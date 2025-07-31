@@ -1,9 +1,10 @@
 import GameBoard from "@/components/GameBoard";
 import GameUI from "@/components/GameUI";
+import ActionBar from "@/components/ActionBar";
 import useGameState from "@/hooks/useGameState";
 
 const Index = () => {
-  const { gameState, selectTile, endTurn } = useGameState();
+  const { gameState, selectTile, endTurn, basicAttack } = useGameState();
 
   return (
     <div className="min-h-screen bg-background">
@@ -13,12 +14,19 @@ const Index = () => {
           <p className="text-xl text-muted-foreground">Tactical Hex-Based Strategy Game</p>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
+          {/* Game Board - Takes up most space */}
+          <div className="lg:col-span-4">
             <GameBoard gameState={gameState} onTileClick={selectTile} />
           </div>
           
-          <div className="lg:col-span-1">
+          {/* Right Sidebar - Game Info and Actions */}
+          <div className="lg:col-span-2 space-y-4">
+            <ActionBar 
+              gameState={gameState} 
+              onBasicAttack={basicAttack}
+              onEndTurn={endTurn} 
+            />
             <GameUI gameState={gameState} onEndTurn={endTurn} />
           </div>
         </div>

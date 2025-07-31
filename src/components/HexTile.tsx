@@ -13,21 +13,21 @@ const HexTile = ({ tile, onClick, icon, size = 40 }: HexTileProps) => {
   const getTerrainColor = () => {
     switch (tile.terrain.type) {
       case 'forest':
-        return 'fill-green-600 border-green-700';
+        return 'fill-green-500 border-green-600';
       case 'mountain':
-        return 'fill-orange-600 border-orange-700';
+        return 'fill-amber-600 border-amber-700';
       case 'river':
-        return 'fill-blue-600 border-blue-700';
-      case 'plain':
-        return 'fill-yellow-600 border-yellow-700';
-      case 'mana_crystal':
-        return 'fill-purple-600 border-purple-700';
-      case 'beast_camp':
-        return 'fill-red-600 border-red-700';
-      case 'base':
-        return 'fill-gray-700 border-gray-800';
-      case 'spawn':
         return 'fill-cyan-400 border-cyan-500';
+      case 'plain':
+        return 'fill-yellow-400 border-yellow-500';
+      case 'mana_crystal':
+        return 'fill-purple-500 border-purple-600 animate-pulse';
+      case 'beast_camp':
+        return 'fill-red-500 border-red-600';
+      case 'base':
+        return 'fill-slate-600 border-slate-700';
+      case 'spawn':
+        return 'fill-slate-400 border-slate-500';
       default:
         return 'fill-gray-600 border-gray-700';
     }

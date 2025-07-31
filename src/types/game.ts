@@ -23,7 +23,7 @@ export interface Icon {
     hp: number;
     maxHp: number;
     moveRange: number;
-    initiative: number;
+    speed: number; // For turn queue
   };
   abilities: Ability[];
   passive: string;
@@ -31,6 +31,8 @@ export interface Icon {
   playerId: number;
   isAlive: boolean;
   respawnTurns: number;
+  actionTaken: boolean; // Has this icon acted this turn?
+  movedThisTurn: boolean; // Has this icon moved this turn?
 }
 
 export interface Ability {
@@ -56,18 +58,21 @@ export interface HexTile {
 
 export interface GameState {
   currentTurn: number;
-  currentPlayer: number;
+  activeIconId?: string; // Current acting icon in speed queue
   phase: 'draft' | 'deploy' | 'combat' | 'victory';
   players: Player[];
   board: HexTile[];
   selectedIcon?: string;
   globalMana: number[];
   turnTimer: number;
+  speedQueue: string[]; // Icon IDs in speed order
+  queueIndex: number;
   objectives: {
     manaCrystal: { controlled: boolean; player?: number };
     beastCamp: { defeated: boolean; buffApplied: boolean };
   };
   baseHealth: number[];
+  matchTimer: number; // In seconds (600 = 10 minutes)
 }
 
 export interface Player {
