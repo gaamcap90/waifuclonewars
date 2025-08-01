@@ -59,7 +59,8 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       const isTargetable = gameState.targetingMode && activeIcon ? 
         calculateDistance(activeIcon.position, tile.coordinates) <= gameState.targetingMode.range : false;
 
-      const handleRightClick = (e: React.MouseEvent) => {
+      const handleTerrainClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
         setTooltipState({
           visible: true,
           terrain: tile.terrain,
@@ -75,14 +76,14 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
           key={`${tile.coordinates.q}-${tile.coordinates.r}`}
           className="absolute"
           style={{
-            left: x + (boardWidth * hexSize),
-            top: y + (boardHeight * hexSize * 0.5),
+            left: x + (boardWidth * hexSize * 0.7),
+            top: y + (boardHeight * hexSize * 0.7),
           }}
         >
           <HexTile
             tile={tile}
             onClick={() => onTileClick(tile.coordinates)}
-            onRightClick={handleRightClick}
+            onTerrainClick={handleTerrainClick}
             icon={icon ? icon.name.charAt(0) : undefined}
             size={hexSize}
             playerColor={playerColor}

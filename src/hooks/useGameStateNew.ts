@@ -64,16 +64,16 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
     };
   }
 
-  // Mountains (orange/brown hexes with mountain symbols) - IMPASSABLE
-  if (Math.abs(q) >= 5 || Math.abs(r) >= 5 || Math.abs(q + r) >= 5) {
+  // Mountains (orange/brown hexes with mountain symbols) - IMPASSABLE - reduced amount
+  if (Math.abs(q) >= 6 || Math.abs(r) >= 6 || Math.abs(q + r) >= 6) {
     return {
       type: 'mountain',
       effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } // Impassable
     };
   }
 
-  // Rivers (light blue hexes) - IMPASSABLE
-  if (Math.abs(q + r) === 2 || (q === 0 && Math.abs(r) <= 3) || (r === 0 && Math.abs(q) <= 3)) {
+  // Rivers (light blue hexes) - IMPASSABLE - reduced amount
+  if ((Math.abs(q + r) === 3 && Math.abs(q) <= 2) || (q === 0 && Math.abs(r) === 4)) {
     return {
       type: 'river',
       effects: { movementModifier: -999 } // Impassable
@@ -113,42 +113,46 @@ const createInitialIcons = (): Icon[] => {
       role: "tank" as const,
       stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 3 },
       abilities: [
-        { id: "1", name: "Shield Bash", manaCost: 3, cooldown: 2, currentCooldown: 0, range: 1, description: "Stun and damage", damage: 35 },
-        { id: "2", name: "Taunt", manaCost: 4, cooldown: 3, currentCooldown: 0, range: 2, description: "Force enemies to attack you" }
+        { id: "1", name: "Shield Bash", manaCost: 3, cooldown: 2, currentCooldown: 0, range: 1, description: "Stuns target for 1 turn and deals 35 damage. Extra damage on high ground.", damage: 35 },
+        { id: "2", name: "Taunt", manaCost: 4, cooldown: 3, currentCooldown: 0, range: 2, description: "Forces all enemies within range to attack you next turn. Reduces incoming damage by 50%." }
       ],
-      passive: "Damage reduction on high ground"
+      passive: "25% damage reduction when on mountain or high ground hexes"
     },
     {
       name: "Shadowblade",
       role: "dps_melee" as const,
       stats: { hp: 70, maxHp: 70, moveRange: 4, speed: 8 },
       abilities: [
-        { id: "1", name: "Stealth Strike", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 1, description: "High damage from stealth", damage: 65 },
-        { id: "2", name: "Shadow Step", manaCost: 3, cooldown: 3, currentCooldown: 0, range: 6, description: "Teleport to target" }
+        { id: "1", name: "Stealth Strike", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 1, description: "Deals 65 damage. +50% damage if attacking from behind or from forest hex.", damage: 65 },
+        { id: "2", name: "Shadow Step", manaCost: 3, cooldown: 3, currentCooldown: 0, range: 6, description: "Teleport to target hex up to 6 tiles away. If enemy adjacent, deal 40 damage and gain stealth." }
       ],
-      passive: "Bonus damage in forest hexes"
+      passive: "+30% damage and dodge chance in forest hexes"
     },
     {
       name: "Runeseer",
       role: "controller" as const,
       stats: { hp: 60, maxHp: 60, moveRange: 3, speed: 5 },
       abilities: [
-        { id: "1", name: "Arcane Bolt", manaCost: 3, cooldown: 1, currentCooldown: 0, range: 4, description: "Ranged magic damage", damage: 50 },
-        { id: "2", name: "Frost Nova", manaCost: 5, cooldown: 4, currentCooldown: 0, range: 2, description: "AoE freeze and damage", damage: 40 }
+        { id: "1", name: "Arcane Bolt", manaCost: 3, cooldown: 1, currentCooldown: 0, range: 4, description: "Ranged magic projectile. Deals 50 damage and pierces through enemies.", damage: 50 },
+        { id: "2", name: "Frost Nova", manaCost: 5, cooldown: 4, currentCooldown: 0, range: 2, description: "AoE explosion centered on target. Deals 40 damage and freezes enemies for 1 turn.", damage: 40 }
       ],
-      passive: "Mana regen on spell cast"
+      passive: "Regenerates 1 extra mana when casting spells from mana crystal hex"
     }
   ];
 
   const icons: Icon[] = [];
   
-  // Create icons for both players
+  // Create icons for both players - spawn them on plains, not mountains
+  const player1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
+  const player2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
+  
   for (let playerId = 0; playerId < 2; playerId++) {
     iconTemplates.forEach((template, index) => {
+      const spawns = playerId === 0 ? player1Spawns : player2Spawns;
       icons.push({
         id: `${playerId}-${index}`,
         ...template,
-        position: playerId === 0 ? { q: -5, r: 4 - index } : { q: 5, r: -4 + index },
+        position: spawns[index],
         playerId,
         isAlive: true,
         respawnTurns: 0,
@@ -270,7 +274,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         manaCrystal: { controlled: false },
         beastCamp: { defeated: false, buffApplied: false }
       },
-      baseHealth: [10, 10],
+      baseHealth: [5, 5],
       matchTimer: 600,
       gameMode
     };
@@ -340,7 +344,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
 
-      // Only allow selecting the current active icon
+      // Only allow interacting with the current active icon
       const clickedIcon = prev.players
         .flatMap(p => p.icons)
         .find(i => 
@@ -349,6 +353,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           i.isAlive
         );
 
+      // If clicking on the active icon, select it
       if (clickedIcon && clickedIcon.id === prev.activeIconId) {
         return {
           ...prev,
@@ -356,8 +361,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         };
       }
 
-      // Try to move the active icon
-      if (activeIcon && activeIcon.id === prev.selectedIcon && !activeIcon.movedThisTurn) {
+      // Try to move the active icon (one-click movement)
+      if (activeIcon && !activeIcon.movedThisTurn) {
         if (isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
           // Check if destination is not occupied
           const occupied = prev.players

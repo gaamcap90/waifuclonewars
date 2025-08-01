@@ -5,7 +5,7 @@ import { Trees, Mountain, Waves, Sparkles, Crown, Shield } from "lucide-react";
 interface HexTileProps {
   tile: HexTileType;
   onClick: () => void;
-  onRightClick?: (e: React.MouseEvent) => void;
+  onTerrainClick?: (e: React.MouseEvent) => void;
   icon?: string;
   size?: number;
   playerColor?: string;
@@ -13,7 +13,7 @@ interface HexTileProps {
   isTargetable?: boolean;
 }
 
-const HexTile = ({ tile, onClick, onRightClick, icon, size = 40, playerColor, isActiveIcon, isTargetable }: HexTileProps) => {
+const HexTile = ({ tile, onClick, onTerrainClick, icon, size = 40, playerColor, isActiveIcon, isTargetable }: HexTileProps) => {
   const getTerrainColor = () => {
     switch (tile.terrain.type) {
       case 'forest':
@@ -64,16 +64,16 @@ const HexTile = ({ tile, onClick, onRightClick, icon, size = 40, playerColor, is
 
   const hexPath = `M ${size * 0.866} ${size * 0.5} L ${size * 0.866} ${size * 1.5} L 0 ${size * 2} L ${-size * 0.866} ${size * 1.5} L ${-size * 0.866} ${size * 0.5} L 0 0 Z`;
 
-  const handleRightClick = (e: React.MouseEvent) => {
+  const handleTerrainClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    onRightClick?.(e);
+    onTerrainClick?.(e);
   };
 
   return (
     <div
       className="relative cursor-pointer transform hover:scale-105 transition-transform"
-      onClick={onClick}
-      onContextMenu={handleRightClick}
+      onClick={icon ? onClick : onTerrainClick}
+      onContextMenu={handleTerrainClick}
       style={{
         width: size * 2,
         height: size * 2,

@@ -2,6 +2,7 @@ import { GameState } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HorizontalGameUIProps {
   gameState: GameState;
@@ -47,13 +48,56 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
         </CardContent>
       </Card>
 
+      {/* Objectives Row */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-center text-sm">Objectives</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center gap-4 text-xs">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className="text-center">
+                    <div className="font-semibold">Mana Crystal</div>
+                    <div className={gameState.objectives.manaCrystal.controlled ? "text-green-500" : "text-gray-500"}>
+                      {gameState.objectives.manaCrystal.controlled ? "Controlled" : "Neutral"}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Control the center crystal for +2 mana regeneration per turn</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className="text-center">
+                    <div className="font-semibold">Beast Camp</div>
+                    <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
+                      {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Defeat beast camps for permanent team-wide +15% damage buff</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Bottom Row: Player Info and Active Icon */}
       <div className="grid grid-cols-3 gap-4">
         {/* Player 1 Icons */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-player1">Player 1 (Blue)</CardTitle>
-            <div className="text-sm">Mana: {gameState.globalMana[0]}/20</div>
+            <div className="text-sm">Mana: {gameState.globalMana[0]}/20 (+1/turn)</div>
+            <div className="text-sm">Base HP: {gameState.baseHealth[0]}/5</div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -91,22 +135,34 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                   </Button>
                 </div>
                 <div className="space-y-1">
-                  {activeIcon.abilities.map(ability => (
-                    <Button
-                      key={ability.id}
-                      onClick={() => onUseAbility(ability.id)}
-                      disabled={
-                        activeIcon.actionTaken || 
-                        ability.currentCooldown > 0 || 
-                        gameState.globalMana[activeIcon.playerId] < ability.manaCost
-                      }
-                      size="sm"
-                      variant="outline"
-                      className="w-full justify-start"
-                    >
-                      {ability.name} ({ability.manaCost} mana)
-                    </Button>
-                  ))}
+                  <TooltipProvider>
+                    {activeIcon.abilities.map(ability => (
+                      <Tooltip key={ability.id}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={() => onUseAbility(ability.id)}
+                            disabled={
+                              activeIcon.actionTaken || 
+                              ability.currentCooldown > 0 || 
+                              gameState.globalMana[activeIcon.playerId] < ability.manaCost
+                            }
+                            size="sm"
+                            variant={gameState.targetingMode?.abilityId === ability.id ? "default" : "outline"}
+                            className="w-full justify-start"
+                          >
+                            {ability.name} ({ability.manaCost} mana)
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="max-w-xs">
+                            <p className="font-semibold">{ability.name}</p>
+                            <p className="text-sm">{ability.description}</p>
+                            <p className="text-xs mt-1">Range: {ability.range} | Cooldown: {ability.cooldown}</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </TooltipProvider>
                 </div>
               </div>
             )}
@@ -117,7 +173,8 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-player2">Player 2 (Red)</CardTitle>
-            <div className="text-sm">Mana: {gameState.globalMana[1]}/20</div>
+            <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
+            <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
