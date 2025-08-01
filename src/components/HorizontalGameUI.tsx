@@ -1,0 +1,140 @@
+import { GameState } from "@/types/game";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+interface HorizontalGameUIProps {
+  gameState: GameState;
+  onBasicAttack: () => void;
+  onUseAbility: (abilityId: string) => void;
+  onEndTurn: () => void;
+}
+
+const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: HorizontalGameUIProps) => {
+  const activeIcon = gameState.players
+    .flatMap(p => p.icons)
+    .find(i => i.id === gameState.activeIconId);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="w-full space-y-4">
+      {/* Top Row: Turn Queue */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-center text-lg">Turn Queue</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center gap-2">
+            {gameState.speedQueue.slice(0, 5).map((iconId, index) => {
+              const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
+              if (!icon) return null;
+              return (
+                <Badge 
+                  key={iconId} 
+                  variant={index === 0 ? "default" : "secondary"}
+                  className={icon.playerId === 0 ? "bg-player1" : "bg-player2"}
+                >
+                  {icon.name.charAt(0)}
+                </Badge>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bottom Row: Player Info and Active Icon */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Player 1 Icons */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-player1">Player 1 (Blue)</CardTitle>
+            <div className="text-sm">Mana: {gameState.globalMana[0]}/20</div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {gameState.players[0].icons.map(icon => (
+                <div key={icon.id} className="flex justify-between text-sm">
+                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
+                    {icon.name}
+                  </span>
+                  <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Icon Details */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle>Active: {activeIcon?.name}</CardTitle>
+            <div className="text-sm">Timer: {formatTime(gameState.matchTimer)}</div>
+          </CardHeader>
+          <CardContent>
+            {activeIcon && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={onBasicAttack}
+                    disabled={activeIcon.actionTaken}
+                    size="sm"
+                  >
+                    Basic Attack
+                  </Button>
+                  <Button onClick={onEndTurn} size="sm" variant="outline">
+                    End Turn
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {activeIcon.abilities.map(ability => (
+                    <Button
+                      key={ability.id}
+                      onClick={() => onUseAbility(ability.id)}
+                      disabled={
+                        activeIcon.actionTaken || 
+                        ability.currentCooldown > 0 || 
+                        gameState.globalMana[activeIcon.playerId] < ability.manaCost
+                      }
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      {ability.name} ({ability.manaCost} mana)
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Player 2 Icons */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-player2">Player 2 (Red)</CardTitle>
+            <div className="text-sm">Mana: {gameState.globalMana[1]}/20</div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {gameState.players[1].icons.map(icon => (
+                <div key={icon.id} className="flex justify-between text-sm">
+                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
+                    {icon.name}
+                  </span>
+                  <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default HorizontalGameUI;

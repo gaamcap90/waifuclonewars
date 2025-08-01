@@ -53,6 +53,21 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Game-specific colors */
+    --player1: 221 83% 53%; /* Blue */
+    --player1-foreground: 210 40% 98%;
+    --player2: 0 84% 60%; /* Red */
+    --player2-foreground: 210 40% 98%;
+    --terrain-forest: 120 60% 30%; /* Dark green */
+    --terrain-mountain: 30 60% 50%; /* Orange/brown */
+    --terrain-river: 200 80% 60%; /* Light blue */
+    --terrain-plain: 50 60% 70%; /* Yellow */
+    --terrain-spawn: 270 50% 40%; /* Purple */
+    --terrain-base: 0 0% 40%; /* Gray */
+    --terrain-crystal: 270 80% 60%; /* Bright purple */
+    --terrain-beast: 15 80% 50%; /* Red-orange */
+    --active-turn: 60 100% 80%; /* Bright yellow highlight */
   }
 
   .dark {
@@ -91,6 +106,21 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Game-specific colors for dark mode */
+    --player1: 221 83% 53%; /* Blue */
+    --player1-foreground: 210 40% 98%;
+    --player2: 0 84% 60%; /* Red */
+    --player2-foreground: 210 40% 98%;
+    --terrain-forest: 120 40% 25%; /* Darker green */
+    --terrain-mountain: 30 40% 35%; /* Darker orange */
+    --terrain-river: 200 60% 40%; /* Darker blue */
+    --terrain-plain: 50 40% 50%; /* Darker yellow */
+    --terrain-spawn: 270 30% 30%; /* Darker purple */
+    --terrain-base: 0 0% 30%; /* Darker gray */
+    --terrain-crystal: 270 60% 50%; /* Darker purple */
+    --terrain-beast: 15 60% 40%; /* Darker red-orange */
+    --active-turn: 60 100% 70%; /* Bright yellow highlight */
   }
 }
 

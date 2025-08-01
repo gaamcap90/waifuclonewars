@@ -1,35 +1,43 @@
+import { useState } from "react";
 import GameBoard from "@/components/GameBoard";
-import GameUI from "@/components/GameUI";
-import ActionBar from "@/components/ActionBar";
-import useGameState from "@/hooks/useGameState";
+import HorizontalGameUI from "@/components/HorizontalGameUI";
+import MainMenu from "@/components/MainMenu";
+import useGameState from "@/hooks/useGameStateNew";
 
 const Index = () => {
-  const { gameState, selectTile, endTurn, basicAttack } = useGameState();
+  const [gameMode, setGameMode] = useState<'menu' | 'singleplayer' | 'multiplayer'>('menu');
+  const { gameState, selectTile, endTurn, basicAttack, useAbility } = useGameState(
+    gameMode === 'menu' ? 'singleplayer' : gameMode
+  );
+
+  const handleStartGame = (mode: 'singleplayer' | 'multiplayer') => {
+    setGameMode(mode);
+  };
+
+  if (gameMode === 'menu') {
+    return <MainMenu onStartGame={handleStartGame} />;
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4">
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold mb-2 text-foreground">Icons of Theia</h1>
-          <p className="text-xl text-muted-foreground">Tactical Hex-Based Strategy Game</p>
+    <div className="min-h-screen bg-background p-4">
+      <div className="container mx-auto max-w-7xl space-y-4">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-foreground">Icons of Theia</h1>
+          <p className="text-muted-foreground">Turn {gameState.currentTurn} | {gameMode === 'singleplayer' ? 'vs AI' : 'Local Multiplayer'}</p>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-          {/* Game Board - Takes up most space */}
-          <div className="lg:col-span-4">
-            <GameBoard gameState={gameState} onTileClick={selectTile} />
-          </div>
-          
-          {/* Right Sidebar - Game Info and Actions */}
-          <div className="lg:col-span-2 space-y-4">
-            <ActionBar 
-              gameState={gameState} 
-              onBasicAttack={basicAttack}
-              onEndTurn={endTurn} 
-            />
-            <GameUI gameState={gameState} onEndTurn={endTurn} />
-          </div>
+        {/* Game Board */}
+        <div className="flex justify-center">
+          <GameBoard gameState={gameState} onTileClick={selectTile} />
         </div>
+        
+        {/* Horizontal UI */}
+        <HorizontalGameUI 
+          gameState={gameState}
+          onBasicAttack={basicAttack}
+          onUseAbility={useAbility}
+          onEndTurn={endTurn}
+        />
       </div>
     </div>
   );

@@ -1,11 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { GameState, Coordinates, Icon, HexTile, TerrainType } from "@/types/game";
 
 const createInitialBoard = (): HexTile[] => {
   const board: HexTile[] = [];
   
   // Create hex map matching the image pattern
-  // The image shows a roughly 15x11 hex grid
   for (let q = -7; q <= 7; q++) {
     const r1 = Math.max(-7, -q - 7);
     const r2 = Math.min(7, -q + 7);
@@ -65,11 +64,19 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
     };
   }
 
-  // Mountains (orange/brown hexes with mountain symbols)
+  // Mountains (orange/brown hexes with mountain symbols) - IMPASSABLE
   if (Math.abs(q) >= 5 || Math.abs(r) >= 5 || Math.abs(q + r) >= 5) {
     return {
       type: 'mountain',
-      effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -1 }
+      effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } // Impassable
+    };
+  }
+
+  // Rivers (light blue hexes) - IMPASSABLE
+  if (Math.abs(q + r) === 2 || (q === 0 && Math.abs(r) <= 3) || (r === 0 && Math.abs(q) <= 3)) {
+    return {
+      type: 'river',
+      effects: { movementModifier: -999 } // Impassable
     };
   }
 
@@ -89,14 +96,6 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
     return {
       type: 'forest',
       effects: { dodgeBonus: true, stealthBonus: true }
-    };
-  }
-
-  // Rivers (light blue hexes) - create flowing pattern
-  if (Math.abs(q + r) === 2 || (q === 0 && Math.abs(r) <= 3) || (r === 0 && Math.abs(q) <= 3)) {
-    return {
-      type: 'river',
-      effects: { movementModifier: -1 }
     };
   }
 
@@ -162,12 +161,91 @@ const createInitialIcons = (): Icon[] => {
   return icons;
 };
 
-// Helper function to create speed queue
 const createSpeedQueue = (icons: Icon[]): string[] => {
   return icons
     .filter(icon => icon.isAlive)
     .sort((a, b) => b.stats.speed - a.stats.speed)
     .map(icon => icon.id);
+};
+
+const calculateDistance = (from: Coordinates, to: Coordinates): number => {
+  return Math.max(
+    Math.abs(to.q - from.q),
+    Math.abs(to.r - from.r),
+    Math.abs((to.q + to.r) - (from.q + from.r))
+  );
+};
+
+const isValidMovement = (from: Coordinates, to: Coordinates, moveRange: number, board: HexTile[]): boolean => {
+  const distance = calculateDistance(from, to);
+  if (distance > moveRange) return false;
+  
+  // Check if destination is passable
+  const destinationTile = board.find(tile => tile.coordinates.q === to.q && tile.coordinates.r === to.r);
+  if (!destinationTile) return false;
+  
+  // Check if terrain is impassable
+  if (destinationTile.terrain.effects.movementModifier === -999) return false;
+  
+  return true;
+};
+
+// Simple AI that makes random valid moves
+const makeAIMove = (gameState: GameState): Partial<GameState> => {
+  const activeIcon = gameState.players
+    .flatMap(p => p.icons)
+    .find(i => i.id === gameState.activeIconId);
+    
+  if (!activeIcon || !activeIcon.isAlive || activeIcon.playerId !== 1) {
+    return {};
+  }
+
+  // Simple AI: Try to move towards enemy base or use basic attack
+  const enemyBase = gameState.board.find(tile => 
+    tile.terrain.type === 'base' && 
+    tile.coordinates.q === -6 && tile.coordinates.r === 5
+  );
+
+  if (!enemyBase) return {};
+
+  // Find valid movement positions
+  const validMoves: Coordinates[] = [];
+  for (let q = -7; q <= 7; q++) {
+    for (let r = -7; r <= 7; r++) {
+      const target = { q, r };
+      if (isValidMovement(activeIcon.position, target, activeIcon.stats.moveRange, gameState.board)) {
+        // Check if not occupied
+        const occupied = gameState.players
+          .flatMap(p => p.icons)
+          .some(icon => icon.position.q === q && icon.position.r === r && icon.isAlive);
+        if (!occupied) {
+          validMoves.push(target);
+        }
+      }
+    }
+  }
+
+  if (validMoves.length > 0) {
+    // Pick the move that gets closest to enemy base
+    const bestMove = validMoves.reduce((best, move) => {
+      const currentDistance = calculateDistance(move, enemyBase.coordinates);
+      const bestDistance = calculateDistance(best, enemyBase.coordinates);
+      return currentDistance < bestDistance ? move : best;
+    });
+
+    return {
+      players: gameState.players.map(player => ({
+        ...player,
+        icons: player.icons.map(icon => 
+          icon.id === activeIcon.id 
+            ? { ...icon, position: bestMove, movedThisTurn: true }
+            : icon
+        )
+      }))
+    };
+  }
+
+  return {};
 };
 
 const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer') => {
@@ -193,73 +271,115 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         beastCamp: { defeated: false, buffApplied: false }
       },
       baseHealth: [10, 10],
-      matchTimer: 600, // 10 minutes
+      matchTimer: 600,
       gameMode
     };
   });
 
+  // Handle AI turns
+  useEffect(() => {
+    if (gameState.gameMode === 'singleplayer') {
+      const activeIcon = gameState.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === gameState.activeIconId);
+        
+      if (activeIcon?.playerId === 1 && !activeIcon.actionTaken && !activeIcon.movedThisTurn) {
+        const timer = setTimeout(() => {
+          const aiMove = makeAIMove(gameState);
+          if (Object.keys(aiMove).length > 0) {
+            setGameState(prev => ({ ...prev, ...aiMove }));
+            // End AI turn after move
+            setTimeout(() => {
+              endTurn();
+            }, 1000);
+          } else {
+            endTurn();
+          }
+        }, 1000); // AI thinks for 1 second
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [gameState.activeIconId, gameState.gameMode]);
+
   const selectTile = useCallback((coordinates: Coordinates) => {
     setGameState(prev => {
-      // Find the active icon (whose turn it is)
+      // Check if we're in targeting mode
+      if (prev.targetingMode) {
+        const activeIcon = prev.players
+          .flatMap(p => p.icons)
+          .find(i => i.id === prev.targetingMode!.iconId);
+          
+        if (activeIcon) {
+          const distance = calculateDistance(activeIcon.position, coordinates);
+          if (distance <= prev.targetingMode.range) {
+            // Execute ability (simplified - just end targeting for now)
+            return {
+              ...prev,
+              targetingMode: undefined,
+              players: prev.players.map(player => ({
+                ...player,
+                icons: player.icons.map(icon => 
+                  icon.id === activeIcon.id 
+                    ? { ...icon, actionTaken: true }
+                    : icon
+                )
+              })),
+              globalMana: prev.globalMana.map((mana, index) => 
+                index === activeIcon.playerId 
+                  ? Math.max(0, mana - activeIcon.abilities.find(a => a.id === prev.targetingMode!.abilityId)!.manaCost)
+                  : mana
+              )
+            };
+          }
+        }
+        return prev;
+      }
+
       const activeIcon = prev.players
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
 
-      // Find if there's an icon at this position that belongs to the active player
-      const icon = prev.players
+      // Only allow selecting the current active icon
+      const clickedIcon = prev.players
         .flatMap(p => p.icons)
         .find(i => 
           i.position.q === coordinates.q && 
           i.position.r === coordinates.r && 
-          i.isAlive &&
-          activeIcon && i.playerId === activeIcon.playerId
+          i.isAlive
         );
 
-      if (icon) {
-        // Select this icon
+      if (clickedIcon && clickedIcon.id === prev.activeIconId) {
         return {
           ...prev,
-          selectedIcon: icon.id,
-          board: prev.board.map(tile => ({
-            ...tile,
-            highlighted: tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r,
-            selectable: false
-          }))
+          selectedIcon: clickedIcon.id
         };
       }
 
-      // If we have a selected icon, try to move it
-      if (prev.selectedIcon) {
-        const selectedIcon = prev.players
-          .flatMap(p => p.icons)
-          .find(i => i.id === prev.selectedIcon);
-
-        if (selectedIcon) {
-          // Simple movement validation (within range)
-          const distance = Math.max(
-            Math.abs(coordinates.q - selectedIcon.position.q),
-            Math.abs(coordinates.r - selectedIcon.position.r),
-            Math.abs((coordinates.q + coordinates.r) - (selectedIcon.position.q + selectedIcon.position.r))
-          );
-
-          if (distance <= selectedIcon.stats.moveRange) {
-            // Move the icon
+      // Try to move the active icon
+      if (activeIcon && activeIcon.id === prev.selectedIcon && !activeIcon.movedThisTurn) {
+        if (isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
+          // Check if destination is not occupied
+          const occupied = prev.players
+            .flatMap(p => p.icons)
+            .some(icon => 
+              icon.position.q === coordinates.q && 
+              icon.position.r === coordinates.r && 
+              icon.isAlive
+            );
+            
+          if (!occupied) {
             return {
               ...prev,
               players: prev.players.map(player => ({
                 ...player,
                 icons: player.icons.map(icon => 
-                  icon.id === selectedIcon.id 
-                    ? { ...icon, position: coordinates }
+                  icon.id === activeIcon.id 
+                    ? { ...icon, position: coordinates, movedThisTurn: true }
                     : icon
                 )
               })),
-              selectedIcon: undefined,
-              board: prev.board.map(tile => ({
-                ...tile,
-                highlighted: false,
-                selectable: false
-              }))
+              selectedIcon: undefined
             };
           }
         }
@@ -269,12 +389,36 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     });
   }, []);
 
+  const useAbility = useCallback((abilityId: string) => {
+    setGameState(prev => {
+      const activeIcon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === prev.activeIconId);
+        
+      if (!activeIcon || activeIcon.actionTaken) return prev;
+      
+      const ability = activeIcon.abilities.find(a => a.id === abilityId);
+      if (!ability || ability.currentCooldown > 0) return prev;
+      
+      if (prev.globalMana[activeIcon.playerId] < ability.manaCost) return prev;
+      
+      // Enter targeting mode
+      return {
+        ...prev,
+        targetingMode: {
+          abilityId,
+          iconId: activeIcon.id,
+          range: ability.range
+        }
+      };
+    });
+  }, []);
+
   const endTurn = useCallback(() => {
     setGameState(prev => {
       const nextQueueIndex = (prev.queueIndex + 1) % prev.speedQueue.length;
       const newTurn = nextQueueIndex === 0 ? prev.currentTurn + 1 : prev.currentTurn;
       
-      // Reset action states for the icon whose turn just ended
       const updatedPlayers = prev.players.map(player => ({
         ...player,
         icons: player.icons.map(icon => 
@@ -291,15 +435,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         activeIconId: prev.speedQueue[nextQueueIndex],
         currentTurn: newTurn,
         selectedIcon: undefined,
-        // Add mana regen every full round
+        targetingMode: undefined,
         globalMana: nextQueueIndex === 0 
-          ? prev.globalMana.map(mana => Math.min(mana + 3, 20))
-          : prev.globalMana,
-        board: prev.board.map(tile => ({
-          ...tile,
-          highlighted: false,
-          selectable: false
-        }))
+          ? prev.globalMana.map(mana => Math.min(mana + 1, 20)) // 1 mana per turn
+          : prev.globalMana
       };
     });
   }, []);
@@ -312,7 +451,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
       if (!activeIcon || activeIcon.actionTaken) return prev;
 
-      // Mark action as taken
       return {
         ...prev,
         players: prev.players.map(player => ({
@@ -330,6 +468,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   return {
     gameState,
     selectTile,
+    useAbility,
     endTurn,
     basicAttack,
   };

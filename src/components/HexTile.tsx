@@ -5,32 +5,42 @@ import { Trees, Mountain, Waves, Sparkles, Crown, Shield } from "lucide-react";
 interface HexTileProps {
   tile: HexTileType;
   onClick: () => void;
+  onRightClick?: (e: React.MouseEvent) => void;
   icon?: string;
   size?: number;
+  playerColor?: string;
+  isActiveIcon?: boolean;
+  isTargetable?: boolean;
 }
 
-const HexTile = ({ tile, onClick, icon, size = 40 }: HexTileProps) => {
+const HexTile = ({ tile, onClick, onRightClick, icon, size = 40, playerColor, isActiveIcon, isTargetable }: HexTileProps) => {
   const getTerrainColor = () => {
     switch (tile.terrain.type) {
       case 'forest':
-        return 'fill-green-500 border-green-600';
+        return 'fill-terrain-forest border-terrain-forest';
       case 'mountain':
-        return 'fill-amber-600 border-amber-700';
+        return 'fill-terrain-mountain border-terrain-mountain';
       case 'river':
-        return 'fill-cyan-400 border-cyan-500';
+        return 'fill-terrain-river border-terrain-river';
       case 'plain':
-        return 'fill-yellow-400 border-yellow-500';
+        return 'fill-terrain-plain border-terrain-plain';
       case 'mana_crystal':
-        return 'fill-purple-500 border-purple-600 animate-pulse';
+        return 'fill-terrain-crystal border-terrain-crystal animate-pulse';
       case 'beast_camp':
-        return 'fill-red-500 border-red-600';
+        return 'fill-terrain-beast border-terrain-beast';
       case 'base':
-        return 'fill-slate-600 border-slate-700';
+        return 'fill-terrain-base border-terrain-base';
       case 'spawn':
-        return 'fill-slate-400 border-slate-500';
+        return 'fill-terrain-spawn border-terrain-spawn';
       default:
-        return 'fill-gray-600 border-gray-700';
+        return 'fill-terrain-plain border-terrain-plain';
     }
+  };
+
+  const getIconColor = () => {
+    if (playerColor === 'blue') return 'text-player1-foreground bg-player1';
+    if (playerColor === 'red') return 'text-player2-foreground bg-player2';
+    return 'text-foreground bg-muted';
   };
 
   const getTerrainIcon = () => {
@@ -54,10 +64,16 @@ const HexTile = ({ tile, onClick, icon, size = 40 }: HexTileProps) => {
 
   const hexPath = `M ${size * 0.866} ${size * 0.5} L ${size * 0.866} ${size * 1.5} L 0 ${size * 2} L ${-size * 0.866} ${size * 1.5} L ${-size * 0.866} ${size * 0.5} L 0 0 Z`;
 
+  const handleRightClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onRightClick?.(e);
+  };
+
   return (
     <div
       className="relative cursor-pointer transform hover:scale-105 transition-transform"
       onClick={onClick}
+      onContextMenu={handleRightClick}
       style={{
         width: size * 2,
         height: size * 2,
@@ -75,24 +91,27 @@ const HexTile = ({ tile, onClick, icon, size = 40 }: HexTileProps) => {
             getTerrainColor(),
             'stroke-2 transition-colors',
             tile.highlighted && 'ring-2 ring-primary',
-            tile.selectable && 'ring-2 ring-accent'
+            tile.selectable && 'ring-2 ring-accent',
+            isTargetable && 'ring-2 ring-destructive',
+            isActiveIcon && 'ring-2 ring-active-turn'
           )}
         />
       </svg>
       
       <div className="absolute inset-0 flex items-center justify-center">
         {icon ? (
-          <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground">
+          <div className={cn(
+            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2",
+            getIconColor(),
+            isActiveIcon && 'border-active-turn animate-pulse',
+            !isActiveIcon && 'border-transparent'
+          )}>
             {icon}
           </div>
         ) : (
           getTerrainIcon()
         )}
       </div>
-      
-      {tile.occupiedBy && (
-        <div className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
-      )}
     </div>
   );
 };

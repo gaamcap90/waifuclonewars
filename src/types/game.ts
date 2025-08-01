@@ -73,6 +73,12 @@ export interface GameState {
   };
   baseHealth: number[];
   matchTimer: number; // In seconds (600 = 10 minutes)
+  gameMode: 'singleplayer' | 'multiplayer';
+  targetingMode?: {
+    abilityId: string;
+    iconId: string;
+    range: number;
+  };
 }
 
 export interface Player {
@@ -80,4 +86,5 @@ export interface Player {
   name: string;
   icons: Icon[];
   color: string;
+  isAI?: boolean;
 }

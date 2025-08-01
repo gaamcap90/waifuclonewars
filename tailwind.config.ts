@@ -61,7 +61,27 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				/* Game-specific colors */
+				player1: {
+					DEFAULT: 'hsl(var(--player1))',
+					foreground: 'hsl(var(--player1-foreground))'
+				},
+				player2: {
+					DEFAULT: 'hsl(var(--player2))',
+					foreground: 'hsl(var(--player2-foreground))'
+				},
+				terrain: {
+					forest: 'hsl(var(--terrain-forest))',
+					mountain: 'hsl(var(--terrain-mountain))',
+					river: 'hsl(var(--terrain-river))',
+					plain: 'hsl(var(--terrain-plain))',
+					spawn: 'hsl(var(--terrain-spawn))',
+					base: 'hsl(var(--terrain-base))',
+					crystal: 'hsl(var(--terrain-crystal))',
+					beast: 'hsl(var(--terrain-beast))'
+				},
+				'active-turn': 'hsl(var(--active-turn))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
