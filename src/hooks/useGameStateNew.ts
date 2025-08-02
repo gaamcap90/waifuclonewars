@@ -36,7 +36,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (q === -6 && r === 5) {
     return {
       type: 'base',
-      effects: {}
+      effects: { movementModifier: -999 } // Impassable
     };
   }
 
@@ -44,7 +44,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (q === 6 && r === -5) {
     return {
       type: 'base',
-      effects: {}
+      effects: { movementModifier: -999 } // Impassable
     };
   }
 
@@ -133,7 +133,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Da Vinci-chan", 
       role: "support" as const,
-      stats: { hp: 65, maxHp: 65, moveRange: 3, speed: 4, might: 30, power: 80, defense: 45, movement: 2 },
+      stats: { hp: 65, maxHp: 65, moveRange: 2, speed: 4, might: 30, power: 80, defense: 45, movement: 2 },
       abilities: [
         { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 2, description: "Teleport to any visible hex + gain aerial view (see through terrain) for 2 turns." },
         { id: "2", name: "Masterpiece", manaCost: 7, cooldown: 5, currentCooldown: 0, range: 2, description: "Creates a defensive art barrier. Heals 45 HP + shields allies from next attack.", healing: 45 },
@@ -510,7 +510,17 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         const distance = calculateDistance(activeIcon.position, coordinates);
         console.log('Movement distance:', distance, 'moveRange:', activeIcon.stats.moveRange);
         
-        if (distance <= activeIcon.stats.moveRange) {
+        if (distance <= activeIcon.stats.movement && distance <= activeIcon.stats.moveRange) {
+          // Check if destination is passable
+          const destinationTile = prev.board.find(tile => 
+            tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+          );
+          
+          if (!destinationTile || destinationTile.terrain.effects.movementModifier === -999) {
+            console.log('Destination is impassable:', destinationTile?.terrain.type);
+            return prev;
+          }
+          
           // Check if destination is not occupied
           const allIcons = prev.players.flatMap(p => p.icons).filter(icon => icon.isAlive);
           console.log('All alive icons positions:', allIcons.map(i => ({ id: i.id, name: i.name, pos: i.position })));
@@ -535,7 +545,12 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                 ...player,
                 icons: player.icons.map(icon => 
                   icon.id === activeIcon.id 
-                    ? { ...icon, position: coordinates, movedThisTurn: true }
+                    ? { 
+                        ...icon, 
+                        position: coordinates, 
+                        movedThisTurn: true,
+                        stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - distance) }
+                      }
                     : icon
                 )
               })),
