@@ -335,7 +335,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   }, [gameState.activeIconId, gameState.gameMode]);
 
   const selectTile = useCallback((coordinates: Coordinates) => {
+    console.log('selectTile called with:', coordinates);
     setGameState(prev => {
+      console.log('Current game state:', {
+        activeIconId: prev.activeIconId,
+        selectedIcon: prev.selectedIcon,
+        targetingMode: prev.targetingMode
+      });
       // Check if we're in targeting mode (ability or basic attack)
       if (prev.targetingMode) {
         const activeIcon = prev.players
