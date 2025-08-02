@@ -3,6 +3,7 @@ import { Icon } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
+// Use the uploaded character portraits directly
 
 interface CharacterDetailPopupProps {
   character: Icon;
@@ -20,6 +21,13 @@ const CharacterDetailPopup = ({ character, onClose, position }: CharacterDetailP
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [onClose]);
+
+  const getCharacterPortrait = (name: string) => {
+    if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
+    if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
+    if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
+    return null;
+  };
 
   return (
     <>
@@ -39,15 +47,29 @@ const CharacterDetailPopup = ({ character, onClose, position }: CharacterDetailP
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <Card className="bg-background/95 backdrop-blur-sm border-border shadow-xl min-w-[200px]">
+        <Card className="bg-background/95 backdrop-blur-sm border-border shadow-xl min-w-[280px]">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold border-2 ${
+              <div className={`w-12 h-12 rounded-full border-2 overflow-hidden ${
                 character.playerId === 0 
-                  ? "border-blue-400 bg-blue-500/90 text-white" 
-                  : "border-red-400 bg-red-500/90 text-white"
+                  ? "border-blue-400" 
+                  : "border-red-400"
               }`}>
-                {character.name.charAt(0)}
+                {getCharacterPortrait(character.name) ? (
+                  <img 
+                    src={getCharacterPortrait(character.name)!} 
+                    alt={character.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center text-lg font-bold ${
+                    character.playerId === 0 
+                      ? "bg-blue-500/90 text-white" 
+                      : "bg-red-500/90 text-white"
+                  }`}>
+                    {character.name.charAt(0)}
+                  </div>
+                )}
               </div>
               <div>
                 <CardTitle className="text-lg">{character.name}</CardTitle>
