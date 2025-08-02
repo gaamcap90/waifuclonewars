@@ -3,6 +3,13 @@ import { GameState, Coordinates, HexTile as HexTileType } from "@/types/game";
 import HexTile from "./HexTile";
 import HPBar from "./HPBar";
 
+const getCharacterPortrait = (name: string) => {
+  if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
+  if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
+  if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
+  return null;
+};
+
 interface GameBoardProps {
   gameState: GameState;
   onTileClick: (coordinates: Coordinates) => void;
@@ -80,6 +87,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
                 onTileClick(tile.coordinates);
               }}
               icon={icon ? icon.name.charAt(0) : undefined}
+              iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
               size={hexSize}
               playerColor={playerColor}
               isActiveIcon={isActiveIcon}

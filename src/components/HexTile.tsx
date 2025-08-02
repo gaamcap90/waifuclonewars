@@ -7,6 +7,7 @@ interface HexTileProps {
   onClick: () => void;
   onTerrainClick?: (e: React.MouseEvent) => void;
   icon?: string;
+  iconPortrait?: string;
   size?: number;
   playerColor?: string;
   isActiveIcon?: boolean;
@@ -14,7 +15,7 @@ interface HexTileProps {
   isValidMovement?: boolean;
 }
 
-const HexTile = ({ tile, onClick, onTerrainClick, icon, size = 40, playerColor, isActiveIcon, isTargetable, isValidMovement }: HexTileProps) => {
+const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40, playerColor, isActiveIcon, isTargetable, isValidMovement }: HexTileProps) => {
   const getTerrainColor = () => {
     switch (tile.terrain.type) {
       case 'forest':
@@ -104,11 +105,24 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, size = 40, playerColor, 
         {icon ? (
           <div className="flex flex-col items-center">
             <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-3 font-orbitron",
-              playerColor === 'blue' ? 'border-player1 bg-player1/90 text-white' : 'border-player2 bg-player2/90 text-white',
+              "w-8 h-8 rounded-full border-3 font-orbitron overflow-hidden",
+              playerColor === 'blue' ? 'border-player1' : 'border-player2',
               isActiveIcon && 'border-active-turn shadow-lg shadow-active-turn/50 animate-pulse'
             )}>
-              {icon}
+              {iconPortrait ? (
+                <img 
+                  src={iconPortrait} 
+                  alt={icon}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className={cn(
+                  "w-full h-full flex items-center justify-center text-sm font-bold",
+                  playerColor === 'blue' ? 'bg-player1/90 text-white' : 'bg-player2/90 text-white'
+                )}>
+                  {icon}
+                </div>
+              )}
             </div>
           </div>
         ) : (

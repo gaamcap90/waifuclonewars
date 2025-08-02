@@ -283,10 +283,10 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Movement: {activeIcon.stats.movement}/{activeIcon.stats.moveRange}</span>
                   <div className="flex items-center gap-4">
-                    {/* Timer next to active character info */}
+                    {/* Timer next to active character info - made wider */}
                     <Card className="bg-background/80 backdrop-blur-sm border-border/50">
-                      <CardContent className="p-2">
-                        <div className="text-center">
+                      <CardContent className="p-3">
+                        <div className="text-center min-w-[80px]">
                           <div className="text-xs font-semibold">Timer</div>
                           <div className="text-lg font-bold">{currentTurnTimer}s</div>
                         </div>
