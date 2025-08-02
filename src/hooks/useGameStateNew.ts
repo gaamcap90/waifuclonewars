@@ -493,12 +493,12 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       }
 
       // Try to move the active icon - SIMPLIFIED MOVEMENT
-      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode && !clickedIcon) {
+      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode) {
         console.log('Attempting movement for activeIcon:', activeIcon.id);
         const distance = calculateDistance(activeIcon.position, coordinates);
-        console.log('Movement distance:', distance, 'moveRange:', activeIcon.stats.moveRange, 'actionTaken:', activeIcon.actionTaken);
+        console.log('Movement distance:', distance, 'moveRange:', activeIcon.stats.moveRange);
         
-        if (distance <= activeIcon.stats.moveRange && !activeIcon.actionTaken) {
+        if (distance <= activeIcon.stats.moveRange) {
           // Check if destination is not occupied
           const occupied = prev.players
             .flatMap(p => p.icons)
@@ -518,7 +518,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                 ...player,
                 icons: player.icons.map(icon => 
                   icon.id === activeIcon.id 
-                    ? { ...icon, position: coordinates, actionTaken: true }
+                    ? { ...icon, position: coordinates, movedThisTurn: true }
                     : icon
                 )
               })),
@@ -533,6 +533,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   }, []);
 
   const useAbility = useCallback((abilityId: string) => {
+    console.log('useAbility called - DISABLED FOR TESTING');
+    return; // Early return to disable abilities
     setGameState(prev => {
       const activeIcon = prev.players
         .flatMap(p => p.icons)
@@ -634,6 +636,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   }, []);
 
   const basicAttack = useCallback(() => {
+    console.log('basicAttack called - DISABLED FOR TESTING');
+    return; // Early return to disable basic attack
     setGameState(prev => {
       const activeIcon = prev.players
         .flatMap(p => p.icons)
