@@ -18,6 +18,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ["Exo 2", "sans-serif"],
+				orbitron: ["Orbitron", "monospace"],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -81,7 +85,11 @@ export default {
 					crystal: 'hsl(var(--terrain-crystal))',
 					beast: 'hsl(var(--terrain-beast))'
 				},
-				'active-turn': 'hsl(var(--active-turn))'
+				'active-turn': 'hsl(var(--active-turn))',
+				'alien-purple': 'hsl(var(--alien-purple))',
+				'alien-green': 'hsl(var(--alien-green))',
+				'mana-blue': 'hsl(var(--mana-blue))',
+				'arena-glow': 'hsl(var(--arena-glow))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

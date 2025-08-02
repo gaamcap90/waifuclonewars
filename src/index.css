@@ -71,7 +71,7 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 240 15% 8%; /* Dark alien arena theme */
     --foreground: 210 40% 98%;
 
     --card: 222.2 84% 4.9%;
@@ -121,6 +121,12 @@ All colors MUST be HSL.
     --terrain-crystal: 270 60% 50%; /* Darker purple */
     --terrain-beast: 15 60% 40%; /* Darker red-orange */
     --active-turn: 60 100% 70%; /* Bright yellow highlight */
+    
+    /* New alien theme colors */
+    --alien-purple: 280 100% 70%;
+    --alien-green: 120 100% 50%;
+    --mana-blue: 200 100% 70%;
+    --arena-glow: 45 100% 50%;
   }
 }
 

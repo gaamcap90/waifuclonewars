@@ -24,6 +24,9 @@ export interface Icon {
     maxHp: number;
     moveRange: number;
     speed: number; // For turn queue
+    might: number; // Physical attack power
+    power: number; // Magical/ability power  
+    defense: number; // Damage reduction
   };
   abilities: Ability[];
   passive: string;

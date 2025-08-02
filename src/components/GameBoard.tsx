@@ -59,16 +59,20 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       const isTargetable = gameState.targetingMode && activeIcon ? 
         calculateDistance(activeIcon.position, tile.coordinates) <= gameState.targetingMode.range : false;
 
-      const handleTerrainClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
+      const handleTerrainHover = (e: React.MouseEvent) => {
         setTooltipState({
           visible: true,
           terrain: tile.terrain,
           position: { x: e.clientX, y: e.clientY }
         });
-        setTimeout(() => {
-          setTooltipState(prev => ({ ...prev, visible: false }));
-        }, 3000);
+      };
+
+      const handleTerrainLeave = () => {
+        setTooltipState({
+          visible: false,
+          terrain: null,
+          position: { x: 0, y: 0 }
+        });
       };
 
       return (
@@ -80,16 +84,20 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             top: y + (boardHeight * hexSize * 0.7),
           }}
         >
-          <HexTile
-            tile={tile}
-            onClick={() => onTileClick(tile.coordinates)}
-            onTerrainClick={handleTerrainClick}
-            icon={icon ? icon.name.charAt(0) : undefined}
-            size={hexSize}
-            playerColor={playerColor}
-            isActiveIcon={isActiveIcon}
-            isTargetable={isTargetable}
-          />
+          <div
+            onMouseEnter={handleTerrainHover}
+            onMouseLeave={handleTerrainLeave}
+          >
+            <HexTile
+              tile={tile}
+              onClick={() => onTileClick(tile.coordinates)}
+              icon={icon ? icon.name.charAt(0) : undefined}
+              size={hexSize}
+              playerColor={playerColor}
+              isActiveIcon={isActiveIcon}
+              isTargetable={isTargetable}
+            />
+          </div>
         </div>
       );
     });

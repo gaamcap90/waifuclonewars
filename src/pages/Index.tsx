@@ -1,6 +1,6 @@
 import { useState } from "react";
 import GameBoard from "@/components/GameBoard";
-import HorizontalGameUI from "@/components/HorizontalGameUI";
+import NewGameUI from "@/components/NewGameUI";
 import MainMenu from "@/components/MainMenu";
 import useGameState from "@/hooks/useGameStateNew";
 
@@ -22,8 +22,8 @@ const Index = () => {
     <div className="min-h-screen bg-background p-4">
       <div className="container mx-auto max-w-7xl space-y-4">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-foreground">Icons of Theia</h1>
-          <p className="text-muted-foreground">Turn {gameState.currentTurn} | {gameMode === 'singleplayer' ? 'vs AI' : 'Local Multiplayer'}</p>
+          <h1 className="text-4xl font-bold text-arena-glow font-orbitron">WAIFU CLONE WARS</h1>
+          <p className="text-alien-purple font-orbitron">Turn {gameState.currentTurn} | {gameMode === 'singleplayer' ? 'vs Znyxorgan AI' : 'Local Arena Battle'}</p>
         </div>
         
         {/* Game Board */}
@@ -31,8 +31,8 @@ const Index = () => {
           <GameBoard gameState={gameState} onTileClick={selectTile} />
         </div>
         
-        {/* Horizontal UI */}
-        <HorizontalGameUI 
+        {/* New Game UI */}
+        <NewGameUI 
           gameState={gameState}
           onBasicAttack={basicAttack}
           onUseAbility={useAbility}

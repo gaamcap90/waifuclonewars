@@ -100,13 +100,14 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, size = 40, playerColor, 
       
       <div className="absolute inset-0 flex items-center justify-center">
         {icon ? (
-          <div className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2",
-            getIconColor(),
-            isActiveIcon && 'border-active-turn animate-pulse',
-            !isActiveIcon && 'border-transparent'
-          )}>
-            {icon}
+          <div className="flex flex-col items-center">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-3 font-orbitron",
+              playerColor === 'blue' ? 'border-player1 bg-player1/90 text-white' : 'border-player2 bg-player2/90 text-white',
+              isActiveIcon && 'border-active-turn shadow-lg shadow-active-turn/50 animate-pulse'
+            )}>
+              {icon}
+            </div>
           </div>
         ) : (
           getTerrainIcon()
