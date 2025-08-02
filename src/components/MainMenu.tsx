@@ -17,8 +17,8 @@ const MainMenu = ({ onStartGame }: MainMenuProps) => {
         <CardContent className="space-y-4">
           <Button 
             onClick={() => onStartGame('singleplayer')}
-            className="w-full h-12 text-lg font-orbitron bg-alien-purple hover:bg-alien-purple/80"
-            variant="default"
+            className="w-full h-12 text-lg font-orbitron border-alien-green text-alien-green hover:bg-alien-green/10"
+            variant="outline"
           >
             🤖 Single Player (vs Znyxorgan AI)
           </Button>

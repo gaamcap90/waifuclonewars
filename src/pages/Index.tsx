@@ -23,11 +23,16 @@ const Index = () => {
     setShowEscapeMenu(false);
   };
 
-  // ESC key handler
+  // ESC key handler - pauses game automatically in single player
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && gameMode !== 'menu') {
-        setShowEscapeMenu(prev => !prev);
+        // Auto-pause in single player, just show menu in multiplayer
+        if (gameMode === 'singleplayer') {
+          setShowEscapeMenu(true);
+        } else {
+          setShowEscapeMenu(prev => !prev);
+        }
       }
     };
 
