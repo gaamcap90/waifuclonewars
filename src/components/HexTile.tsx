@@ -73,7 +73,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, size = 40, playerColor, 
   return (
     <div
       className="relative cursor-pointer transform hover:scale-105 transition-transform"
-      onClick={icon ? onClick : onTerrainClick}
+      onClick={onClick}
       onContextMenu={handleTerrainClick}
       style={{
         width: size * 2,
