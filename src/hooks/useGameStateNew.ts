@@ -478,7 +478,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       }
 
       // Try to move the active icon - only if it's their turn and has movement points
-      if (activeIcon && activeIcon.id === prev.activeIconId && activeIcon.stats.movement > 0) {
+      if (activeIcon && activeIcon.id === prev.activeIconId && activeIcon.stats.movement > 0 && !prev.targetingMode) {
         const distance = calculateDistance(activeIcon.position, coordinates);
         if (distance <= activeIcon.stats.movement && isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
           // Check if destination is not occupied
@@ -550,7 +550,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             return { ...icon, actionTaken: false, movedThisTurn: false, stats: { ...icon.stats, movement: 2 } };
           }
           
-          // Handle respawn countdown
+          // Handle respawn countdown on every turn completion
           if (!icon.isAlive && icon.respawnTurns > 0) {
             return { ...icon, respawnTurns: icon.respawnTurns - 1 };
           }
@@ -558,6 +558,21 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           return icon;
         })
       }));
+
+      // Update speed queue to only include alive characters
+      const aliveIcons = updatedPlayers.flatMap(p => p.icons).filter(icon => icon.isAlive);
+      const newSpeedQueue = aliveIcons
+        .sort((a, b) => b.stats.speed - a.stats.speed)
+        .map(icon => icon.id);
+      
+      // Find next valid icon in queue
+      let actualNextIndex = nextQueueIndex;
+      if (newSpeedQueue.length > 0) {
+        while (actualNextIndex < newSpeedQueue.length && !aliveIcons.find(i => i.id === newSpeedQueue[actualNextIndex])) {
+          actualNextIndex = (actualNextIndex + 1) % newSpeedQueue.length;
+        }
+        if (actualNextIndex >= newSpeedQueue.length) actualNextIndex = 0;
+      }
 
       // Check for victory conditions
       const updatedBaseHealth = [...prev.baseHealth];
@@ -578,8 +593,9 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       return {
         ...prev,
         players: updatedPlayers,
-        queueIndex: nextQueueIndex,
-        activeIconId: prev.speedQueue[nextQueueIndex],
+        speedQueue: newSpeedQueue,
+        queueIndex: actualNextIndex,
+        activeIconId: newSpeedQueue[actualNextIndex],
         currentTurn: newTurn,
         selectedIcon: undefined,
         targetingMode: undefined,

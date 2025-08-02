@@ -85,17 +85,6 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
           </CardContent>
         </Card>
 
-        {/* Match Timer */}
-        <Card className="border-alien-green/30">
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-sm text-alien-green">Match</div>
-              <div className="text-lg font-bold text-alien-green">
-                {formatTime(gameState.matchTimer)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Objectives Row */}
@@ -164,14 +153,39 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {gameState.players[0].icons.map(icon => (
-                  <div key={icon.id} className="flex justify-between items-center text-sm">
-                    <span className={icon.id === gameState.activeIconId ? "font-bold text-alien-green" : ""}>
-                      {icon.name}
-                    </span>
-                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                  </div>
-                ))}
+                {gameState.players[0].icons.map(icon => {
+                  if (!icon.isAlive) {
+                    return (
+                      <div key={icon.id} className="flex justify-between items-center text-sm text-red-400">
+                        <span>
+                          {icon.name} - Respawn in {icon.respawnTurns} turns
+                        </span>
+                        {icon.respawnTurns === 0 && (
+                          <span className="text-alien-green cursor-pointer">Click to respawn</span>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={icon.id} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-6 h-6 rounded-full bg-player1/20 border border-player1 flex items-center justify-center text-xs cursor-pointer hover:bg-player1/40"
+                          onClick={() => {/* TODO: Open character sheet */}}
+                        >
+                          {icon.name.charAt(0)}
+                        </div>
+                        <span className={icon.id === gameState.activeIconId ? "font-bold text-alien-green" : ""}>
+                          {icon.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">{icon.stats.hp}/{icon.stats.maxHp}</span>
+                        <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -305,14 +319,39 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {gameState.players[1].icons.map(icon => (
-                  <div key={icon.id} className="flex justify-between items-center text-sm">
-                    <span className={icon.id === gameState.activeIconId ? "font-bold text-alien-green" : ""}>
-                      {icon.name}
-                    </span>
-                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                  </div>
-                ))}
+                {gameState.players[1].icons.map(icon => {
+                  if (!icon.isAlive) {
+                    return (
+                      <div key={icon.id} className="flex justify-between items-center text-sm text-red-400">
+                        <span>
+                          {icon.name} - Respawn in {icon.respawnTurns} turns
+                        </span>
+                        {icon.respawnTurns === 0 && (
+                          <span className="text-alien-green cursor-pointer">Click to respawn</span>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={icon.id} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-6 h-6 rounded-full bg-player2/20 border border-player2 flex items-center justify-center text-xs cursor-pointer hover:bg-player2/40"
+                          onClick={() => {/* TODO: Open character sheet */}}
+                        >
+                          {icon.name.charAt(0)}
+                        </div>
+                        <span className={icon.id === gameState.activeIconId ? "font-bold text-alien-green" : ""}>
+                          {icon.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">{icon.stats.hp}/{icon.stats.maxHp}</span>
+                        <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

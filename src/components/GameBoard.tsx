@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { GameState, Coordinates, HexTile as HexTileType } from "@/types/game";
 import HexTile from "./HexTile";
 import TerrainTooltip from "./TerrainTooltip";
+import HPBar from "./HPBar";
 
 interface GameBoardProps {
   gameState: GameState;
@@ -21,6 +22,11 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
     terrain: null,
     position: { x: 0, y: 0 }
   });
+  
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const boardRef = useRef<HTMLDivElement>(null);
 
   const calculateDistance = (from: Coordinates, to: Coordinates): number => {
     return Math.max(
@@ -58,6 +64,12 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       // Check if tile is targetable in targeting mode
       const isTargetable = gameState.targetingMode && activeIcon ? 
         calculateDistance(activeIcon.position, tile.coordinates) <= gameState.targetingMode.range : false;
+        
+      // Check if tile is valid for movement (only when active icon is selected and no targeting)
+      const isValidMovement = !gameState.targetingMode && activeIcon && activeIcon.id === gameState.activeIconId && activeIcon.stats.movement > 0 ?
+        calculateDistance(activeIcon.position, tile.coordinates) <= activeIcon.stats.movement && 
+        !gameState.players.flatMap(p => p.icons).some(i => i.position.q === tile.coordinates.q && i.position.r === tile.coordinates.r && i.isAlive) &&
+        tile.terrain.effects.movementModifier !== -999 : false;
 
       const handleTerrainHover = (e: React.MouseEvent) => {
         // Only show tooltip if no character on tile and no targeting mode
@@ -99,17 +111,43 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
               playerColor={playerColor}
               isActiveIcon={isActiveIcon}
               isTargetable={isTargetable}
+              isValidMovement={isValidMovement}
             />
+            {/* HP Bar under character */}
+            {icon && (
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1">
+                <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+              </div>
+            )}
           </div>
         </div>
       );
     });
   }, [gameState.board, gameState.players, gameState.activeIconId, gameState.targetingMode, hexSize]);
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPanOffset({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
   return (
     <div className="relative flex justify-center">
       <div 
-        className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden"
+        ref={boardRef}
+        className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden cursor-grab"
         style={{
           width: '800px',
           height: '600px',
@@ -119,6 +157,10 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             radial-gradient(circle at 40% 60%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)
           `,
         }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
         onClick={() => setTooltipState(prev => ({ ...prev, visible: false }))}
       >
         {/* Alien audience background elements */}
@@ -130,7 +172,12 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         </div>
         
         <div className="relative w-full h-full flex items-center justify-center">
-          <div className="relative">
+          <div 
+            className="relative"
+            style={{
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
+            }}
+          >
             {renderBoard}
           </div>
         </div>
