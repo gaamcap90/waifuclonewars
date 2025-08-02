@@ -390,15 +390,22 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                   })
                 }));
               } else {
-                // Attack base
+                // Attack base - but only enemy base
                 const baseTile = prev.board.find(tile => 
                   tile.coordinates.q === coordinates.q && 
                   tile.coordinates.r === coordinates.r && 
                   tile.terrain.type === 'base'
                 );
                 if (baseTile) {
-                  const enemyPlayerId = activeIcon.playerId === 0 ? 1 : 0;
-                  updatedBaseHealth[enemyPlayerId] = Math.max(0, updatedBaseHealth[enemyPlayerId] - 1);
+                  // Determine which base this is based on coordinates
+                  const isPlayer1Base = coordinates.q === -6 && coordinates.r === 5;
+                  const isPlayer2Base = coordinates.q === 6 && coordinates.r === -5;
+                  
+                  // Only allow attacking enemy base
+                  if ((activeIcon.playerId === 0 && isPlayer2Base) || (activeIcon.playerId === 1 && isPlayer1Base)) {
+                    const enemyPlayerId = activeIcon.playerId === 0 ? 1 : 0;
+                    updatedBaseHealth[enemyPlayerId] = Math.max(0, updatedBaseHealth[enemyPlayerId] - 1);
+                  }
                 }
               }
             } else {

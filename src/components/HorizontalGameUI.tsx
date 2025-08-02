@@ -102,17 +102,6 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
               </div>
             </CardContent>
           </Card>
-          
-          {/* End Turn Button below Turn Number */}
-          <div className="flex justify-center mt-2">
-            <Button 
-              onClick={onEndTurn} 
-              size="lg" 
-              className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-2 text-lg shadow-lg border-2 border-red-400"
-            >
-              End Turn
-            </Button>
-          </div>
        </div>
 
       {/* Top Center: Turn Queue */}
@@ -154,10 +143,21 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
             </CardContent>
           </Card>
         </div>
+        
+        {/* End Turn Button below Turn Queue */}
+        <div className="flex justify-center mt-2">
+          <Button 
+            onClick={onEndTurn} 
+            size="lg" 
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-2 text-lg shadow-lg border-2 border-red-400"
+          >
+            End Turn
+          </Button>
+        </div>
       </div>
 
 
-      {/* Center Left: Player 1 - Expanded Width */}
+      {/* Center Left: Player 1 - Same size as Player 2 */}
       <div className="absolute top-1/2 left-4 transform -translate-y-1/2 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
           <CardHeader className="pb-2">
@@ -296,11 +296,11 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                               size="sm"
                               variant={gameState.targetingMode?.abilityId === ability.id ? "default" : "outline"}
                               className={`flex items-center gap-2 ${
-                                ability.name.toLowerCase().includes('ultimate') ? "bg-red-600 hover:bg-red-700" : ""
+                                ability.name.toLowerCase().includes('ultimate') ? "bg-red-600 hover:bg-red-700 text-white" : ""
                               }`}
                             >
                               <IconComponent className="w-4 h-4" />
-                              {ability.name.slice(0, 8)} ({ability.manaCost})
+                              {ability.name.toLowerCase().includes('ultimate') ? 'Ultimate' : ability.name.slice(0, 8)} ({ability.manaCost})
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
