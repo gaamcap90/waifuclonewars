@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Sparkles, Crown, Swords, Zap, Shield, Target } from "lucide-react";
 import HPBar from "./HPBar";
+import CharacterDetailPopup from "./CharacterDetailPopup";
 
 interface HorizontalGameUIProps {
   gameState: GameState;
@@ -15,7 +16,7 @@ interface HorizontalGameUIProps {
 }
 
 const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: HorizontalGameUIProps) => {
-  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  const [selectedCharacter, setSelectedCharacter] = useState<{id: string, position: {x: number, y: number}} | null>(null);
   
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
@@ -85,8 +86,8 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
         </Card>
       </div>
 
-      {/* Top Center: Turn Queue and Timer */}
-      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
+      {/* Top Center: Turn Queue */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
         <div className="flex items-center gap-4">
           <Card className="bg-background/80 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
@@ -113,28 +114,33 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
             </CardContent>
           </Card>
           
+          {/* Timer beside Turn Queue */}
           <Card className="bg-background/80 backdrop-blur-sm border-border/50">
             <CardContent className="p-4">
               <div className="text-center">
                 <div className="text-sm font-semibold">Timer</div>
-                <div className="text-lg">{formatTime(gameState.matchTimer)}</div>
+                <div className="text-xl font-bold">{formatTime(gameState.matchTimer)}</div>
               </div>
             </CardContent>
           </Card>
         </div>
         
-        {/* End Turn Button below Turn Queue */}
-        <div className="flex justify-center mt-2">
-          <Button onClick={onEndTurn} size="sm" variant="outline" className="bg-primary">
+        {/* End Turn Button underneath Turn Queue - More Visible */}
+        <div className="flex justify-center mt-3">
+          <Button 
+            onClick={onEndTurn} 
+            size="lg" 
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-2 text-lg shadow-lg"
+          >
             End Turn
           </Button>
         </div>
       </div>
 
 
-      {/* Center Left: Player 1 */}
+      {/* Center Left: Player 1 - Expanded Width */}
       <div className="absolute top-1/2 left-4 transform -translate-y-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-player1">Player 1 (Blue)</CardTitle>
             <div className="text-sm">Mana: {gameState.globalMana[0]}/20 (+1/turn)</div>
@@ -146,7 +152,13 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                 {gameState.players[0].icons.map(icon => (
                   <div key={icon.id} className="text-center">
                     <button
-                      onClick={() => setSelectedCharacter(selectedCharacter === icon.id ? null : icon.id)}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setSelectedCharacter({
+                          id: icon.id,
+                          position: { x: rect.left + rect.width / 2, y: rect.top }
+                        });
+                      }}
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
                         icon.playerId === 0 ? "border-blue-400 bg-blue-500/90 text-white hover:bg-blue-600/90" : ""
                       } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
@@ -158,32 +170,14 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                   </div>
                 ))}
               </div>
-              
-              {selectedCharacter && (
-                <div className="border-t pt-2 text-sm">
-                  {(() => {
-                    const char = gameState.players[0].icons.find(i => i.id === selectedCharacter);
-                    if (!char) return null;
-                    return (
-                      <div>
-                        <div className="font-semibold">{char.name}</div>
-                        <div>Might: {char.stats.might}</div>
-                        <div>Power: {char.stats.power}</div>
-                        <div>Defense: {char.stats.defense}</div>
-                        <div>Speed: {char.stats.speed}</div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Center Right: Player 2 */}
+      {/* Center Right: Player 2 - Expanded Width */}
       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-player2">Player 2 (Red)</CardTitle>
             <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
@@ -195,7 +189,13 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                 {gameState.players[1].icons.map(icon => (
                   <div key={icon.id} className="text-center">
                     <button
-                      onClick={() => setSelectedCharacter(selectedCharacter === icon.id ? null : icon.id)}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setSelectedCharacter({
+                          id: icon.id,
+                          position: { x: rect.left + rect.width / 2, y: rect.top }
+                        });
+                      }}
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
                         icon.playerId === 1 ? "border-red-400 bg-red-500/90 text-white hover:bg-red-600/90" : ""
                       } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
@@ -207,24 +207,6 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                   </div>
                 ))}
               </div>
-              
-              {selectedCharacter && (
-                <div className="border-t pt-2 text-sm">
-                  {(() => {
-                    const char = gameState.players[1].icons.find(i => i.id === selectedCharacter);
-                    if (!char) return null;
-                    return (
-                      <div>
-                        <div className="font-semibold">{char.name}</div>
-                        <div>Might: {char.stats.might}</div>
-                        <div>Power: {char.stats.power}</div>
-                        <div>Defense: {char.stats.defense}</div>
-                        <div>Speed: {char.stats.speed}</div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -310,6 +292,23 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           </CardContent>
         </Card>
       </div>
+      
+      {/* Character Detail Popup */}
+      {selectedCharacter && (() => {
+        const character = gameState.players
+          .flatMap(p => p.icons)
+          .find(icon => icon.id === selectedCharacter.id);
+        
+        if (!character) return null;
+        
+        return (
+          <CharacterDetailPopup
+            character={character}
+            onClose={() => setSelectedCharacter(null)}
+            position={selectedCharacter.position}
+          />
+        );
+      })()}
     </>
   );
 };
