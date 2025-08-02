@@ -363,11 +363,29 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     });
   }, []);
 
+  const useAbility = useCallback((abilityId: string) => {
+    console.log('useAbility called with:', abilityId);
+    // Simple implementation for now
+  }, []);
+
+  const selectIcon = useCallback((iconId: string) => {
+    console.log('selectIcon called with:', iconId);
+    setGameState(prev => ({
+      ...prev,
+      selectedIcon: iconId
+    }));
+  }, []);
+
+  const currentTurnTimer = 30; // Fixed timer for now
+
   return {
     gameState,
     selectTile,
     endTurn,
     basicAttack,
+    useAbility,
+    currentTurnTimer,
+    selectIcon,
   };
 };
 

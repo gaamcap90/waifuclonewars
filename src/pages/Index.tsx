@@ -3,7 +3,7 @@ import GameBoard from "@/components/GameBoard";
 import GameUI from "@/components/GameUI";
 import VictoryScreen from "@/components/VictoryScreen";
 import MainMenu from "@/components/MainMenu";
-import useGameState from "@/hooks/useGameStateNew";
+import useGameState from "@/hooks/useGameState";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'singleplayer' | 'multiplayer'>('menu');
