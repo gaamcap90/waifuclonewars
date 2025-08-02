@@ -492,8 +492,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         };
       }
 
-      // Try to move the active icon - SIMPLIFIED MOVEMENT
-      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode) {
+      // Try to move the active icon - check if allowed to move
+      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode && !activeIcon.movedThisTurn) {
         console.log('Attempting movement for activeIcon:', activeIcon.id);
         const distance = calculateDistance(activeIcon.position, coordinates);
         console.log('Movement distance:', distance, 'moveRange:', activeIcon.stats.moveRange);
@@ -533,8 +533,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   }, []);
 
   const useAbility = useCallback((abilityId: string) => {
-    console.log('useAbility called - DISABLED FOR TESTING');
-    return; // Early return to disable abilities
     setGameState(prev => {
       const activeIcon = prev.players
         .flatMap(p => p.icons)
@@ -636,8 +634,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   }, []);
 
   const basicAttack = useCallback(() => {
-    console.log('basicAttack called - DISABLED FOR TESTING');
-    return; // Early return to disable basic attack
     setGameState(prev => {
       const activeIcon = prev.players
         .flatMap(p => p.icons)
