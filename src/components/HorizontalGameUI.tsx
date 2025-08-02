@@ -173,7 +173,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
       <div className="absolute top-1/2 left-4 transform -translate-y-1/2 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-player1">Player 1 (Blue)</CardTitle>
+            <CardTitle className="text-player1">{gameState.players[0].name} (Blue)</CardTitle>
             <div className="text-sm">Mana: {gameState.globalMana[0]}/20 (+1/turn)</div>
             <div className="text-sm">Base HP: {gameState.baseHealth[0]}/5</div>
           </CardHeader>
@@ -230,7 +230,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-player2">Player 2 (Red)</CardTitle>
+            <CardTitle className="text-player2">{gameState.players[1].name} (Red)</CardTitle>
             <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
             <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
           </CardHeader>

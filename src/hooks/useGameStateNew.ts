@@ -337,7 +337,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       phase: 'combat',
       players: [
         { id: 0, name: "Player 1", icons: initialIcons.filter(i => i.playerId === 0), color: "blue", isAI: false },
-        { id: 1, name: "Player 2", icons: initialIcons.filter(i => i.playerId === 1), color: "red", isAI: gameMode === 'singleplayer' }
+        { id: 1, name: gameMode === 'singleplayer' ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter(i => i.playerId === 1), color: "red", isAI: gameMode === 'singleplayer' }
       ],
       board: createInitialBoard(),
       globalMana: [15, 15],
@@ -377,7 +377,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     setCurrentTurnTimer(20);
   }, [gameState.activeIconId]);
 
-  // Handle AI turns
+  // Handle AI turns - only in single player mode
   useEffect(() => {
     if (gameState.gameMode === 'singleplayer' && gameState.phase === 'combat') {
       const activeIcon = gameState.players
