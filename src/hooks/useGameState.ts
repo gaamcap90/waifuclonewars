@@ -196,7 +196,15 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       queueIndex: 0,
       objectives: {
         manaCrystal: { controlled: false },
-        beastCamp: { defeated: false, buffApplied: false }
+        beastCamps: { 
+          hp: [75, 75], 
+          maxHp: 75,
+          defeated: [false, false]
+        }
+      },
+      teamBuffs: {
+        mightBonus: [0, 0],
+        powerBonus: [0, 0]
       },
       baseHealth: [10, 10],
       matchTimer: 0, // Timer in seconds

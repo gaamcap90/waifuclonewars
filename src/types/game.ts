@@ -76,7 +76,15 @@ export interface GameState {
   queueIndex: number;
   objectives: {
     manaCrystal: { controlled: boolean; player?: number };
-    beastCamp: { defeated: boolean; buffApplied: boolean };
+    beastCamps: { 
+      hp: number[]; // HP for each beast camp [camp1, camp2]
+      maxHp: number;
+      defeated: boolean[];
+    };
+  };
+  teamBuffs: {
+    mightBonus: number[]; // % bonus for each player [player1, player2]
+    powerBonus: number[]; // % bonus for each player
   };
   baseHealth: number[];
   matchTimer: number; // In seconds (600 = 10 minutes)

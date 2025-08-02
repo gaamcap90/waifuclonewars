@@ -93,9 +93,9 @@ const NewGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: NewGam
                 <Tooltip>
                   <TooltipTrigger>
                     <div className="text-center">
-                      <div className="font-semibold font-orbitron">👹 Beast Camp</div>
-                      <div className={gameState.objectives.beastCamp.defeated ? "text-alien-green" : "text-gray-500"}>
-                        {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                      <div className="font-semibold font-orbitron">👹 Beast Camps</div>
+                      <div className={gameState.objectives.beastCamps.defeated.some(d => d) ? "text-alien-green" : "text-gray-500"}>
+                        {gameState.objectives.beastCamps.defeated.every(d => d) ? "All Cleared" : `${gameState.objectives.beastCamps.defeated.filter(d => d).length}/2 Cleared`}
                       </div>
                     </div>
                   </TooltipTrigger>
@@ -274,7 +274,7 @@ const NewGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: NewGam
       </div>
 
       {/* Character Panel */}
-      <CharacterPanel character={selectedCharacter} visible={!!selectedCharacter} />
+      <CharacterPanel character={selectedCharacter} visible={!!selectedCharacter} gameState={gameState} />
     </div>
   );
 };

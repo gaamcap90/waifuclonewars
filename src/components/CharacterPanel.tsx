@@ -1,14 +1,21 @@
-import { Icon } from "@/types/game";
+import { Icon, GameState } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import HPBar from "./HPBar";
 
 interface CharacterPanelProps {
   character?: Icon;
   visible: boolean;
+  gameState?: GameState;
 }
 
-const CharacterPanel = ({ character, visible }: CharacterPanelProps) => {
+const CharacterPanel = ({ character, visible, gameState }: CharacterPanelProps) => {
   if (!visible || !character) return null;
+
+  // Calculate buffed stats
+  const mightBonus = gameState?.teamBuffs.mightBonus[character.playerId] || 0;
+  const powerBonus = gameState?.teamBuffs.powerBonus[character.playerId] || 0;
+  const buffedMight = Math.floor(character.stats.might * (1 + mightBonus / 100));
+  const buffedPower = Math.floor(character.stats.power * (1 + powerBonus / 100));
 
   return (
     <div className="fixed bottom-4 left-4 w-80 z-40">
@@ -36,11 +43,27 @@ const CharacterPanel = ({ character, visible }: CharacterPanelProps) => {
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Might:</span>
-                <span className="text-red-400">{character.stats.might}</span>
+                <span className="text-red-400">
+                  {mightBonus > 0 ? (
+                    <>
+                      {character.stats.might} + <span className="text-green-400">{buffedMight - character.stats.might}</span>
+                    </>
+                  ) : (
+                    character.stats.might
+                  )}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Power:</span>
-                <span className="text-blue-400">{character.stats.power}</span>
+                <span className="text-blue-400">
+                  {powerBonus > 0 ? (
+                    <>
+                      {character.stats.power} + <span className="text-green-400">{buffedPower - character.stats.power}</span>
+                    </>
+                  ) : (
+                    character.stats.power
+                  )}
+                </span>
               </div>
             </div>
             <div className="space-y-1">

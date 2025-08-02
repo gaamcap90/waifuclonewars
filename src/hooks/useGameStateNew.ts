@@ -346,7 +346,15 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       queueIndex: 0,
       objectives: {
         manaCrystal: { controlled: false },
-        beastCamp: { defeated: false, buffApplied: false }
+        beastCamps: { 
+          hp: [75, 75], // Two beast camps with 75 HP each
+          maxHp: 75,
+          defeated: [false, false]
+        }
+      },
+      teamBuffs: {
+        mightBonus: [0, 0], // No buffs initially
+        powerBonus: [0, 0]
       },
       baseHealth: [5, 5],
       matchTimer: 600,
@@ -384,23 +392,42 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === gameState.activeIconId);
         
+      console.log('AI Turn check:', {
+        activeIconId: gameState.activeIconId,
+        activeIcon: activeIcon ? {
+          id: activeIcon.id,
+          name: activeIcon.name,
+          playerId: activeIcon.playerId,
+          isAlive: activeIcon.isAlive,
+          actionTaken: activeIcon.actionTaken,
+          movedThisTurn: activeIcon.movedThisTurn
+        } : null,
+        targetingMode: gameState.targetingMode
+      });
+        
       if (activeIcon?.playerId === 1 && activeIcon.isAlive) {
         const timer = setTimeout(() => {
-          // Check if AI is in targeting mode
+          console.log('AI Timer triggered');
+          
+          // Check if AI is in targeting mode - execute the attack/ability
           if (gameState.targetingMode && gameState.targetingMode.iconId === activeIcon.id) {
-            // AI executes attack automatically
+            console.log('AI in targeting mode, looking for targets');
+            
+            // Find best target
             const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
             const enemyBase = gameState.board.find(tile => 
               tile.terrain.type === 'base' && 
               tile.coordinates.q === -6 && tile.coordinates.r === 5
             );
             
-            // Priority: Attack characters first, then base
             let target = null;
+            
+            // Priority: Attack characters first, then base
             for (const enemy of enemyIcons) {
               const distance = calculateDistance(activeIcon.position, enemy.position);
               if (distance <= gameState.targetingMode.range) {
                 target = enemy.position;
+                console.log('AI targeting enemy:', enemy.name, 'at', target);
                 break;
               }
             }
@@ -409,32 +436,35 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               const distanceToBase = calculateDistance(activeIcon.position, enemyBase.coordinates);
               if (distanceToBase <= gameState.targetingMode.range) {
                 target = enemyBase.coordinates;
+                console.log('AI targeting base at', target);
               }
             }
             
             if (target) {
+              console.log('AI executing attack on', target);
               selectTile(target);
-              // End turn after attack
-              setTimeout(() => {
-                endTurn();
-              }, 1000);
-              return;
+              return; // The selectTile will handle ending the turn
             }
           }
           
-          // Regular AI move logic
-          if (!activeIcon.actionTaken && (!activeIcon.movedThisTurn || activeIcon.stats.movement > 0)) {
+          // If no targeting mode, check if AI can act
+          if (!activeIcon.actionTaken) {
+            console.log('AI making move decision');
             const aiMove = makeAIMove(gameState);
+            console.log('AI move result:', aiMove);
+            
             if (Object.keys(aiMove).length > 0) {
               setGameState(prev => ({ ...prev, ...aiMove }));
               
-              // If AI is entering targeting mode, don't end turn - let targeting logic handle it
+              // If AI is entering targeting mode, don't end turn immediately
               if (aiMove.targetingMode) {
+                console.log('AI entering targeting mode');
                 return; // Let the targeting mode handle the turn ending
               }
               
-              // End turn after movement only
+              // End turn after movement
               setTimeout(() => {
+                console.log('AI ending turn after movement');
                 endTurn();
               }, 1000);
               return;
@@ -442,6 +472,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           }
           
           // End AI turn if nothing to do
+          console.log('AI ending turn - nothing to do');
           endTurn();
         }, 1500); // AI thinks for 1.5 seconds
         
@@ -589,15 +620,94 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                   }
                   
                   // Only allow attacking enemy base
-                  if ((activeIcon.playerId === 0 && isPlayer2Base) || (activeIcon.playerId === 1 && isPlayer1Base)) {
-                    const enemyPlayerId = activeIcon.playerId === 0 ? 1 : 0;
-                    updatedBaseHealth[enemyPlayerId] = Math.max(0, updatedBaseHealth[enemyPlayerId] - 1);
-                  }
-                } else {
-                  // Attacking empty terrain
-                  toast.error("No target to attack!");
-                  return prev;
-                }
+                   if ((activeIcon.playerId === 0 && isPlayer2Base) || (activeIcon.playerId === 1 && isPlayer1Base)) {
+                     const enemyPlayerId = activeIcon.playerId === 0 ? 1 : 0;
+                     updatedBaseHealth[enemyPlayerId] = Math.max(0, updatedBaseHealth[enemyPlayerId] - 1);
+                   }
+                 } else {
+                   // Check if attacking beast camp
+                   const beastCampTile = prev.board.find(tile => 
+                     tile.coordinates.q === coordinates.q && 
+                     tile.coordinates.r === coordinates.r && 
+                     tile.terrain.type === 'beast_camp'
+                   );
+                   
+                   if (beastCampTile) {
+                     // Determine which beast camp (0 for left, 1 for right)
+                     const campIndex = coordinates.q === -2 && coordinates.r === 2 ? 0 : 1;
+                     
+                     if (!prev.objectives.beastCamps.defeated[campIndex]) {
+                       // Attack beast camp
+                       const newHp = Math.max(0, prev.objectives.beastCamps.hp[campIndex] - damage);
+                       const newHpArray = [...prev.objectives.beastCamps.hp];
+                       const newDefeatedArray = [...prev.objectives.beastCamps.defeated];
+                       
+                       newHpArray[campIndex] = newHp;
+                       
+                       // Check if camp is defeated
+                       if (newHp <= 0 && !newDefeatedArray[campIndex]) {
+                         newDefeatedArray[campIndex] = true;
+                         
+                         // Apply 15% might and power buff to player's team
+                         const newMightBonus = [...prev.teamBuffs.mightBonus];
+                         const newPowerBonus = [...prev.teamBuffs.powerBonus];
+                         newMightBonus[activeIcon.playerId] = 15;
+                         newPowerBonus[activeIcon.playerId] = 15;
+                         
+                         toast.success(`Beast Camp defeated! Team gains +15% might and power!`);
+                         
+                         return {
+                           ...prev,
+                           targetingMode: undefined,
+                           players: prev.players.map(player => ({
+                             ...player,
+                             icons: player.icons.map(icon => 
+                               icon.id === activeIcon.id 
+                                 ? { ...icon, actionTaken: true }
+                                 : icon
+                             )
+                           })),
+                           objectives: {
+                             ...prev.objectives,
+                             beastCamps: {
+                               ...prev.objectives.beastCamps,
+                               hp: newHpArray,
+                               defeated: newDefeatedArray
+                             }
+                           },
+                           teamBuffs: {
+                             mightBonus: newMightBonus,
+                             powerBonus: newPowerBonus
+                           }
+                         };
+                       } else {
+                         return {
+                           ...prev,
+                           targetingMode: undefined,
+                           players: prev.players.map(player => ({
+                             ...player,
+                             icons: player.icons.map(icon => 
+                               icon.id === activeIcon.id 
+                                 ? { ...icon, actionTaken: true }
+                                 : icon
+                             )
+                           })),
+                           objectives: {
+                             ...prev.objectives,
+                             beastCamps: {
+                               ...prev.objectives.beastCamps,
+                               hp: newHpArray
+                             }
+                           }
+                         };
+                       }
+                     }
+                   } else {
+                     // Attacking empty terrain
+                     toast.error("No target to attack!");
+                     return prev;
+                   }
+                 }
               }
             } else {
               // Ability logic
@@ -864,7 +974,22 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         phase: newPhase,
         winner,
         globalMana: nextQueueIndex === 0 
-          ? prev.globalMana.map(mana => Math.min(mana + 1, 20)) // 1 mana per turn
+          ? prev.globalMana.map((mana, playerIndex) => {
+              // Base mana gain
+              let manaGain = 1;
+              
+              // Check if any player character is on mana crystal
+              const playerIcons = updatedPlayers[playerIndex].icons.filter(icon => icon.isAlive);
+              const hasCharacterOnCrystal = playerIcons.some(icon => 
+                icon.position.q === 0 && icon.position.r === 0
+              );
+              
+              if (hasCharacterOnCrystal) {
+                manaGain += 2; // +2 bonus from mana crystal
+              }
+              
+              return Math.min(mana + manaGain, 20);
+            })
           : prev.globalMana
       };
     });

@@ -66,8 +66,8 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
                   <TooltipTrigger>
                     <div className="text-center">
                       <div className="font-semibold text-red-400 text-xs">Beast Camp</div>
-                      <div className={`text-xs ${gameState.objectives.beastCamp.defeated ? "text-alien-green" : "text-gray-400"}`}>
-                        {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                      <div className={`text-xs ${gameState.objectives.beastCamps.defeated.some(d => d) ? "text-alien-green" : "text-gray-400"}`}>
+                        {gameState.objectives.beastCamps.defeated.every(d => d) ? "All Cleared" : `${gameState.objectives.beastCamps.defeated.filter(d => d).length}/2 Cleared`}
                       </div>
                     </div>
                   </TooltipTrigger>
@@ -132,7 +132,7 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
         <div className="w-64 space-y-2 flex-shrink-0">
           {/* Character Panel above if P1 character selected */}
           {selectedIcon && selectedIcon.playerId === 0 && (
-            <CharacterPanel character={selectedIcon} visible={true} />
+            <CharacterPanel character={selectedIcon} visible={true} gameState={gameState} />
           )}
           
           <Card className="border-player1/30">
@@ -194,7 +194,7 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
         <div className="w-64 space-y-2 flex-shrink-0">
           {/* Character Panel above if P2 character selected */}
           {selectedIcon && selectedIcon.playerId === 1 && (
-            <CharacterPanel character={selectedIcon} visible={true} />
+            <CharacterPanel character={selectedIcon} visible={true} gameState={gameState} />
           )}
           
           <Card className="border-player2/30">

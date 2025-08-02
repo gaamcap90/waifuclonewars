@@ -1,10 +1,12 @@
-import { TerrainType } from "@/types/game";
+import { TerrainType, GameState, Coordinates } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TerrainTooltipProps {
   terrain: TerrainType;
   position: { x: number; y: number };
   visible: boolean;
+  gameState?: GameState;
+  coordinates?: Coordinates;
 }
 
 const getTerrainDisplayName = (type: string): string => {
@@ -21,7 +23,7 @@ const getTerrainDisplayName = (type: string): string => {
   }
 };
 
-const getTerrainEffectsText = (terrain: TerrainType): string[] => {
+const getTerrainEffectsText = (terrain: TerrainType, gameState?: GameState, coordinates?: Coordinates): string[] => {
   const effects: string[] = [];
   
   if (terrain.effects.movementModifier) {
@@ -48,11 +50,28 @@ const getTerrainEffectsText = (terrain: TerrainType): string[] => {
   if (terrain.type === 'river') {
     effects.push('Impassable terrain');
   }
+  if (terrain.type === 'beast_camp' && gameState && coordinates) {
+    // Determine which beast camp
+    const campIndex = coordinates.q === -2 && coordinates.r === 2 ? 0 : 1;
+    const hp = gameState.objectives.beastCamps.hp[campIndex];
+    const maxHp = gameState.objectives.beastCamps.maxHp;
+    const isDefeated = gameState.objectives.beastCamps.defeated[campIndex];
+    
+    if (isDefeated) {
+      effects.push('✅ Defeated - Buffs active');
+    } else {
+      effects.push(`❤️ HP: ${hp}/${maxHp}`);
+      effects.push('🎯 Defeat for +15% team buffs');
+    }
+  }
+  if (terrain.type === 'mana_crystal') {
+    effects.push('💎 +2 mana while occupied');
+  }
   
   return effects.length > 0 ? effects : ['No special effects'];
 };
 
-const TerrainTooltip = ({ terrain, position, visible }: TerrainTooltipProps) => {
+const TerrainTooltip = ({ terrain, position, visible, gameState, coordinates }: TerrainTooltipProps) => {
   if (!visible) return null;
 
   return (
@@ -71,7 +90,7 @@ const TerrainTooltip = ({ terrain, position, visible }: TerrainTooltipProps) => 
         </CardHeader>
         <CardContent className="pt-0">
           <div className="text-xs text-muted-foreground space-y-1">
-            {getTerrainEffectsText(terrain).map((effect, index) => (
+            {getTerrainEffectsText(terrain, gameState, coordinates).map((effect, index) => (
               <div key={index}>{effect}</div>
             ))}
           </div>

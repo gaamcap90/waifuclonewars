@@ -97,11 +97,11 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                 <Tooltip>
                   <TooltipTrigger>
                      <div className="text-center p-2 rounded border flex items-center gap-2">
-                       <Crown className={`w-4 h-4 ${gameState.objectives.beastCamp.defeated ? "text-yellow-400" : "text-red-400"}`} />
-                       <div>
-                         <div className="font-semibold">Beast Camp</div>
-                         <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
-                           {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                        <Crown className={`w-4 h-4 ${gameState.objectives.beastCamps.defeated.some(d => d) ? "text-yellow-400" : "text-red-400"}`} />
+                        <div>
+                          <div className="font-semibold">Beast Camps</div>
+                          <div className={gameState.objectives.beastCamps.defeated.some(d => d) ? "text-green-500" : "text-gray-500"}>
+                            {gameState.objectives.beastCamps.defeated.every(d => d) ? "All Cleared" : `${gameState.objectives.beastCamps.defeated.filter(d => d).length}/2 Cleared`}
                          </div>
                        </div>
                      </div>
