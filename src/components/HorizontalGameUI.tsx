@@ -30,7 +30,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
   const formatTime = (seconds: number) => {
     // Show 30-second countdown per turn
     const turnTimeLeft = 30 - (seconds % 30);
-    return turnTimeLeft === 0 ? "30s" : `${turnTimeLeft}s`;
+    return `${turnTimeLeft}s`;
   };
 
   const getCurrentTurn = () => {
@@ -241,7 +241,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
             {activeIcon && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Movement: {activeIcon.stats.movement}/{activeIcon.stats.movement}</span>
+                  <span className="text-sm">Movement: {activeIcon.movedThisTurn ? 0 : activeIcon.stats.movement}/{activeIcon.stats.movement}</span>
                   <Button 
                     size="sm" 
                     variant="outline"
@@ -249,7 +249,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                       // TODO: Implement undo movement functionality
                       console.log('Undo movement clicked');
                     }}
-                    disabled={true}
+                    disabled={!activeIcon.movedThisTurn}
                   >
                     Undo Movement
                   </Button>
