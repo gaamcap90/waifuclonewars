@@ -715,6 +715,42 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     });
   }, []);
 
+  const undoMovement = useCallback(() => {
+    setGameState(prev => {
+      const activeIcon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === prev.activeIconId);
+
+      if (!activeIcon || !activeIcon.movedThisTurn || activeIcon.actionTaken) {
+        return prev;
+      }
+
+      // Reset to original spawn position
+      const player1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
+      const player2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
+      const iconIndex = parseInt(activeIcon.id.split('-')[1]);
+      const spawns = activeIcon.playerId === 0 ? player1Spawns : player2Spawns;
+      const originalPosition = spawns[iconIndex];
+
+      return {
+        ...prev,
+        players: prev.players.map(player => ({
+          ...player,
+          icons: player.icons.map(icon => 
+            icon.id === activeIcon.id 
+              ? { 
+                  ...icon, 
+                  position: originalPosition, 
+                  movedThisTurn: false,
+                  stats: { ...icon.stats, movement: icon.stats.moveRange }
+                }
+              : icon
+          )
+        }))
+      };
+    });
+  }, []);
+
   const selectIcon = useCallback((iconId: string) => {
     setGameState(prev => ({
       ...prev,
@@ -731,6 +767,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     respawnCharacter,
     currentTurnTimer,
     selectIcon,
+    undoMovement,
   };
 };
 

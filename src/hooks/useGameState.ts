@@ -377,6 +377,34 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     }));
   }, []);
 
+  const undoMovement = useCallback(() => {
+    setGameState(prev => {
+      const activeIcon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === prev.activeIconId);
+
+      if (!activeIcon || !activeIcon.movedThisTurn || activeIcon.actionTaken) return prev;
+
+      // Find the icon's original position (stored before movement)
+      // For now, we'll reset to the spawn area - in a real game you'd store previous position
+      const originalPosition = activeIcon.playerId === 0 
+        ? { q: -5, r: 4 - parseInt(activeIcon.id.split('-')[1]) } 
+        : { q: 5, r: -4 + parseInt(activeIcon.id.split('-')[1]) };
+
+      return {
+        ...prev,
+        players: prev.players.map(player => ({
+          ...player,
+          icons: player.icons.map(icon => 
+            icon.id === activeIcon.id 
+              ? { ...icon, position: originalPosition, movedThisTurn: false }
+              : icon
+          )
+        }))
+      };
+    });
+  }, []);
+
   // Timer effect
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
   
@@ -403,6 +431,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     basicAttack,
     useAbility,
     selectIcon,
+    undoMovement,
   };
 };
 

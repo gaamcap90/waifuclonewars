@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Sparkles, Crown, Swords, Zap, Shield, Target } from "lucide-react";
+import { Sparkles, Crown, Swords, Zap, Shield, Target, Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
 import CharacterDetailPopup from "./CharacterDetailPopup";
 
@@ -13,9 +13,10 @@ interface HorizontalGameUIProps {
   onBasicAttack: () => void;
   onUseAbility: (abilityId: string) => void;
   onEndTurn: () => void;
+  onUndoMovement: () => void;
 }
 
-const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: HorizontalGameUIProps) => {
+const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, onUndoMovement }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{id: string, position: {x: number, y: number}} | null>(null);
   
   const activeIcon = gameState.players
@@ -30,7 +31,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
   const formatTime = (seconds: number) => {
     // Show 30-second countdown per turn
     const turnTimeLeft = 30 - (seconds % 30);
-    return `${turnTimeLeft}s`;
+    return turnTimeLeft === 0 ? "30s" : `${turnTimeLeft}s`;
   };
 
   const getCurrentTurn = () => {
@@ -245,11 +246,8 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => {
-                      // TODO: Implement undo movement functionality
-                      console.log('Undo movement clicked');
-                    }}
-                    disabled={!activeIcon.movedThisTurn}
+                    onClick={onUndoMovement}
+                    disabled={!activeIcon.movedThisTurn || activeIcon.actionTaken}
                   >
                     Undo Movement
                   </Button>

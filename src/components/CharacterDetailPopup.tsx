@@ -1,6 +1,7 @@
 import React from "react";
 import { Icon } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
 
 interface CharacterDetailPopupProps {
@@ -50,7 +51,11 @@ const CharacterDetailPopup = ({ character, onClose, position }: CharacterDetailP
               </div>
               <div>
                 <CardTitle className="text-lg">{character.name}</CardTitle>
-                <div className="text-sm text-muted-foreground">{character.role}</div>
+                <div className="text-sm text-muted-foreground flex items-center gap-1">
+                  {character.role === 'dps_ranged' && <><Crosshair className="w-3 h-3" /> Ranged DPS</>}
+                  {character.role === 'dps_melee' && <><Sword className="w-3 h-3" /> Melee DPS</>}
+                  {character.role === 'support' && <><Heart className="w-3 h-3" /> Support</>}
+                </div>
               </div>
             </div>
           </CardHeader>
