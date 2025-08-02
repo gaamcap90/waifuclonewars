@@ -88,7 +88,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             />
             {/* HP Bar under character */}
             {icon && (
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1">
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
                 <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
               </div>
             )}
