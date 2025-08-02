@@ -205,26 +205,34 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
   const selectTile = useCallback((coordinates: Coordinates) => {
     setGameState(prev => {
+      console.log('selectTile called with:', coordinates);
+      console.log('activeIconId:', prev.activeIconId);
+      console.log('selectedIcon:', prev.selectedIcon);
+      
       // Find the active icon (whose turn it is)
       const activeIcon = prev.players
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
 
-      // Find if there's an icon at this position that belongs to the active player
-      const icon = prev.players
+      console.log('activeIcon found:', activeIcon);
+
+      // Check if there's any icon at the clicked position
+      const iconAtPosition = prev.players
         .flatMap(p => p.icons)
         .find(i => 
           i.position.q === coordinates.q && 
           i.position.r === coordinates.r && 
-          i.isAlive &&
-          activeIcon && i.playerId === activeIcon.playerId
+          i.isAlive
         );
 
-      if (icon) {
-        // Select this icon
+      console.log('iconAtPosition:', iconAtPosition);
+
+      // If clicking on an icon that belongs to the active player, select it
+      if (iconAtPosition && activeIcon && iconAtPosition.playerId === activeIcon.playerId) {
+        console.log('Selecting icon:', iconAtPosition.id);
         return {
           ...prev,
-          selectedIcon: icon.id,
+          selectedIcon: iconAtPosition.id,
           board: prev.board.map(tile => ({
             ...tile,
             highlighted: tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r,
@@ -239,7 +247,23 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           .flatMap(p => p.icons)
           .find(i => i.id === prev.selectedIcon);
 
-        if (selectedIcon) {
+        console.log('selectedIcon found:', selectedIcon);
+
+        if (selectedIcon && selectedIcon.id === prev.activeIconId) {
+          // Check if the target tile is occupied
+          const targetOccupied = prev.players
+            .flatMap(p => p.icons)
+            .some(i => 
+              i.position.q === coordinates.q && 
+              i.position.r === coordinates.r && 
+              i.isAlive
+            );
+
+          if (targetOccupied) {
+            console.log('Target tile occupied, cannot move');
+            return prev;
+          }
+
           // Simple movement validation (within range)
           const distance = Math.max(
             Math.abs(coordinates.q - selectedIcon.position.q),
@@ -247,7 +271,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             Math.abs((coordinates.q + coordinates.r) - (selectedIcon.position.q + selectedIcon.position.r))
           );
 
+          console.log('Movement distance:', distance, 'moveRange:', selectedIcon.stats.moveRange);
+
           if (distance <= selectedIcon.stats.moveRange) {
+            console.log('Moving icon to:', coordinates);
             // Move the icon
             return {
               ...prev,
@@ -255,7 +282,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                 ...player,
                 icons: player.icons.map(icon => 
                   icon.id === selectedIcon.id 
-                    ? { ...icon, position: coordinates }
+                    ? { ...icon, position: coordinates, movedThisTurn: true }
                     : icon
                 )
               })),
@@ -266,7 +293,11 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                 selectable: false
               }))
             };
+          } else {
+            console.log('Move out of range');
           }
+        } else {
+          console.log('Selected icon is not active icon');
         }
       }
 
