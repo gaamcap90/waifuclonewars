@@ -23,77 +23,92 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
   };
 
   return (
-    <div className="w-full space-y-4">
-      {/* Top Row: Turn Queue */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-center text-lg">Turn Queue</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center gap-2">
-            {gameState.speedQueue.slice(0, 5).map((iconId, index) => {
-              const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
-              if (!icon) return null;
-              return (
-                <Badge 
-                  key={iconId} 
-                  variant={index === 0 ? "default" : "secondary"}
-                  className={icon.playerId === 0 ? "bg-player1" : "bg-player2"}
-                >
-                  {icon.name.charAt(0)}
-                </Badge>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Objectives Row */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-center text-sm">Objectives</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center gap-4 text-xs">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <div className="text-center">
-                    <div className="font-semibold">Mana Crystal</div>
-                    <div className={gameState.objectives.manaCrystal.controlled ? "text-green-500" : "text-gray-500"}>
-                      {gameState.objectives.manaCrystal.controlled ? "Controlled" : "Neutral"}
+    <>
+      {/* Top Left: Objectives */}
+      <div className="absolute top-20 left-4 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-center text-sm">Objectives</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-xs">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="text-center p-2 rounded border">
+                      <div className="font-semibold">Mana Crystal</div>
+                      <div className={gameState.objectives.manaCrystal.controlled ? "text-green-500" : "text-gray-500"}>
+                        {gameState.objectives.manaCrystal.controlled ? "Controlled" : "Neutral"}
+                      </div>
                     </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Control the center crystal for +2 mana regeneration per turn</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <div className="text-center">
-                    <div className="font-semibold">Beast Camp</div>
-                    <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
-                      {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Control the center crystal for +2 mana regeneration per turn</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="text-center p-2 rounded border">
+                      <div className="font-semibold">Beast Camp</div>
+                      <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
+                        {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                      </div>
                     </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Defeat beast camps for permanent team-wide +15% damage buff</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </CardContent>
-      </Card>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Defeat beast camps for permanent team-wide +15% damage buff</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Bottom Row: Player Info and Active Icon */}
-      <div className="grid grid-cols-3 gap-4">
-        {/* Player 1 Icons */}
-        <Card>
+      {/* Top Center: Turn Queue */}
+      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-center text-lg">Turn Queue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center gap-2">
+              {gameState.speedQueue.slice(0, 5).map((iconId, index) => {
+                const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
+                if (!icon) return null;
+                return (
+                  <Badge 
+                    key={iconId} 
+                    variant={index === 0 ? "default" : "secondary"}
+                    className={icon.playerId === 0 ? "bg-player1" : "bg-player2"}
+                  >
+                    {icon.name.charAt(0)}
+                  </Badge>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Right: Timer */}
+      <div className="absolute top-20 right-4 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-sm font-semibold">Timer</div>
+              <div className="text-lg">{formatTime(gameState.matchTimer)}</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Left: Player 1 */}
+      <div className="absolute bottom-4 left-4 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-player1">Player 1 (Blue)</CardTitle>
             <div className="text-sm">Mana: {gameState.globalMana[0]}/20 (+1/turn)</div>
@@ -112,12 +127,36 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Active Icon Details */}
-        <Card>
+      {/* Bottom Right: Player 2 */}
+      <div className="absolute bottom-4 right-4 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-player2">Player 2 (Red)</CardTitle>
+            <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
+            <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {gameState.players[1].icons.map(icon => (
+                <div key={icon.id} className="flex justify-between text-sm">
+                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
+                    {icon.name}
+                  </span>
+                  <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Center: Active Icon Actions */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
             <CardTitle>Active: {activeIcon?.name}</CardTitle>
-            <div className="text-sm">Timer: {formatTime(gameState.matchTimer)}</div>
           </CardHeader>
           <CardContent>
             {activeIcon && (
@@ -127,10 +166,11 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                     onClick={onBasicAttack}
                     disabled={activeIcon.actionTaken}
                     size="sm"
+                    className="bg-primary"
                   >
                     Basic Attack
                   </Button>
-                  <Button onClick={onEndTurn} size="sm" variant="outline">
+                  <Button onClick={onEndTurn} size="sm" variant="outline" className="bg-primary">
                     End Turn
                   </Button>
                 </div>
@@ -168,29 +208,8 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
             )}
           </CardContent>
         </Card>
-
-        {/* Player 2 Icons */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-player2">Player 2 (Red)</CardTitle>
-            <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
-            <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {gameState.players[1].icons.map(icon => (
-                <div key={icon.id} className="flex justify-between text-sm">
-                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
-                    {icon.name}
-                  </span>
-                  <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </>
   );
 };
 
