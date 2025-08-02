@@ -202,10 +202,18 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
           {activeIcon && (
             <Card className="border-alien-green/30">
               <CardHeader className="pb-2">
-                <CardTitle className="text-alien-green flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  Active: {activeIcon.name}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-alien-green flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Active: {activeIcon.name}
+                    <span className="text-sm text-gray-400 ml-2">
+                      Movement: {activeIcon.stats.movement}/2
+                    </span>
+                  </CardTitle>
+                  <Button onClick={onEndTurn} size="sm" variant="default" className="bg-alien-green hover:bg-alien-green/80 text-black font-bold">
+                    End Turn
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-2">
@@ -289,15 +297,6 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
                   )}
                 </div>
 
-                {/* Movement Status and End Turn */}
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-400">
-                    Movement: {activeIcon.stats.movement}/2
-                  </div>
-                  <Button onClick={onEndTurn} size="lg" variant="default" className="bg-alien-green hover:bg-alien-green/80 text-black font-bold">
-                    End Turn
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           )}
