@@ -1,6 +1,6 @@
 import { useState } from "react";
 import GameBoard from "@/components/GameBoard";
-import GameUI from "@/components/GameUI";
+import HorizontalGameUI from "@/components/HorizontalGameUI";
 import VictoryScreen from "@/components/VictoryScreen";
 import MainMenu from "@/components/MainMenu";
 import useGameState from "@/hooks/useGameStateNew";
@@ -28,8 +28,8 @@ const Index = () => {
           <p className="text-sm text-alien-purple font-orbitron">Turn {gameState.currentTurn} | {gameMode === 'singleplayer' ? 'vs Znyxorgan AI' : 'Local Arena Battle'}</p>
         </div>
         
-        {/* Game UI with new layout */}
-        <GameUI 
+        {/* Game UI with new horizontal layout */}
+        <HorizontalGameUI 
           gameState={gameState}
           onBasicAttack={basicAttack}
           onUseAbility={useAbility}
