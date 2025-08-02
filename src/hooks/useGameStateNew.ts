@@ -512,15 +512,20 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         
         if (distance <= activeIcon.stats.moveRange) {
           // Check if destination is not occupied
-          const occupied = prev.players
-            .flatMap(p => p.icons)
-            .some(icon => 
-              icon.position.q === coordinates.q && 
-              icon.position.r === coordinates.r && 
-              icon.isAlive
-            );
+          const allIcons = prev.players.flatMap(p => p.icons).filter(icon => icon.isAlive);
+          console.log('All alive icons positions:', allIcons.map(i => ({ id: i.id, name: i.name, pos: i.position })));
+          console.log('Target coordinates:', coordinates);
+          
+          const occupied = allIcons.some(icon => 
+            icon.position.q === coordinates.q && 
+            icon.position.r === coordinates.r
+          );
           
           console.log('Target occupied:', occupied);
+          console.log('Icon checking occupied against:', allIcons.find(icon => 
+            icon.position.q === coordinates.q && 
+            icon.position.r === coordinates.r
+          ));
           
           if (!occupied) {
             console.log('MOVING ICON TO:', coordinates);
