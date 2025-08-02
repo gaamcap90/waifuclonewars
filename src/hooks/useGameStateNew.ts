@@ -379,12 +379,12 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
   // Handle AI turns
   useEffect(() => {
-    if (gameState.gameMode === 'singleplayer') {
+    if (gameState.gameMode === 'singleplayer' && gameState.phase === 'combat') {
       const activeIcon = gameState.players
         .flatMap(p => p.icons)
         .find(i => i.id === gameState.activeIconId);
         
-      if (activeIcon?.playerId === 1) {
+      if (activeIcon?.playerId === 1 && activeIcon.isAlive) {
         const timer = setTimeout(() => {
           // Check if AI is in targeting mode
           if (gameState.targetingMode && gameState.targetingMode.iconId === activeIcon.id) {
@@ -414,6 +414,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             
             if (target) {
               selectTile(target);
+              // End turn after attack
+              setTimeout(() => {
+                endTurn();
+              }, 1000);
               return;
             }
           }
@@ -423,6 +427,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             const aiMove = makeAIMove(gameState);
             if (Object.keys(aiMove).length > 0) {
               setGameState(prev => ({ ...prev, ...aiMove }));
+              // End turn after move
+              setTimeout(() => {
+                endTurn();
+              }, 1000);
               return;
             }
           }
@@ -434,7 +442,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         return () => clearTimeout(timer);
       }
     }
-  }, [gameState.activeIconId, gameState.gameMode, gameState.targetingMode]);
+  }, [gameState.activeIconId, gameState.gameMode, gameState.targetingMode, gameState.phase]);
 
   const selectTile = useCallback((coordinates: Coordinates) => {
     console.log('selectTile called with:', coordinates);
@@ -442,13 +450,71 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       console.log('Current game state:', {
         activeIconId: prev.activeIconId,
         selectedIcon: prev.selectedIcon,
-        targetingMode: prev.targetingMode
+        targetingMode: prev.targetingMode,
+        respawnPlacement: prev.respawnPlacement
       });
-      console.log('Current game state:', {
-        activeIconId: prev.activeIconId,
-        selectedIcon: prev.selectedIcon,
-        targetingMode: prev.targetingMode
-      });
+
+      const currentActiveIcon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === prev.activeIconId);
+
+      // Prevent player from controlling AI units
+      if (currentActiveIcon?.playerId === 1 && prev.gameMode === 'singleplayer') {
+        return prev;
+      }
+
+      // Handle respawn placement
+      if (prev.respawnPlacement) {
+        const respawningIcon = prev.players
+          .flatMap(p => p.icons)
+          .find(i => i.id === prev.respawnPlacement);
+          
+        if (respawningIcon) {
+          // Check if coordinates are in the correct spawn zone
+          const isValidSpawn = respawningIcon.playerId === 0 
+            ? (coordinates.q >= -6 && coordinates.q <= -4 && coordinates.r >= 3 && coordinates.r <= 5)
+            : (coordinates.q >= 4 && coordinates.q <= 6 && coordinates.r >= -5 && coordinates.r <= -3);
+            
+          // Check if tile is not occupied
+          const occupied = prev.players
+            .flatMap(p => p.icons)
+            .some(icon => icon.position.q === coordinates.q && icon.position.r === coordinates.r && icon.isAlive);
+            
+          if (isValidSpawn && !occupied) {
+            // Respawn the character
+            const updatedPlayers = prev.players.map(player => ({
+              ...player,
+              icons: player.icons.map(icon => 
+                icon.id === prev.respawnPlacement 
+                  ? { 
+                      ...icon, 
+                      position: coordinates,
+                      isAlive: true,
+                      stats: { ...icon.stats, hp: icon.stats.maxHp, movement: icon.stats.moveRange },
+                      respawnTurns: 0
+                    }
+                  : icon
+              )
+            }));
+            
+            // Add back to speed queue
+            const aliveIcons = updatedPlayers.flatMap(p => p.icons).filter(icon => icon.isAlive);
+            const newSpeedQueue = aliveIcons
+              .sort((a, b) => b.stats.speed - a.stats.speed)
+              .map(icon => icon.id);
+            
+            return {
+              ...prev,
+              players: updatedPlayers,
+              speedQueue: newSpeedQueue,
+              respawnPlacement: undefined
+            };
+          } else {
+            toast.error("Invalid spawn location!");
+            return prev;
+          }
+        }
+      }
       // Check if we're in targeting mode (ability or basic attack)
       if (prev.targetingMode) {
         const activeIcon = prev.players
@@ -593,7 +659,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         return prev;
       }
 
-      const activeIcon = prev.players
+      const movementActiveIcon = prev.players
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
 
@@ -624,20 +690,20 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       }
 
       // Try to move the active icon - check if allowed to move
-      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode && activeIcon.stats.movement > 0) {
+      if (movementActiveIcon && movementActiveIcon.id === prev.activeIconId && !prev.targetingMode && movementActiveIcon.stats.movement > 0) {
         console.log('Active icon details:', {
-          id: activeIcon.id,
-          name: activeIcon.name,
-          movedThisTurn: activeIcon.movedThisTurn,
-          actionTaken: activeIcon.actionTaken,
-          position: activeIcon.position,
-          movement: activeIcon.stats.movement
+          id: movementActiveIcon.id,
+          name: movementActiveIcon.name,
+          movedThisTurn: movementActiveIcon.movedThisTurn,
+          actionTaken: movementActiveIcon.actionTaken,
+          position: movementActiveIcon.position,
+          movement: movementActiveIcon.stats.movement
         });
-        console.log('Attempting movement for activeIcon:', activeIcon.id);
-        const distance = calculateDistance(activeIcon.position, coordinates);
-        console.log('Movement distance:', distance, 'remaining movement:', activeIcon.stats.movement);
+        console.log('Attempting movement for activeIcon:', movementActiveIcon.id);
+        const distance = calculateDistance(movementActiveIcon.position, coordinates);
+        console.log('Movement distance:', distance, 'remaining movement:', movementActiveIcon.stats.movement);
         
-        if (distance <= activeIcon.stats.movement && distance <= activeIcon.stats.moveRange) {
+        if (distance <= movementActiveIcon.stats.movement && distance <= movementActiveIcon.stats.moveRange) {
           // Check if destination is passable
           const destinationTile = prev.board.find(tile => 
             tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
@@ -667,7 +733,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               players: prev.players.map(player => ({
                 ...player,
                 icons: player.icons.map(icon => 
-                  icon.id === activeIcon.id 
+                  icon.id === movementActiveIcon.id 
                     ? { 
                         ...icon, 
                         position: coordinates, 
@@ -907,6 +973,33 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     }));
   }, []);
 
+  const startRespawnPlacement = useCallback((iconId: string) => {
+    setGameState(prev => {
+      const icon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === iconId);
+        
+      if (!icon || icon.isAlive || icon.respawnTurns > 0) {
+        return prev;
+      }
+      
+      // Only allow respawning on player's turn
+      const activeIcon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === prev.activeIconId);
+        
+      if (activeIcon?.playerId !== icon.playerId) {
+        toast.error("You can only respawn on your turn!");
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        respawnPlacement: iconId
+      };
+    });
+  }, []);
+
   return {
     gameState,
     selectTile,
@@ -917,6 +1010,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     currentTurnTimer,
     selectIcon,
     undoMovement,
+    startRespawnPlacement
   };
 };
 

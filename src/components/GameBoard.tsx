@@ -69,6 +69,22 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         tile.terrain.type !== 'base' &&
         tile.terrain.effects.movementModifier !== -999 : false;
 
+      // Check if tile is valid for respawn placement
+      const isRespawnTarget = gameState.respawnPlacement ? 
+        (() => {
+          const respawningIcon = gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.respawnPlacement);
+          if (!respawningIcon) return false;
+          
+          const isValidSpawn = respawningIcon.playerId === 0 
+            ? (tile.coordinates.q >= -6 && tile.coordinates.q <= -4 && tile.coordinates.r >= 3 && tile.coordinates.r <= 5)
+            : (tile.coordinates.q >= 4 && tile.coordinates.q <= 6 && tile.coordinates.r >= -5 && tile.coordinates.r <= -3);
+            
+          const occupied = gameState.players
+            .flatMap(p => p.icons)
+            .some(icon => icon.position.q === tile.coordinates.q && icon.position.r === tile.coordinates.r && icon.isAlive);
+            
+          return isValidSpawn && !occupied;
+        })() : false;
 
       return (
         <div
@@ -93,6 +109,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
               isActiveIcon={isActiveIcon}
               isTargetable={isTargetable}
               isValidMovement={isValidMovement}
+              isRespawnTarget={isRespawnTarget}
             />
             {/* HP Bar under character */}
             {icon && (
@@ -104,7 +121,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         </div>
       );
     });
-  }, [gameState.board, gameState.players, gameState.activeIconId, gameState.targetingMode, hexSize]);
+  }, [gameState.board, gameState.players, gameState.activeIconId, gameState.targetingMode, gameState.respawnPlacement, hexSize]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);

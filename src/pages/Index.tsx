@@ -10,7 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'singleplayer' | 'multiplayer'>('menu');
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
-  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter } = useGameState(
+  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement } = useGameState(
     gameMode === 'menu' ? 'singleplayer' : gameMode
   );
 
@@ -59,7 +59,7 @@ const Index = () => {
           onUseAbility={useAbility}
           onEndTurn={endTurn}
           onUndoMovement={undoMovement}
-          onRespawn={(iconId: string) => respawnCharacter(iconId, { q: 0, r: 0 })} // Will be updated to handle placement
+          onRespawn={startRespawnPlacement}
           currentTurnTimer={currentTurnTimer}
         />
       </div>

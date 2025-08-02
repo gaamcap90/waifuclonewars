@@ -69,6 +69,7 @@ export interface GameState {
   players: Player[];
   board: HexTile[];
   selectedIcon?: string;
+  respawnPlacement?: string; // Icon ID being placed for respawn
   globalMana: number[];
   turnTimer: number;
   speedQueue: string[]; // Icon IDs in speed order

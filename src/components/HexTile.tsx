@@ -13,9 +13,10 @@ interface HexTileProps {
   isActiveIcon?: boolean;
   isTargetable?: boolean;
   isValidMovement?: boolean;
+  isRespawnTarget?: boolean;
 }
 
-const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40, playerColor, isActiveIcon, isTargetable, isValidMovement }: HexTileProps) => {
+const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40, playerColor, isActiveIcon, isTargetable, isValidMovement, isRespawnTarget }: HexTileProps) => {
   const getTerrainColor = () => {
     switch (tile.terrain.type) {
       case 'forest':
@@ -96,6 +97,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
             tile.selectable && 'ring-2 ring-accent',
             isTargetable && 'ring-2 ring-destructive bg-red-500/20',
             isValidMovement && 'ring-2 ring-alien-green bg-alien-green/20',
+            isRespawnTarget && 'ring-2 ring-blue-400 bg-blue-400/20',
             isActiveIcon && 'ring-2 ring-active-turn'
           )}
         />
