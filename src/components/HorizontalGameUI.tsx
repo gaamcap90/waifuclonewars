@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { GameState } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,11 +22,27 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
     .flatMap(p => p.icons)
     .find(i => i.id === gameState.activeIconId);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // Close popup when clicking anywhere
+  const handleClosePopup = () => {
+    setSelectedCharacter(null);
   };
+
+  const formatTime = (seconds: number) => {
+    // Show 30-second countdown per turn instead of total match time
+    const turnTimeLeft = 30 - (seconds % 30);
+    return `${turnTimeLeft}s`;
+  };
+
+  const getCurrentTurn = () => {
+    return Math.floor(gameState.matchTimer / 30) + 1;
+  };
+
+  // Listen for global close popup events
+  React.useEffect(() => {
+    const handleGlobalClose = () => setSelectedCharacter(null);
+    window.addEventListener('closeCharacterPopup', handleGlobalClose);
+    return () => window.removeEventListener('closeCharacterPopup', handleGlobalClose);
+  }, []);
 
   return (
     <>
@@ -57,37 +73,48 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <div className="text-center p-2 rounded border flex items-center gap-2">
-                      <Crown className={`w-4 h-4 ${gameState.objectives.beastCamp.defeated ? "text-yellow-400" : "text-red-400"}`} />
-                      <div>
-                        <div className="font-semibold">Beast Camp</div>
-                        <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
-                          {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
-                        </div>
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Defeat beast camps for permanent team-wide +15% damage buff</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Turn Number */}
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg mt-1">
-          <CardContent className="p-3">
-            <div className="text-center">
-              <div className="text-lg font-bold">Turn {Math.floor(gameState.matchTimer / 30) + 1}</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                     <div className="text-center p-2 rounded border flex items-center gap-2">
+                       <Crown className={`w-4 h-4 ${gameState.objectives.beastCamp.defeated ? "text-yellow-400" : "text-red-400"}`} />
+                       <div>
+                         <div className="font-semibold">Beast Camp</div>
+                         <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
+                           {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                         </div>
+                       </div>
+                     </div>
+                   </TooltipTrigger>
+                   <TooltipContent>
+                     <p>Defeat beast camps for permanent team-wide +15% damage buff</p>
+                   </TooltipContent>
+                 </Tooltip>
+               </TooltipProvider>
+             </div>
+           </CardContent>
+         </Card>
+         
+         {/* Turn Number */}
+         <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg mt-1">
+           <CardContent className="p-3">
+             <div className="text-center">
+               <div className="text-lg font-bold">Turn {getCurrentTurn()}</div>
+             </div>
+           </CardContent>
+         </Card>
+         
+         {/* End Turn Button below Turn Number */}
+         <div className="flex justify-center mt-2">
+           <Button 
+             onClick={onEndTurn} 
+             size="lg" 
+             className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-2 text-lg shadow-lg"
+           >
+             End Turn
+           </Button>
+         </div>
+       </div>
 
       {/* Top Center: Turn Queue */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
+      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
         <div className="flex items-center gap-4">
           <Card className="bg-background/80 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
@@ -98,13 +125,14 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                 {gameState.speedQueue.slice(0, 5).map((iconId, index) => {
                   const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
                   if (!icon) return null;
+                  const isActive = icon.id === gameState.activeIconId;
                   return (
-                    <div key={iconId} className={`relative ${index === 0 ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/50 rounded-full" : ""}`}>
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 ${
+                    <div key={iconId} className={`relative ${isActive ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/50 rounded-full" : ""}`}>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 transition-all ${
                         icon.playerId === 0 
                           ? "border-blue-400 bg-blue-500/90 text-white" 
                           : "border-red-400 bg-red-500/90 text-white"
-                      }`}>
+                      } ${isActive ? "scale-110" : ""}`}>
                         {icon.name.charAt(0)}
                       </div>
                     </div>
@@ -123,17 +151,6 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
               </div>
             </CardContent>
           </Card>
-        </div>
-        
-        {/* End Turn Button underneath Turn Queue - More Visible */}
-        <div className="flex justify-center mt-3">
-          <Button 
-            onClick={onEndTurn} 
-            size="lg" 
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-2 text-lg shadow-lg"
-          >
-            End Turn
-          </Button>
         </div>
       </div>
 
@@ -223,7 +240,17 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Movement: {activeIcon.stats.movement}/{activeIcon.stats.movement}</span>
-                  <Button size="sm" variant="outline" disabled>Undo Movement</Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      // TODO: Implement undo movement functionality
+                      console.log('Undo movement clicked');
+                    }}
+                    disabled={true}
+                  >
+                    Undo Movement
+                  </Button>
                 </div>
                 
                 <div className="flex gap-2 justify-center">
@@ -304,7 +331,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
         return (
           <CharacterDetailPopup
             character={character}
-            onClose={() => setSelectedCharacter(null)}
+            onClose={handleClosePopup}
             position={selectedCharacter.position}
           />
         );

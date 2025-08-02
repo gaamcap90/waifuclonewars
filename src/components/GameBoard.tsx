@@ -137,6 +137,12 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onClick={(e) => {
+        // Close any open character popups when clicking on empty space
+        if (e.target === e.currentTarget) {
+          window.dispatchEvent(new CustomEvent('closeCharacterPopup'));
+        }
+      }}
     >
       {/* Alien audience background elements */}
       <div className="absolute inset-0 pointer-events-none">
