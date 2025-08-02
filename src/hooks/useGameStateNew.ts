@@ -483,6 +483,15 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         };
       }
 
+      // If we're in targeting mode and click on empty space, cancel targeting
+      if (prev.targetingMode && !clickedIcon) {
+        console.log('Canceling targeting mode');
+        return {
+          ...prev,
+          targetingMode: undefined
+        };
+      }
+
       // Try to move the active icon - only if it's their turn and has movement points
       if (activeIcon && activeIcon.id === prev.activeIconId && activeIcon.stats.movement > 0 && !prev.targetingMode) {
         const distance = calculateDistance(activeIcon.position, coordinates);
