@@ -37,6 +37,7 @@ const Index = () => {
           onUseAbility={useAbility}
           onEndTurn={endTurn}
           onUndoMovement={undoMovement}
+          currentTurnTimer={currentTurnTimer}
         />
       </div>
       

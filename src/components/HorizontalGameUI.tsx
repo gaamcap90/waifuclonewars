@@ -14,9 +14,10 @@ interface HorizontalGameUIProps {
   onUseAbility: (abilityId: string) => void;
   onEndTurn: () => void;
   onUndoMovement: () => void;
+  currentTurnTimer: number;
 }
 
-const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, onUndoMovement }: HorizontalGameUIProps) => {
+const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, onUndoMovement, currentTurnTimer }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{id: string, position: {x: number, y: number}} | null>(null);
   
   const activeIcon = gameState.players
@@ -97,7 +98,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
           <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg mt-1">
             <CardContent className="p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold">Turn {getCurrentTurn()}</div>
+                <div className="text-2xl font-bold">Turn {gameState.currentTurn}</div>
               </div>
             </CardContent>
           </Card>
@@ -148,7 +149,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
             <CardContent className="p-4">
               <div className="text-center">
                 <div className="text-sm font-semibold">Timer</div>
-                <div className="text-xl font-bold">{formatTime(gameState.matchTimer)}</div>
+                <div className="text-xl font-bold">{currentTurnTimer}s</div>
               </div>
             </CardContent>
           </Card>
@@ -242,7 +243,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
             {activeIcon && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Movement: {activeIcon.movedThisTurn ? 0 : activeIcon.stats.movement}/{activeIcon.stats.movement}</span>
+                  <span className="text-sm">Movement: {activeIcon.stats.movement}/{activeIcon.stats.moveRange}</span>
                   <Button 
                     size="sm" 
                     variant="outline"
