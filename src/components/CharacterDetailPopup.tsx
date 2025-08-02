@@ -1,3 +1,4 @@
+import React from "react";
 import { Icon } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import HPBar from "./HPBar";
@@ -9,6 +10,16 @@ interface CharacterDetailPopupProps {
 }
 
 const CharacterDetailPopup = ({ character, onClose, position }: CharacterDetailPopupProps) => {
+  // Close popup when clicking anywhere
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      onClose();
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [onClose]);
+
   return (
     <>
       {/* Backdrop to close popup */}
@@ -25,6 +36,7 @@ const CharacterDetailPopup = ({ character, onClose, position }: CharacterDetailP
           top: position.y,
           transform: 'translate(-50%, -100%)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <Card className="bg-background/95 backdrop-blur-sm border-border shadow-xl min-w-[200px]">
           <CardHeader className="pb-2">
@@ -38,7 +50,7 @@ const CharacterDetailPopup = ({ character, onClose, position }: CharacterDetailP
               </div>
               <div>
                 <CardTitle className="text-lg">{character.name}</CardTitle>
-                <div className="text-sm text-muted-foreground">Support</div>
+                <div className="text-sm text-muted-foreground">{character.role}</div>
               </div>
             </div>
           </CardHeader>

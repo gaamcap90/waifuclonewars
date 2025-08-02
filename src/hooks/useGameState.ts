@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import React from "react";
 import { GameState, Coordinates, Icon, HexTile, TerrainType } from "@/types/game";
 
 const createInitialBoard = (): HexTile[] => {
@@ -198,7 +199,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         beastCamp: { defeated: false, buffApplied: false }
       },
       baseHealth: [10, 10],
-      matchTimer: 600, // 10 minutes
+      matchTimer: 0, // Timer in seconds
       gameMode
     };
   });
@@ -376,7 +377,24 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     }));
   }, []);
 
-  const currentTurnTimer = 30; // Fixed timer for now
+  // Timer effect
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  // Start timer effect
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setGameState(prev => ({
+        ...prev,
+        matchTimer: prev.matchTimer + 1
+      }));
+    }, 1000);
+    
+    setTimerInterval(interval);
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, []);
 
   return {
     gameState,
@@ -384,7 +402,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     endTurn,
     basicAttack,
     useAbility,
-    currentTurnTimer,
     selectIcon,
   };
 };
