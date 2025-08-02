@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Sparkles, Crown, Swords, Zap, Shield, Target, Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
 import CharacterDetailPopup from "./CharacterDetailPopup";
+import RespawnUI from "./RespawnUI";
 // Use the uploaded character portraits directly
 
 interface HorizontalGameUIProps {
@@ -15,10 +16,11 @@ interface HorizontalGameUIProps {
   onUseAbility: (abilityId: string) => void;
   onEndTurn: () => void;
   onUndoMovement: () => void;
+  onRespawn: (iconId: string) => void;
   currentTurnTimer: number;
 }
 
-const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, onUndoMovement, currentTurnTimer }: HorizontalGameUIProps) => {
+const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, onUndoMovement, onRespawn, currentTurnTimer }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{id: string, position: {x: number, y: number}} | null>(null);
   
   const activeIcon = gameState.players
@@ -178,7 +180,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
           <CardContent>
             <div className="space-y-3">
               <div className="flex gap-2 justify-center">
-                {gameState.players[0].icons.map(icon => {
+                {gameState.players[0].icons.filter(icon => icon.isAlive).map(icon => {
                   const portrait = getCharacterPortrait(icon.name);
                   
                   return (
@@ -213,6 +215,11 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                     </div>
                   );
                 })}
+                <RespawnUI 
+                  deadCharacters={gameState.players[0].icons.filter(icon => !icon.isAlive)}
+                  onRespawn={onRespawn}
+                  isMyTurn={gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.activeIconId)?.playerId === 0}
+                />
               </div>
             </div>
           </CardContent>
@@ -230,7 +237,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
           <CardContent>
             <div className="space-y-3">
               <div className="flex gap-2 justify-center">
-                {gameState.players[1].icons.map(icon => {
+                {gameState.players[1].icons.filter(icon => icon.isAlive).map(icon => {
                   const portrait = getCharacterPortrait(icon.name);
                   
                   return (
@@ -265,6 +272,11 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                     </div>
                   );
                 })}
+                <RespawnUI 
+                  deadCharacters={gameState.players[1].icons.filter(icon => !icon.isAlive)}
+                  onRespawn={onRespawn}
+                  isMyTurn={gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.activeIconId)?.playerId === 1}
+                />
               </div>
             </div>
           </CardContent>

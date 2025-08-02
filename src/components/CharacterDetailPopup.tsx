@@ -47,7 +47,7 @@ const CharacterDetailPopup = ({ character, onClose, position }: CharacterDetailP
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <Card className="bg-background/95 backdrop-blur-sm border-border shadow-xl min-w-[240px]">
+        <Card className="bg-background/95 backdrop-blur-sm border-border shadow-xl min-w-[200px] max-w-[220px]">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-3">
               <div className={`w-12 h-12 rounded-full border-2 overflow-hidden ${

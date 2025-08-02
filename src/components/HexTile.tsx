@@ -105,8 +105,8 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         {icon ? (
           <div className="flex flex-col items-center">
             <div className={cn(
-              "w-8 h-8 rounded-full border-3 font-orbitron overflow-hidden",
-              playerColor === 'blue' ? 'border-player1' : 'border-player2',
+              "w-8 h-8 rounded-full border-4 font-orbitron overflow-hidden",
+              playerColor === 'blue' ? 'border-blue-400' : 'border-red-400',
               isActiveIcon && 'border-active-turn shadow-lg shadow-active-turn/50 animate-pulse'
             )}>
               {iconPortrait ? (

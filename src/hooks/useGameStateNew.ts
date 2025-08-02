@@ -200,7 +200,7 @@ const isValidMovement = (from: Coordinates, to: Coordinates, moveRange: number, 
   return true;
 };
 
-// Simple AI that makes random valid moves
+// Enhanced AI that can attack, use abilities, and target base
 const makeAIMove = (gameState: GameState): Partial<GameState> => {
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
@@ -210,21 +210,73 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
     return {};
   }
 
-  // Simple AI: Try to move towards enemy base or use basic attack
+  // Priority 1: Attack enemy characters if in range
+  const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
+  for (const enemy of enemyIcons) {
+    const distance = calculateDistance(activeIcon.position, enemy.position);
+    const attackRange = activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan" ? 2 : 1;
+    
+    if (distance <= attackRange) {
+      return {
+        targetingMode: {
+          abilityId: 'basic_attack',
+          iconId: activeIcon.id,
+          range: attackRange
+        }
+      };
+    }
+  }
+
+  // Priority 2: Use abilities if available and mana permits
+  const usableAbility = activeIcon.abilities.find(ability => 
+    ability.currentCooldown === 0 && 
+    gameState.globalMana[1] >= ability.manaCost &&
+    ability.id !== 'ultimate'
+  );
+  
+  if (usableAbility) {
+    // Find target for ability
+    for (const enemy of enemyIcons) {
+      const distance = calculateDistance(activeIcon.position, enemy.position);
+      if (distance <= usableAbility.range) {
+        return {
+          targetingMode: {
+            abilityId: usableAbility.id,
+            iconId: activeIcon.id,
+            range: usableAbility.range
+          }
+        };
+      }
+    }
+  }
+
+  // Priority 3: Attack enemy base if in range
   const enemyBase = gameState.board.find(tile => 
     tile.terrain.type === 'base' && 
     tile.coordinates.q === -6 && tile.coordinates.r === 5
   );
+  
+  if (enemyBase) {
+    const distanceToBase = calculateDistance(activeIcon.position, enemyBase.coordinates);
+    const attackRange = activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan" ? 2 : 1;
+    
+    if (distanceToBase <= attackRange) {
+      return {
+        targetingMode: {
+          abilityId: 'basic_attack',
+          iconId: activeIcon.id,
+          range: attackRange
+        }
+      };
+    }
+  }
 
-  if (!enemyBase) return {};
-
-  // Find valid movement positions
+  // Priority 4: Move towards enemies or base
   const validMoves: Coordinates[] = [];
   for (let q = -7; q <= 7; q++) {
     for (let r = -7; r <= 7; r++) {
       const target = { q, r };
       if (isValidMovement(activeIcon.position, target, activeIcon.stats.moveRange, gameState.board)) {
-        // Check if not occupied
         const occupied = gameState.players
           .flatMap(p => p.icons)
           .some(icon => icon.position.q === q && icon.position.r === r && icon.isAlive);
@@ -235,11 +287,22 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
     }
   }
 
-  if (validMoves.length > 0) {
-    // Pick the move that gets closest to enemy base
+  if (validMoves.length > 0 && enemyBase) {
+    // Move towards closest enemy or base
+    let bestTarget = enemyBase.coordinates;
+    let minDistance = calculateDistance(activeIcon.position, bestTarget);
+    
+    for (const enemy of enemyIcons) {
+      const dist = calculateDistance(activeIcon.position, enemy.position);
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestTarget = enemy.position;
+      }
+    }
+    
     const bestMove = validMoves.reduce((best, move) => {
-      const currentDistance = calculateDistance(move, enemyBase.coordinates);
-      const bestDistance = calculateDistance(best, enemyBase.coordinates);
+      const currentDistance = calculateDistance(move, bestTarget);
+      const bestDistance = calculateDistance(best, bestTarget);
       return currentDistance < bestDistance ? move : best;
     });
 
@@ -248,7 +311,12 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
         ...player,
         icons: player.icons.map(icon => 
           icon.id === activeIcon.id 
-            ? { ...icon, position: bestMove, movedThisTurn: true }
+            ? { 
+                ...icon, 
+                position: bestMove, 
+                movedThisTurn: true,
+                stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - calculateDistance(activeIcon.position, bestMove)) }
+              }
             : icon
         )
       }))
@@ -316,24 +384,57 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === gameState.activeIconId);
         
-      if (activeIcon?.playerId === 1 && !activeIcon.actionTaken && !activeIcon.movedThisTurn) {
+      if (activeIcon?.playerId === 1) {
         const timer = setTimeout(() => {
-          const aiMove = makeAIMove(gameState);
-          if (Object.keys(aiMove).length > 0) {
-            setGameState(prev => ({ ...prev, ...aiMove }));
-            // End AI turn after move
-            setTimeout(() => {
-              endTurn();
-            }, 1000);
-          } else {
-            endTurn();
+          // Check if AI is in targeting mode
+          if (gameState.targetingMode && gameState.targetingMode.iconId === activeIcon.id) {
+            // AI executes attack automatically
+            const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
+            const enemyBase = gameState.board.find(tile => 
+              tile.terrain.type === 'base' && 
+              tile.coordinates.q === -6 && tile.coordinates.r === 5
+            );
+            
+            // Priority: Attack characters first, then base
+            let target = null;
+            for (const enemy of enemyIcons) {
+              const distance = calculateDistance(activeIcon.position, enemy.position);
+              if (distance <= gameState.targetingMode.range) {
+                target = enemy.position;
+                break;
+              }
+            }
+            
+            if (!target && enemyBase) {
+              const distanceToBase = calculateDistance(activeIcon.position, enemyBase.coordinates);
+              if (distanceToBase <= gameState.targetingMode.range) {
+                target = enemyBase.coordinates;
+              }
+            }
+            
+            if (target) {
+              selectTile(target);
+              return;
+            }
           }
-        }, 1000); // AI thinks for 1 second
+          
+          // Regular AI move logic
+          if (!activeIcon.actionTaken && (!activeIcon.movedThisTurn || activeIcon.stats.movement > 0)) {
+            const aiMove = makeAIMove(gameState);
+            if (Object.keys(aiMove).length > 0) {
+              setGameState(prev => ({ ...prev, ...aiMove }));
+              return;
+            }
+          }
+          
+          // End AI turn if nothing to do
+          endTurn();
+        }, 1500); // AI thinks for 1.5 seconds
         
         return () => clearTimeout(timer);
       }
     }
-  }, [gameState.activeIconId, gameState.gameMode]);
+  }, [gameState.activeIconId, gameState.gameMode, gameState.targetingMode]);
 
   const selectTile = useCallback((coordinates: Coordinates) => {
     console.log('selectTile called with:', coordinates);
@@ -656,13 +757,22 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
       // Check for victory conditions
       const updatedBaseHealth = [...prev.baseHealth];
-      const player1Alive = updatedPlayers[0].icons.some(icon => icon.isAlive) || updatedBaseHealth[0] > 0;
-      const player2Alive = updatedPlayers[1].icons.some(icon => icon.isAlive) || updatedBaseHealth[1] > 0;
+      
+      // Check if any player has no alive characters
+      const player1AliveCharacters = updatedPlayers[0].icons.some(icon => icon.isAlive);
+      const player2AliveCharacters = updatedPlayers[1].icons.some(icon => icon.isAlive);
       
       let newPhase = prev.phase;
       let winner = prev.winner;
       
-      if (updatedBaseHealth[0] <= 0) {
+      // Auto-win if all enemy characters are dead
+      if (!player1AliveCharacters && player2AliveCharacters) {
+        newPhase = 'defeat';
+        winner = 1;
+      } else if (!player2AliveCharacters && player1AliveCharacters) {
+        newPhase = 'victory';
+        winner = 0;
+      } else if (updatedBaseHealth[0] <= 0) {
         newPhase = 'defeat';
         winner = 1;
       } else if (updatedBaseHealth[1] <= 0) {
