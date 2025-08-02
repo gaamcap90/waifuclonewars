@@ -158,6 +158,8 @@ const createInitialIcons = (): Icon[] => {
         respawnTurns: 0,
         actionTaken: false,
         movedThisTurn: false,
+        hasUltimate: true,
+        ultimateUsed: false,
       });
     });
   }
@@ -267,7 +269,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       ],
       board: createInitialBoard(),
       globalMana: [15, 15],
-      turnTimer: 30,
+      turnTimer: 20,
       speedQueue,
       queueIndex: 0,
       objectives: {
@@ -279,6 +281,29 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       gameMode
     };
   });
+
+  // Turn timer countdown
+  const [currentTurnTimer, setCurrentTurnTimer] = useState(20);
+
+  // Handle turn timer countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTurnTimer(prev => {
+        if (prev <= 1) {
+          endTurn();
+          return 20;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameState.activeIconId]);
+
+  // Reset timer when turn changes
+  useEffect(() => {
+    setCurrentTurnTimer(20);
+  }, [gameState.activeIconId]);
 
   // Handle AI turns
   useEffect(() => {
@@ -308,7 +333,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
   const selectTile = useCallback((coordinates: Coordinates) => {
     setGameState(prev => {
-      // Check if we're in targeting mode
+      // Check if we're in targeting mode (ability or basic attack)
       if (prev.targetingMode) {
         const activeIcon = prev.players
           .flatMap(p => p.icons)
@@ -317,11 +342,73 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         if (activeIcon) {
           const distance = calculateDistance(activeIcon.position, coordinates);
           if (distance <= prev.targetingMode.range) {
-            // Execute ability (simplified - just end targeting for now)
+            // Execute ability or basic attack
+            const targetIcon = prev.players
+              .flatMap(p => p.icons)
+              .find(icon => 
+                icon.position.q === coordinates.q && 
+                icon.position.r === coordinates.r && 
+                icon.isAlive
+              );
+
+            let updatedPlayers = prev.players;
+            let updatedBaseHealth = [...prev.baseHealth];
+
+            if (prev.targetingMode.abilityId === 'basic_attack') {
+              // Basic attack logic
+              const damage = Math.max(1, Math.floor(activeIcon.stats.might * 1.5) - (targetIcon?.stats.defense || 0));
+              
+              if (targetIcon) {
+                // Attack another character
+                updatedPlayers = prev.players.map(player => ({
+                  ...player,
+                  icons: player.icons.map(icon => 
+                    icon.id === targetIcon.id 
+                      ? { ...icon, stats: { ...icon.stats, hp: Math.max(0, icon.stats.hp - damage) } }
+                      : icon
+                  )
+                }));
+              } else {
+                // Attack base
+                const baseTile = prev.board.find(tile => 
+                  tile.coordinates.q === coordinates.q && 
+                  tile.coordinates.r === coordinates.r && 
+                  tile.terrain.type === 'base'
+                );
+                if (baseTile) {
+                  const enemyPlayerId = activeIcon.playerId === 0 ? 1 : 0;
+                  updatedBaseHealth[enemyPlayerId] = Math.max(0, updatedBaseHealth[enemyPlayerId] - 1);
+                }
+              }
+            } else {
+              // Ability logic
+              const ability = activeIcon.abilities.find(a => a.id === prev.targetingMode!.abilityId);
+              if (ability && targetIcon) {
+                const damage = ability.damage ? Math.max(1, Math.floor(ability.damage + activeIcon.stats.power * 0.5) - targetIcon.stats.defense) : 0;
+                const healing = ability.healing || 0;
+                
+                updatedPlayers = prev.players.map(player => ({
+                  ...player,
+                  icons: player.icons.map(icon => {
+                    if (icon.id === targetIcon.id && damage > 0) {
+                      return { ...icon, stats: { ...icon.stats, hp: Math.max(0, icon.stats.hp - damage) } };
+                    }
+                    if (icon.id === activeIcon.id && healing > 0) {
+                      return { ...icon, stats: { ...icon.stats, hp: Math.min(icon.stats.maxHp, icon.stats.hp + healing) } };
+                    }
+                    return icon;
+                  })
+                }));
+              }
+            }
+
+            const manaCost = prev.targetingMode.abilityId === 'basic_attack' ? 0 : 
+              activeIcon.abilities.find(a => a.id === prev.targetingMode!.abilityId)?.manaCost || 0;
+
             return {
               ...prev,
               targetingMode: undefined,
-              players: prev.players.map(player => ({
+              players: updatedPlayers.map(player => ({
                 ...player,
                 icons: player.icons.map(icon => 
                   icon.id === activeIcon.id 
@@ -329,9 +416,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                     : icon
                 )
               })),
+              baseHealth: updatedBaseHealth,
               globalMana: prev.globalMana.map((mana, index) => 
                 index === activeIcon.playerId 
-                  ? Math.max(0, mana - activeIcon.abilities.find(a => a.id === prev.targetingMode!.abilityId)!.manaCost)
+                  ? Math.max(0, mana - manaCost)
                   : mana
               )
             };
@@ -361,8 +449,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         };
       }
 
-      // Try to move the active icon (one-click movement)
-      if (activeIcon && !activeIcon.movedThisTurn) {
+      // Try to move the active icon (one-click movement) - only if it's their turn
+      if (activeIcon && activeIcon.id === prev.activeIconId && !activeIcon.movedThisTurn) {
         if (isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
           // Check if destination is not occupied
           const occupied = prev.players
@@ -456,16 +544,14 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
       if (!activeIcon || activeIcon.actionTaken) return prev;
 
+      // Enter targeting mode for basic attack
       return {
         ...prev,
-        players: prev.players.map(player => ({
-          ...player,
-          icons: player.icons.map(icon => 
-            icon.id === activeIcon.id 
-              ? { ...icon, actionTaken: true }
-              : icon
-          )
-        }))
+        targetingMode: {
+          abilityId: 'basic_attack',
+          iconId: activeIcon.id,
+          range: 1 // Basic attack range is 1
+        }
       };
     });
   }, []);
@@ -476,6 +562,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     useAbility,
     endTurn,
     basicAttack,
+    currentTurnTimer,
   };
 };
 

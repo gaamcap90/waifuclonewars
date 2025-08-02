@@ -1,251 +1,312 @@
 import { GameState } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Zap, Heart, Swords } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Clock, Zap, Swords, Shield, Sparkles } from "lucide-react";
+import HPBar from "./HPBar";
+import CharacterPanel from "./CharacterPanel";
 
 interface GameUIProps {
   gameState: GameState;
+  onBasicAttack: () => void;
+  onUseAbility: (abilityId: string) => void;
   onEndTurn: () => void;
+  currentTurnTimer: number;
 }
 
-const GameUI = ({ gameState, onEndTurn }: GameUIProps) => {
-  // Get the active icon (whose turn it is)
+const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurnTimer }: GameUIProps) => {
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
     .find(i => i.id === gameState.activeIconId);
-    
-  const activePlayer = activeIcon ? gameState.players.find(p => p.id === activeIcon.playerId) : null;
-  
-  const selectedIcon = gameState.selectedIcon 
-    ? gameState.players
-        .flatMap(p => p.icons)
-        .find(i => i.id === gameState.selectedIcon)
-    : undefined;
 
-  // Get next 3 icons in turn queue for display
-  const upcomingTurns = gameState.speedQueue
-    .slice(gameState.queueIndex, gameState.queueIndex + 3)
-    .concat(gameState.speedQueue.slice(0, Math.max(0, 3 - (gameState.speedQueue.length - gameState.queueIndex))))
-    .map(iconId => gameState.players.flatMap(p => p.icons).find(i => i.id === iconId))
-    .filter(Boolean);
+  const selectedIcon = gameState.selectedIcon ? 
+    gameState.players
+      .flatMap(p => p.icons)
+      .find(i => i.id === gameState.selectedIcon) : null;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-card border rounded-lg max-h-screen overflow-y-auto">
-      {/* Match Info */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Match Timer: {Math.floor(gameState.matchTimer / 60)}:{(gameState.matchTimer % 60).toString().padStart(2, '0')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center gap-1">
-              <Heart className="w-4 h-4 text-blue-500" />
-              <span>P1 Base: {gameState.baseHealth[0]}/10</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Heart className="w-4 h-4 text-red-500" />
-              <span>P2 Base: {gameState.baseHealth[1]}/10</span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center gap-1">
-              <Zap className="w-4 h-4 text-blue-500" />
-              <span>P1 Mana: {gameState.globalMana[0]}/20</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Zap className="w-4 h-4 text-red-500" />
-              <span>P2 Mana: {gameState.globalMana[1]}/20</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Active Turn */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Swords className="w-5 h-5" />
-            Active Turn
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {activeIcon && activePlayer && (
-            <div className="flex justify-between items-center">
-              <span className="font-medium">{activeIcon.name}</span>
-              <Badge variant={activePlayer.color === 'blue' ? 'default' : 'destructive'}>
-                {activePlayer.name}
-              </Badge>
-            </div>
-          )}
-          <div className="text-sm text-muted-foreground">Turn {gameState.currentTurn}</div>
-        </CardContent>
-      </Card>
-
-      {/* Turn Queue */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Turn Queue</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {upcomingTurns.map((icon, index) => {
-              if (!icon) return null;
-              const player = gameState.players.find(p => p.id === icon.playerId);
-              return (
-                <div 
-                  key={`${icon.id}-${index}`}
-                  className={`flex justify-between items-center p-2 rounded text-sm ${
-                    index === 0 ? 'bg-primary/20 border border-primary' : 'bg-muted/50'
-                  }`}
-                >
-                  <span className="font-medium">{icon.name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">Speed: {icon.stats.speed}</span>
-                    <Badge 
-                      variant={player?.color === 'blue' ? 'default' : 'destructive'}
-                      className="text-xs"
-                    >
-                      {player?.name}
-                    </Badge>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Selected Icon Info */}
-      {selectedIcon && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">{selectedIcon.name}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span>Role:</span>
-              <Badge variant="secondary">{selectedIcon.role.replace('_', ' ')}</Badge>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>Health:</span>
-                <span>{selectedIcon.stats.hp}/{selectedIcon.stats.maxHp}</span>
+    <div className="w-full max-w-7xl mx-auto space-y-4">
+      {/* Top Row: Turn Timer and Turn Queue */}
+      <div className="flex items-center justify-center gap-8">
+        {/* Turn Timer */}
+        <Card className="border-alien-green/30">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-alien-green" />
+              <div className="text-lg font-bold text-alien-green">
+                {currentTurnTimer}s
               </div>
-              <Progress value={(selectedIcon.stats.hp / selectedIcon.stats.maxHp) * 100} className="h-2" />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>Move: {selectedIcon.stats.moveRange}</div>
-              <div>Speed: {selectedIcon.stats.speed}</div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="font-medium text-sm">Abilities:</div>
-              {selectedIcon.abilities.map((ability) => (
-                <div key={ability.id} className="text-xs p-2 bg-muted rounded">
-                  <div className="flex justify-between">
-                    <span className="font-medium">{ability.name}</span>
-                    <span className="text-primary">{ability.manaCost} mana</span>
-                  </div>
-                  <div className="text-muted-foreground">{ability.description}</div>
-                  {ability.damage && (
-                    <div className="text-red-600">Damage: {ability.damage}</div>
-                  )}
-                  {ability.currentCooldown > 0 && (
-                    <div className="text-destructive">Cooldown: {ability.currentCooldown}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            <div className="text-xs text-muted-foreground">
-              <strong>Passive:</strong> {selectedIcon.passive}
+              <Progress 
+                value={(currentTurnTimer / 20) * 100} 
+                className="w-20 h-2"
+              />
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* All Icons for Active Player */}
-      {activePlayer && (
-        <Card>
+        {/* Turn Queue */}
+        <Card className="border-alien-green/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">{activePlayer.name}'s Icons</CardTitle>
+            <CardTitle className="text-center text-lg text-alien-green">Turn Queue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {activePlayer.icons.map((icon) => (
-                <div 
-                  key={icon.id} 
-                  className={`p-2 border rounded text-sm ${
-                    icon.id === gameState.selectedIcon ? 'border-primary bg-primary/10' : 'border-border'
-                  } ${!icon.isAlive ? 'opacity-50' : ''} ${
-                    icon.id === gameState.activeIconId ? 'ring-2 ring-accent' : ''
-                  }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">{icon.name}</span>
-                    <div className="text-xs flex gap-2">
-                      {icon.id === gameState.activeIconId && (
-                        <Badge variant="outline" className="text-xs">ACTIVE</Badge>
-                      )}
-                      {icon.isAlive ? (
-                        <span className="text-green-600">Alive</span>
-                      ) : (
-                        <span className="text-red-600">Respawn in {icon.respawnTurns}</span>
-                      )}
+            <div className="flex justify-center gap-2">
+              {gameState.speedQueue.slice(0, 6).map((iconId, index) => {
+                const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
+                if (!icon) return null;
+                return (
+                  <div key={iconId} className="relative">
+                    <Badge 
+                      variant={index === 0 ? "default" : "secondary"}
+                      className={`
+                        w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold
+                        ${icon.playerId === 0 ? "border-2 border-player1 bg-player1/20" : "border-2 border-player2 bg-player2/20"}
+                        ${index === 0 ? "ring-2 ring-alien-green animate-pulse" : ""}
+                      `}
+                    >
+                      {icon.name.charAt(0)}
+                    </Badge>
+                    {/* HP Bar under character */}
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                      <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                     </div>
                   </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>HP: {icon.stats.hp}/{icon.stats.maxHp}</span>
-                    <span>Speed: {icon.stats.speed}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Objectives */}
-      <Card>
+        {/* Match Timer */}
+        <Card className="border-alien-green/30">
+          <CardContent className="pt-4">
+            <div className="text-center">
+              <div className="text-sm text-alien-green">Match</div>
+              <div className="text-lg font-bold text-alien-green">
+                {formatTime(gameState.matchTimer)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Objectives Row */}
+      <Card className="border-alien-green/30">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Objectives</CardTitle>
+          <CardTitle className="text-center text-sm text-alien-green">Neutral Objectives</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between items-center text-sm">
-            <span>Mana Crystal:</span>
-            <span className={
-              gameState.objectives.manaCrystal.controlled 
-                ? 'text-green-600' 
-                : 'text-muted-foreground'
-            }>
-              {gameState.objectives.manaCrystal.controlled ? 'Controlled' : 'Neutral'}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-center text-sm">
-            <span>Beast Camp:</span>
-            <span className={
-              gameState.objectives.beastCamp.defeated 
-                ? 'text-green-600' 
-                : 'text-muted-foreground'
-            }>
-              {gameState.objectives.beastCamp.defeated ? 'Defeated' : 'Active'}
-            </span>
+        <CardContent>
+          <div className="flex justify-center gap-8 text-xs">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className="text-center">
+                    <div className="font-semibold text-purple-400">Mana Crystal</div>
+                    <div className={gameState.objectives.manaCrystal.controlled ? "text-alien-green" : "text-gray-400"}>
+                      {gameState.objectives.manaCrystal.controlled ? "Controlled" : "Neutral"}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Control the center crystal for +2 mana regeneration per turn</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className="text-center">
+                    <div className="font-semibold text-red-400">Beast Camp</div>
+                    <div className={gameState.objectives.beastCamp.defeated ? "text-alien-green" : "text-gray-400"}>
+                      {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Defeat beast camps for permanent team-wide +15% damage buff</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>
 
-      <Button onClick={onEndTurn} className="w-full" size="lg">
-        End Turn
-      </Button>
+      {/* Bottom Row: Player Info and Actions */}
+      <div className="grid grid-cols-12 gap-4">
+        {/* Player 1 Column */}
+        <div className="col-span-3 space-y-2">
+          {/* Character Panel above if P1 character selected */}
+          {selectedIcon && selectedIcon.playerId === 0 && (
+            <CharacterPanel character={selectedIcon} visible={true} />
+          )}
+          
+          <Card className="border-player1/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-player1 flex items-center gap-2">
+                <Zap className="w-4 h-4" />
+                Player 1 (Blue)
+              </CardTitle>
+              <div className="text-sm">Mana: {gameState.globalMana[0]}/20 (+1/turn)</div>
+              <div className="text-sm flex items-center gap-2">
+                Base HP: 
+                <HPBar currentHP={gameState.baseHealth[0]} maxHP={5} size="medium" />
+                {gameState.baseHealth[0]}/5
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {gameState.players[0].icons.map(icon => (
+                  <div key={icon.id} className="flex justify-between items-center text-sm">
+                    <span className={icon.id === gameState.activeIconId ? "font-bold text-alien-green" : ""}>
+                      {icon.name}
+                    </span>
+                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Actions Column */}
+        <div className="col-span-6">
+          {activeIcon && (
+            <Card className="border-alien-green/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-alien-green flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  Active: {activeIcon.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Basic Attack */}
+                  <Button 
+                    onClick={onBasicAttack}
+                    disabled={activeIcon.actionTaken}
+                    size="sm"
+                    variant={gameState.targetingMode?.abilityId === 'basic_attack' ? "default" : "outline"}
+                    className="flex items-center gap-2"
+                  >
+                    <Swords className="w-4 h-4" />
+                    Basic Attack
+                  </Button>
+
+                  {/* Abilities */}
+                  {activeIcon.abilities.map(ability => (
+                    <TooltipProvider key={ability.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={() => onUseAbility(ability.id)}
+                            disabled={
+                              activeIcon.actionTaken || 
+                              ability.currentCooldown > 0 || 
+                              gameState.globalMana[activeIcon.playerId] < ability.manaCost
+                            }
+                            size="sm"
+                            variant={gameState.targetingMode?.abilityId === ability.id ? "default" : "outline"}
+                            className="justify-start text-xs"
+                          >
+                            <Zap className="w-3 h-3 mr-1" />
+                            {ability.name}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="max-w-xs">
+                            <p className="font-semibold">{ability.name}</p>
+                            <p className="text-sm">{ability.description}</p>
+                            <p className="text-xs mt-1">
+                              Range: {ability.range} | Mana: {ability.manaCost} | Cooldown: {ability.cooldown}
+                            </p>
+                            {ability.damage && <p className="text-xs text-red-400">Damage: {ability.damage}</p>}
+                            {ability.healing && <p className="text-xs text-green-400">Healing: {ability.healing}</p>}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+
+                  {/* Ultimate Ability */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          disabled={!activeIcon.hasUltimate || activeIcon.ultimateUsed}
+                          size="sm"
+                          variant="destructive"
+                          className="col-span-2 justify-center"
+                        >
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          ULTIMATE
+                          {activeIcon.ultimateUsed && " (USED)"}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Devastating ultimate ability - once per match</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                {/* Movement Status and End Turn */}
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-400">
+                    {activeIcon.movedThisTurn ? "Movement: Used" : "Movement: Available"}
+                  </div>
+                  <Button onClick={onEndTurn} size="sm" variant="outline">
+                    End Turn
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Player 2 Column */}
+        <div className="col-span-3 space-y-2">
+          {/* Character Panel above if P2 character selected */}
+          {selectedIcon && selectedIcon.playerId === 1 && (
+            <CharacterPanel character={selectedIcon} visible={true} />
+          )}
+          
+          <Card className="border-player2/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-player2 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Player 2 (Red)
+              </CardTitle>
+              <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
+              <div className="text-sm flex items-center gap-2">
+                Base HP: 
+                <HPBar currentHP={gameState.baseHealth[1]} maxHP={5} size="medium" />
+                {gameState.baseHealth[1]}/5
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {gameState.players[1].icons.map(icon => (
+                  <div key={icon.id} className="flex justify-between items-center text-sm">
+                    <span className={icon.id === gameState.activeIconId ? "font-bold text-alien-green" : ""}>
+                      {icon.name}
+                    </span>
+                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

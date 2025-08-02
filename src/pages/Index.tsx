@@ -1,12 +1,12 @@
 import { useState } from "react";
 import GameBoard from "@/components/GameBoard";
-import NewGameUI from "@/components/NewGameUI";
+import GameUI from "@/components/GameUI";
 import MainMenu from "@/components/MainMenu";
 import useGameState from "@/hooks/useGameStateNew";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'singleplayer' | 'multiplayer'>('menu');
-  const { gameState, selectTile, endTurn, basicAttack, useAbility } = useGameState(
+  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer } = useGameState(
     gameMode === 'menu' ? 'singleplayer' : gameMode
   );
 
@@ -19,24 +19,25 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="container mx-auto max-w-7xl space-y-4">
+    <div className="min-h-screen bg-gradient-to-b from-space-dark via-space-medium to-space-dark p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-arena-glow font-orbitron">WAIFU CLONE WARS</h1>
           <p className="text-alien-purple font-orbitron">Turn {gameState.currentTurn} | {gameMode === 'singleplayer' ? 'vs Znyxorgan AI' : 'Local Arena Battle'}</p>
         </div>
         
-        {/* Game Board */}
+        {/* Game Board - Centered */}
         <div className="flex justify-center">
           <GameBoard gameState={gameState} onTileClick={selectTile} />
         </div>
         
-        {/* New Game UI */}
-        <NewGameUI 
+        {/* Game UI - Below Board */}
+        <GameUI 
           gameState={gameState}
           onBasicAttack={basicAttack}
           onUseAbility={useAbility}
           onEndTurn={endTurn}
+          currentTurnTimer={currentTurnTimer}
         />
       </div>
     </div>

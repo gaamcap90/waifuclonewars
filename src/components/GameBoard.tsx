@@ -9,7 +9,7 @@ interface GameBoardProps {
 }
 
 const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
-  const hexSize = 30;
+  const hexSize = 40; // Increased size
   const boardWidth = 15;
   const boardHeight = 11;
   const [tooltipState, setTooltipState] = useState<{
@@ -60,11 +60,14 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         calculateDistance(activeIcon.position, tile.coordinates) <= gameState.targetingMode.range : false;
 
       const handleTerrainHover = (e: React.MouseEvent) => {
-        setTooltipState({
-          visible: true,
-          terrain: tile.terrain,
-          position: { x: e.clientX, y: e.clientY }
-        });
+        // Only show tooltip if no character on tile and no targeting mode
+        if (!icon && !gameState.targetingMode) {
+          setTooltipState({
+            visible: true,
+            terrain: tile.terrain,
+            position: { x: e.clientX, y: e.clientY }
+          });
+        }
       };
 
       const handleTerrainLeave = () => {
@@ -104,19 +107,32 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
   }, [gameState.board, gameState.players, gameState.activeIconId, gameState.targetingMode, hexSize]);
 
   return (
-    <div className="relative">
+    <div className="relative flex justify-center">
       <div 
-        className="relative bg-background border border-border rounded-lg overflow-auto flex items-center justify-center"
+        className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden"
         style={{
-          width: '100%',
+          width: '800px',
           height: '600px',
-          minWidth: boardWidth * hexSize * 3,
-          minHeight: boardHeight * hexSize * 2,
+          backgroundImage: `
+            radial-gradient(circle at 20% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)
+          `,
         }}
         onClick={() => setTooltipState(prev => ({ ...prev, visible: false }))}
       >
-        <div className="relative">
-          {renderBoard}
+        {/* Alien audience background elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-2 left-4 w-8 h-8 bg-alien-green/20 rounded-full animate-pulse"></div>
+          <div className="absolute top-8 right-8 w-6 h-6 bg-purple-400/20 rounded-full animate-pulse delay-500"></div>
+          <div className="absolute bottom-4 left-8 w-10 h-10 bg-blue-400/20 rounded-full animate-pulse delay-1000"></div>
+          <div className="absolute bottom-8 right-4 w-7 h-7 bg-yellow-400/20 rounded-full animate-pulse delay-700"></div>
+        </div>
+        
+        <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative">
+            {renderBoard}
+          </div>
         </div>
       </div>
       

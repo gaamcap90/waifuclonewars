@@ -36,6 +36,8 @@ export interface Icon {
   respawnTurns: number;
   actionTaken: boolean; // Has this icon acted this turn?
   movedThisTurn: boolean; // Has this icon moved this turn?
+  hasUltimate: boolean; // Can use ultimate this match
+  ultimateUsed: boolean; // Has used ultimate this match
 }
 
 export interface Ability {

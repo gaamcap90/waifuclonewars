@@ -146,16 +146,18 @@ const createInitialIcons = (): Icon[] => {
   // Create icons for both players
   for (let playerId = 0; playerId < 2; playerId++) {
     iconTemplates.forEach((template, index) => {
-      icons.push({
-        id: `${playerId}-${index}`,
-        ...template,
-        position: playerId === 0 ? { q: -5, r: 4 - index } : { q: 5, r: -4 + index },
-        playerId,
-        isAlive: true,
-        respawnTurns: 0,
-        actionTaken: false,
-        movedThisTurn: false,
-      });
+        icons.push({
+          id: `${playerId}-${index}`,
+          ...template,
+          position: playerId === 0 ? { q: -5, r: 4 - index } : { q: 5, r: -4 + index },
+          playerId,
+          isAlive: true,
+          respawnTurns: 0,
+          actionTaken: false,
+          movedThisTurn: false,
+          hasUltimate: true,
+          ultimateUsed: false,
+        });
     });
   }
 
