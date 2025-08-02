@@ -7,7 +7,12 @@ interface MainMenuProps {
 
 const MainMenu = ({ onStartGame }: MainMenuProps) => {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div 
+      className="min-h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png')`
+      }}
+    >
       <Card className="w-96">
         <CardHeader className="text-center space-y-4">
           <div className="text-alien-purple text-sm font-orbitron">The Empire of Znyxorga Presents:</div>
