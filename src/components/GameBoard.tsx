@@ -1,7 +1,6 @@
 import { useMemo, useState, useRef } from "react";
 import { GameState, Coordinates, HexTile as HexTileType } from "@/types/game";
 import HexTile from "./HexTile";
-import TerrainTooltip from "./TerrainTooltip";
 import HPBar from "./HPBar";
 
 interface GameBoardProps {
@@ -13,19 +12,10 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
   const hexSize = 40; // Increased size
   const boardWidth = 15;
   const boardHeight = 11;
-  const [tooltipState, setTooltipState] = useState<{
-    visible: boolean;
-    terrain: HexTileType['terrain'] | null;
-    position: { x: number; y: number };
-  }>({
-    visible: false,
-    terrain: null,
-    position: { x: 0, y: 0 }
-  });
-  
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const boardRef = useRef<HTMLDivElement>(null);
 
   const calculateDistance = (from: Coordinates, to: Coordinates): number => {
@@ -71,24 +61,6 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         !gameState.players.flatMap(p => p.icons).some(i => i.position.q === tile.coordinates.q && i.position.r === tile.coordinates.r && i.isAlive) &&
         tile.terrain.effects.movementModifier !== -999 : false;
 
-      const handleTerrainHover = (e: React.MouseEvent) => {
-        // Only show tooltip if no character on tile and no targeting mode
-        if (!icon && !gameState.targetingMode) {
-          setTooltipState({
-            visible: true,
-            terrain: tile.terrain,
-            position: { x: e.clientX, y: e.clientY }
-          });
-        }
-      };
-
-      const handleTerrainLeave = () => {
-        setTooltipState({
-          visible: false,
-          terrain: null,
-          position: { x: 0, y: 0 }
-        });
-      };
 
       return (
         <div
@@ -99,10 +71,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             top: y + (boardHeight * hexSize * 0.7),
           }}
         >
-          <div
-            onMouseEnter={handleTerrainHover}
-            onMouseLeave={handleTerrainLeave}
-          >
+          <div>
             <HexTile
               tile={tile}
               onClick={() => onTileClick(tile.coordinates)}
@@ -143,13 +112,18 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
     setIsDragging(false);
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom(prev => Math.min(Math.max(prev * delta, 0.5), 2));
+  };
+
   return (
-    <div className="relative flex justify-center">
+    <div className="relative flex justify-center w-full">
       <div 
         ref={boardRef}
-        className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden cursor-grab"
+        className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden cursor-grab w-full"
         style={{
-          width: '800px',
           height: '600px',
           backgroundImage: `
             radial-gradient(circle at 20% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
@@ -161,7 +135,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onClick={() => setTooltipState(prev => ({ ...prev, visible: false }))}
+        onWheel={handleWheel}
       >
         {/* Alien audience background elements */}
         <div className="absolute inset-0 pointer-events-none">
@@ -175,19 +149,13 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
           <div 
             className="relative"
             style={{
-              transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`
             }}
           >
             {renderBoard}
           </div>
         </div>
       </div>
-      
-      <TerrainTooltip
-        visible={tooltipState.visible}
-        terrain={tooltipState.terrain!}
-        position={tooltipState.position}
-      />
     </div>
   );
 };

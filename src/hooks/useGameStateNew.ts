@@ -372,7 +372,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                         ...icon, 
                         stats: { ...icon.stats, hp: newHp },
                         isAlive: newHp > 0,
-                        respawnTurns: newHp <= 0 ? 3 : icon.respawnTurns
+                        respawnTurns: newHp <= 0 ? 5 : icon.respawnTurns
                       };
                     }
                     return icon;
@@ -406,7 +406,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                         ...icon, 
                         stats: { ...icon.stats, hp: newHp },
                         isAlive: newHp > 0,
-                        respawnTurns: newHp <= 0 ? 3 : icon.respawnTurns
+                        respawnTurns: newHp <= 0 ? 5 : icon.respawnTurns
                       };
                     }
                     if (icon.id === activeIcon.id && healing > 0) {
@@ -480,7 +480,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       // Try to move the active icon - only if it's their turn and has movement points
       if (activeIcon && activeIcon.id === prev.activeIconId && activeIcon.stats.movement > 0 && !prev.targetingMode) {
         const distance = calculateDistance(activeIcon.position, coordinates);
-        if (distance <= activeIcon.stats.movement && isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
+        if (distance === 1 && isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
           // Check if destination is not occupied
           const occupied = prev.players
             .flatMap(p => p.icons)
@@ -491,13 +491,16 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             );
             
           if (!occupied) {
+            // Movement consumes 1 point per move
+            const newMovement = Math.max(0, activeIcon.stats.movement - 1);
+            
             return {
               ...prev,
               players: prev.players.map(player => ({
                 ...player,
                 icons: player.icons.map(icon => 
                   icon.id === activeIcon.id 
-                    ? { ...icon, position: coordinates, stats: { ...icon.stats, movement: icon.stats.movement - distance } }
+                    ? { ...icon, position: coordinates, stats: { ...icon.stats, movement: newMovement }, movedThisTurn: true }
                     : icon
                 )
               })),
@@ -522,7 +525,11 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       const ability = activeIcon.abilities.find(a => a.id === abilityId);
       if (!ability || ability.currentCooldown > 0) return prev;
       
-      if (prev.globalMana[activeIcon.playerId] < ability.manaCost) return prev;
+      // Check ultimate usage
+      if (abilityId === 'ultimate' && activeIcon.ultimateUsed) return prev;
+      
+      // Check mana cost (ultimates don't cost mana)
+      if (abilityId !== 'ultimate' && prev.globalMana[activeIcon.playerId] < ability.manaCost) return prev;
       
       // Enter targeting mode
       return {
