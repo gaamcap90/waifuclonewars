@@ -59,6 +59,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       const isValidMovement = !gameState.targetingMode && activeIcon && activeIcon.id === gameState.activeIconId && activeIcon.stats.movement > 0 ?
         calculateDistance(activeIcon.position, tile.coordinates) <= activeIcon.stats.movement && 
         !gameState.players.flatMap(p => p.icons).some(i => i.position.q === tile.coordinates.q && i.position.r === tile.coordinates.r && i.isAlive) &&
+        tile.terrain.type !== 'base' &&
         tile.terrain.effects.movementModifier !== -999 : false;
 
 
@@ -122,8 +123,9 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
     <div className="relative flex justify-center w-full">
       <div 
         ref={boardRef}
-        className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden cursor-grab w-full"
+        className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden cursor-grab"
         style={{
+          width: '60%',
           height: '600px',
           backgroundImage: `
             radial-gradient(circle at 20% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),

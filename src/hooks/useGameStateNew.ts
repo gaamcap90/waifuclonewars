@@ -480,7 +480,9 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       // Try to move the active icon - only if it's their turn and has movement points
       if (activeIcon && activeIcon.id === prev.activeIconId && activeIcon.stats.movement > 0 && !prev.targetingMode) {
         const distance = calculateDistance(activeIcon.position, coordinates);
-        if (distance === 1 && isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
+        
+        // Allow movement up to remaining movement points, but each move consumes 1 point
+        if (distance <= activeIcon.stats.movement) {
           // Check if destination is not occupied
           const occupied = prev.players
             .flatMap(p => p.icons)
@@ -489,10 +491,16 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               icon.position.r === coordinates.r && 
               icon.isAlive
             );
+          
+          // Check if destination is passable (not base or mountain with -999 modifier)
+          const targetTile = prev.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          const isPassable = targetTile && 
+            targetTile.terrain.type !== 'base' && 
+            targetTile.terrain.effects.movementModifier !== -999;
             
-          if (!occupied) {
-            // Movement consumes 1 point per move
-            const newMovement = Math.max(0, activeIcon.stats.movement - 1);
+          if (!occupied && isPassable) {
+            // Movement consumes distance points
+            const newMovement = Math.max(0, activeIcon.stats.movement - distance);
             
             return {
               ...prev,
@@ -680,6 +688,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     });
   }, []);
 
+  const selectIcon = useCallback((iconId: string) => {
+    setGameState(prev => ({
+      ...prev,
+      selectedIcon: iconId
+    }));
+  }, []);
+
   return {
     gameState,
     selectTile,
@@ -688,6 +703,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     basicAttack,
     respawnCharacter,
     currentTurnTimer,
+    selectIcon,
   };
 };
 

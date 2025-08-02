@@ -7,7 +7,7 @@ import useGameState from "@/hooks/useGameStateNew";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'singleplayer' | 'multiplayer'>('menu');
-  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer } = useGameState(
+  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon } = useGameState(
     gameMode === 'menu' ? 'singleplayer' : gameMode
   );
 
@@ -39,6 +39,7 @@ const Index = () => {
           onUseAbility={useAbility}
           onEndTurn={endTurn}
           currentTurnTimer={currentTurnTimer}
+          onCharacterSelect={selectIcon}
         />
       </div>
       

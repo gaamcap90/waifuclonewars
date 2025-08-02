@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { GameState } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +15,10 @@ interface GameUIProps {
   onUseAbility: (abilityId: string) => void;
   onEndTurn: () => void;
   currentTurnTimer: number;
+  onCharacterSelect: (iconId: string) => void;
 }
 
-const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurnTimer }: GameUIProps) => {
+const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurnTimer, onCharacterSelect }: GameUIProps) => {
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
     .find(i => i.id === gameState.activeIconId);
@@ -113,7 +115,7 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
                         className={`
                           w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold
                           ${icon.playerId === 0 ? "border-2 border-player1 bg-player1/20" : "border-2 border-player2 bg-player2/20"}
-                          ${index === 0 ? "ring-2 ring-yellow-400 animate-pulse bg-yellow-400/20" : ""}
+                          ${index === 0 ? "ring-2 ring-white animate-pulse shadow-lg scale-110" : ""}
                         `}
                       >
                         {icon.name.charAt(0)}
@@ -176,7 +178,7 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-6 h-6 rounded-full bg-player1/20 border border-player1 flex items-center justify-center text-xs cursor-pointer hover:bg-player1/40"
-                          onClick={() => {/* TODO: Open character sheet */}}
+                          onClick={() => onCharacterSelect(icon.id)}
                         >
                           {icon.name.charAt(0)}
                         </div>
@@ -341,7 +343,7 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-6 h-6 rounded-full bg-player2/20 border border-player2 flex items-center justify-center text-xs cursor-pointer hover:bg-player2/40"
-                          onClick={() => {/* TODO: Open character sheet */}}
+                          onClick={() => onCharacterSelect(icon.id)}
                         >
                           {icon.name.charAt(0)}
                         </div>
