@@ -110,31 +110,34 @@ const createInitialIcons = (): Icon[] => {
   const iconTemplates = [
     {
       name: "Napoleon-chan",
-      role: "controller" as const,
-      stats: { hp: 80, maxHp: 80, moveRange: 3, speed: 6, might: 45, power: 60, defense: 35 },
+      role: "dps_ranged" as const,
+      stats: { hp: 80, maxHp: 80, moveRange: 3, speed: 6, might: 45, power: 60, defense: 35, movement: 2 },
       abilities: [
-        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 5, description: "Long-range bombardment. Deals 55 damage + terrain destruction.", damage: 55 },
-        { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 4, currentCooldown: 0, range: 3, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns and grants movement bonus." }
+        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 2, description: "Long-range bombardment. Deals 55 damage + terrain destruction.", damage: 55 },
+        { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 4, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns and grants movement bonus." },
+        { id: "ultimate", name: "Final Salvo", manaCost: 0, cooldown: 999, currentCooldown: 0, range: 3, description: "Deal 30 damage in a 3-tile line", damage: 30 }
       ],
       passive: "Tactical Genius: +1 movement range when commanding from high ground"
     },
     {
       name: "Genghis-chan",
       role: "dps_melee" as const,
-      stats: { hp: 90, maxHp: 90, moveRange: 5, speed: 8, might: 70, power: 40, defense: 40 },
+      stats: { hp: 90, maxHp: 90, moveRange: 5, speed: 8, might: 70, power: 40, defense: 40, movement: 2 },
       abilities: [
-        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 1, currentCooldown: 0, range: 3, description: "Rush attack through multiple enemies. Deals 60 damage + bonus per enemy hit.", damage: 60 },
-        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 3, currentCooldown: 0, range: 2, description: "Teleport behind target and strike. 75 damage + fear effect (target can't move next turn).", damage: 75 }
+        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 1, currentCooldown: 0, range: 1, description: "Rush attack through multiple enemies. Deals 60 damage + bonus per enemy hit.", damage: 60 },
+        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 3, currentCooldown: 0, range: 1, description: "Teleport behind target and strike. 75 damage + fear effect (target can't move next turn).", damage: 75 },
+        { id: "ultimate", name: "Rider's Fury", manaCost: 0, cooldown: 999, currentCooldown: 0, range: 1, description: "Charge through up to 3 enemies in a line, dealing 25 damage each", damage: 25 }
       ],
       passive: "Conqueror's Fury: +15% damage for each enemy defeated this match"
     },
     {
       name: "Da Vinci-chan", 
       role: "support" as const,
-      stats: { hp: 65, maxHp: 65, moveRange: 3, speed: 4, might: 30, power: 80, defense: 45 },
+      stats: { hp: 65, maxHp: 65, moveRange: 3, speed: 4, might: 30, power: 80, defense: 45, movement: 2 },
       abilities: [
-        { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 6, description: "Teleport to any visible hex + gain aerial view (see through terrain) for 2 turns." },
-        { id: "2", name: "Masterpiece", manaCost: 7, cooldown: 5, currentCooldown: 0, range: 4, description: "Creates a defensive art barrier. Heals 45 HP + shields allies from next attack.", healing: 45 }
+        { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 2, description: "Teleport to any visible hex + gain aerial view (see through terrain) for 2 turns." },
+        { id: "2", name: "Masterpiece", manaCost: 7, cooldown: 5, currentCooldown: 0, range: 2, description: "Creates a defensive art barrier. Heals 45 HP + shields allies from next attack.", healing: 45 },
+        { id: "ultimate", name: "Vitruvian Guardian", manaCost: 0, cooldown: 999, currentCooldown: 0, range: 3, description: "Summons a 2-turn drone that auto-attacks nearby enemies", damage: 20 }
       ],
       passive: "Renaissance Mind: Gains +1 mana when casting spells near mana crystals"
     }
@@ -362,11 +365,18 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                 // Attack another character
                 updatedPlayers = prev.players.map(player => ({
                   ...player,
-                  icons: player.icons.map(icon => 
-                    icon.id === targetIcon.id 
-                      ? { ...icon, stats: { ...icon.stats, hp: Math.max(0, icon.stats.hp - damage) } }
-                      : icon
-                  )
+                  icons: player.icons.map(icon => {
+                    if (icon.id === targetIcon.id) {
+                      const newHp = Math.max(0, icon.stats.hp - damage);
+                      return { 
+                        ...icon, 
+                        stats: { ...icon.stats, hp: newHp },
+                        isAlive: newHp > 0,
+                        respawnTurns: newHp <= 0 ? 3 : icon.respawnTurns
+                      };
+                    }
+                    return icon;
+                  })
                 }));
               } else {
                 // Attack base
@@ -391,7 +401,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                   ...player,
                   icons: player.icons.map(icon => {
                     if (icon.id === targetIcon.id && damage > 0) {
-                      return { ...icon, stats: { ...icon.stats, hp: Math.max(0, icon.stats.hp - damage) } };
+                      const newHp = Math.max(0, icon.stats.hp - damage);
+                      return { 
+                        ...icon, 
+                        stats: { ...icon.stats, hp: newHp },
+                        isAlive: newHp > 0,
+                        respawnTurns: newHp <= 0 ? 3 : icon.respawnTurns
+                      };
                     }
                     if (icon.id === activeIcon.id && healing > 0) {
                       return { ...icon, stats: { ...icon.stats, hp: Math.min(icon.stats.maxHp, icon.stats.hp + healing) } };
@@ -399,6 +415,18 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                     return icon;
                   })
                 }));
+                
+                // Handle ultimate abilities - mark as used
+                if (ability.id === 'ultimate') {
+                  updatedPlayers = updatedPlayers.map(player => ({
+                    ...player,
+                    icons: player.icons.map(icon => 
+                      icon.id === activeIcon.id 
+                        ? { ...icon, ultimateUsed: true }
+                        : icon
+                    )
+                  }));
+                }
               }
             }
 
@@ -449,9 +477,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         };
       }
 
-      // Try to move the active icon (one-click movement) - only if it's their turn
-      if (activeIcon && activeIcon.id === prev.activeIconId && !activeIcon.movedThisTurn) {
-        if (isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
+      // Try to move the active icon - only if it's their turn and has movement points
+      if (activeIcon && activeIcon.id === prev.activeIconId && activeIcon.stats.movement > 0) {
+        const distance = calculateDistance(activeIcon.position, coordinates);
+        if (distance <= activeIcon.stats.movement && isValidMovement(activeIcon.position, coordinates, activeIcon.stats.moveRange, prev.board)) {
           // Check if destination is not occupied
           const occupied = prev.players
             .flatMap(p => p.icons)
@@ -468,7 +497,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                 ...player,
                 icons: player.icons.map(icon => 
                   icon.id === activeIcon.id 
-                    ? { ...icon, position: coordinates, movedThisTurn: true }
+                    ? { ...icon, position: coordinates, stats: { ...icon.stats, movement: icon.stats.movement - distance } }
                     : icon
                 )
               })),
@@ -512,14 +541,39 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       const nextQueueIndex = (prev.queueIndex + 1) % prev.speedQueue.length;
       const newTurn = nextQueueIndex === 0 ? prev.currentTurn + 1 : prev.currentTurn;
       
+      // Handle respawn countdown and reset movement/actions
       const updatedPlayers = prev.players.map(player => ({
         ...player,
-        icons: player.icons.map(icon => 
-          icon.id === prev.activeIconId 
-            ? { ...icon, actionTaken: false, movedThisTurn: false }
-            : icon
-        )
+        icons: player.icons.map(icon => {
+          if (icon.id === prev.activeIconId) {
+            // Reset movement and action for the current icon
+            return { ...icon, actionTaken: false, movedThisTurn: false, stats: { ...icon.stats, movement: 2 } };
+          }
+          
+          // Handle respawn countdown
+          if (!icon.isAlive && icon.respawnTurns > 0) {
+            return { ...icon, respawnTurns: icon.respawnTurns - 1 };
+          }
+          
+          return icon;
+        })
       }));
+
+      // Check for victory conditions
+      const updatedBaseHealth = [...prev.baseHealth];
+      const player1Alive = updatedPlayers[0].icons.some(icon => icon.isAlive) || updatedBaseHealth[0] > 0;
+      const player2Alive = updatedPlayers[1].icons.some(icon => icon.isAlive) || updatedBaseHealth[1] > 0;
+      
+      let newPhase = prev.phase;
+      let winner = prev.winner;
+      
+      if (updatedBaseHealth[0] <= 0) {
+        newPhase = 'defeat';
+        winner = 1;
+      } else if (updatedBaseHealth[1] <= 0) {
+        newPhase = 'victory';
+        winner = 0;
+      }
       
       return {
         ...prev,
@@ -529,6 +583,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         currentTurn: newTurn,
         selectedIcon: undefined,
         targetingMode: undefined,
+        phase: newPhase,
+        winner,
         globalMana: nextQueueIndex === 0 
           ? prev.globalMana.map(mana => Math.min(mana + 1, 20)) // 1 mana per turn
           : prev.globalMana
@@ -544,14 +600,59 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
       if (!activeIcon || activeIcon.actionTaken) return prev;
 
+      // Get basic attack range based on character
+      let range = 1; // Default melee range for Genghis
+      if (activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan") {
+        range = 2; // Ranged characters
+      }
+
       // Enter targeting mode for basic attack
       return {
         ...prev,
         targetingMode: {
           abilityId: 'basic_attack',
           iconId: activeIcon.id,
-          range: 1 // Basic attack range is 1
+          range: range
         }
+      };
+    });
+  }, []);
+
+  const respawnCharacter = useCallback((iconId: string, coordinates: Coordinates) => {
+    setGameState(prev => {
+      const icon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === iconId);
+        
+      if (!icon || icon.isAlive || icon.respawnTurns > 0) return prev;
+      
+      // Check if coordinates are valid spawn tile
+      const tile = prev.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+      if (!tile || tile.terrain.type !== 'spawn') return prev;
+      
+      // Check if tile is occupied
+      const occupied = prev.players
+        .flatMap(p => p.icons)
+        .some(i => i.position.q === coordinates.q && i.position.r === coordinates.r && i.isAlive);
+        
+      if (occupied) return prev;
+      
+      return {
+        ...prev,
+        players: prev.players.map(player => ({
+          ...player,
+          icons: player.icons.map(i => 
+            i.id === iconId 
+              ? { 
+                  ...i, 
+                  isAlive: true, 
+                  position: coordinates, 
+                  stats: { ...i.stats, hp: i.stats.maxHp, movement: 0 }, // No movement on respawn turn
+                  respawnTurns: 0 
+                }
+              : i
+          )
+        }))
       };
     });
   }, []);
@@ -562,6 +663,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     useAbility,
     endTurn,
     basicAttack,
+    respawnCharacter,
     currentTurnTimer,
   };
 };

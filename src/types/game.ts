@@ -27,6 +27,7 @@ export interface Icon {
     might: number; // Physical attack power
     power: number; // Magical/ability power  
     defense: number; // Damage reduction
+    movement: number; // Current movement points remaining
   };
   abilities: Ability[];
   passive: string;
@@ -64,7 +65,7 @@ export interface HexTile {
 export interface GameState {
   currentTurn: number;
   activeIconId?: string; // Current acting icon in speed queue
-  phase: 'draft' | 'deploy' | 'combat' | 'victory';
+  phase: 'draft' | 'deploy' | 'combat' | 'victory' | 'defeat';
   players: Player[];
   board: HexTile[];
   selectedIcon?: string;
@@ -84,6 +85,7 @@ export interface GameState {
     iconId: string;
     range: number;
   };
+  winner?: number; // Player ID who won
 }
 
 export interface Player {

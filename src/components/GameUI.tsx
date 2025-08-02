@@ -202,7 +202,7 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
                   </Button>
 
                   {/* Abilities */}
-                  {activeIcon.abilities.map(ability => (
+                  {activeIcon.abilities.filter(a => a.id !== 'ultimate').map(ability => (
                     <TooltipProvider key={ability.id}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -237,31 +237,42 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
                   ))}
 
                   {/* Ultimate Ability */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          disabled={!activeIcon.hasUltimate || activeIcon.ultimateUsed}
-                          size="sm"
-                          variant="destructive"
-                          className="col-span-2 justify-center"
-                        >
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          ULTIMATE
-                          {activeIcon.ultimateUsed && " (USED)"}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Devastating ultimate ability - once per match</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {activeIcon.abilities.find(a => a.id === 'ultimate') && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={() => onUseAbility('ultimate')}
+                            disabled={activeIcon.ultimateUsed || activeIcon.actionTaken}
+                            size="sm"
+                            variant="destructive"
+                            className="col-span-2 justify-center"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            ULTIMATE
+                            {activeIcon.ultimateUsed && " (USED)"}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="max-w-xs">
+                            {activeIcon.abilities.find(a => a.id === 'ultimate') && (
+                              <>
+                                <p className="font-semibold">{activeIcon.abilities.find(a => a.id === 'ultimate')!.name}</p>
+                                <p className="text-sm">{activeIcon.abilities.find(a => a.id === 'ultimate')!.description}</p>
+                                <p className="text-xs text-red-400">Damage: {activeIcon.abilities.find(a => a.id === 'ultimate')!.damage}</p>
+                              </>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
 
                 {/* Movement Status and End Turn */}
                 <div className="mt-4 flex items-center justify-between">
                   <div className="text-sm text-gray-400">
-                    {activeIcon.movedThisTurn ? "Movement: Used" : "Movement: Available"}
+                    Movement: {activeIcon.stats.movement}/2
                   </div>
                   <Button onClick={onEndTurn} size="sm" variant="outline">
                     End Turn

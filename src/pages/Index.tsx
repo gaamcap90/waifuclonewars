@@ -1,6 +1,7 @@
 import { useState } from "react";
 import GameBoard from "@/components/GameBoard";
 import GameUI from "@/components/GameUI";
+import VictoryScreen from "@/components/VictoryScreen";
 import MainMenu from "@/components/MainMenu";
 import useGameState from "@/hooks/useGameStateNew";
 
@@ -40,6 +41,13 @@ const Index = () => {
           currentTurnTimer={currentTurnTimer}
         />
       </div>
+      
+      {(gameState.phase === 'victory' || gameState.phase === 'defeat') && (
+        <VictoryScreen 
+          isVictory={gameState.phase === 'victory'} 
+          onBackToMenu={() => setGameMode('menu')} 
+        />
+      )}
     </div>
   );
 };
