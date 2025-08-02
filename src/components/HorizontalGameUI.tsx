@@ -76,46 +76,55 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
         </Card>
       </div>
 
-      {/* Top Center: Turn Queue */}
+      {/* Top Center: Turn Queue and Timer */}
       <div className="absolute top-20 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-center text-lg">Turn Queue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-center gap-2">
-              {gameState.speedQueue.slice(0, 5).map((iconId, index) => {
-                const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
-                if (!icon) return null;
-                return (
-                  <Badge 
-                    key={iconId} 
-                    variant={index === 0 ? "default" : "secondary"}
-                    className={icon.playerId === 0 ? "bg-player1" : "bg-player2"}
-                  >
-                    {icon.name.charAt(0)}
-                  </Badge>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-4">
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-center text-lg">Turn Queue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center gap-2">
+                {gameState.speedQueue.slice(0, 5).map((iconId, index) => {
+                  const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
+                  if (!icon) return null;
+                  return (
+                    <Badge 
+                      key={iconId} 
+                      variant={index === 0 ? "default" : "secondary"}
+                      className={`${icon.playerId === 0 ? "bg-player1" : "bg-player2"} ${
+                        index === 0 ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/50" : ""
+                      }`}
+                    >
+                      {icon.name.charAt(0)}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="text-sm font-semibold">Timer</div>
+                <div className="text-lg">{formatTime(gameState.matchTimer)}</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* End Turn Button below Turn Queue */}
+        <div className="flex justify-center mt-2">
+          <Button onClick={onEndTurn} size="sm" variant="outline" className="bg-primary">
+            End Turn
+          </Button>
+        </div>
       </div>
 
-      {/* Top Right: Timer */}
-      <div className="absolute top-20 right-4 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <div className="text-sm font-semibold">Timer</div>
-              <div className="text-lg">{formatTime(gameState.matchTimer)}</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Bottom Left: Player 1 */}
-      <div className="absolute bottom-4 left-4 pointer-events-auto z-10">
+      {/* Center Left: Player 1 */}
+      <div className="absolute top-1/2 left-4 transform -translate-y-1/2 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-player1">Player 1 (Blue)</CardTitle>
@@ -125,7 +134,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           <CardContent>
             <div className="space-y-2">
               {gameState.players[0].icons.map(icon => (
-                <div key={icon.id} className="flex justify-between items-center text-sm">
+                <div key={icon.id} className="flex justify-between items-center text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
                   <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
                     {icon.name}
                   </span>
@@ -140,8 +149,8 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
         </Card>
       </div>
 
-      {/* Bottom Right: Player 2 */}
-      <div className="absolute bottom-4 right-4 pointer-events-auto z-10">
+      {/* Center Right: Player 2 */}
+      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-player2">Player 2 (Red)</CardTitle>
@@ -151,7 +160,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           <CardContent>
             <div className="space-y-2">
               {gameState.players[1].icons.map(icon => (
-                <div key={icon.id} className="flex justify-between items-center text-sm">
+                <div key={icon.id} className="flex justify-between items-center text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
                   <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
                     {icon.name}
                   </span>
@@ -166,7 +175,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
         </Card>
       </div>
 
-      {/* Bottom Center: Active Icon Actions */}
+      {/* Bottom Center: Active Character Panel */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
@@ -174,23 +183,23 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           </CardHeader>
           <CardContent>
             {activeIcon && (
-              <div className="space-y-2">
-                <div className="flex gap-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Movement: {activeIcon.stats.movement}/{activeIcon.stats.movement}</span>
+                  <Button size="sm" variant="outline" disabled>Undo Movement</Button>
+                </div>
+                
+                <div className="flex gap-1">
                   <Button 
                     onClick={onBasicAttack}
                     disabled={activeIcon.actionTaken}
                     size="sm"
-                    className="bg-primary"
+                    className="bg-primary flex-1"
                   >
-                    Basic Attack
+                    Attack
                   </Button>
-                  <Button onClick={onEndTurn} size="sm" variant="outline" className="bg-primary">
-                    End Turn
-                  </Button>
-                </div>
-                <div className="space-y-1">
                   <TooltipProvider>
-                    {activeIcon.abilities.map(ability => (
+                    {activeIcon.abilities.slice(0, 3).map(ability => (
                       <Tooltip key={ability.id}>
                         <TooltipTrigger asChild>
                           <Button
@@ -202,16 +211,16 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                             }
                             size="sm"
                             variant={gameState.targetingMode?.abilityId === ability.id ? "default" : "outline"}
-                            className="w-full justify-start"
+                            className="flex-1 text-xs"
                           >
-                            {ability.name} ({ability.manaCost} mana)
+                            {ability.name.slice(0, 3)} ({ability.manaCost})
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
                           <div className="max-w-xs">
                             <p className="font-semibold">{ability.name}</p>
                             <p className="text-sm">{ability.description}</p>
-                            <p className="text-xs mt-1">Range: {ability.range} | Cooldown: {ability.cooldown}</p>
+                            <p className="text-xs mt-1">Power: {activeIcon.stats.power} | Range: {ability.range}</p>
                           </div>
                         </TooltipContent>
                       </Tooltip>
