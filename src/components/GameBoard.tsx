@@ -125,8 +125,8 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         ref={boardRef}
         className="relative bg-gradient-to-b from-space-dark via-space-medium to-space-dark border-2 border-alien-green/30 rounded-lg overflow-hidden cursor-grab"
         style={{
-          width: '60%',
-          height: '600px',
+          width: '100%',
+          height: '100%',
           backgroundImage: `
             radial-gradient(circle at 20% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
             radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
