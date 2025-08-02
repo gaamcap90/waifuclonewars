@@ -20,19 +20,15 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-space-dark via-space-medium to-space-dark p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-b from-space-dark via-space-medium to-space-dark p-2">
+      <div className="max-w-7xl mx-auto space-y-2">
+        {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-arena-glow font-orbitron">WAIFU CLONE WARS</h1>
-          <p className="text-alien-purple font-orbitron">Turn {gameState.currentTurn} | {gameMode === 'singleplayer' ? 'vs Znyxorgan AI' : 'Local Arena Battle'}</p>
+          <h1 className="text-3xl font-bold text-arena-glow font-orbitron">WAIFU CLONE WARS</h1>
+          <p className="text-sm text-alien-purple font-orbitron">Turn {gameState.currentTurn} | {gameMode === 'singleplayer' ? 'vs Znyxorgan AI' : 'Local Arena Battle'}</p>
         </div>
         
-        {/* Game Board - Centered */}
-        <div className="flex justify-center">
-          <GameBoard gameState={gameState} onTileClick={selectTile} />
-        </div>
-        
-        {/* Game UI - Below Board */}
+        {/* Game UI with new layout */}
         <GameUI 
           gameState={gameState}
           onBasicAttack={basicAttack}
@@ -40,6 +36,7 @@ const Index = () => {
           onEndTurn={endTurn}
           currentTurnTimer={currentTurnTimer}
           onCharacterSelect={selectIcon}
+          onTileClick={selectTile}
         />
       </div>
       
