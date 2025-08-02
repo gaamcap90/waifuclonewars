@@ -125,14 +125,14 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           <CardContent>
             <div className="space-y-2">
               {gameState.players[0].icons.map(icon => (
-                <div key={icon.id} className="flex flex-col gap-1">
-                  <div className="flex justify-between text-sm">
-                    <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
-                      {icon.name}
-                    </span>
+                <div key={icon.id} className="flex justify-between items-center text-sm">
+                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
+                    {icon.name}
+                  </span>
+                  <div className="flex items-center gap-2">
                     <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                   </div>
-                  <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                 </div>
               ))}
             </div>
@@ -151,14 +151,14 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           <CardContent>
             <div className="space-y-2">
               {gameState.players[1].icons.map(icon => (
-                <div key={icon.id} className="flex flex-col gap-1">
-                  <div className="flex justify-between text-sm">
-                    <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
-                      {icon.name}
-                    </span>
+                <div key={icon.id} className="flex justify-between items-center text-sm">
+                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
+                    {icon.name}
+                  </span>
+                  <div className="flex items-center gap-2">
                     <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                   </div>
-                  <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                 </div>
               ))}
             </div>

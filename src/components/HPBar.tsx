@@ -8,7 +8,7 @@ const HPBar = ({ currentHP, maxHP, size = 'small' }: HPBarProps) => {
   const percentage = (currentHP / maxHP) * 100;
   
   const getHPColor = (percent: number): string => {
-    if (percent > 75) return 'bg-alien-green';
+    if (percent > 75) return 'bg-green-500';
     if (percent > 50) return 'bg-yellow-500';
     if (percent > 25) return 'bg-orange-500';
     return 'bg-red-500';
