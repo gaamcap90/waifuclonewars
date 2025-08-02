@@ -75,7 +75,10 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
           <div>
             <HexTile
               tile={tile}
-              onClick={() => onTileClick(tile.coordinates)}
+              onClick={() => {
+                console.log('HexTile clicked:', tile.coordinates, 'occupied by:', icon?.name);
+                onTileClick(tile.coordinates);
+              }}
               icon={icon ? icon.name.charAt(0) : undefined}
               size={hexSize}
               playerColor={playerColor}
@@ -114,7 +117,6 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setZoom(prev => Math.min(Math.max(prev * delta, 0.5), 2));
   };
