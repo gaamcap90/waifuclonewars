@@ -427,7 +427,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             const aiMove = makeAIMove(gameState);
             if (Object.keys(aiMove).length > 0) {
               setGameState(prev => ({ ...prev, ...aiMove }));
-              // End turn after move
+              
+              // If AI is entering targeting mode, don't end turn - let targeting logic handle it
+              if (aiMove.targetingMode) {
+                return; // Let the targeting mode handle the turn ending
+              }
+              
+              // End turn after movement only
               setTimeout(() => {
                 endTurn();
               }, 1000);
