@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { GameState, Coordinates, Icon, HexTile, TerrainType } from "@/types/game";
+import { toast } from "sonner";
 
 const createInitialBoard = (): HexTile[] => {
   const board: HexTile[] = [];
@@ -373,6 +374,12 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               const damage = Math.max(1, Math.floor(activeIcon.stats.might * 1.5) - (targetIcon?.stats.defense || 0));
               
               if (targetIcon) {
+                // Check if trying to attack own team
+                if (targetIcon.playerId === activeIcon.playerId) {
+                  toast.error("Cannot attack your own character!");
+                  return prev;
+                }
+                
                 // Attack another character
                 updatedPlayers = prev.players.map(player => ({
                   ...player,
@@ -390,22 +397,33 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                   })
                 }));
               } else {
-                // Attack base - but only enemy base
+                // Check if attacking empty terrain or own base
                 const baseTile = prev.board.find(tile => 
                   tile.coordinates.q === coordinates.q && 
                   tile.coordinates.r === coordinates.r && 
                   tile.terrain.type === 'base'
                 );
+                
                 if (baseTile) {
                   // Determine which base this is based on coordinates
                   const isPlayer1Base = coordinates.q === -6 && coordinates.r === 5;
                   const isPlayer2Base = coordinates.q === 6 && coordinates.r === -5;
+                  
+                  // Check if trying to attack own base
+                  if ((activeIcon.playerId === 0 && isPlayer1Base) || (activeIcon.playerId === 1 && isPlayer2Base)) {
+                    toast.error("Cannot attack your own base!");
+                    return prev;
+                  }
                   
                   // Only allow attacking enemy base
                   if ((activeIcon.playerId === 0 && isPlayer2Base) || (activeIcon.playerId === 1 && isPlayer1Base)) {
                     const enemyPlayerId = activeIcon.playerId === 0 ? 1 : 0;
                     updatedBaseHealth[enemyPlayerId] = Math.max(0, updatedBaseHealth[enemyPlayerId] - 1);
                   }
+                } else {
+                  // Attacking empty terrain
+                  toast.error("No target to attack!");
+                  return prev;
                 }
               }
             } else {
@@ -505,17 +523,18 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       }
 
       // Try to move the active icon - check if allowed to move
-      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode && !activeIcon.movedThisTurn) {
+      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode && activeIcon.stats.movement > 0) {
         console.log('Active icon details:', {
           id: activeIcon.id,
           name: activeIcon.name,
           movedThisTurn: activeIcon.movedThisTurn,
           actionTaken: activeIcon.actionTaken,
-          position: activeIcon.position
+          position: activeIcon.position,
+          movement: activeIcon.stats.movement
         });
         console.log('Attempting movement for activeIcon:', activeIcon.id);
         const distance = calculateDistance(activeIcon.position, coordinates);
-        console.log('Movement distance:', distance, 'moveRange:', activeIcon.stats.moveRange);
+        console.log('Movement distance:', distance, 'remaining movement:', activeIcon.stats.movement);
         
         if (distance <= activeIcon.stats.movement && distance <= activeIcon.stats.moveRange) {
           // Check if destination is passable
@@ -539,10 +558,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           );
           
           console.log('Target occupied:', occupied);
-          console.log('Icon checking occupied against:', allIcons.find(icon => 
-            icon.position.q === coordinates.q && 
-            icon.position.r === coordinates.r
-          ));
           
           if (!occupied) {
             console.log('MOVING ICON TO:', coordinates);
@@ -748,7 +763,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         return prev;
       }
 
-      // Reset to original spawn position
+      // Store the previous position in a more robust way
+      // For now, we'll implement a single-step undo
       const player1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
       const player2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
       const iconIndex = parseInt(activeIcon.id.split('-')[1]);

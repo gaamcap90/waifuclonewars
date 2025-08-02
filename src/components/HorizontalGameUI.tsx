@@ -48,9 +48,20 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
 
   return (
     <>
-      {/* Top Left: Objectives */}
+      {/* Top Left: Turn Number */}
       <div className="absolute top-0 left-0 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold">Turn {gameState.currentTurn}</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Right: Objectives */}
+      <div className="absolute top-0 right-0 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-bl-lg">
           <CardContent className="p-3">
             <div className="space-y-2 text-xs">
               <TooltipProvider>
@@ -93,20 +104,11 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
              </div>
            </CardContent>
          </Card>
-         
-          {/* Turn Number */}
-          <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg mt-1">
-            <CardContent className="p-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold">Turn {gameState.currentTurn}</div>
-              </div>
-            </CardContent>
-          </Card>
        </div>
 
       {/* Top Center: Turn Queue */}
       <div className="absolute top-0 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
           <Card className="bg-background/80 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-center text-lg">Turn Queue</CardTitle>
@@ -142,10 +144,8 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
               </div>
             </CardContent>
           </Card>
-        </div>
-        
-        {/* End Turn Button below Turn Queue */}
-        <div className="flex justify-center mt-2">
+          
+          {/* End Turn Button below Turn Queue */}
           <Button 
             onClick={onEndTurn} 
             size="lg" 

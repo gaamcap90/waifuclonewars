@@ -4,6 +4,7 @@ import VictoryScreen from "@/components/VictoryScreen";
 import MainMenu from "@/components/MainMenu";
 import HorizontalGameUI from "@/components/HorizontalGameUI";
 import useGameState from "@/hooks/useGameStateNew";
+import { Toaster } from "@/components/ui/sonner";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'singleplayer' | 'multiplayer'>('menu');
@@ -21,6 +22,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-space-dark via-space-medium to-space-dark relative overflow-hidden">
+      <Toaster />
+      
       {/* Full-screen game board */}
       <GameBoard 
         gameState={gameState}
