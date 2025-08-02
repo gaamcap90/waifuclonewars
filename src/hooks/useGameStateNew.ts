@@ -492,12 +492,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         };
       }
 
-      // Try to move the active icon - only if it's their turn and has movement points
-      if (activeIcon && activeIcon.id === prev.activeIconId && activeIcon.stats.movement > 0 && !prev.targetingMode) {
+      // Try to move the active icon - SIMPLIFIED MOVEMENT
+      if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode) {
+        console.log('Attempting movement for activeIcon:', activeIcon.id);
         const distance = calculateDistance(activeIcon.position, coordinates);
+        console.log('Movement distance:', distance, 'moveRange:', activeIcon.stats.moveRange);
         
-        // Allow movement up to remaining movement points, but each move consumes 1 point
-        if (distance <= activeIcon.stats.movement) {
+        if (distance <= activeIcon.stats.moveRange) {
           // Check if destination is not occupied
           const occupied = prev.players
             .flatMap(p => p.icons)
@@ -507,23 +508,17 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               icon.isAlive
             );
           
-          // Check if destination is passable (not base or mountain with -999 modifier)
-          const targetTile = prev.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
-          const isPassable = targetTile && 
-            targetTile.terrain.type !== 'base' && 
-            targetTile.terrain.effects.movementModifier !== -999;
-            
-          if (!occupied && isPassable) {
-            // Movement consumes distance points
-            const newMovement = Math.max(0, activeIcon.stats.movement - distance);
-            
+          console.log('Target occupied:', occupied);
+          
+          if (!occupied) {
+            console.log('MOVING ICON TO:', coordinates);
             return {
               ...prev,
               players: prev.players.map(player => ({
                 ...player,
                 icons: player.icons.map(icon => 
                   icon.id === activeIcon.id 
-                    ? { ...icon, position: coordinates, stats: { ...icon.stats, movement: newMovement }, movedThisTurn: true }
+                    ? { ...icon, position: coordinates, movedThisTurn: true }
                     : icon
                 )
               })),
