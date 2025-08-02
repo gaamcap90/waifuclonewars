@@ -533,6 +533,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   }, []);
 
   const useAbility = useCallback((abilityId: string) => {
+    console.log('useAbility called - DISABLED FOR TESTING');
+    return; // Early return to disable abilities
     setGameState(prev => {
       const activeIcon = prev.players
         .flatMap(p => p.icons)
@@ -634,6 +636,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   }, []);
 
   const basicAttack = useCallback(() => {
+    console.log('basicAttack called - DISABLED FOR TESTING');
+    return; // Early return to disable basic attack
     setGameState(prev => {
       const activeIcon = prev.players
         .flatMap(p => p.icons)
