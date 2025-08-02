@@ -10,7 +10,7 @@ const MainMenu = ({ onStartGame }: MainMenuProps) => {
     <div 
       className="min-h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat"
       style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/lovable-uploads/e2e18457-eb69-4ad4-828e-dc6b3fe40de4.png')`
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/lovable-uploads/ec9e8022-84ce-48c2-8677-1ff35d8f70fc.png')`
       }}
     >
       <Card className="w-96">
