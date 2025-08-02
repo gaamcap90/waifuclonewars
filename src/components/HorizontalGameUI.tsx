@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { GameState } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Sparkles, Crown } from "lucide-react";
+import { Sparkles, Crown, Swords, Zap, Shield, Target } from "lucide-react";
 import HPBar from "./HPBar";
 
 interface HorizontalGameUIProps {
@@ -14,6 +15,8 @@ interface HorizontalGameUIProps {
 }
 
 const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: HorizontalGameUIProps) => {
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
     .find(i => i.id === gameState.activeIconId);
@@ -26,13 +29,10 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
 
   return (
     <>
-      {/* Top Left: Objectives */}
-      <div className="absolute top-20 left-4 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-center text-sm">Objectives</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Top Left: Objectives and Turn Number */}
+      <div className="absolute top-0 left-0 pointer-events-auto z-10">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg">
+          <CardContent className="p-3">
             <div className="space-y-2 text-xs">
               <TooltipProvider>
                 <Tooltip>
@@ -74,6 +74,15 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
             </div>
           </CardContent>
         </Card>
+        
+        {/* Turn Number */}
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg mt-1">
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-lg font-bold">Turn {Math.floor(gameState.matchTimer / 30) + 1}</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Top Center: Turn Queue and Timer */}
@@ -84,20 +93,20 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
               <CardTitle className="text-center text-lg">Turn Queue</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-center gap-2">
+              <div className="flex justify-center gap-3">
                 {gameState.speedQueue.slice(0, 5).map((iconId, index) => {
                   const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
                   if (!icon) return null;
                   return (
-                    <Badge 
-                      key={iconId} 
-                      variant={index === 0 ? "default" : "secondary"}
-                      className={`${icon.playerId === 0 ? "bg-player1" : "bg-player2"} ${
-                        index === 0 ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/50" : ""
-                      }`}
-                    >
-                      {icon.name.charAt(0)}
-                    </Badge>
+                    <div key={iconId} className={`relative ${index === 0 ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/50 rounded-full" : ""}`}>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 ${
+                        icon.playerId === 0 
+                          ? "border-blue-400 bg-blue-500/90 text-white" 
+                          : "border-red-400 bg-red-500/90 text-white"
+                      }`}>
+                        {icon.name.charAt(0)}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -132,18 +141,41 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
             <div className="text-sm">Base HP: {gameState.baseHealth[0]}/5</div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {gameState.players[0].icons.map(icon => (
-                <div key={icon.id} className="flex justify-between items-center text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
-                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
-                    {icon.name}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+            <div className="space-y-3">
+              <div className="flex gap-2 justify-center">
+                {gameState.players[0].icons.map(icon => (
+                  <div key={icon.id} className="text-center">
+                    <button
+                      onClick={() => setSelectedCharacter(selectedCharacter === icon.id ? null : icon.id)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
+                        icon.playerId === 0 ? "border-blue-400 bg-blue-500/90 text-white hover:bg-blue-600/90" : ""
+                      } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
+                    >
+                      {icon.name.charAt(0)}
+                    </button>
+                    <div className="text-xs mt-1">{icon.stats.hp}/{icon.stats.maxHp}</div>
                     <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                   </div>
+                ))}
+              </div>
+              
+              {selectedCharacter && (
+                <div className="border-t pt-2 text-sm">
+                  {(() => {
+                    const char = gameState.players[0].icons.find(i => i.id === selectedCharacter);
+                    if (!char) return null;
+                    return (
+                      <div>
+                        <div className="font-semibold">{char.name}</div>
+                        <div>Might: {char.stats.might}</div>
+                        <div>Power: {char.stats.power}</div>
+                        <div>Defense: {char.stats.defense}</div>
+                        <div>Speed: {char.stats.speed}</div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
@@ -158,26 +190,49 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
             <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {gameState.players[1].icons.map(icon => (
-                <div key={icon.id} className="flex justify-between items-center text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
-                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
-                    {icon.name}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+            <div className="space-y-3">
+              <div className="flex gap-2 justify-center">
+                {gameState.players[1].icons.map(icon => (
+                  <div key={icon.id} className="text-center">
+                    <button
+                      onClick={() => setSelectedCharacter(selectedCharacter === icon.id ? null : icon.id)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
+                        icon.playerId === 1 ? "border-red-400 bg-red-500/90 text-white hover:bg-red-600/90" : ""
+                      } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
+                    >
+                      {icon.name.charAt(0)}
+                    </button>
+                    <div className="text-xs mt-1">{icon.stats.hp}/{icon.stats.maxHp}</div>
                     <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                   </div>
+                ))}
+              </div>
+              
+              {selectedCharacter && (
+                <div className="border-t pt-2 text-sm">
+                  {(() => {
+                    const char = gameState.players[1].icons.find(i => i.id === selectedCharacter);
+                    if (!char) return null;
+                    return (
+                      <div>
+                        <div className="font-semibold">{char.name}</div>
+                        <div>Might: {char.stats.might}</div>
+                        <div>Power: {char.stats.power}</div>
+                        <div>Defense: {char.stats.defense}</div>
+                        <div>Speed: {char.stats.speed}</div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Bottom Center: Active Character Panel */}
+      {/* Bottom Center: Active Character Panel - Made Wider */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[600px]">
           <CardHeader className="pb-2">
             <CardTitle>Active: {activeIcon?.name}</CardTitle>
           </CardHeader>
@@ -189,43 +244,66 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
                   <Button size="sm" variant="outline" disabled>Undo Movement</Button>
                 </div>
                 
-                <div className="flex gap-1">
-                  <Button 
-                    onClick={onBasicAttack}
-                    disabled={activeIcon.actionTaken}
-                    size="sm"
-                    className="bg-primary flex-1"
-                  >
-                    Attack
-                  </Button>
+                <div className="flex gap-2 justify-center">
                   <TooltipProvider>
-                    {activeIcon.abilities.slice(0, 3).map(ability => (
-                      <Tooltip key={ability.id}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={() => onUseAbility(ability.id)}
-                            disabled={
-                              activeIcon.actionTaken || 
-                              ability.currentCooldown > 0 || 
-                              gameState.globalMana[activeIcon.playerId] < ability.manaCost
-                            }
-                            size="sm"
-                            variant={gameState.targetingMode?.abilityId === ability.id ? "default" : "outline"}
-                            className="flex-1 text-xs"
-                          >
-                            {ability.name.slice(0, 3)} ({ability.manaCost})
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="max-w-xs">
-                            <p className="font-semibold">{ability.name}</p>
-                            <p className="text-sm">{ability.description}</p>
-                            <p className="text-xs mt-1">Power: {activeIcon.stats.power} | Range: {ability.range}</p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          onClick={onBasicAttack}
+                          disabled={activeIcon.actionTaken}
+                          size="sm"
+                          className="bg-primary flex items-center gap-2"
+                        >
+                          <Swords className="w-4 h-4" />
+                          Attack
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Basic Attack - Damage: {activeIcon.stats.power}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TooltipProvider>
+                  
+                  {activeIcon.abilities.slice(0, 3).map((ability, index) => {
+                    const getAbilityIcon = (abilityName: string) => {
+                      if (abilityName.toLowerCase().includes('charge')) return Zap;
+                      if (abilityName.toLowerCase().includes('ultimate')) return Target;
+                      return Shield;
+                    };
+                    const IconComponent = getAbilityIcon(ability.name);
+                    
+                    return (
+                      <TooltipProvider key={ability.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={() => onUseAbility(ability.id)}
+                              disabled={
+                                activeIcon.actionTaken || 
+                                ability.currentCooldown > 0 || 
+                                gameState.globalMana[activeIcon.playerId] < ability.manaCost
+                              }
+                              size="sm"
+                              variant={gameState.targetingMode?.abilityId === ability.id ? "default" : "outline"}
+                              className={`flex items-center gap-2 ${
+                                ability.name.toLowerCase().includes('ultimate') ? "bg-red-600 hover:bg-red-700" : ""
+                              }`}
+                            >
+                              <IconComponent className="w-4 h-4" />
+                              {ability.name.slice(0, 8)} ({ability.manaCost})
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="max-w-xs">
+                              <p className="font-semibold">{ability.name} {ability.name.toLowerCase().includes('ultimate') ? '(ULTIMATE)' : ''}</p>
+                              <p className="text-sm">{ability.description}</p>
+                              <p className="text-xs mt-1">Power: {activeIcon.stats.power} | Range: {ability.range}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
                 </div>
               </div>
             )}
