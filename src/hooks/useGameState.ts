@@ -38,7 +38,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (q === -6 && r === 5) {
     return {
       type: 'base',
-      effects: {}
+      effects: { movementModifier: -999 } // Impassable
     };
   }
 
@@ -46,7 +46,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (q === 6 && r === -5) {
     return {
       type: 'base',
-      effects: {}
+      effects: { movementModifier: -999 } // Impassable
     };
   }
 
@@ -70,7 +70,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (Math.abs(q) >= 5 || Math.abs(r) >= 5 || Math.abs(q + r) >= 5) {
     return {
       type: 'mountain',
-      effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -1 }
+      effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } // Impassable
     };
   }
 
@@ -113,7 +113,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Napoleon-chan",
       role: "dps_ranged" as const,
-      stats: { hp: 80, maxHp: 80, moveRange: 3, speed: 6, might: 45, power: 60, defense: 35, movement: 2 },
+      stats: { hp: 80, maxHp: 80, moveRange: 2, speed: 6, might: 45, power: 60, defense: 35, movement: 2 },
       abilities: [
         { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 2, description: "Long-range bombardment. Deals 55 damage + terrain destruction.", damage: 55 },
         { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 4, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns and grants movement bonus." },
@@ -124,7 +124,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Genghis-chan",
       role: "dps_melee" as const,
-      stats: { hp: 90, maxHp: 90, moveRange: 5, speed: 8, might: 70, power: 40, defense: 40, movement: 2 },
+      stats: { hp: 90, maxHp: 90, moveRange: 2, speed: 8, might: 70, power: 40, defense: 40, movement: 2 },
       abilities: [
         { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 1, currentCooldown: 0, range: 1, description: "Rush attack through multiple enemies. Deals 60 damage + bonus per enemy hit.", damage: 60 },
         { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 3, currentCooldown: 0, range: 1, description: "Teleport behind target and strike. 75 damage + fear effect (target can't move next turn).", damage: 75 },
@@ -135,7 +135,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Da Vinci-chan", 
       role: "support" as const,
-      stats: { hp: 65, maxHp: 65, moveRange: 3, speed: 4, might: 30, power: 80, defense: 45, movement: 2 },
+      stats: { hp: 65, maxHp: 65, moveRange: 2, speed: 4, might: 30, power: 80, defense: 45, movement: 2 },
       abilities: [
         { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 2, description: "Teleport to any visible hex + gain aerial view (see through terrain) for 2 turns." },
         { id: "2", name: "Masterpiece", manaCost: 7, cooldown: 5, currentCooldown: 0, range: 2, description: "Creates a defensive art barrier. Heals 45 HP + shields allies from next attack.", healing: 45 },
