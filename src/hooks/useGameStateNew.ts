@@ -342,6 +342,11 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         selectedIcon: prev.selectedIcon,
         targetingMode: prev.targetingMode
       });
+      console.log('Current game state:', {
+        activeIconId: prev.activeIconId,
+        selectedIcon: prev.selectedIcon,
+        targetingMode: prev.targetingMode
+      });
       // Check if we're in targeting mode (ability or basic attack)
       if (prev.targetingMode) {
         const activeIcon = prev.players
@@ -494,6 +499,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
       // Try to move the active icon - check if allowed to move
       if (activeIcon && activeIcon.id === prev.activeIconId && !prev.targetingMode && !activeIcon.movedThisTurn) {
+        console.log('Active icon details:', {
+          id: activeIcon.id,
+          name: activeIcon.name,
+          movedThisTurn: activeIcon.movedThisTurn,
+          actionTaken: activeIcon.actionTaken,
+          position: activeIcon.position
+        });
         console.log('Attempting movement for activeIcon:', activeIcon.id);
         const distance = calculateDistance(activeIcon.position, coordinates);
         console.log('Movement distance:', distance, 'moveRange:', activeIcon.stats.moveRange);
