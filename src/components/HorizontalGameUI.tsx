@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sparkles, Crown } from "lucide-react";
+import HPBar from "./HPBar";
 
 interface HorizontalGameUIProps {
   gameState: GameState;
@@ -35,10 +37,13 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <div className="text-center p-2 rounded border">
-                      <div className="font-semibold">Mana Crystal</div>
-                      <div className={gameState.objectives.manaCrystal.controlled ? "text-green-500" : "text-gray-500"}>
-                        {gameState.objectives.manaCrystal.controlled ? "Controlled" : "Neutral"}
+                    <div className="text-center p-2 rounded border flex items-center gap-2">
+                      <Sparkles className={`w-4 h-4 ${gameState.objectives.manaCrystal.controlled ? "text-purple-400" : "text-gray-500"}`} />
+                      <div>
+                        <div className="font-semibold">Mana Crystal</div>
+                        <div className={gameState.objectives.manaCrystal.controlled ? "text-green-500" : "text-gray-500"}>
+                          {gameState.objectives.manaCrystal.controlled ? "Controlled" : "Neutral"}
+                        </div>
                       </div>
                     </div>
                   </TooltipTrigger>
@@ -51,10 +56,13 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <div className="text-center p-2 rounded border">
-                      <div className="font-semibold">Beast Camp</div>
-                      <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
-                        {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                    <div className="text-center p-2 rounded border flex items-center gap-2">
+                      <Crown className={`w-4 h-4 ${gameState.objectives.beastCamp.defeated ? "text-yellow-400" : "text-red-400"}`} />
+                      <div>
+                        <div className="font-semibold">Beast Camp</div>
+                        <div className={gameState.objectives.beastCamp.defeated ? "text-green-500" : "text-gray-500"}>
+                          {gameState.objectives.beastCamp.defeated ? "Cleared" : "Active"}
+                        </div>
                       </div>
                     </div>
                   </TooltipTrigger>
@@ -117,11 +125,14 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           <CardContent>
             <div className="space-y-2">
               {gameState.players[0].icons.map(icon => (
-                <div key={icon.id} className="flex justify-between text-sm">
-                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
-                    {icon.name}
-                  </span>
-                  <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                <div key={icon.id} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-sm">
+                    <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
+                      {icon.name}
+                    </span>
+                    <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                  </div>
+                  <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                 </div>
               ))}
             </div>
@@ -140,11 +151,14 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }:
           <CardContent>
             <div className="space-y-2">
               {gameState.players[1].icons.map(icon => (
-                <div key={icon.id} className="flex justify-between text-sm">
-                  <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
-                    {icon.name}
-                  </span>
-                  <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                <div key={icon.id} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-sm">
+                    <span className={icon.id === gameState.activeIconId ? "font-bold text-active-turn" : ""}>
+                      {icon.name}
+                    </span>
+                    <span>{icon.stats.hp}/{icon.stats.maxHp}</span>
+                  </div>
+                  <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                 </div>
               ))}
             </div>
