@@ -135,8 +135,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         <path
           d={hexPath}
           className={cn(
-            getTerrainColor(),
-            'stroke-2 transition-colors',
+            'stroke-2 transition-colors stroke-gray-600 fill-transparent',
             tile.highlighted && 'ring-2 ring-primary',
             tile.selectable && 'ring-2 ring-accent',
             isTargetable && 'ring-2 ring-destructive bg-red-500/20',
