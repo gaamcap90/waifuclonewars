@@ -42,7 +42,7 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
           variant={activeIcon.actionTaken ? "secondary" : "outline"}
         >
           <Swords className="w-4 h-4 mr-2" />
-          Basic Attack ({activeIcon.stats.might - 0} damage)
+          Basic Attack ({activeIcon.stats.might} damage)
         </Button>
 
         {/* Abilities */}
@@ -95,7 +95,13 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
         </div>
 
         {/* End Turn */}
-        <Button onClick={onEndTurn} className="w-full" variant="outline" size="lg">
+        <Button 
+          onClick={onEndTurn} 
+          className="w-full" 
+          variant="outline" 
+          size="lg"
+          disabled={gameState.gameMode === 'singleplayer' && activeIcon.playerId === 1}
+        >
           End Turn
         </Button>
 
