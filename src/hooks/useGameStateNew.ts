@@ -388,8 +388,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     setCurrentTurnTimer(20);
   }, [gameState.activeIconId]);
 
-  // Handle AI turns - only in single player mode
-  useEffect(() => {
+ // Handle AI turns - only in single player mode
+useEffect(() => {
   if (gameState.gameMode === 'singleplayer' && gameState.phase === 'combat') {
     const activeIcon = gameState.players
       .flatMap(p => p.icons)
@@ -409,102 +409,99 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     });
 
     if (
-  activeIcon?.playerId === 1 &&
-  activeIcon.isAlive &&
-  !(activeIcon.movedThisTurn && activeIcon.actionTaken)
-)
- {
+      activeIcon?.playerId === 1 &&
+      activeIcon.isAlive &&
+      !(activeIcon.movedThisTurn && activeIcon.actionTaken)
+    ) {
       const timer = setTimeout(() => {
-  console.log('AI Timer triggered');
+        console.log('AI Timer triggered');
 
-  // 1. If AI is in targeting mode, try to attack
-  if (gameState.targetingMode && gameState.targetingMode.iconId === activeIcon.id) {
-    console.log('AI in targeting mode, looking for targets');
+        // 1. If AI is in targeting mode, try to attack
+        if (gameState.targetingMode && gameState.targetingMode.iconId === activeIcon.id) {
+          console.log('AI in targeting mode, looking for targets');
 
-    const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
-    const enemyBase = gameState.board.find(tile =>
-      tile.terrain.type === 'base' &&
-      tile.coordinates.q === -6 && tile.coordinates.r === 5
-    );
+          const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
+          const enemyBase = gameState.board.find(tile =>
+            tile.terrain.type === 'base' &&
+            tile.coordinates.q === -6 && tile.coordinates.r === 5
+          );
 
-    let target = null;
+          let target = null;
 
-    for (const enemy of enemyIcons) {
-      const distance = calculateDistance(activeIcon.position, enemy.position);
-      if (distance <= gameState.targetingMode.range) {
-        target = enemy.position;
-        console.log('AI targeting enemy:', enemy.name, 'at', target);
-        break;
-      }
-    }
+          for (const enemy of enemyIcons) {
+            const distance = calculateDistance(activeIcon.position, enemy.position);
+            if (distance <= gameState.targetingMode.range) {
+              target = enemy.position;
+              console.log('AI targeting enemy:', enemy.name, 'at', target);
+              break;
+            }
+          }
 
-    if (!target && enemyBase) {
-      const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
-      if (dist <= gameState.targetingMode.range) {
-        target = enemyBase.coordinates;
-        console.log('AI targeting base at', target);
-      }
-    }
+          if (!target && enemyBase) {
+            const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
+            if (dist <= gameState.targetingMode.range) {
+              target = enemyBase.coordinates;
+              console.log('AI targeting base at', target);
+            }
+          }
 
-    if (target) {
-  console.log('AI executing attack on', target);
-  setTimeout(() => {
-    selectTile(target);
-    
-    // Fallback: force mark actionTaken = true 1s later
-    setTimeout(() => {
-      setGameState(prev => ({
-        ...prev,
-        players: prev.players.map(p => ({
-          ...p,
-          icons: p.icons.map(icon =>
-            icon.id === activeIcon.id
-              ? { ...icon, actionTaken: true }
-              : icon
-          )
-        }))
-      }));
-    }, 1000);
+          if (target) {
+            console.log('AI executing attack on', target);
+            setTimeout(() => {
+              selectTile(target);
 
-  }, 500);
+              // Fallback: mark actionTaken true 1s later
+              setTimeout(() => {
+                setGameState(prev => ({
+                  ...prev,
+                  players: prev.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(icon =>
+                      icon.id === activeIcon.id
+                        ? { ...icon, actionTaken: true }
+                        : icon
+                    )
+                  }))
+                }));
+              }, 1000);
+            }, 500);
 
-  return;
-}
+            return;
+          }
+        }
 
+        // 2. If not targeting, try moving
+        const aiMove = makeAIMove(gameState);
+        if (Object.keys(aiMove).length > 0) {
+          console.log('AI moving:', aiMove);
+          setGameState(prev => {
+            const updatedState = {
+              ...prev,
+              ...aiMove,
+              players: prev.players.map(p => ({
+                ...p,
+                icons: p.icons.map(icon =>
+                  icon.id === activeIcon.id
+                    ? { ...icon, movedThisTurn: true }
+                    : icon
+                )
+              }))
+            };
+            return updatedState;
+          });
 
-  // 2. If not targeting, try moving
-  const aiMove = makeAIMove(gameState);
-  if (Object.keys(aiMove).length > 0) {
-  console.log('AI moving:', aiMove);
-  setGameState(prev => {
-  const updatedState = {
-    ...prev,
-    ...aiMove,
-    players: prev.players.map(p => ({
-      ...p,
-      icons: p.icons.map(icon =>
-        icon.id === activeIcon.id
-          ? { ...icon, movedThisTurn: true }
-          : icon
-      )
-    }))
-  };
-  return updatedState;
-});
+          // After moving, wait and trigger basic attack targeting
+          setTimeout(() => {
+            basicAttack();
+          }, 500);
 
-// After moving, wait and trigger basic attack targeting
-setTimeout(() => {
-  basicAttack(); // this should set targetingMode
-}, 500);
+          return;
+        }
 
-return;
-
-
-  // 3. Nothing left to do — end turn
-  console.log('AI ending turn - nothing to do');
-  endTurn();
-
-}, 1000); // <-- make sure this closing brace and comma is placed correctly
+        // 3. Nothing left to do — end turn
+        console.log('AI ending turn - nothing to do');
+        endTurn();
+      }, 1000); // ✅ This closes the setTimeout
 
       return () => clearTimeout(timer);
     }
@@ -516,6 +513,7 @@ return;
   gameState.players,
   gameState.board
 ]);
+
 
 
 
