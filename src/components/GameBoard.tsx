@@ -17,7 +17,7 @@ interface GameBoardProps {
 }
 
 const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
-  const hexSize = 45; // Increased size for better spacing
+  const hexSize = 50; // Improved size for better spacing and art display
   const boardWidth = 15;
   const boardHeight = 11;
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -36,7 +36,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
 
   // Convert axial coordinates to pixel coordinates with better spacing
   const hexToPixel = (q: number, r: number) => {
-    const x = hexSize * (1.7 * q); // Increased spacing to prevent overlap
+    const x = hexSize * (1.8 * q); // Improved spacing to prevent hex overlap
     const y = hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
     return { x, y };
   };
