@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { GameState, Coordinates, Icon, HexTile, TerrainType } from "@/types/game";
 import { toast } from "sonner";
-export function useGameStateNew() {
 const aiTurnHandledRef = useRef(false);
 const createInitialBoard = (): HexTile[] => {
   const board: HexTile[] = [];
@@ -330,7 +329,7 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
   return {};
 };
 
-const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer') => {
+  export function useGameStateNew(gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer') {
   const [gameState, setGameState] = useState<GameState>(() => {
     const initialIcons = createInitialIcons();
     const speedQueue = createSpeedQueue(initialIcons);
@@ -521,57 +520,71 @@ useEffect(() => {
     gameState.board,
     gameState.targetingMode
   ]);
-}
 
- 
-useEffect(() => {
-  if (
-    gameState.gameMode !== 'singleplayer' ||
-    gameState.phase !== 'combat' ||
-    !gameState.targetingMode
-  ) return;
+  // Handle AI targeting mode for attacking
+  useEffect(() => {
+    if (
+      gameState.gameMode !== 'singleplayer' ||
+      gameState.phase !== 'combat' ||
+      !gameState.targetingMode
+    ) return;
 
-  const activeIcon = gameState.players
-    .flatMap(p => p.icons)
-    .find(i => i.id === gameState.activeIconId);
+    const activeIcon = gameState.players
+      .flatMap(p => p.icons)
+      .find(i => i.id === gameState.activeIconId);
 
-  if (!activeIcon || activeIcon.playerId !== 1) return;
+    if (!activeIcon || activeIcon.playerId !== 1) return;
 
-  console.log('AI in targeting mode, looking for targets');
+    console.log('AI in targeting mode, looking for targets');
 
-  const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
-  const enemyBase = gameState.board.find(tile =>
-    tile.terrain.type === 'base' &&
-    tile.coordinates.q === -6 && tile.coordinates.r === 5
-  );
+    const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
+    const enemyBase = gameState.board.find(tile =>
+      tile.terrain.type === 'base' &&
+      tile.coordinates.q === -6 && tile.coordinates.r === 5
+    );
 
-  let target = null;
+    let target = null;
 
-  for (const enemy of enemyIcons) {
-    const dist = calculateDistance(activeIcon.position, enemy.position);
-    if (dist <= gameState.targetingMode.range) {
-      target = enemy.position;
-      console.log('AI targeting enemy:', enemy.name, 'at', target);
-      break;
+    for (const enemy of enemyIcons) {
+      const dist = calculateDistance(activeIcon.position, enemy.position);
+      if (dist <= gameState.targetingMode.range) {
+        target = enemy.position;
+        console.log('AI targeting enemy:', enemy.name, 'at', target);
+        break;
+      }
     }
-  }
 
-  if (!target && enemyBase) {
-    const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
-    if (dist <= gameState.targetingMode.range) {
-      target = enemyBase.coordinates;
-      console.log('AI targeting base at', target);
+    if (!target && enemyBase) {
+      const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
+      if (dist <= gameState.targetingMode.range) {
+        target = enemyBase.coordinates;
+        console.log('AI targeting base at', target);
+      }
     }
-  }
 
-  if (target) {
-    console.log('AI executing attack on', target);
-    setTimeout(() => selectTile(target), 400);
+    if (target) {
+      console.log('AI executing attack on', target);
+      setTimeout(() => selectTile(target), 400);
 
-    // Optional fallback in case attack fails to resolve
-    setTimeout(() => {
+      // Optional fallback in case attack fails to resolve
+      setTimeout(() => {
+        setGameState(prev => ({
+          ...prev,
+          players: prev.players.map(p => ({
+            ...p,
+            icons: p.icons.map(icon =>
+              icon.id === activeIcon.id
+                ? { ...icon, actionTaken: true }
+                : icon
+            )
+          }))
+        }));
+      }, 1200);
+    } else {
+      console.log('No valid targets — clearing targetingMode and marking actionTaken');
       setGameState(prev => ({
         ...prev,
+        targetingMode: null,
         players: prev.players.map(p => ({
           ...p,
           icons: p.icons.map(icon =>
@@ -581,23 +594,8 @@ useEffect(() => {
           )
         }))
       }));
-    }, 1200);
-  } else {
-    console.log('No valid targets — clearing targetingMode and marking actionTaken');
-    setGameState(prev => ({
-      ...prev,
-      targetingMode: null,
-      players: prev.players.map(p => ({
-        ...p,
-        icons: p.icons.map(icon =>
-          icon.id === activeIcon.id
-            ? { ...icon, actionTaken: true }
-            : icon
-        )
-      }))
-    }));
-  }
-}, [gameState.targetingMode]);
+    }
+  }, [gameState.targetingMode]);
 
 
 
@@ -1177,63 +1175,6 @@ useEffect(() => {
     });
   }, []);
 
-  function performBasicAttack(gameState) {
-  const activeIcon = gameState.players
-    .flatMap(p => p.icons)
-    .find(i => i.id === gameState.activeIconId);
-
-  if (!activeIcon || activeIcon.actionTaken || !activeIcon.isAlive) {
-    return gameState;
-  }
-
-  const enemyIcons = gameState.players
-    .filter(p => p.id !== activeIcon.playerId)
-    .flatMap(p => p.icons)
-    .filter(icon => icon.isAlive);
-
-  let range = 1; // Default melee
-  if (activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan") {
-    range = 2; // Ranged
-  }
-
-  // Try to find the closest valid enemy in range
-  let target = null;
-  for (const enemy of enemyIcons) {
-    const dist = calculateDistance(activeIcon.position, enemy.position);
-    if (dist <= range) {
-      target = enemy;
-      break;
-    }
-  }
-
-  if (!target) return gameState; // No one to attack
-
-  const damage = Math.max(0, activeIcon.stats.might - target.stats.defense);
-  console.log(`[AI] ${activeIcon.name} attacks ${target.name} for ${damage} damage`);
-
-  const updatedPlayers = gameState.players.map(player => ({
-    ...player,
-    icons: player.icons.map(icon => {
-      if (icon.id === target.id) {
-        const newHP = Math.max(0, icon.hp - damage);
-        return {
-          ...icon,
-          hp: newHP,
-          isAlive: newHP > 0
-        };
-      }
-      return icon;
-    })
-  }));
-
-  return {
-    ...gameState,
-    players: updatedPlayers,
-    targetingMode: null,
-    actionTaken: true
-  };
-}
-
 
   const respawnCharacter = useCallback((iconId: string, coordinates: Coordinates) => {
     setGameState(prev => {
@@ -1360,4 +1301,4 @@ useEffect(() => {
   };
 };
 
-export default useGameState;
+export default useGameStateNew;
