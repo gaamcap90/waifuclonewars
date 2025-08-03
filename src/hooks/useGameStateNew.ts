@@ -821,6 +821,18 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           targetingMode: undefined
         };
       }
+      
+      // Prevent player from controlling enemy characters  
+      if (clickedIcon && clickedIcon.playerId !== 0) {
+        console.log('Cannot control enemy character');
+        return prev;
+      }
+      
+      // Prevent terrain targeting error - ensure icon exists before accessing properties
+      if (movementActiveIcon && movementActiveIcon.playerId !== 0) {
+        console.log('Cannot control enemy character for movement');
+        return prev;
+      }
 
       // Try to move the active icon - check if allowed to move
       if (movementActiveIcon && movementActiveIcon.id === prev.activeIconId && !prev.targetingMode && movementActiveIcon.stats.movement > 0) {

@@ -38,10 +38,10 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
           onClick={onBasicAttack}
           disabled={activeIcon.actionTaken}
           className="w-full"
-          variant={activeIcon.actionTaken ? "secondary" : "default"}
+          variant="outline"
         >
           <Swords className="w-4 h-4 mr-2" />
-          Basic Attack (No Mana)
+          Basic Attack ({activeIcon.stats.might - 5} damage)
         </Button>
 
         {/* Abilities */}
@@ -61,8 +61,8 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
                 <Zap className="w-4 h-4 mr-2" />
                 <div className="flex-1 text-left">
                   <div className="flex justify-between">
-                    <span>{ability.name}</span>
-                    <span className="text-xs">{ability.manaCost} mana</span>
+                    <span>{ability.name}{activeIcon.ultimateUsed && ability.id.includes('ultimate') ? ' (ULTIMATE)' : ''}</span>
+                    <span className="text-xs">{Math.floor(activeIcon.stats.power * 0.5)} damage • {ability.manaCost} mana</span>
                   </div>
                   {ability.currentCooldown > 0 && (
                     <div className="text-xs text-muted-foreground">

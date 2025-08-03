@@ -20,26 +20,8 @@ interface HexTileProps {
 
 const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40, playerColor, isActiveIcon, isTargetable, isValidMovement, isRespawnTarget, isInAttackRange, isInAbilityRange }: HexTileProps) => {
   const getTerrainColor = () => {
-    switch (tile.terrain.type) {
-      case 'forest':
-        return 'fill-terrain-forest border-terrain-forest';
-      case 'mountain':
-        return 'fill-terrain-mountain border-terrain-mountain';
-      case 'river':
-        return 'fill-terrain-river border-terrain-river';
-      case 'plain':
-        return 'fill-terrain-plain border-terrain-plain';
-      case 'mana_crystal':
-        return 'fill-terrain-crystal border-terrain-crystal animate-pulse';
-      case 'beast_camp':
-        return 'fill-terrain-beast border-terrain-beast';
-      case 'base':
-        return 'fill-terrain-base border-terrain-base';
-      case 'spawn':
-        return 'fill-terrain-spawn border-terrain-spawn';
-      default:
-        return 'fill-terrain-plain border-terrain-plain';
-    }
+    // Return transparent to show terrain images
+    return 'fill-transparent stroke-gray-600/30';
   };
 
   const getIconColor = () => {
@@ -153,7 +135,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         {icon ? (
           <div className="flex flex-col items-center">
             <div className={cn(
-              "w-16 h-16 rounded-full border-4 font-orbitron overflow-hidden",
+              "w-20 h-20 rounded-full border-4 font-orbitron overflow-hidden",
               playerColor === 'blue' ? 'border-blue-400' : 'border-red-400',
               isActiveIcon && 'border-active-turn shadow-lg shadow-active-turn/50 animate-pulse'
             )}>
