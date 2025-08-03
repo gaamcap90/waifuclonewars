@@ -54,17 +54,17 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
             
             // Calculate damage/healing for display
             let displayValue = "";
-            if (ability.description.includes("Power × 0.8")) {
+            if (ability.description.includes("× 0.8")) {
               displayValue = `${Math.floor(activeIcon.stats.power * 0.8)} damage`;
-            } else if (ability.description.includes("Power × 1.2")) {
+            } else if (ability.description.includes("× 1.2")) {
               displayValue = `${Math.floor(activeIcon.stats.power * 1.2)} damage`;
-            } else if (ability.description.includes("Power × 1.5")) {
+            } else if (ability.description.includes("× 1.5")) {
               displayValue = `${Math.floor(activeIcon.stats.power * 1.5)} damage`;
-            } else if (ability.description.includes("Power × 0.5")) {
+            } else if (ability.description.includes("× 0.5")) {
               displayValue = `${Math.floor(activeIcon.stats.power * 0.5)} damage`;
-            } else if (ability.description.includes("Power × 0.6")) {
+            } else if (ability.description.includes("× 0.6")) {
               displayValue = `${Math.floor(activeIcon.stats.power * 0.6)} damage`;
-            } else if (ability.description.includes("Power × 0.9")) {
+            } else if (ability.description.includes("× 0.9")) {
               displayValue = `${Math.floor(activeIcon.stats.power * 0.9)} healing`;
             }
             
@@ -100,7 +100,7 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
           className="w-full" 
           variant="outline" 
           size="lg"
-          disabled={gameState.gameMode === 'singleplayer' && activeIcon.playerId === 1}
+          disabled={gameState.gameMode === 'singleplayer' && activePlayer?.id === 1}
         >
           End Turn
         </Button>

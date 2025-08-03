@@ -450,28 +450,43 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             }
           }
           
-          // If no targeting mode, check if AI can act
-          if (!activeIcon.actionTaken) {
-            console.log('AI making move decision');
+          // Try to move first if not moved
+          if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
+            console.log('AI trying to move');
             const aiMove = makeAIMove(gameState);
             console.log('AI move result:', aiMove);
             
             if (Object.keys(aiMove).length > 0) {
               setGameState(prev => ({ ...prev, ...aiMove }));
               
-              // If AI is entering targeting mode, don't end turn immediately
-              if (aiMove.targetingMode) {
-                console.log('AI entering targeting mode');
-                return; // Let the targeting mode handle the turn ending
-              }
-              
-              // End turn after movement
+              // Wait then try to attack
               setTimeout(() => {
-                console.log('AI ending turn after movement');
-                endTurn();
+                if (!activeIcon.actionTaken) {
+                  console.log('AI trying basic attack after move');
+                  basicAttack();
+                  
+                  setTimeout(() => {
+                    console.log('AI ending turn after attack');
+                    endTurn();
+                  }, 1000);
+                } else {
+                  endTurn();
+                }
               }, 1000);
               return;
             }
+          }
+          
+          // If can't or won't move, try attack
+          if (!activeIcon.actionTaken) {
+            console.log('AI trying basic attack');
+            basicAttack();
+            
+            setTimeout(() => {
+              console.log('AI ending turn after attack only');
+              endTurn();
+            }, 1000);
+            return;
           }
           
           // End AI turn if nothing to do
