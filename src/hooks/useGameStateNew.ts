@@ -203,7 +203,7 @@ const isValidMovement = (from: Coordinates, to: Coordinates, moveRange: number, 
   return true;
 };
 
-// Enhanced AI that can attack, use abilities, and target base
+// Enhanced AI that prioritizes basic attacks and smart movement
 const makeAIMove = (gameState: GameState): Partial<GameState> => {
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
@@ -213,13 +213,14 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
     return {};
   }
 
-  // Priority 1: Attack enemy characters if in range
   const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
+  const attackRange = activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan" ? 2 : 1;
+
+  // PRIORITY 1: Basic attack if enemy is in range NOW
   for (const enemy of enemyIcons) {
     const distance = calculateDistance(activeIcon.position, enemy.position);
-    const attackRange = activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan" ? 2 : 1;
-    
-    if (distance <= attackRange) {
+    if (distance <= attackRange && !activeIcon.actionTaken) {
+      console.log('AI: Enemy in attack range, attacking!');
       return {
         targetingMode: {
           abilityId: 'basic_attack',
@@ -230,40 +231,96 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
     }
   }
 
-  // Priority 2: Use abilities if available and mana permits
-  const usableAbility = activeIcon.abilities.find(ability => 
-    ability.currentCooldown === 0 && 
-    gameState.globalMana[1] >= ability.manaCost &&
-    ability.id !== 'ultimate'
-  );
-  
-  if (usableAbility) {
-    // Find target for ability
-    for (const enemy of enemyIcons) {
-      const distance = calculateDistance(activeIcon.position, enemy.position);
-      if (distance <= usableAbility.range) {
-        return {
-          targetingMode: {
-            abilityId: usableAbility.id,
-            iconId: activeIcon.id,
-            range: usableAbility.range
+  // PRIORITY 2: Move to get in attack range of enemy
+  if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
+    const validMoves: Coordinates[] = [];
+    for (let q = -7; q <= 7; q++) {
+      for (let r = -7; r <= 7; r++) {
+        const target = { q, r };
+        if (isValidMovement(activeIcon.position, target, activeIcon.stats.moveRange, gameState.board)) {
+          const occupied = gameState.players
+            .flatMap(p => p.icons)
+            .some(icon => icon.position.q === q && icon.position.r === r && icon.isAlive);
+          if (!occupied) {
+            validMoves.push(target);
           }
-        };
+        }
       }
+    }
+
+    // Find move that puts us in attack range of an enemy
+    for (const move of validMoves) {
+      for (const enemy of enemyIcons) {
+        const distanceAfterMove = calculateDistance(move, enemy.position);
+        if (distanceAfterMove <= attackRange) {
+          console.log('AI: Moving to attack range');
+          return {
+            players: gameState.players.map(player => ({
+              ...player,
+              icons: player.icons.map(icon => 
+                icon.id === activeIcon.id 
+                  ? { 
+                      ...icon, 
+                      position: move, 
+                      movedThisTurn: true,
+                      stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - calculateDistance(activeIcon.position, move)) }
+                    }
+                  : icon
+              )
+            }))
+          };
+        }
+      }
+    }
+
+    // If no attack move available, move towards closest enemy
+    if (validMoves.length > 0 && enemyIcons.length > 0) {
+      let closestEnemy = enemyIcons[0];
+      let minDistance = calculateDistance(activeIcon.position, closestEnemy.position);
+      
+      for (const enemy of enemyIcons) {
+        const dist = calculateDistance(activeIcon.position, enemy.position);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestEnemy = enemy;
+        }
+      }
+      
+      const bestMove = validMoves.reduce((best, move) => {
+        const currentDistance = calculateDistance(move, closestEnemy.position);
+        const bestDistance = calculateDistance(best, closestEnemy.position);
+        return currentDistance < bestDistance ? move : best;
+      });
+
+      console.log('AI: Moving towards enemy');
+      return {
+        players: gameState.players.map(player => ({
+          ...player,
+          icons: player.icons.map(icon => 
+            icon.id === activeIcon.id 
+              ? { 
+                  ...icon, 
+                  position: bestMove, 
+                  movedThisTurn: true,
+                  stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - calculateDistance(activeIcon.position, bestMove)) }
+                }
+              : icon
+          )
+        }))
+      };
     }
   }
 
-  // Priority 3: Attack enemy base if in range
+  // PRIORITY 3: Attack enemy base if in range
   const enemyBase = gameState.board.find(tile => 
     tile.terrain.type === 'base' && 
     tile.coordinates.q === -6 && tile.coordinates.r === 5
   );
   
-  if (enemyBase) {
+  if (enemyBase && !activeIcon.actionTaken) {
     const distanceToBase = calculateDistance(activeIcon.position, enemyBase.coordinates);
-    const attackRange = activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan" ? 2 : 1;
-    
     if (distanceToBase <= attackRange) {
+      console.log('AI: Attacking enemy base');
       return {
         targetingMode: {
           abilityId: 'basic_attack',
@@ -272,58 +329,6 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
         }
       };
     }
-  }
-
-  // Priority 4: Move towards enemies or base
-  const validMoves: Coordinates[] = [];
-  for (let q = -7; q <= 7; q++) {
-    for (let r = -7; r <= 7; r++) {
-      const target = { q, r };
-      if (isValidMovement(activeIcon.position, target, activeIcon.stats.moveRange, gameState.board)) {
-        const occupied = gameState.players
-          .flatMap(p => p.icons)
-          .some(icon => icon.position.q === q && icon.position.r === r && icon.isAlive);
-        if (!occupied) {
-          validMoves.push(target);
-        }
-      }
-    }
-  }
-
-  if (validMoves.length > 0 && enemyBase) {
-    // Move towards closest enemy or base
-    let bestTarget = enemyBase.coordinates;
-    let minDistance = calculateDistance(activeIcon.position, bestTarget);
-    
-    for (const enemy of enemyIcons) {
-      const dist = calculateDistance(activeIcon.position, enemy.position);
-      if (dist < minDistance) {
-        minDistance = dist;
-        bestTarget = enemy.position;
-      }
-    }
-    
-    const bestMove = validMoves.reduce((best, move) => {
-      const currentDistance = calculateDistance(move, bestTarget);
-      const bestDistance = calculateDistance(best, bestTarget);
-      return currentDistance < bestDistance ? move : best;
-    });
-
-    return {
-      players: gameState.players.map(player => ({
-        ...player,
-        icons: player.icons.map(icon => 
-          icon.id === activeIcon.id 
-            ? { 
-                ...icon, 
-                position: bestMove, 
-                movedThisTurn: true,
-                stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - calculateDistance(activeIcon.position, bestMove)) }
-              }
-            : icon
-        )
-      }))
-    };
   }
 
   return {};
@@ -450,48 +455,25 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             }
           }
           
-          // Try to move first if not moved
-          if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
-            console.log('AI trying to move');
-            const aiMove = makeAIMove(gameState);
-            console.log('AI move result:', aiMove);
-            
-            if (Object.keys(aiMove).length > 0) {
-              setGameState(prev => ({ ...prev, ...aiMove }));
-              
-              // Wait then try to attack
-              setTimeout(() => {
-                if (!activeIcon.actionTaken) {
-                  console.log('AI trying basic attack after move');
-                  basicAttack();
-                  
-                  setTimeout(() => {
-                    console.log('AI ending turn after attack');
-                    endTurn();
-                  }, 1000);
-                } else {
-                  endTurn();
-                }
-              }, 1000);
-              return;
-            }
-          }
+          // Get AI move decision
+          const aiMove = makeAIMove(gameState);
+          console.log('AI move result:', aiMove);
           
-          // If can't or won't move, try attack
-          if (!activeIcon.actionTaken) {
-            console.log('AI trying basic attack');
-            basicAttack();
-            
-            setTimeout(() => {
-              console.log('AI ending turn after attack only');
-              endTurn();
-            }, 1000);
+          if (aiMove.targetingMode) {
+            // AI wants to attack - set targeting mode
+            console.log('AI setting targeting mode for attack');
+            setGameState(prev => ({ ...prev, ...aiMove }));
             return;
+          } else if (aiMove.players) {
+            // AI wants to move
+            console.log('AI moving');
+            setGameState(prev => ({ ...prev, ...aiMove }));
+            return;
+          } else {
+            // AI can't do anything useful, end turn
+            console.log('AI ending turn - no valid actions');
+            endTurn();
           }
-          
-          // End AI turn if nothing to do
-          console.log('AI ending turn - nothing to do');
-          endTurn();
         }, 1500); // AI thinks for 1.5 seconds
         
         return () => clearTimeout(timer);

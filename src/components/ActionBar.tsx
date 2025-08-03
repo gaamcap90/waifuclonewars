@@ -42,7 +42,7 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
           variant={activeIcon.actionTaken ? "secondary" : "outline"}
         >
           <Swords className="w-4 h-4 mr-2" />
-          Basic Attack ({activeIcon.stats.might} damage)
+          Basic Attack (deals {activeIcon.stats.might} damage)
         </Button>
 
         {/* Abilities */}
@@ -52,20 +52,34 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
                           gameState.globalMana[activePlayer.id] >= ability.manaCost &&
                           ability.currentCooldown === 0;
             
-            // Calculate damage/healing for display
+            // Calculate damage/healing for display - replace description with actual values
             let displayValue = "";
+            let cleanDescription = ability.description;
+            
             if (ability.description.includes("× 0.8")) {
-              displayValue = `${Math.floor(activeIcon.stats.power * 0.8)} damage`;
+              const damage = Math.floor(activeIcon.stats.power * 0.8);
+              displayValue = `deals ${damage} damage`;
+              cleanDescription = ability.description.replace(/Deals Power × 0\.8 damage/g, `Deals ${damage} damage`);
             } else if (ability.description.includes("× 1.2")) {
-              displayValue = `${Math.floor(activeIcon.stats.power * 1.2)} damage`;
+              const damage = Math.floor(activeIcon.stats.power * 1.2);
+              displayValue = `deals ${damage} damage`;
+              cleanDescription = ability.description.replace(/Deals Power × 1\.2 damage/g, `Deals ${damage} damage`);
             } else if (ability.description.includes("× 1.5")) {
-              displayValue = `${Math.floor(activeIcon.stats.power * 1.5)} damage`;
+              const damage = Math.floor(activeIcon.stats.power * 1.5);
+              displayValue = `deals ${damage} damage`;
+              cleanDescription = ability.description.replace(/Deals Power × 1\.5 damage/g, `Deals ${damage} damage`);
             } else if (ability.description.includes("× 0.5")) {
-              displayValue = `${Math.floor(activeIcon.stats.power * 0.5)} damage`;
+              const damage = Math.floor(activeIcon.stats.power * 0.5);
+              displayValue = `deals ${damage} damage`;
+              cleanDescription = ability.description.replace(/Deal Power × 0\.5 damage/g, `Deal ${damage} damage`);
             } else if (ability.description.includes("× 0.6")) {
-              displayValue = `${Math.floor(activeIcon.stats.power * 0.6)} damage`;
+              const damage = Math.floor(activeIcon.stats.power * 0.6);
+              displayValue = `deals ${damage} damage`;
+              cleanDescription = ability.description.replace(/dealing Power × 0\.6 damage/g, `dealing ${damage} damage`);
             } else if (ability.description.includes("× 0.9")) {
-              displayValue = `${Math.floor(activeIcon.stats.power * 0.9)} healing`;
+              const healing = Math.floor(activeIcon.stats.power * 0.9);
+              displayValue = `heals ${healing} HP`;
+              cleanDescription = ability.description.replace(/Heals Power × 0\.9 HP/g, `Heals ${healing} HP`);
             }
             
             return (
@@ -78,16 +92,14 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
                 <Zap className="w-4 h-4 mr-2" />
                 <div className="flex-1 text-left">
                   <div className="flex justify-between">
-                    <span className={ability.name === "Mongol Charge" ? "text-red-500 font-bold" : ""}>
-                      {ability.name === "Mongol Charge" ? "ULTIMATE: " : ""}{ability.name}
+                    <span className={ability.id === "ultimate" ? "text-orange-400 font-bold" : ""}>
+                      {ability.id === "ultimate" ? "ULTIMATE: " : ""}{ability.name}
                     </span>
                     <span className="text-xs">{ability.manaCost} mana</span>
                   </div>
-                  {displayValue && (
-                    <div className="text-xs text-muted-foreground">
-                      {displayValue}
-                    </div>
-                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {cleanDescription}
+                  </div>
                 </div>
               </Button>
             );
@@ -100,7 +112,7 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
           className="w-full" 
           variant="outline" 
           size="lg"
-          disabled={gameState.gameMode === 'singleplayer' && activePlayer?.id === 1}
+          disabled={gameState.gameMode === 'singleplayer' && activeIcon?.playerId === 1}
         >
           End Turn
         </Button>

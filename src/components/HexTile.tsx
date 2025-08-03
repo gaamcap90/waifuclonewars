@@ -87,10 +87,11 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
             className="absolute inset-0 opacity-90"
             style={{ 
               zIndex: -1,
-              width: '100%',
-              height: '100%',
+              width: `${size * 2}px`,
+              height: `${size * 2}px`,
               objectFit: 'cover',
-              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+              transform: 'scale(1.15)' // Slightly scale up to fill hex completely
             }}
           />
       );
