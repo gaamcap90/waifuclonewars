@@ -530,8 +530,8 @@ return;
   return;
 }
 
-
-
+          }
+        
 
           
           // End AI turn if nothing to do
