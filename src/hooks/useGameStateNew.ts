@@ -197,6 +197,9 @@ const isValidMovement = (from: Coordinates, to: Coordinates, moveRange: number, 
   // Check if terrain is impassable
   if (destinationTile.terrain.effects.movementModifier === -999) return false;
   
+  // Prevent moving onto beast camps (they are impassable)
+  if (destinationTile.terrain.type === 'beast_camp') return false;
+  
   return true;
 };
 
