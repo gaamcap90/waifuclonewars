@@ -475,32 +475,6 @@ setTimeout(() => {
 }, 1000);
 return;
           
-          // Try to move first if not moved
-          if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
-            console.log('AI trying to move');
-            const aiMove = makeAIMove(gameState);
-            console.log('AI move result:', aiMove);
-            
-            if (Object.keys(aiMove).length > 0) {
-              setGameState(prev => ({ ...prev, ...aiMove }));
-              
-              // Wait then try to attack
-              setTimeout(() => {
-                if (!activeIcon.actionTaken) {
-                  console.log('AI trying basic attack after move');
-                  basicAttack();
-                  
-                  setTimeout(() => {
-                    console.log('AI ending turn after attack');
-                    endTurn();
-                  }, 1000);
-                } else {
-                  endTurn();
-                }
-              }, 1000);
-              return;
-            }
-          }
           
           // If can't or won't move, try attack
           if (!activeIcon.actionTaken) {
@@ -532,8 +506,6 @@ return;
 
           }
         
-
-          
           // End AI turn if nothing to do
           console.log('AI ending turn - nothing to do');
           endTurn();
