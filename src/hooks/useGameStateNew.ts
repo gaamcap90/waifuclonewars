@@ -488,14 +488,18 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   console.log('AI attempting backend basic attack');
   setGameState(prev => {
     const newState = performBasicAttack(prev);
+
+    // Schedule end turn *inside* the update so it happens after state updates
+    setTimeout(() => {
+      console.log('AI ending turn after backend basic attack');
+      endTurn();
+    }, 1000);
+
     return newState;
   });
-
-  setTimeout(() => {
-    endTurn();
-  }, 1000);
   return;
 }
+
 
           
           // End AI turn if nothing to do
