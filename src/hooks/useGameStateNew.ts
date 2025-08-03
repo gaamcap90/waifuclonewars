@@ -486,10 +486,17 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           // If can't or won't move, try attack
           if (!activeIcon.actionTaken) {
   console.log('AI attempting backend basic attack');
+
   setGameState(prev => {
+    // 🚨 Prevent running attack logic if targeting mode is null
+    if (!prev.targetingMode) {
+      console.log('No targeting mode set — skipping attack and ending turn');
+      setTimeout(() => endTurn(), 1000);
+      return prev;
+    }
+
     const newState = performBasicAttack(prev);
 
-    // Schedule end turn *inside* the update so it happens after state updates
     setTimeout(() => {
       console.log('AI ending turn after backend basic attack');
       endTurn();
@@ -497,8 +504,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
     return newState;
   });
+
   return;
 }
+
 
 
           
