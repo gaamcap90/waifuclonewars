@@ -2,6 +2,7 @@ import { useMemo, useState, useRef } from "react";
 import { GameState, Coordinates, HexTile as HexTileType } from "@/types/game";
 import HexTile from "./HexTile";
 import HPBar from "./HPBar";
+import BeastCampHPBar from "./BeastCampHPBar";
 import { useRangeCalculation } from "./RangeIndicator";
 
 const getCharacterPortrait = (name: string) => {
@@ -205,6 +206,9 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         >
           {renderBoard}
         </div>
+        
+        {/* Beast Camp HP Bars */}
+        <BeastCampHPBar gameState={gameState} />
       </div>
     </div>
   );

@@ -65,7 +65,8 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
           {activeIcon.abilities.map((ability) => {
             const canUse = !activeIcon.actionTaken && 
                           gameState.globalMana[activePlayer.id] >= ability.manaCost &&
-                          ability.currentCooldown === 0;
+                          ability.currentCooldown === 0 &&
+                          (ability.id !== 'ultimate' || !activeIcon.ultimateUsed);
             
             const isSelected = selectedAction === ability.id;
             
@@ -74,17 +75,25 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
                 key={ability.id}
                 onClick={() => handleActionSelect(ability.id)}
                 disabled={!canUse}
-                className={`w-full justify-start ${isSelected ? 'bg-background text-foreground' : 'bg-muted text-muted-foreground'}`}
-                variant="outline"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                <div className="flex-1 text-left">
-                  <div className="flex justify-between">
-                    <span className={ability.id === "ultimate" ? "text-orange-400 font-bold" : ""}>
-                      {ability.id === "ultimate" ? "ULTIMATE: " : ""}{ability.name}
-                    </span>
-                    <span className="text-xs">{ability.manaCost} mana</span>
-                  </div>
+                 className={`w-full justify-start ${
+                   isSelected 
+                     ? 'bg-background text-foreground' 
+                     : 'bg-muted text-muted-foreground'
+                 } ${
+                   ability.id === "ultimate" 
+                     ? 'border-red-500 ring-2 ring-red-500/50 bg-red-500/10' 
+                     : ''
+                 }`}
+                 variant="outline"
+               >
+                 <Zap className="w-4 h-4 mr-2" />
+                 <div className="flex-1 text-left">
+                   <div className="flex justify-between">
+                     <span className={ability.id === "ultimate" ? "text-red-400 font-bold" : ""}>
+                       {ability.id === "ultimate" ? "ULTIMATE: " : ""}{ability.name}
+                     </span>
+                     <span className="text-xs">{ability.manaCost} mana</span>
+                   </div>
                   <div className="text-xs text-muted-foreground">
                     {ability.description}
                   </div>

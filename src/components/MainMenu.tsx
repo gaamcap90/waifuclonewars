@@ -48,6 +48,13 @@ const MainMenu = ({ onStartGame }: MainMenuProps) => {
           >
             ⚙️ Arena Settings (Coming Soon)
           </Button>
+          <Button 
+            onClick={() => window.close()}
+            className="w-full h-12 text-lg font-orbitron border-red-500 text-red-500 hover:bg-red-500/10"
+            variant="outline"
+          >
+            🚪 Quit Game
+          </Button>
         </CardContent>
       </Card>
     </div>
