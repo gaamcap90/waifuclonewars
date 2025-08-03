@@ -14,9 +14,11 @@ interface HexTileProps {
   isTargetable?: boolean;
   isValidMovement?: boolean;
   isRespawnTarget?: boolean;
+  isInAttackRange?: boolean;
+  isInAbilityRange?: boolean;
 }
 
-const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40, playerColor, isActiveIcon, isTargetable, isValidMovement, isRespawnTarget }: HexTileProps) => {
+const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40, playerColor, isActiveIcon, isTargetable, isValidMovement, isRespawnTarget, isInAttackRange, isInAbilityRange }: HexTileProps) => {
   const getTerrainColor = () => {
     switch (tile.terrain.type) {
       case 'forest':
@@ -47,6 +49,48 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
   };
 
   const getTerrainIcon = () => {
+    const getTerrainImage = () => {
+      switch (tile.terrain.type) {
+        case 'forest':
+          return '/lovable-uploads/04c976e4-64a9-409a-b803-4510824e88c5.png';
+        case 'mountain':
+          return '/lovable-uploads/e44a4bc4-3431-4ef9-abda-21829202c98a.png';
+        case 'river':
+          return '/lovable-uploads/05c34c82-9e2d-4cbf-ad0f-01232315e270.png';
+        case 'plain':
+          return '/lovable-uploads/4490f506-21ad-4e64-a28f-95b37d50757f.png';
+        case 'mana_crystal':
+          return '/lovable-uploads/c5003197-3858-422f-911a-92d0122902c7.png';
+        case 'beast_camp':
+          return '/lovable-uploads/ed85b6df-3fb1-4f6a-89ce-53010aae0c0f.png';
+        case 'base':
+          // Use different bases for different teams
+          return tile.coordinates.q === -6 && tile.coordinates.r === 5 
+            ? '/lovable-uploads/49d9e3e0-76f2-42c5-8126-79023cf5cea2.png' // Blue base
+            : '/lovable-uploads/53e73cfa-d834-41d6-a6be-5c7246a07c40.png'; // Red base
+        case 'spawn':
+          // Use different spawn zones for different teams
+          return tile.coordinates.q < 0 
+            ? '/lovable-uploads/48b26504-94cd-4656-95ad-a47a067fa509.png' // Blue spawn
+            : '/lovable-uploads/6751baaa-0c93-4c53-9aac-987fbdca6626.png'; // Red spawn
+        default:
+          return null;
+      }
+    };
+
+    const terrainImage = getTerrainImage();
+    if (terrainImage) {
+      return (
+        <img 
+          src={terrainImage} 
+          alt={tile.terrain.type}
+          className="w-full h-full object-cover absolute inset-0 rounded-sm opacity-90"
+          style={{ zIndex: -1 }}
+        />
+      );
+    }
+
+    // Fallback to icons if images don't load
     switch (tile.terrain.type) {
       case 'forest':
         return <Trees className="w-4 h-4 text-green-200" />;
@@ -96,7 +140,9 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
             tile.highlighted && 'ring-2 ring-primary',
             tile.selectable && 'ring-2 ring-accent',
             isTargetable && 'ring-2 ring-destructive bg-red-500/20',
-            isValidMovement && 'ring-2 ring-alien-green bg-alien-green/20',
+            isValidMovement && 'ring-2 ring-green-400 bg-green-400/20',
+            isInAttackRange && 'ring-2 ring-red-400 bg-red-400/20',
+            isInAbilityRange && 'ring-2 ring-orange-400 bg-orange-400/20',
             isRespawnTarget && 'ring-2 ring-blue-400 bg-blue-400/20',
             isActiveIcon && 'ring-2 ring-active-turn'
           )}
@@ -107,7 +153,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         {icon ? (
           <div className="flex flex-col items-center">
             <div className={cn(
-              "w-8 h-8 rounded-full border-4 font-orbitron overflow-hidden",
+              "w-16 h-16 rounded-full border-4 font-orbitron overflow-hidden",
               playerColor === 'blue' ? 'border-blue-400' : 'border-red-400',
               isActiveIcon && 'border-active-turn shadow-lg shadow-active-turn/50 animate-pulse'
             )}>

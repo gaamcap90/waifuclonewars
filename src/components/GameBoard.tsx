@@ -2,6 +2,7 @@ import { useMemo, useState, useRef } from "react";
 import { GameState, Coordinates, HexTile as HexTileType } from "@/types/game";
 import HexTile from "./HexTile";
 import HPBar from "./HPBar";
+import { useRangeCalculation } from "./RangeIndicator";
 
 const getCharacterPortrait = (name: string) => {
   if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
@@ -45,6 +46,16 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       .flatMap(p => p.icons)
       .find(i => i.id === gameState.activeIconId);
 
+    // Calculate range indicators
+    const { movementRange, attackRange, abilityRange } = useRangeCalculation(
+      gameState,
+      gameState.activeIconId,
+      !gameState.targetingMode && activeIcon && !activeIcon.actionTaken, // Show movement range when not targeting and can move
+      gameState.targetingMode?.abilityId === 'basic_attack', // Show attack range when in basic attack mode
+      gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack', // Show ability range when using ability
+      gameState.targetingMode?.range
+    );
+
     return gameState.board.map((tile) => {
       const { x, y } = hexToPixel(tile.coordinates.q, tile.coordinates.r);
       const icon = gameState.players
@@ -58,16 +69,22 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       const playerColor = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
       const isActiveIcon = icon?.id === gameState.activeIconId;
       
+      // Check range indicators
+      const isInMovementRange = movementRange.some(coord => 
+        coord.q === tile.coordinates.q && coord.r === tile.coordinates.r
+      );
+      const isInAttackRange = attackRange.some(coord => 
+        coord.q === tile.coordinates.q && coord.r === tile.coordinates.r
+      );
+      const isInAbilityRange = abilityRange.some(coord => 
+        coord.q === tile.coordinates.q && coord.r === tile.coordinates.r
+      );
+      
       // Check if tile is targetable in targeting mode
-      const isTargetable = gameState.targetingMode && activeIcon ? 
-        calculateDistance(activeIcon.position, tile.coordinates) <= gameState.targetingMode.range : false;
-        
+      const isTargetable = isInAttackRange || isInAbilityRange;
+
       // Check if tile is valid for movement (only when active icon is selected and no targeting)
-      const isValidMovement = !gameState.targetingMode && activeIcon && activeIcon.id === gameState.activeIconId && activeIcon.stats.movement > 0 ?
-        calculateDistance(activeIcon.position, tile.coordinates) <= activeIcon.stats.movement && 
-        !gameState.players.flatMap(p => p.icons).some(i => i.position.q === tile.coordinates.q && i.position.r === tile.coordinates.r && i.isAlive) &&
-        tile.terrain.type !== 'base' &&
-        tile.terrain.effects.movementModifier !== -999 : false;
+      const isValidMovement = isInMovementRange;
 
       // Check if tile is valid for respawn placement
       const isRespawnTarget = gameState.respawnPlacement ? 
@@ -110,6 +127,8 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
               isTargetable={isTargetable}
               isValidMovement={isValidMovement}
               isRespawnTarget={isRespawnTarget}
+              isInAttackRange={isInAttackRange}
+              isInAbilityRange={isInAbilityRange}
             />
             {/* HP Bar under character */}
             {icon && (

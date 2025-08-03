@@ -112,33 +112,33 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Napoleon-chan",
       role: "dps_ranged" as const,
-      stats: { hp: 80, maxHp: 80, moveRange: 2, speed: 6, might: 45, power: 60, defense: 35, movement: 2 },
+      stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 70, power: 60, defense: 15, movement: 2 },
       abilities: [
-        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 2, description: "Long-range bombardment. Deals 55 damage + terrain destruction.", damage: 55 },
-        { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 4, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns and grants movement bonus." },
-        { id: "ultimate", name: "Final Salvo", manaCost: 0, cooldown: 999, currentCooldown: 0, range: 3, description: "Deal 30 damage in a 3-tile line", damage: 30 }
+        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals Power × 0.8 damage.", damage: 0 },
+        { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
+        { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal Power × 0.5 damage in a 3-tile line", damage: 0 }
       ],
       passive: "Tactical Genius: +1 movement range when commanding from high ground"
     },
     {
       name: "Genghis-chan",
       role: "dps_melee" as const,
-      stats: { hp: 90, maxHp: 90, moveRange: 2, speed: 8, might: 70, power: 40, defense: 40, movement: 2 },
+      stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 40, defense: 25, movement: 2 },
       abilities: [
-        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 1, currentCooldown: 0, range: 1, description: "Rush attack through multiple enemies. Deals 60 damage + bonus per enemy hit.", damage: 60 },
-        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 3, currentCooldown: 0, range: 1, description: "Teleport behind target and strike. 75 damage + fear effect (target can't move next turn).", damage: 75 },
-        { id: "ultimate", name: "Rider's Fury", manaCost: 0, cooldown: 999, currentCooldown: 0, range: 1, description: "Charge through up to 3 enemies in a line, dealing 25 damage each", damage: 25 }
+        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack through enemies. Deals Power × 1.2 damage.", damage: 0 },
+        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Teleport behind target. Deals Power × 1.5 damage + fear effect.", damage: 0 },
+        { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Charge through up to 3 enemies, dealing Power × 0.6 damage each", damage: 0 }
       ],
       passive: "Conqueror's Fury: +15% damage for each enemy defeated this match"
     },
     {
       name: "Da Vinci-chan", 
       role: "support" as const,
-      stats: { hp: 65, maxHp: 65, moveRange: 2, speed: 4, might: 30, power: 80, defense: 45, movement: 2 },
+      stats: { hp: 80, maxHp: 80, moveRange: 2, speed: 4, might: 35, power: 50, defense: 20, movement: 2 },
       abilities: [
-        { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 2, currentCooldown: 0, range: 2, description: "Teleport to any visible hex + gain aerial view (see through terrain) for 2 turns." },
-        { id: "2", name: "Masterpiece", manaCost: 7, cooldown: 5, currentCooldown: 0, range: 2, description: "Creates a defensive art barrier. Heals 45 HP + shields allies from next attack.", healing: 45 },
-        { id: "ultimate", name: "Vitruvian Guardian", manaCost: 0, cooldown: 999, currentCooldown: 0, range: 3, description: "Summons a 2-turn drone that auto-attacks nearby enemies", damage: 20 }
+        { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Teleport to any hex + gain aerial view for 2 turns.", damage: 0 },
+        { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals Power × 0.9 HP + shields allies from next attack.", healing: 0 },
+        { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons a 2-turn drone that auto-attacks nearby enemies", damage: 0 }
       ],
       passive: "Renaissance Mind: Gains +1 mana when casting spells near mana crystals"
     }
@@ -574,8 +574,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             let updatedBaseHealth = [...prev.baseHealth];
 
             if (prev.targetingMode.abilityId === 'basic_attack') {
-              // Basic attack logic
-              const damage = Math.max(1, Math.floor(activeIcon.stats.might * 1.5) - (targetIcon?.stats.defense || 0));
+              // NEW FORMULA: Basic Attack Damage = Might - Target Defense
+              const baseDamage = activeIcon.stats.might;
+              const targetDefense = targetIcon?.stats.defense || 0;
+              const damage = Math.max(1, baseDamage - targetDefense);
               
               if (targetIcon) {
                 // Check if trying to attack own team
@@ -710,11 +712,26 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                  }
               }
             } else {
-              // Ability logic
+              // Ability logic with NEW FORMULA: Ability Damage = (Power × multiplier) - Target Defense
               const ability = activeIcon.abilities.find(a => a.id === prev.targetingMode!.abilityId);
-              if (ability && targetIcon) {
-                const damage = ability.damage ? Math.max(1, Math.floor(ability.damage + activeIcon.stats.power * 0.5) - targetIcon.stats.defense) : 0;
-                const healing = ability.healing || 0;
+              if (ability) {
+                // Calculate damage based on ability description multipliers
+                let damage = 0;
+                let healing = 0;
+                
+                if (ability.description.includes("Power × 0.8")) {
+                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 0.8) - (targetIcon?.stats.defense || 0));
+                } else if (ability.description.includes("Power × 1.2")) {
+                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 1.2) - (targetIcon?.stats.defense || 0));
+                } else if (ability.description.includes("Power × 1.5")) {
+                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 1.5) - (targetIcon?.stats.defense || 0));
+                } else if (ability.description.includes("Power × 0.5")) {
+                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 0.5) - (targetIcon?.stats.defense || 0));
+                } else if (ability.description.includes("Power × 0.6")) {
+                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 0.6) - (targetIcon?.stats.defense || 0));
+                } else if (ability.description.includes("Power × 0.9")) {
+                  healing = Math.floor(activeIcon.stats.power * 0.9);
+                }
                 
                 updatedPlayers = prev.players.map(player => ({
                   ...player,
@@ -883,8 +900,11 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       // Check ultimate usage
       if (abilityId === 'ultimate' && activeIcon.ultimateUsed) return prev;
       
-      // Check mana cost (ultimates don't cost mana)
-      if (abilityId !== 'ultimate' && prev.globalMana[activeIcon.playerId] < ability.manaCost) return prev;
+      // Check mana cost - new system: no cooldowns, only mana
+      if (prev.globalMana[activeIcon.playerId] < ability.manaCost) {
+        toast.error("Not enough mana!");
+        return prev;
+      }
       
       // Enter targeting mode
       return {
