@@ -1,8 +1,8 @@
-const aiTurnHandledRef = useRef(false);
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { GameState, Coordinates, Icon, HexTile, TerrainType } from "@/types/game";
 import { toast } from "sonner";
-
+export function useGameStateNew() {
+const aiTurnHandledRef = useRef(false);
 const createInitialBoard = (): HexTile[] => {
   const board: HexTile[] = [];
   
@@ -391,134 +391,137 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
 // Handle AI turns - only in single player mode
 useEffect(() => {
-  if (
-    gameState.gameMode === 'singleplayer' &&
-    gameState.phase === 'combat'
-  ) {
-    const activeIcon = gameState.players
-      .flatMap(p => p.icons)
-      .find(i => i.id === gameState.activeIconId);
+    if (
+      gameState.gameMode === 'singleplayer' &&
+      gameState.phase === 'combat'
+    ) {
+      const activeIcon = gameState.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === gameState.activeIconId);
 
-    const shouldHandleTurn =
-      activeIcon?.playerId === 1 &&
-      activeIcon.isAlive &&
-      (!activeIcon.movedThisTurn || !activeIcon.actionTaken);
+      const shouldHandleTurn =
+        activeIcon?.playerId === 1 &&
+        activeIcon.isAlive &&
+        (!activeIcon.movedThisTurn || !activeIcon.actionTaken);
 
-    if (shouldHandleTurn && !aiTurnHandledRef.current) {
-      aiTurnHandledRef.current = true;
+      if (shouldHandleTurn && !aiTurnHandledRef.current) {
+        aiTurnHandledRef.current = true;
 
-      const timer = setTimeout(() => {
-        console.log('AI Timer triggered');
+        const timer = setTimeout(() => {
+          console.log('AI Timer triggered');
 
-        const freshIcon = gameState.players
-          .flatMap(p => p.icons)
-          .find(i => i.id === gameState.activeIconId);
+          const freshIcon = gameState.players
+            .flatMap(p => p.icons)
+            .find(i => i.id === gameState.activeIconId);
 
-        if (freshIcon?.movedThisTurn && freshIcon?.actionTaken) {
-          console.log('AI already acted — ending turn');
-          aiTurnHandledRef.current = false;
-          endTurn();
-          return;
-        }
+          // Failsafe: if AI has already acted and moved, end turn
+          if (freshIcon?.movedThisTurn && freshIcon?.actionTaken) {
+            console.log('AI already acted — ending turn');
+            aiTurnHandledRef.current = false;
+            endTurn();
+            return;
+          }
 
-        // Targeting
-        if (
-          gameState.targetingMode &&
-          gameState.targetingMode.iconId === freshIcon?.id
-        ) {
-          const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
-          const enemyBase = gameState.board.find(tile =>
-            tile.terrain.type === 'base' &&
-            tile.coordinates.q === -6 && tile.coordinates.r === 5
-          );
+          // Try to attack if targetingMode is active
+          if (
+            gameState.targetingMode &&
+            gameState.targetingMode.iconId === freshIcon?.id
+          ) {
+            const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
+            const enemyBase = gameState.board.find(tile =>
+              tile.terrain.type === 'base' &&
+              tile.coordinates.q === -6 && tile.coordinates.r === 5
+            );
 
-          let target = null;
-          for (const enemy of enemyIcons) {
-            const distance = calculateDistance(freshIcon.position, enemy.position);
-            if (distance <= gameState.targetingMode.range) {
-              target = enemy.position;
-              break;
+            let target = null;
+            for (const enemy of enemyIcons) {
+              const distance = calculateDistance(freshIcon.position, enemy.position);
+              if (distance <= gameState.targetingMode.range) {
+                target = enemy.position;
+                break;
+              }
+            }
+
+            if (!target && enemyBase) {
+              const dist = calculateDistance(freshIcon.position, enemyBase.coordinates);
+              if (dist <= gameState.targetingMode.range) {
+                target = enemyBase.coordinates;
+              }
+            }
+
+            if (target) {
+              console.log('AI attacking:', target);
+              selectTile(target);
+              return;
+            } else {
+              console.log('No valid targets — clearing targeting mode and marking actionTaken');
+              setGameState(prev => ({
+                ...prev,
+                targetingMode: null,
+                players: prev.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(icon =>
+                    icon.id === freshIcon.id
+                      ? { ...icon, actionTaken: true }
+                      : icon
+                  )
+                }))
+              }));
+
+              setTimeout(() => {
+                console.log('Failsafe after target fail — ending turn');
+                aiTurnHandledRef.current = false;
+                endTurn();
+              }, 300);
+
+              return;
             }
           }
 
-          if (!target && enemyBase) {
-            const dist = calculateDistance(freshIcon.position, enemyBase.coordinates);
-            if (dist <= gameState.targetingMode.range) {
-              target = enemyBase.coordinates;
-            }
-          }
-
-          if (target) {
-            console.log('AI attacking:', target);
-            selectTile(target);
-          } else {
-            console.log('No valid targets — clearing targeting mode');
+          // No targetingMode — try to move
+          const aiMove = makeAIMove(gameState);
+          if (Object.keys(aiMove).length > 0) {
+            console.log('AI moving:', aiMove);
             setGameState(prev => ({
               ...prev,
-              targetingMode: null,
+              ...aiMove,
               players: prev.players.map(p => ({
                 ...p,
                 icons: p.icons.map(icon =>
-                  icon.id === freshIcon.id
-                    ? { ...icon, actionTaken: true }
+                  icon.id === freshIcon?.id
+                    ? { ...icon, movedThisTurn: true }
                     : icon
                 )
               }))
             }));
 
             setTimeout(() => {
-              console.log('Failsafe after target fail — ending turn');
+              basicAttack();
               aiTurnHandledRef.current = false;
-              endTurn();
-            }, 300);
+            }, 500);
+            return;
           }
 
-          return;
-        }
+          // Nothing else to do — end turn
+          console.log('AI ending turn — nothing to do');
+          aiTurnHandledRef.current = false;
+          endTurn();
+        }, 500);
 
-        // Move
-        const aiMove = makeAIMove(gameState);
-        if (Object.keys(aiMove).length > 0) {
-          console.log('AI moving:', aiMove);
-          setGameState(prev => ({
-            ...prev,
-            ...aiMove,
-            players: prev.players.map(p => ({
-              ...p,
-              icons: p.icons.map(icon =>
-                icon.id === freshIcon?.id
-                  ? { ...icon, movedThisTurn: true }
-                  : icon
-              )
-            }))
-          }));
-
-          setTimeout(() => {
-            basicAttack();
-            aiTurnHandledRef.current = false;
-          }, 500);
-          return;
-        }
-
-        // Nothing left
-        console.log('AI ending turn — nothing to do');
-        aiTurnHandledRef.current = false;
-        endTurn();
-      }, 500);
-
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      // Reset AI lock when not in combat
+      aiTurnHandledRef.current = false;
     }
-  } else {
-    // Reset lock when not in combat
-    aiTurnHandledRef.current = false;
-  }
-}, [
-  gameState.activeIconId,
-  gameState.phase,
-  gameState.players,
-  gameState.board,
-  gameState.targetingMode
-]);
+  }, [
+    gameState.activeIconId,
+    gameState.phase,
+    gameState.players,
+    gameState.board,
+    gameState.targetingMode
+  ]);
+}
 
  
 useEffect(() => {
