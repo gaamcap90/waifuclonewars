@@ -231,7 +231,7 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
     }
   }
 
-  // PRIORITY 2: Move to get in attack range of enemy
+  // PRIORITY 2: Move to get in attack range of enemy and attack immediately
   if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
     const validMoves: Coordinates[] = [];
     for (let q = -7; q <= 7; q++) {
@@ -248,26 +248,35 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
       }
     }
 
-    // Find move that puts us in attack range of an enemy
+    // Find move that puts us in attack range of an enemy - then attack immediately
     for (const move of validMoves) {
       for (const enemy of enemyIcons) {
         const distanceAfterMove = calculateDistance(move, enemy.position);
         if (distanceAfterMove <= attackRange) {
-          console.log('AI: Moving to attack range');
+          console.log('AI: Moving to attack range and will attack');
+          
+          // Move AND set targeting mode to attack in the same turn
+          const updatedPlayers = gameState.players.map(player => ({
+            ...player,
+            icons: player.icons.map(icon => 
+              icon.id === activeIcon.id 
+                ? { 
+                    ...icon, 
+                    position: move, 
+                    movedThisTurn: true,
+                    stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - calculateDistance(activeIcon.position, move)) }
+                  }
+                : icon
+            )
+          }));
+          
           return {
-            players: gameState.players.map(player => ({
-              ...player,
-              icons: player.icons.map(icon => 
-                icon.id === activeIcon.id 
-                  ? { 
-                      ...icon, 
-                      position: move, 
-                      movedThisTurn: true,
-                      stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - calculateDistance(activeIcon.position, move)) }
-                    }
-                  : icon
-              )
-            }))
+            players: updatedPlayers,
+            targetingMode: {
+              abilityId: 'basic_attack',
+              iconId: activeIcon.id,
+              range: attackRange
+            }
           };
         }
       }

@@ -54,7 +54,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         case 'forest':
           return '/lovable-uploads/04c976e4-64a9-409a-b803-4510824e88c5.png';
         case 'mountain':
-          return '/lovable-uploads/dd72fa33-6c10-4508-b7a0-016270132a8d.png';
+          return '/lovable-uploads/new-mountain-tile.png';
         case 'river':
           return '/lovable-uploads/05c34c82-9e2d-4cbf-ad0f-01232315e270.png';
         case 'plain':
@@ -81,18 +81,18 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
     const terrainImage = getTerrainImage();
     if (terrainImage) {
       return (
-          <img 
-            src={terrainImage} 
-            alt={tile.terrain.type}
-            className="absolute inset-0 opacity-90"
-              style={{ 
-                zIndex: -1,
-                width: `${size * 2.2}px`,
-                height: `${size * 2.2}px`,
-                objectFit: 'cover',
-                clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                transform: 'scale(1.2) translate(-10%, -10%)' // Better fill and positioning
-              }}
+            <img 
+              src={terrainImage} 
+              alt={tile.terrain.type}
+              className="absolute inset-0 opacity-90"
+                style={{ 
+                  zIndex: -1,
+                  width: `${size * 1.8}px`,
+                  height: `${size * 1.8}px`,
+                  objectFit: 'cover',
+                  clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                  transform: 'translate(-12.5%, -12.5%)' // Proper centering
+                }}
           />
       );
     }
@@ -129,14 +129,14 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
       onClick={onClick}
       onContextMenu={handleTerrainClick}
       style={{
-        width: size * 2,
-        height: size * 2,
+        width: size * 1.8,
+        height: size * 1.8,
       }}
     >
       <svg
-        width={size * 2}
-        height={size * 2}
-        viewBox={`${-size} 0 ${size * 2} ${size * 2}`}
+        width={size * 1.8}
+        height={size * 1.8}
+        viewBox={`${-size * 0.9} 0 ${size * 1.8} ${size * 1.8}`}
         className="absolute"
       >
         <path
