@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import GameBoard from "@/components/GameBoard";
 import VictoryScreen from "@/components/VictoryScreen";
 import MainMenu from "@/components/MainMenu";
-import HorizontalGameUI from "@/components/HorizontalGameUI";
 import EscapeMenu from "@/components/EscapeMenu";
+import NewGameUI from "@/components/NewGameUI";
 import useGameState from "@/hooks/useGameStateNew";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -45,29 +44,18 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-space-dark via-space-medium to-space-dark relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
       <Toaster />
       
-      {/* Full-screen game board */}
-      <GameBoard 
+      {/* New integrated UI */}
+      <NewGameUI 
         gameState={gameState}
+        onBasicAttack={basicAttack}
+        onAbilityUse={useAbility}
+        onEndTurn={endTurn}
         onTileClick={selectTile}
+        onUndoMovement={undoMovement}
       />
-      
-      {/* UI Overlays */}
-      <div className="absolute inset-0 pointer-events-none">
-
-        {/* Game UI overlays */}
-        <HorizontalGameUI 
-          gameState={gameState}
-          onBasicAttack={basicAttack}
-          onUseAbility={useAbility}
-          onEndTurn={endTurn}
-          onUndoMovement={undoMovement}
-          onRespawn={startRespawnPlacement}
-          currentTurnTimer={currentTurnTimer}
-        />
-      </div>
       
       {/* Escape Menu */}
       {showEscapeMenu && (

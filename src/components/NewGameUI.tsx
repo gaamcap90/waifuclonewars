@@ -10,11 +10,13 @@ import { useState } from "react";
 interface NewGameUIProps {
   gameState: GameState;
   onBasicAttack: () => void;
-  onUseAbility: (abilityId: string) => void;
+  onAbilityUse: (abilityId: string) => void;
   onEndTurn: () => void;
+  onTileClick: (coordinates: any) => void;
+  onUndoMovement?: () => void;
 }
 
-const NewGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: NewGameUIProps) => {
+const NewGameUI = ({ gameState, onBasicAttack, onAbilityUse, onEndTurn }: NewGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<Icon | undefined>();
   
   const activeIcon = gameState.players
@@ -186,7 +188,7 @@ const NewGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: NewGam
                         <Tooltip key={ability.id}>
                           <TooltipTrigger asChild>
                             <Button
-                              onClick={() => onUseAbility(ability.id)}
+                              onClick={() => onAbilityUse(ability.id)}
                               disabled={
                                 activeIcon.actionTaken || 
                                 ability.currentCooldown > 0 || 
