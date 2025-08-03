@@ -114,9 +114,9 @@ const createInitialIcons = (): Icon[] => {
       role: "dps_ranged" as const,
       stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 70, power: 60, defense: 15, movement: 2 },
       abilities: [
-        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals Power × 0.8 damage.", damage: 0 },
+        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 48 },
         { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
-        { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal Power × 0.5 damage in a 3-tile line", damage: 0 }
+        { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 30 }
       ],
       passive: "Tactical Genius: +1 movement range when commanding from high ground"
     },
@@ -125,9 +125,9 @@ const createInitialIcons = (): Icon[] => {
       role: "dps_melee" as const,
       stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 40, defense: 25, movement: 2 },
       abilities: [
-        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack through enemies. Deals Power × 1.2 damage.", damage: 0 },
-        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Teleport behind target. Deals Power × 1.5 damage + fear effect.", damage: 0 },
-        { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Charge through up to 3 enemies, dealing Power × 0.6 damage each", damage: 0 }
+        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack through enemies. Deals 48 damage.", damage: 48 },
+        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Teleport behind target. Deals 60 damage + fear effect.", damage: 60 },
+        { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Charge through up to 3 enemies, dealing 24 damage each", damage: 24 }
       ],
       passive: "Conqueror's Fury: +15% damage for each enemy defeated this match"
     },
@@ -137,7 +137,7 @@ const createInitialIcons = (): Icon[] => {
       stats: { hp: 80, maxHp: 80, moveRange: 2, speed: 4, might: 35, power: 50, defense: 20, movement: 2 },
       abilities: [
         { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Teleport to any hex + gain aerial view for 2 turns.", damage: 0 },
-        { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals Power × 0.9 HP + shields allies from next attack.", healing: 0 },
+        { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals 45 HP + shields allies from next attack.", healing: 45 },
         { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons a 2-turn drone that auto-attacks nearby enemies", damage: 0 }
       ],
       passive: "Renaissance Mind: Gains +1 mana when casting spells near mana crystals"
@@ -450,8 +450,71 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             
             if (target) {
               console.log('AI executing attack on', target);
-              selectTile(target);
-              return; // The selectTile will handle ending the turn
+              
+              // Execute the attack immediately instead of calling selectTile
+              setGameState(prev => {
+                const damage = activeIcon.stats.might;
+                const targetIcon = prev.players
+                  .flatMap(p => p.icons)
+                  .find(icon => 
+                    icon.position.q === target.q && 
+                    icon.position.r === target.r && 
+                    icon.isAlive
+                  );
+
+                let updatedPlayers = prev.players;
+                let updatedBaseHealth = [...prev.baseHealth];
+
+                if (targetIcon) {
+                  const finalDamage = Math.max(1, damage - targetIcon.stats.defense);
+                  updatedPlayers = prev.players.map(player => ({
+                    ...player,
+                    icons: player.icons.map(icon => {
+                      if (icon.id === targetIcon.id) {
+                        const newHp = Math.max(0, icon.stats.hp - finalDamage);
+                        return { 
+                          ...icon, 
+                          stats: { ...icon.stats, hp: newHp },
+                          isAlive: newHp > 0,
+                          respawnTurns: newHp <= 0 ? 5 : icon.respawnTurns
+                        };
+                      }
+                      return icon;
+                    })
+                  }));
+                } else {
+                  // Attack base
+                  if (target.q === -6 && target.r === 5) {
+                    updatedBaseHealth[0] = Math.max(0, prev.baseHealth[0] - damage);
+                  }
+                }
+
+                // Mark AI as having taken action and advance turn
+                const updatedPlayersWithAction = updatedPlayers.map(player => ({
+                  ...player,
+                  icons: player.icons.map(icon => 
+                    icon.id === activeIcon.id 
+                      ? { ...icon, actionTaken: true }
+                      : icon
+                  )
+                }));
+
+                // Advance to next turn immediately
+                const aliveIcons = updatedPlayersWithAction.flatMap(p => p.icons).filter(icon => icon.isAlive);
+                const nextIndex = (prev.queueIndex + 1) % aliveIcons.length;
+                const nextIconId = prev.speedQueue[nextIndex] || aliveIcons[0]?.id;
+
+                return {
+                  ...prev,
+                  players: updatedPlayersWithAction,
+                  baseHealth: updatedBaseHealth,
+                  targetingMode: undefined,
+                  activeIconId: nextIconId,
+                  queueIndex: nextIndex
+                };
+              });
+              
+              return;
             }
           }
           

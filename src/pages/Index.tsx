@@ -4,18 +4,24 @@ import VictoryScreen from "@/components/VictoryScreen";
 import MainMenu from "@/components/MainMenu";
 import HorizontalGameUI from "@/components/HorizontalGameUI";
 import EscapeMenu from "@/components/EscapeMenu";
+import CharacterSelection from "@/components/CharacterSelection";
+import UltimateIndicator from "@/components/UltimateIndicator";
 import useGameState from "@/hooks/useGameStateNew";
 import { Toaster } from "@/components/ui/sonner";
 
 const Index = () => {
-  const [gameMode, setGameMode] = useState<'menu' | 'singleplayer' | 'multiplayer'>('menu');
+  const [gameMode, setGameMode] = useState<'menu' | 'characterSelect' | 'singleplayer' | 'multiplayer'>('menu');
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
   const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement } = useGameState(
-    gameMode === 'menu' ? 'singleplayer' : gameMode
+    gameMode === 'menu' || gameMode === 'characterSelect' ? 'singleplayer' : gameMode
   );
 
   const handleStartGame = (mode: 'singleplayer' | 'multiplayer') => {
-    setGameMode(mode);
+    setGameMode('characterSelect');
+  };
+
+  const handleCharacterSelectionComplete = (selectedIcons: any[]) => {
+    setGameMode('singleplayer'); // Start the actual game
   };
 
   const handleBackToMenu = () => {
@@ -44,6 +50,10 @@ const Index = () => {
     return <MainMenu onStartGame={handleStartGame} />;
   }
 
+  if (gameMode === 'characterSelect') {
+    return <CharacterSelection onStartGame={handleCharacterSelectionComplete} gameMode="singleplayer" />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-space-dark via-space-medium to-space-dark relative overflow-hidden">
       <Toaster />
@@ -56,7 +66,6 @@ const Index = () => {
       
       {/* UI Overlays */}
       <div className="absolute inset-0 pointer-events-none">
-
         {/* Game UI overlays */}
         <HorizontalGameUI 
           gameState={gameState}
@@ -69,6 +78,9 @@ const Index = () => {
         />
       </div>
       
+      {/* Ultimate Indicator */}
+      <UltimateIndicator gameState={gameState} />
+      
       {/* Escape Menu */}
       {showEscapeMenu && (
         <EscapeMenu 
@@ -80,7 +92,10 @@ const Index = () => {
       {(gameState.phase === 'victory' || gameState.phase === 'defeat') && (
         <VictoryScreen 
           isVictory={gameState.phase === 'victory'} 
-          onBackToMenu={handleBackToMenu} 
+          onBackToMenu={handleBackToMenu}
+          onPlayAgain={() => {
+            setGameMode('characterSelect'); // Go back to character selection for new game
+          }}
         />
       )}
     </div>

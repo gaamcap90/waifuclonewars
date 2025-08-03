@@ -5,9 +5,10 @@ import { Trophy, Home } from "lucide-react";
 interface VictoryScreenProps {
   isVictory: boolean;
   onBackToMenu: () => void;
+  onPlayAgain: () => void;
 }
 
-const VictoryScreen = ({ isVictory, onBackToMenu }: VictoryScreenProps) => {
+const VictoryScreen = ({ isVictory, onBackToMenu, onPlayAgain }: VictoryScreenProps) => {
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
       <Card className="border-alien-green/50 bg-space-dark/95 max-w-md mx-4">
@@ -25,10 +26,15 @@ const VictoryScreen = ({ isVictory, onBackToMenu }: VictoryScreenProps) => {
               ? "The Znyxorgan audience cheers for your tactical brilliance!" 
               : "Better luck next time, Earthling..."}
           </p>
-          <Button onClick={onBackToMenu} className="w-full" size="lg">
-            <Home className="w-4 h-4 mr-2" />
-            Back to Menu
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={onPlayAgain} className="flex-1" size="lg" variant="outline">
+              Play Again
+            </Button>
+            <Button onClick={onBackToMenu} className="flex-1" size="lg">
+              <Home className="w-4 h-4 mr-2" />
+              Back to Menu
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

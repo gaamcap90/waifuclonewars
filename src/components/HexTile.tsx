@@ -54,7 +54,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         case 'forest':
           return '/lovable-uploads/04c976e4-64a9-409a-b803-4510824e88c5.png';
         case 'mountain':
-          return '/lovable-uploads/new-mountain-tile.png';
+          return '/lovable-uploads/dd72fa33-6c10-4508-b7a0-016270132a8d.png';
         case 'river':
           return '/lovable-uploads/05c34c82-9e2d-4cbf-ad0f-01232315e270.png';
         case 'plain':
@@ -85,14 +85,14 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
             src={terrainImage} 
             alt={tile.terrain.type}
             className="absolute inset-0 opacity-90"
-            style={{ 
-              zIndex: -1,
-              width: `${size * 2}px`,
-              height: `${size * 2}px`,
-              objectFit: 'cover',
-              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-              transform: 'scale(1.15)' // Slightly scale up to fill hex completely
-            }}
+              style={{ 
+                zIndex: -1,
+                width: `${size * 2.2}px`,
+                height: `${size * 2.2}px`,
+                objectFit: 'cover',
+                clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                transform: 'scale(1.2) translate(-10%, -10%)' // Better fill and positioning
+              }}
           />
       );
     }
