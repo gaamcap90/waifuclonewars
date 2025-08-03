@@ -432,22 +432,30 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           }
 
           if (!target && enemyBase) {
-            const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
-            if (dist <= gameState.targetingMode.range) {
-              target = enemyBase.coordinates;
-            }
-          }
+  const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
+  if (dist <= gameState.targetingMode.range) {
+    target = enemyBase.coordinates;
+  }
+}
 
-          if (target) {
-            console.log('AI executing attack on', target);
-            selectTile(target);
-            return;
-          } else {
-            console.log('No valid targets — clearing targeting mode');
-            setGameState(prev => ({ ...prev, targetingMode: null }));
-            return; // Wait for next AI cycle
-          }
-        }
+if (target) {
+  console.log('AI executing attack on', target);
+  setTimeout(() => selectTile(target), 500);
+  return;
+} else {
+  console.log('No valid targets — setting actionTaken = true and clearing targeting mode');
+  setGameState(prev => ({
+    ...prev,
+    targetingMode: null,
+    players: prev.players.map(p => ({
+      ...p,
+      icons: p.icons.map(icon =>
+        icon.id === activeIcon.id ? { ...icon, actionTaken: true } : icon
+      )
+    }))
+  }));
+}
+
 
         // 2. Not in targeting mode and hasn't attacked — try to move
         if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
