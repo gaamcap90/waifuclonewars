@@ -1154,7 +1154,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
         
-      if (activeIcon?.playerId !== icon.playerId || (prev.gameMode === 'singleplayer' && icon.playerId === 1)) {
+      if (activeIcon?.playerId !== icon.playerId) {
         toast.error("You can only respawn on your turn!");
         return prev;
       }

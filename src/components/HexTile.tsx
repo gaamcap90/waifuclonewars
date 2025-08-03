@@ -54,7 +54,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         case 'forest':
           return '/lovable-uploads/04c976e4-64a9-409a-b803-4510824e88c5.png';
         case 'mountain':
-          return '/lovable-uploads/e44a4bc4-3431-4ef9-abda-21829202c98a.png';
+          return '/lovable-uploads/new-mountain-tile.png';
         case 'river':
           return '/lovable-uploads/05c34c82-9e2d-4cbf-ad0f-01232315e270.png';
         case 'plain':
@@ -84,8 +84,11 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         <img 
           src={terrainImage} 
           alt={tile.terrain.type}
-          className="w-full h-full object-cover absolute inset-0 rounded-sm opacity-90"
-          style={{ zIndex: -1 }}
+          className="w-full h-full object-cover absolute inset-0 opacity-90"
+          style={{ 
+            zIndex: -1,
+            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
+          }}
         />
       );
     }
@@ -135,7 +138,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         <path
           d={hexPath}
           className={cn(
-            'stroke-2 transition-colors stroke-gray-600 fill-transparent',
+            'stroke-1 transition-colors stroke-gray-400 fill-transparent',
             tile.highlighted && 'ring-2 ring-primary',
             tile.selectable && 'ring-2 ring-accent',
             isTargetable && 'ring-2 ring-destructive bg-red-500/20',
@@ -149,10 +152,11 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
       </svg>
       
       <div className="absolute inset-0 flex items-center justify-center">
-        {icon ? (
-          <div className="flex flex-col items-center">
+        {getTerrainIcon()}
+        {icon && (
+          <div className="absolute flex flex-col items-center z-10">
             <div className={cn(
-              "w-16 h-16 rounded-full border-4 font-orbitron overflow-hidden",
+              "w-20 h-20 rounded-full border-4 font-orbitron overflow-hidden",
               playerColor === 'blue' ? 'border-blue-400' : 'border-red-400',
               isActiveIcon && 'border-active-turn shadow-lg shadow-active-turn/50 animate-pulse'
             )}>
@@ -172,8 +176,6 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
               )}
             </div>
           </div>
-        ) : (
-          getTerrainIcon()
         )}
       </div>
     </div>
