@@ -326,7 +326,8 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
     };
   }
 
-  return {};
+return {
+  endTurn: true
 };
 
 const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer') => {
