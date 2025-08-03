@@ -487,14 +487,17 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           if (!activeIcon.actionTaken) {
   console.log('AI attempting backend basic attack');
 
-  setGameState(prev => {
-    // 🚨 Prevent running attack logic if targeting mode is null
-    if (!prev.targetingMode) {
-      console.log('No targeting mode set — skipping attack and ending turn');
-      setTimeout(() => endTurn(), 1000);
-      return prev;
-    }
+  if (!gameState.targetingMode) {
+    console.log('No targeting mode set — skipping attack and ending turn');
+    
+    setTimeout(() => {
+      endTurn(); // 🔚 Clean exit
+    }, 500);
+    
+    return; // 🛑 STOP right here, don't go on
+  }
 
+  setGameState(prev => {
     const newState = performBasicAttack(prev);
 
     setTimeout(() => {
@@ -507,6 +510,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
   return;
 }
+
 
 
 
