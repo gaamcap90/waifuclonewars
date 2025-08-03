@@ -81,15 +81,18 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
     const terrainImage = getTerrainImage();
     if (terrainImage) {
       return (
-        <img 
-          src={terrainImage} 
-          alt={tile.terrain.type}
-          className="w-full h-full object-cover absolute inset-0 opacity-90"
-          style={{ 
-            zIndex: -1,
-            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
-          }}
-        />
+          <img 
+            src={terrainImage} 
+            alt={tile.terrain.type}
+            className="absolute inset-0 opacity-90"
+            style={{ 
+              zIndex: -1,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
+            }}
+          />
       );
     }
 
@@ -138,8 +141,7 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
         <path
           d={hexPath}
           className={cn(
-            'stroke-1 transition-colors stroke-gray-300',
-            getTerrainColor(),
+            'stroke-1 transition-colors stroke-gray-300 fill-transparent',
             tile.highlighted && 'ring-2 ring-primary',
             tile.selectable && 'ring-2 ring-accent',
             isTargetable && 'ring-2 ring-destructive bg-red-500/20',
