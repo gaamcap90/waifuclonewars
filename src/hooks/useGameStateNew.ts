@@ -408,7 +408,12 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       targetingMode: gameState.targetingMode
     });
 
-    if (activeIcon?.playerId === 1 && activeIcon.isAlive) {
+    if (
+  activeIcon?.playerId === 1 &&
+  activeIcon.isAlive &&
+  !(activeIcon.movedThisTurn && activeIcon.actionTaken)
+)
+ {
       const timer = setTimeout(() => {
   console.log('AI Timer triggered');
 
@@ -442,33 +447,58 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     }
 
     if (target) {
-      console.log('AI executing attack on', target);
-      setTimeout(() => selectTile(target), 500);
-      return;
-    } else {
-      console.log('No valid targets — setting actionTaken = true and clearing targeting mode');
+  console.log('AI executing attack on', target);
+  setTimeout(() => {
+    selectTile(target);
+    
+    // Fallback: force mark actionTaken = true 1s later
+    setTimeout(() => {
       setGameState(prev => ({
         ...prev,
-        targetingMode: null,
         players: prev.players.map(p => ({
           ...p,
           icons: p.icons.map(icon =>
-            icon.id === activeIcon.id ? { ...icon, actionTaken: true } : icon
+            icon.id === activeIcon.id
+              ? { ...icon, actionTaken: true }
+              : icon
           )
         }))
       }));
-    }
+    }, 1000);
 
-    return; // exit early if we handled targeting
-  }
+  }, 500);
+
+  return;
+}
+
 
   // 2. If not targeting, try moving
   const aiMove = makeAIMove(gameState);
   if (Object.keys(aiMove).length > 0) {
-    console.log('AI moving:', aiMove);
-    setGameState(prev => ({ ...prev, ...aiMove }));
-    return;
-  }
+  console.log('AI moving:', aiMove);
+  setGameState(prev => {
+  const updatedState = {
+    ...prev,
+    ...aiMove,
+    players: prev.players.map(p => ({
+      ...p,
+      icons: p.icons.map(icon =>
+        icon.id === activeIcon.id
+          ? { ...icon, movedThisTurn: true }
+          : icon
+      )
+    }))
+  };
+  return updatedState;
+});
+
+// After moving, wait and trigger basic attack targeting
+setTimeout(() => {
+  basicAttack(); // this should set targetingMode
+}, 500);
+
+return;
+
 
   // 3. Nothing left to do — end turn
   console.log('AI ending turn - nothing to do');
