@@ -444,16 +444,17 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             }
             
             if (target) {
-  console.log('AI executing attack on', target);
-  selectTile(target);
-  return;
-} else {
-  console.log('AI found no valid targets – exiting targeting mode');
-  setGameState(prev => ({
-    ...prev,
-    targetingMode: null
-  }));
-}
+              console.log('AI executing attack on', target);
+              selectTile(target);
+              return;
+            } else {
+              console.log('AI found no valid targets – exiting targeting mode');
+              setGameState(prev => ({
+                ...prev,
+                targetingMode: null
+              }));
+            }
+          }
           
           // Try to move first if not moved
           if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
