@@ -325,9 +325,8 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
       }))
     };
   }
-
-return {
   
+  return {};
 };
 
 const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer') => {
@@ -1015,7 +1014,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         newPhase = 'victory';
         winner = 0;
       }
-      
+
       return {
         ...prev,
         players: updatedPlayers,
