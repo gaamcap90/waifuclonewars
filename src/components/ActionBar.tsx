@@ -78,8 +78,8 @@ const ActionBar = ({ gameState, onBasicAttack, onEndTurn }: ActionBarProps) => {
                 <Zap className="w-4 h-4 mr-2" />
                 <div className="flex-1 text-left">
                   <div className="flex justify-between">
-                    <span className={ability.id === "ultimate" ? "text-red-500 font-bold" : ""}>
-                      {ability.id === "ultimate" ? "ULTIMATE: " : ""}{ability.name}
+                    <span className={ability.name === "Mongol Charge" ? "text-red-500 font-bold" : ""}>
+                      {ability.name === "Mongol Charge" ? "ULTIMATE: " : ""}{ability.name}
                     </span>
                     <span className="text-xs">{ability.manaCost} mana</span>
                   </div>
