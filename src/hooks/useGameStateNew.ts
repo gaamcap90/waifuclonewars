@@ -800,6 +800,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       const clickedIcon = prev.players
         .flatMap(p => p.icons)
         .find(i => 
+          i && i.position && 
           i.position.q === coordinates.q && 
           i.position.r === coordinates.r && 
           i.isAlive
@@ -820,6 +821,11 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           ...prev,
           targetingMode: undefined
         };
+      }
+
+      // Prevent controlling AI units in singleplayer mode
+      if (prev.gameMode === 'singleplayer' && clickedIcon && clickedIcon.playerId === 1) {
+        return prev;
       }
 
       // Try to move the active icon - check if allowed to move
@@ -921,6 +927,15 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   const endTurn = useCallback(() => {
     setCurrentTurnTimer(20); // Reset timer immediately
     setGameState(prev => {
+      // Prevent controlling AI units in singleplayer
+      const currentActiveIcon = prev.players
+        .flatMap(p => p.icons)
+        .find(i => i.id === prev.activeIconId);
+      
+      if (currentActiveIcon?.playerId === 1 && prev.gameMode === 'singleplayer') {
+        return prev;
+      }
+      
       const nextQueueIndex = (prev.queueIndex + 1) % prev.speedQueue.length;
       const newTurn = nextQueueIndex === 0 ? prev.currentTurn + 1 : prev.currentTurn;
       
@@ -1139,7 +1154,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
         
-      if (activeIcon?.playerId !== icon.playerId) {
+      if (activeIcon?.playerId !== icon.playerId || (prev.gameMode === 'singleplayer' && icon.playerId === 1)) {
         toast.error("You can only respawn on your turn!");
         return prev;
       }
