@@ -436,25 +436,44 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             }
             
             if (!target && enemyBase) {
-              const distanceToBase = calculateDistance(activeIcon.position, enemyBase.coordinates);
-              if (distanceToBase <= gameState.targetingMode.range) {
-                target = enemyBase.coordinates;
-                console.log('AI targeting base at', target);
-              }
-            }
-            
-            if (target) {
-              console.log('AI executing attack on', target);
-              selectTile(target);
-              return;
-            } else {
-              console.log('AI found no valid targets – exiting targeting mode');
-              setGameState(prev => ({
-                ...prev,
-                targetingMode: null
-              }));
-            }
-          }
+  const distanceToBase = calculateDistance(activeIcon.position, enemyBase.coordinates);
+  if (distanceToBase <= gameState.targetingMode.range) {
+    target = enemyBase.coordinates;
+    console.log('AI targeting base at', target);
+  }
+}
+
+if (target) {
+  console.log('AI executing attack on', target);
+  selectTile(target);
+  return;
+}
+
+// No attack possible — check for move possibility first
+if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
+  console.log('AI attempting to move since no valid target found');
+  const aiMove = makeAIMove(gameState);
+
+  if (Object.keys(aiMove).length > 0) {
+    console.log('AI move successful, updating state');
+    setGameState(prev => ({ ...prev, ...aiMove }));
+
+    // Try attacking again after moving
+    setTimeout(() => {
+      console.log('AI retrying attack after movement');
+      basicAttack(); // will re-enter this logic after targetingMode is set
+    }, 1000);
+
+    return;
+  }
+}
+
+// At this point: no move, no attack — end turn
+console.log('AI ending turn: no valid moves or attacks');
+setTimeout(() => {
+  endTurn();
+}, 1000);
+return;
           
           // Try to move first if not moved
           if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
