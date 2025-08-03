@@ -390,65 +390,58 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
  // Handle AI turns - only in single player mode
 useEffect(() => {
-  if (
-    gameState.gameMode !== 'singleplayer' ||
-    gameState.phase !== 'combat'
-  ) return;
+  if (gameState.gameMode === 'singleplayer' && gameState.phase === 'combat') {
+    const activeIcon = gameState.players
+      .flatMap(p => p.icons)
+      .find(i => i.id === gameState.activeIconId);
 
-  const activeIcon = gameState.players
-    .flatMap(p => p.icons)
-    .find(i => i.id === gameState.activeIconId);
+    console.log('AI Turn check:', {
+      activeIconId: gameState.activeIconId,
+      activeIcon: activeIcon ? {
+        id: activeIcon.id,
+        name: activeIcon.name,
+        playerId: activeIcon.playerId,
+        isAlive: activeIcon.isAlive,
+        actionTaken: activeIcon.actionTaken,
+        movedThisTurn: activeIcon.movedThisTurn
+      } : null,
+      targetingMode: gameState.targetingMode
+    });
 
-  if (
-    activeIcon?.playerId !== 1 ||
-    !activeIcon.isAlive ||
-    (activeIcon.movedThisTurn && activeIcon.actionTaken)
-  ) return;
-
-  const timer = setTimeout(() => {
-    console.log('AI Timer triggered');
-
-    // Already in targeting mode? Wait for targeting handler effect
-    if (gameState.targetingMode?.iconId === activeIcon.id) return;
-
-    // Try moving
-    const aiMove = makeAIMove(gameState);
-    if (Object.keys(aiMove).length > 0) {
-      console.log('AI moving:', aiMove);
-      setGameState(prev => ({
-        ...prev,
-        ...aiMove,
-        players: prev.players.map(p => ({
-          ...p,
-          icons: p.icons.map(icon =>
-            icon.id === activeIcon.id
-              ? { ...icon, movedThisTurn: true }
-              : icon
-          )
-        }))
-      }));
-
-      // Trigger basic attack after move
-      setTimeout(() => {
-        basicAttack(); // sets targetingMode
-      }, 300);
-
+    // ✅ Failsafe: end turn if everything done
+    if (
+      activeIcon?.playerId === 1 &&
+      activeIcon.isAlive &&
+      activeIcon.movedThisTurn &&
+      activeIcon.actionTaken
+    ) {
+      console.log('Failsafe — AI already moved and acted, ending turn');
+      endTurn();
       return;
     }
 
-    // Nothing else to do — end turn
-    console.log('AI ending turn - nothing to do');
-    endTurn();
-  }, 800);
+    // Only trigger timer if something still left to do
+    if (
+      activeIcon?.playerId === 1 &&
+      activeIcon.isAlive &&
+      (!activeIcon.movedThisTurn || !activeIcon.actionTaken)
+    ) {
+      const timer = setTimeout(() => {
+        console.log('AI Timer triggered');
+        // [rest of logic...]
+      }, 1000);
 
-  return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
+    }
+  }
 }, [
   gameState.activeIconId,
   gameState.phase,
+  gameState.targetingMode,
   gameState.players,
-  gameState.board,
-  gameState.targetingMode
+  gameState.board
 ]);
+
  
 useEffect(() => {
   if (
