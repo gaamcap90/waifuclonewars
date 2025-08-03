@@ -485,15 +485,18 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           
           // If can't or won't move, try attack
           if (!activeIcon.actionTaken) {
-            console.log('AI trying basic attack');
-            basicAttack();
-            
-            setTimeout(() => {
-              console.log('AI ending turn after attack only');
-              endTurn();
-            }, 1000);
-            return;
-          }
+  console.log('AI attempting backend basic attack');
+  setGameState(prev => {
+    const newState = performBasicAttack(prev);
+    return newState;
+  });
+
+  setTimeout(() => {
+    endTurn();
+  }, 1000);
+  return;
+}
+
           
           // End AI turn if nothing to do
           console.log('AI ending turn - nothing to do');
@@ -1079,6 +1082,64 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       };
     });
   }, []);
+
+  function performBasicAttack(gameState) {
+  const activeIcon = gameState.players
+    .flatMap(p => p.icons)
+    .find(i => i.id === gameState.activeIconId);
+
+  if (!activeIcon || activeIcon.actionTaken || !activeIcon.isAlive) {
+    return gameState;
+  }
+
+  const enemyIcons = gameState.players
+    .filter(p => p.id !== activeIcon.playerId)
+    .flatMap(p => p.icons)
+    .filter(icon => icon.isAlive);
+
+  let range = 1; // Default melee
+  if (activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan") {
+    range = 2; // Ranged
+  }
+
+  // Try to find the closest valid enemy in range
+  let target = null;
+  for (const enemy of enemyIcons) {
+    const dist = calculateDistance(activeIcon.position, enemy.position);
+    if (dist <= range) {
+      target = enemy;
+      break;
+    }
+  }
+
+  if (!target) return gameState; // No one to attack
+
+  const damage = Math.max(0, activeIcon.stats.might - target.stats.defense);
+  console.log(`[AI] ${activeIcon.name} attacks ${target.name} for ${damage} damage`);
+
+  const updatedPlayers = gameState.players.map(player => ({
+    ...player,
+    icons: player.icons.map(icon => {
+      if (icon.id === target.id) {
+        const newHP = Math.max(0, icon.hp - damage);
+        return {
+          ...icon,
+          hp: newHP,
+          isAlive: newHP > 0
+        };
+      }
+      return icon;
+    })
+  }));
+
+  return {
+    ...gameState,
+    players: updatedPlayers,
+    targetingMode: null,
+    actionTaken: true
+  };
+}
+
 
   const respawnCharacter = useCallback((iconId: string, coordinates: Coordinates) => {
     setGameState(prev => {
