@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { GameState, Coordinates, Icon, HexTile, TerrainType } from "@/types/game";
 import { toast } from "sonner";
-const aiTurnHandledRef = useRef(false);
+
 const createInitialBoard = (): HexTile[] => {
   const board: HexTile[] = [];
   
@@ -329,7 +329,7 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
   return {};
 };
 
-  export function useGameStateNew(gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer') {
+const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer') => {
   const [gameState, setGameState] = useState<GameState>(() => {
     const initialIcons = createInitialIcons();
     const speedQueue = createSpeedQueue(initialIcons);
@@ -388,217 +388,116 @@ const makeAIMove = (gameState: GameState): Partial<GameState> => {
     setCurrentTurnTimer(20);
   }, [gameState.activeIconId]);
 
-// Handle AI turns - only in single player mode
-useEffect(() => {
-    if (
-      gameState.gameMode === 'singleplayer' &&
-      gameState.phase === 'combat'
-    ) {
+  // Handle AI turns - only in single player mode
+  useEffect(() => {
+    if (gameState.gameMode === 'singleplayer' && gameState.phase === 'combat') {
       const activeIcon = gameState.players
         .flatMap(p => p.icons)
         .find(i => i.id === gameState.activeIconId);
-
-      const shouldHandleTurn =
-        activeIcon?.playerId === 1 &&
-        activeIcon.isAlive &&
-        (!activeIcon.movedThisTurn || !activeIcon.actionTaken);
-
-      if (shouldHandleTurn && !aiTurnHandledRef.current) {
-        aiTurnHandledRef.current = true;
-
+        
+      console.log('AI Turn check:', {
+        activeIconId: gameState.activeIconId,
+        activeIcon: activeIcon ? {
+          id: activeIcon.id,
+          name: activeIcon.name,
+          playerId: activeIcon.playerId,
+          isAlive: activeIcon.isAlive,
+          actionTaken: activeIcon.actionTaken,
+          movedThisTurn: activeIcon.movedThisTurn
+        } : null,
+        targetingMode: gameState.targetingMode
+      });
+        
+      if (activeIcon?.playerId === 1 && activeIcon.isAlive) {
         const timer = setTimeout(() => {
           console.log('AI Timer triggered');
-
-          const freshIcon = gameState.players
-            .flatMap(p => p.icons)
-            .find(i => i.id === gameState.activeIconId);
-
-          // Failsafe: if AI has already acted and moved, end turn
-          if (freshIcon?.movedThisTurn && freshIcon?.actionTaken) {
-            console.log('AI already acted — ending turn');
-            aiTurnHandledRef.current = false;
-            endTurn();
-            return;
-          }
-
-          // Try to attack if targetingMode is active
-          if (
-            gameState.targetingMode &&
-            gameState.targetingMode.iconId === freshIcon?.id
-          ) {
+          
+          // Check if AI is in targeting mode - execute the attack/ability
+          if (gameState.targetingMode && gameState.targetingMode.iconId === activeIcon.id) {
+            console.log('AI in targeting mode, looking for targets');
+            
+            // Find best target
             const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
-            const enemyBase = gameState.board.find(tile =>
-              tile.terrain.type === 'base' &&
+            const enemyBase = gameState.board.find(tile => 
+              tile.terrain.type === 'base' && 
               tile.coordinates.q === -6 && tile.coordinates.r === 5
             );
-
+            
             let target = null;
+            
+            // Priority: Attack characters first, then base
             for (const enemy of enemyIcons) {
-              const distance = calculateDistance(freshIcon.position, enemy.position);
+              const distance = calculateDistance(activeIcon.position, enemy.position);
               if (distance <= gameState.targetingMode.range) {
                 target = enemy.position;
+                console.log('AI targeting enemy:', enemy.name, 'at', target);
                 break;
               }
             }
-
+            
             if (!target && enemyBase) {
-              const dist = calculateDistance(freshIcon.position, enemyBase.coordinates);
-              if (dist <= gameState.targetingMode.range) {
+              const distanceToBase = calculateDistance(activeIcon.position, enemyBase.coordinates);
+              if (distanceToBase <= gameState.targetingMode.range) {
                 target = enemyBase.coordinates;
+                console.log('AI targeting base at', target);
               }
             }
-
+            
             if (target) {
-              console.log('AI attacking:', target);
+              console.log('AI executing attack on', target);
               selectTile(target);
-              return;
-            } else {
-              console.log('No valid targets — clearing targeting mode and marking actionTaken');
-              setGameState(prev => ({
-                ...prev,
-                targetingMode: null,
-                players: prev.players.map(p => ({
-                  ...p,
-                  icons: p.icons.map(icon =>
-                    icon.id === freshIcon.id
-                      ? { ...icon, actionTaken: true }
-                      : icon
-                  )
-                }))
-              }));
-
+              return; // The selectTile will handle ending the turn
+            }
+          }
+          
+          // Try to move first if not moved
+          if (!activeIcon.movedThisTurn && activeIcon.stats.movement > 0) {
+            console.log('AI trying to move');
+            const aiMove = makeAIMove(gameState);
+            console.log('AI move result:', aiMove);
+            
+            if (Object.keys(aiMove).length > 0) {
+              setGameState(prev => ({ ...prev, ...aiMove }));
+              
+              // Wait then try to attack
               setTimeout(() => {
-                console.log('Failsafe after target fail — ending turn');
-                aiTurnHandledRef.current = false;
-                endTurn();
-              }, 300);
-
+                if (!activeIcon.actionTaken) {
+                  console.log('AI trying basic attack after move');
+                  basicAttack();
+                  
+                  setTimeout(() => {
+                    console.log('AI ending turn after attack');
+                    endTurn();
+                  }, 1000);
+                } else {
+                  endTurn();
+                }
+              }, 1000);
               return;
             }
           }
-
-          // No targetingMode — try to move
-          const aiMove = makeAIMove(gameState);
-          if (Object.keys(aiMove).length > 0) {
-            console.log('AI moving:', aiMove);
-            setGameState(prev => ({
-              ...prev,
-              ...aiMove,
-              players: prev.players.map(p => ({
-                ...p,
-                icons: p.icons.map(icon =>
-                  icon.id === freshIcon?.id
-                    ? { ...icon, movedThisTurn: true }
-                    : icon
-                )
-              }))
-            }));
-
+          
+          // If can't or won't move, try attack
+          if (!activeIcon.actionTaken) {
+            console.log('AI trying basic attack');
+            basicAttack();
+            
             setTimeout(() => {
-              basicAttack();
-              aiTurnHandledRef.current = false;
-            }, 500);
+              console.log('AI ending turn after attack only');
+              endTurn();
+            }, 1000);
             return;
           }
-
-          // Nothing else to do — end turn
-          console.log('AI ending turn — nothing to do');
-          aiTurnHandledRef.current = false;
+          
+          // End AI turn if nothing to do
+          console.log('AI ending turn - nothing to do');
           endTurn();
-        }, 500);
-
+        }, 1500); // AI thinks for 1.5 seconds
+        
         return () => clearTimeout(timer);
       }
-    } else {
-      // Reset AI lock when not in combat
-      aiTurnHandledRef.current = false;
     }
-  }, [
-    gameState.activeIconId,
-    gameState.phase,
-    gameState.players,
-    gameState.board,
-    gameState.targetingMode
-  ]);
-
-  // Handle AI targeting mode for attacking
-  useEffect(() => {
-    if (
-      gameState.gameMode !== 'singleplayer' ||
-      gameState.phase !== 'combat' ||
-      !gameState.targetingMode
-    ) return;
-
-    const activeIcon = gameState.players
-      .flatMap(p => p.icons)
-      .find(i => i.id === gameState.activeIconId);
-
-    if (!activeIcon || activeIcon.playerId !== 1) return;
-
-    console.log('AI in targeting mode, looking for targets');
-
-    const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
-    const enemyBase = gameState.board.find(tile =>
-      tile.terrain.type === 'base' &&
-      tile.coordinates.q === -6 && tile.coordinates.r === 5
-    );
-
-    let target = null;
-
-    for (const enemy of enemyIcons) {
-      const dist = calculateDistance(activeIcon.position, enemy.position);
-      if (dist <= gameState.targetingMode.range) {
-        target = enemy.position;
-        console.log('AI targeting enemy:', enemy.name, 'at', target);
-        break;
-      }
-    }
-
-    if (!target && enemyBase) {
-      const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
-      if (dist <= gameState.targetingMode.range) {
-        target = enemyBase.coordinates;
-        console.log('AI targeting base at', target);
-      }
-    }
-
-    if (target) {
-      console.log('AI executing attack on', target);
-      setTimeout(() => selectTile(target), 400);
-
-      // Optional fallback in case attack fails to resolve
-      setTimeout(() => {
-        setGameState(prev => ({
-          ...prev,
-          players: prev.players.map(p => ({
-            ...p,
-            icons: p.icons.map(icon =>
-              icon.id === activeIcon.id
-                ? { ...icon, actionTaken: true }
-                : icon
-            )
-          }))
-        }));
-      }, 1200);
-    } else {
-      console.log('No valid targets — clearing targetingMode and marking actionTaken');
-      setGameState(prev => ({
-        ...prev,
-        targetingMode: null,
-        players: prev.players.map(p => ({
-          ...p,
-          icons: p.icons.map(icon =>
-            icon.id === activeIcon.id
-              ? { ...icon, actionTaken: true }
-              : icon
-          )
-        }))
-      }));
-    }
-  }, [gameState.targetingMode]);
-
-
-
+  }, [gameState.activeIconId, gameState.gameMode, gameState.targetingMode, gameState.phase]);
 
   const selectTile = useCallback((coordinates: Coordinates) => {
     console.log('selectTile called with:', coordinates);
@@ -1115,7 +1014,7 @@ useEffect(() => {
         newPhase = 'victory';
         winner = 0;
       }
-
+      
       return {
         ...prev,
         players: updatedPlayers,
@@ -1174,7 +1073,6 @@ useEffect(() => {
       };
     });
   }, []);
-
 
   const respawnCharacter = useCallback((iconId: string, coordinates: Coordinates) => {
     setGameState(prev => {
@@ -1286,7 +1184,6 @@ useEffect(() => {
     });
   }, []);
 
-
   return {
     gameState,
     selectTile,
@@ -1301,4 +1198,4 @@ useEffect(() => {
   };
 };
 
-export default useGameStateNew;
+export default useGameState;
