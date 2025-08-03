@@ -410,23 +410,25 @@ useEffect(() => {
 
     if (
       activeIcon?.playerId === 1 &&
-      activeIcon.isAlive
+      activeIcon.isAlive &&
+      (!activeIcon.movedThisTurn || !activeIcon.actionTaken)
     ) {
       const timer = setTimeout(() => {
         console.log('AI Timer triggered');
 
-        // ✅ Failsafe inside timer — updated state is accessible here
-        if (
-          activeIcon.movedThisTurn &&
-          activeIcon.actionTaken
-        ) {
-          console.log('AI already moved and acted — ending turn inside timer');
+        // 🔁 Re-fetch icon inside timer (fresh state)
+        const freshIcon = gameState.players
+          .flatMap(p => p.icons)
+          .find(i => i.id === gameState.activeIconId);
+
+        if (freshIcon?.movedThisTurn && freshIcon?.actionTaken) {
+          console.log('Timer check: AI already moved and acted — ending turn');
           endTurn();
           return;
         }
 
-        // 1. AI is in targeting mode — try to attack
-        if (gameState.targetingMode && gameState.targetingMode.iconId === activeIcon.id) {
+        // 1. Targeting mode
+        if (gameState.targetingMode && gameState.targetingMode.iconId === freshIcon?.id) {
           console.log('AI in targeting mode, looking for targets');
 
           const enemyIcons = gameState.players[0].icons.filter(icon => icon.isAlive);
@@ -438,7 +440,7 @@ useEffect(() => {
           let target = null;
 
           for (const enemy of enemyIcons) {
-            const distance = calculateDistance(activeIcon.position, enemy.position);
+            const distance = calculateDistance(freshIcon.position, enemy.position);
             if (distance <= gameState.targetingMode.range) {
               target = enemy.position;
               console.log('AI targeting enemy:', enemy.name, 'at', target);
@@ -447,7 +449,7 @@ useEffect(() => {
           }
 
           if (!target && enemyBase) {
-            const dist = calculateDistance(activeIcon.position, enemyBase.coordinates);
+            const dist = calculateDistance(freshIcon.position, enemyBase.coordinates);
             if (dist <= gameState.targetingMode.range) {
               target = enemyBase.coordinates;
               console.log('AI targeting base at', target);
@@ -456,26 +458,7 @@ useEffect(() => {
 
           if (target) {
             console.log('AI executing attack on', target);
-            setTimeout(() => {
-              selectTile(target);
-
-              // Fallback to mark actionTaken just in case
-              setTimeout(() => {
-                setGameState(prev => ({
-                  ...prev,
-                  players: prev.players.map(p => ({
-                    ...p,
-                    icons: p.icons.map(icon =>
-                      icon.id === activeIcon.id
-                        ? { ...icon, actionTaken: true }
-                        : icon
-                    )
-                  }))
-                }));
-              }, 1000);
-
-            }, 500);
-
+            setTimeout(() => selectTile(target), 500);
             return;
           } else {
             console.log('No valid targets — clearing targetingMode and marking actionTaken');
@@ -485,13 +468,12 @@ useEffect(() => {
               players: prev.players.map(p => ({
                 ...p,
                 icons: p.icons.map(icon =>
-                  icon.id === activeIcon.id
+                  icon.id === freshIcon.id
                     ? { ...icon, actionTaken: true }
                     : icon
                 )
               }))
             }));
-
             return;
           }
         }
@@ -500,34 +482,27 @@ useEffect(() => {
         const aiMove = makeAIMove(gameState);
         if (Object.keys(aiMove).length > 0) {
           console.log('AI moving:', aiMove);
-          setGameState(prev => {
-            const updatedState = {
-              ...prev,
-              ...aiMove,
-              players: prev.players.map(p => ({
-                ...p,
-                icons: p.icons.map(icon =>
-                  icon.id === activeIcon.id
-                    ? { ...icon, movedThisTurn: true }
-                    : icon
-                )
-              }))
-            };
-            return updatedState;
-          });
+          setGameState(prev => ({
+            ...prev,
+            ...aiMove,
+            players: prev.players.map(p => ({
+              ...p,
+              icons: p.icons.map(icon =>
+                icon.id === freshIcon?.id
+                  ? { ...icon, movedThisTurn: true }
+                  : icon
+              )
+            }))
+          }));
 
-          // After moving, try fallback basic attack
-          setTimeout(() => {
-            basicAttack(); // Should set targetingMode
-          }, 500);
-
+          setTimeout(() => basicAttack(), 500);
           return;
         }
 
-        // 3. Nothing left to do
+        // 3. Nothing left — end
         console.log('AI ending turn - nothing to do');
         endTurn();
-      }, 1000);
+      }, 500);
 
       return () => clearTimeout(timer);
     }
@@ -539,7 +514,6 @@ useEffect(() => {
   gameState.players,
   gameState.board
 ]);
-
 
  
 useEffect(() => {
