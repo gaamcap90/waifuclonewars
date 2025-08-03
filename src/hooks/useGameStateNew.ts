@@ -950,9 +950,14 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
       
-      if (currentActiveIcon?.playerId === 1 && prev.gameMode === 'singleplayer') {
-        return prev;
-      }
+     if (
+  currentActiveIcon?.playerId === 1 &&
+  prev.gameMode === 'singleplayer' &&
+  !systemTriggered // pseudo flag
+) {
+  return prev;
+}
+
       
       const nextQueueIndex = (prev.queueIndex + 1) % prev.speedQueue.length;
       const newTurn = nextQueueIndex === 0 ? prev.currentTurn + 1 : prev.currentTurn;
