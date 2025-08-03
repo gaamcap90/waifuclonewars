@@ -485,15 +485,19 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           
           // If can't or won't move, try attack
           if (!activeIcon.actionTaken) {
-            console.log('AI trying basic attack');
-            basicAttack();
-            
-            setTimeout(() => {
-              console.log('AI ending turn after attack only');
-              endTurn();
-            }, 1000);
-            return;
-          }
+  console.log('AI trying basic attack');
+  const didAttack = basicAttack(); // <- Make basicAttack return a boolean
+
+  setTimeout(() => {
+    if (!didAttack) {
+      console.log('No targets found - ending turn');
+      // optionally: reset targeting mode here if needed
+    }
+    console.log('AI ending turn after attack only');
+    endTurn();
+  }, 1000);
+  return;
+}
           
           // End AI turn if nothing to do
           console.log('AI ending turn - nothing to do');
@@ -1189,6 +1193,16 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       };
     });
   }, []);
+
+  function basicAttack() {
+  const target = findClosestTarget();
+  if (target) {
+    performAttack(target);
+    activeIcon.actionTaken = true;
+    return true;
+  }
+  return false;
+}
 
   return {
     gameState,
