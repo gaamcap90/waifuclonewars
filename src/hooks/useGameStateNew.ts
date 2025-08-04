@@ -736,6 +736,11 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                          const newPowerBonus = [...prev.teamBuffs.powerBonus];
                          newMightBonus[activeIcon.playerId] = 15;
                          newPowerBonus[activeIcon.playerId] = 15;
+
+                         console.log(%c[Buffs Applied]",
+                        "color: purple; font-weight: bold",
+                        { newMightBonus, newPowerBonus }
+                           );
                          
                          toast.success(`Beast Camp defeated! Team gains +15% might and power!`);
                          
