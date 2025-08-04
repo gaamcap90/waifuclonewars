@@ -39,7 +39,7 @@ export default function HexTile({
 
   // 2) Map terrain type → /public/uploads asset
   const terrainMap: Record<string,string> = {
-    forest:       "/uploads/Forest2.png",
+    forest:       "/uploads/Forest_2.png",
     mountain:     "/uploads/Mountains.png",
     river:        "/uploads/River.png",
     plain:        "/uploads/Plain.png",
