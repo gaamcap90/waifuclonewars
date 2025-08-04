@@ -37,6 +37,13 @@ const GameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, currentTurn
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  console.log(
+    "%c[GameUI] selectedIcon & teamBuffs →",
+    "color: teal; font-weight: bold",
+    selectedIcon,
+    gameState.teamBuffs
+  );
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-2">
       {/* Top Row: Turn Queue, Timer, and Objectives */}
