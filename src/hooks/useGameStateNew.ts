@@ -462,66 +462,75 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               
               // Execute the attack immediately instead of calling selectTile
               setGameState(prev => {
-                const damage = activeIcon.stats.might;
-                const targetIcon = prev.players
-                  .flatMap(p => p.icons)
-                  .find(icon => 
-                    icon.position.q === target.q && 
-                    icon.position.r === target.r && 
-                    icon.isAlive
-                  );
+  // 1) Compute buffed might & damage
+  const mightBonusPct = prev.teamBuffs.mightBonus[activeIcon.playerId] || 0;
+  const buffedMight = activeIcon.stats.might * (1 + mightBonusPct / 100);
+  const targetDefense = targetIcon.stats.defense;
+  const rawDamage = buffedMight - targetDefense;
+  const damage = Math.max(0.1, rawDamage);
 
-                let updatedPlayers = prev.players;
-                let updatedBaseHealth = [...prev.baseHealth];
+  // 2) Find the actual target icon on the board
+  const targetIconEntity = prev.players
+    .flatMap(p => p.icons)
+    .find(icon =>
+      icon.position.q === target.q &&
+      icon.position.r === target.r &&
+      icon.isAlive
+    );
 
-                if (targetIcon) {
-                  const finalDamage = Math.max(1, damage - targetIcon.stats.defense);
-                  updatedPlayers = prev.players.map(player => ({
-                    ...player,
-                    icons: player.icons.map(icon => {
-                      if (icon.id === targetIcon.id) {
-                        const newHp = Math.max(0, icon.stats.hp - finalDamage);
-                        return { 
-                          ...icon, 
-                          stats: { ...icon.stats, hp: newHp },
-                          isAlive: newHp > 0,
-                          respawnTurns: newHp <= 0 ? 5 : icon.respawnTurns
-                        };
-                      }
-                      return icon;
-                    })
-                  }));
-                } else {
-                  // Attack base
-                  if (target.q === -6 && target.r === 5) {
-                    updatedBaseHealth[0] = Math.max(0, prev.baseHealth[0] - damage);
-                  }
-                }
+  let updatedPlayers = prev.players;
+  let updatedBaseHealth = [...prev.baseHealth];
 
-                // Mark AI as having taken action and advance turn
-                const updatedPlayersWithAction = updatedPlayers.map(player => ({
-                  ...player,
-                  icons: player.icons.map(icon => 
-                    icon.id === activeIcon.id 
-                      ? { ...icon, actionTaken: true }
-                      : icon
-                  )
-                }));
+  if (targetIconEntity) {
+    // 3) Apply damage to that icon
+    updatedPlayers = prev.players.map(player => ({
+      ...player,
+      icons: player.icons.map(icon => {
+        if (icon.id === targetIconEntity.id) {
+          const newHp = Math.max(0, icon.stats.hp - damage);
+          return {
+            ...icon,
+            stats: { ...icon.stats, hp: newHp },
+            isAlive: newHp > 0,
+            respawnTurns: newHp <= 0 ? 5 : icon.respawnTurns
+          };
+        }
+        return icon;
+      })
+    }));
+  } else {
+    // 4) Or attack the base
+    if (target.q === -6 && target.r === 5) {
+      updatedBaseHealth[0] = Math.max(0, prev.baseHealth[0] - damage);
+    }
+  }
 
-                // Advance to next turn immediately
-                const aliveIcons = updatedPlayersWithAction.flatMap(p => p.icons).filter(icon => icon.isAlive);
-                const nextIndex = (prev.queueIndex + 1) % aliveIcons.length;
-                const nextIconId = prev.speedQueue[nextIndex] || aliveIcons[0]?.id;
+  // 5) Mark the AI attacker as having acted
+  const updatedPlayersWithAction = updatedPlayers.map(player => ({
+    ...player,
+    icons: player.icons.map(icon =>
+      icon.id === activeIcon.id
+        ? { ...icon, actionTaken: true }
+        : icon
+    )
+  }));
 
-                return {
-                  ...prev,
-                  players: updatedPlayersWithAction,
-                  baseHealth: updatedBaseHealth,
-                  targetingMode: undefined,
-                  activeIconId: nextIconId,
-                  queueIndex: nextIndex
-                };
-              });
+  // 6) Advance to next turn
+  const aliveIcons = updatedPlayersWithAction
+    .flatMap(p => p.icons)
+    .filter(icon => icon.isAlive);
+  const nextIndex = (prev.queueIndex + 1) % aliveIcons.length;
+  const nextIconId = prev.speedQueue[nextIndex] || aliveIcons[0]?.id;
+
+  return {
+    ...prev,
+    players: updatedPlayersWithAction,   // ← use the action‐marked players
+    baseHealth: updatedBaseHealth,
+    targetingMode: undefined,
+    activeIconId: nextIconId,
+    queueIndex: nextIndex
+  };
+});
               
               return;
             }
@@ -647,11 +656,17 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
             if (prev.targetingMode.abilityId === 'basic_attack') {
               // NEW FORMULA: Basic Attack Damage = Might - Target Defense
-              const baseDamage = activeIcon.stats.might;
+              const mightBonusPct = prev.teamBuffs.mightBonus[activeIcon.playerId] || 0;
+              const buffedMight = activeIcon.stats.might * (1 + mightBonusPct / 100);
               const targetDefense = targetIcon?.stats.defense || 0;
-              const damage = Math.max(1, baseDamage - targetDefense);
+
+              // allow fractional damage
+              const rawDamage = buffedMight - targetDefense;
+              // ensure you always do at least 0.1 damage so things die
+              const damage = Math.max(0.1, rawDamage);
               
               if (targetIcon) {
+                const newHp = Math.max(0, targetIcon.stats.hp - damage);
                 // Check if trying to attack own team
                 if (targetIcon.playerId === activeIcon.playerId) {
                   toast.error("Cannot attack your own character!");
