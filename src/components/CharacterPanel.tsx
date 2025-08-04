@@ -11,11 +11,25 @@ interface CharacterPanelProps {
 const CharacterPanel = ({ character, visible, gameState }: CharacterPanelProps) => {
   if (!visible || !character) return null;
 
-  // Calculate buffed stats
-  const mightBonus = gameState?.teamBuffs.mightBonus[character.playerId] || 0;
-  const powerBonus = gameState?.teamBuffs.powerBonus[character.playerId] || 0;
-  const buffedMight = Math.floor(character.stats.might * (1 + mightBonus / 100));
-  const buffedPower = Math.floor(character.stats.power * (1 + powerBonus / 100));
+   // base values
+  const baseMight = character.stats.might;
+  const basePower = character.stats.power;
+
+  // exact extra from % buffs
+  const extraMightRaw = (baseMight * mightBonus) / 100;
+  const extraPowerRaw = (basePower * powerBonus) / 100;
+
+  // round to 1 decimal if needed, otherwise show integer
+  const extraMight = Number(
+    extraMightRaw % 1 === 0 ? extraMightRaw : extraMightRaw.toFixed(1)
+  );
+  const extraPower = Number(
+    extraPowerRaw % 1 === 0 ? extraPowerRaw : extraPowerRaw.toFixed(1)
+  );
+
+  // final displayed totals (if you ever need them)
+  const buffedMight = baseMight + extraMight;
+  const buffedPower = basePower + extraPower;
 
   return (
     <div className="fixed bottom-4 left-4 w-80 z-40">
@@ -45,25 +59,25 @@ const CharacterPanel = ({ character, visible, gameState }: CharacterPanelProps) 
                 <span className="text-muted-foreground">Might:</span>
                 <span className="text-red-400">
                   {mightBonus > 0 ? (
-                    <>
-                      {character.stats.might} + <span className="text-green-400">{buffedMight - character.stats.might}</span>
-                    </>
-                  ) : (
-                    character.stats.might
-                  )}
-                </span>
+    <>
+      {baseMight} + <span className="text-green-400">{extraMight}</span>
+    </>
+  ) : (
+    baseMight
+  )}
+</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Power:</span>
                 <span className="text-blue-400">
-                  {powerBonus > 0 ? (
-                    <>
-                      {character.stats.power} + <span className="text-green-400">{buffedPower - character.stats.power}</span>
-                    </>
-                  ) : (
-                    character.stats.power
-                  )}
-                </span>
+  {powerBonus > 0 ? (
+    <>
+      {basePower} + <span className="text-green-400">{extraPower}</span>
+    </>
+  ) : (
+    basePower
+  )}
+</span>
               </div>
             </div>
             <div className="space-y-1">
