@@ -8,7 +8,7 @@ interface HexTileProps {
   onTerrainClick?: (e: React.MouseEvent) => void;
   icon?: string;
   iconPortrait?: string;
-  size?: number;  // “radius” from GameBoard
+  size?: number;  // radius from GameBoard (e.g. 50)
   playerColor?: "blue" | "red";
   isActiveIcon?: boolean;
   isTargetable?: boolean;
@@ -33,7 +33,7 @@ export default function HexTile({
   isInAttackRange,
   isInAbilityRange,
 }: HexTileProps) {
-  // 1) Terrain → public URL map
+  // Terrain → public URL map
   const terrainMap: Record<string,string> = {
     forest:       "/uploads/Forest.png",
     mountain:     "/uploads/Mountains.png",
@@ -47,17 +47,17 @@ export default function HexTile({
     spawn_red:    "/uploads/Spawn_Red.png",
   };
 
-  // pick the exact key for base/spawn variants
+  // Pick correct key for base/spawn
   let key = tile.terrain.type;
   if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
   if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
   const imgSrc = terrainMap[key] || terrainMap.plain;
 
-  // 2) Compute wrapper size
+  // True hex bounding‐box dimensions
   const hexWidth  = size * 2;                   // e.g. 100px
   const hexHeight = Math.sqrt(3) * size;        // e.g. ~86.6px
 
-  // 3) SVG outline path (unchanged)
+  // Hex outline path for SVG rings
   const hexPath = [
     [ 0.866, 0.5],
     [ 0.866, 1.5],
@@ -75,15 +75,16 @@ export default function HexTile({
       onClick={onClick}
       onContextMenu={e => { e.preventDefault(); onTerrainClick?.(e); }}
       style={{
-        width:           hexWidth,
-        height:          hexHeight,
-        backgroundImage: `url(${imgSrc})`,
-        backgroundSize:  "cover",
-        backgroundPosition: "center",
-        clipPath:        "polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0% 50%)"
+        width:             hexWidth,
+        height:            hexHeight,
+        backgroundImage:   `url(${imgSrc})`,
+        backgroundSize:    "cover",
+        backgroundPosition:"center",
+        // ** Exact pointy‐top hex clip-path—no gaps **
+        clipPath:          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
       }}
     >
-      {/* Hex outline & highlight rings */}
+      {/* SVG outline & highlight rings */}
       <svg
         className="absolute inset-0"
         width={hexWidth}
@@ -106,7 +107,7 @@ export default function HexTile({
         />
       </svg>
 
-      {/* Character portrait / icon overlay */}
+      {/* Character portrait / icon */}
       {icon && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className={cn(
