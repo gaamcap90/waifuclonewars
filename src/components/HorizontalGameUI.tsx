@@ -394,6 +394,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
         return (
           <CharacterDetailPopup
             character={character}
+            gameState={gameState}
             onClose={handleClosePopup}
             position={selectedCharacter.position}
           />
