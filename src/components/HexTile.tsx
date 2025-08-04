@@ -81,25 +81,18 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
     const terrainImage = getTerrainImage();
     if (terrainImage) {
       return (
-        <div className="relative w-full h-full">
-          <img 
-            src={terrainImage} 
-            alt={tile.terrain.type}
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{ 
-              zIndex: -1,
-            }}
-          />
-          {/* Beast Camp HP Bar - anchored above tile */}
-          {tile.terrain.type === 'beast_camp' && (
-            <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-2 bg-gray-700 rounded z-10">
-              <div
-                className="h-full rounded bg-green-400"
-                style={{ width: '100%' }} // This will be updated by game state
-              />
-            </div>
-          )}
-        </div>
+        <img 
+          src={terrainImage} 
+          alt={tile.terrain.type}
+          className="absolute inset-0"
+          style={{ 
+            zIndex: -1,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            transform: 'scale(1.1)', // Slight scale to ensure full coverage
+          }}
+        />
       );
     }
 
