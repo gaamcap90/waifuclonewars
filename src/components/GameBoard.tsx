@@ -1,10 +1,14 @@
-// src/components/GameBoard.tsx
-import { useMemo, useState, useRef, useEffect } from "react";
-import { GameState, Coordinates } from "@/types/game";
+import React, { useMemo, useState, useRef } from "react";
 import HexTile from "./HexTile";
 import HPBar from "./HPBar";
 import BeastCampHPBar from "./BeastCampHPBar";
+import { GameState, Coordinates } from "@/types/game";
 import { useRangeCalculation } from "./RangeIndicator";
+
+interface GameBoardProps {
+  gameState: GameState;
+  onTileClick: (coordinates: Coordinates) => void;
+}
 
 const getCharacterPortrait = (name: string) => {
   if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
@@ -13,28 +17,26 @@ const getCharacterPortrait = (name: string) => {
   return null;
 };
 
-interface GameBoardProps {
-  gameState: GameState;
-  onTileClick: (coordinates: Coordinates) => void;
-}
-
-const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
-  // 1) Hex dimensions & pan/zoom state
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
+  // 1) Hex dimensions
   const hexSize   = 50;
   const hexWidth  = hexSize * 2;                // 100px
   const hexHeight = Math.sqrt(3) * hexSize;     // ~86.6px
 
-  const [panOffset, setPanOffset]   = useState({ x: 0, y: 0 });
+  // 2) Pan & zoom state
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
-  const [zoom, setZoom]             = useState(1);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  // 1a) Measure container dimensions for BeastCampHPBar
+  // 3) Container size & centering math
   const containerWidth  = boardRef.current?.clientWidth  ?? 800;
   const containerHeight = boardRef.current?.clientHeight ?? 600;
+  const offsetX = (containerWidth  - hexWidth)  / 2;
+  const offsetY = (containerHeight - hexHeight) / 2;
 
-  // 2) Compute ranges
+  // 4) Compute ranges for highlighting
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
     .find(i => i.id === gameState.activeIconId);
@@ -42,18 +44,14 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
   const { movementRange, attackRange, abilityRange } = useRangeCalculation(
     gameState,
     gameState.activeIconId,
-    !gameState.targetingMode && activeIcon && !activeIcon.actionTaken,
+    !gameState.targetingMode && !!activeIcon && !activeIcon.actionTaken,
     gameState.targetingMode?.abilityId === 'basic_attack',
     Boolean(gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack'),
     gameState.targetingMode?.range
   );
 
-  // 3) Build the board
+  // 5) Memoized board rendering
   const renderBoard = useMemo(() => {
-    const offsetX = (containerWidth  - hexWidth)  / 2;
-    const offsetY = (containerHeight - hexHeight) / 2;
-
-    // axial → pixel
     const hexToPixel = (q: number, r: number) => ({
       x: hexSize * (3/2 * q),
       y: hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r),
@@ -75,7 +73,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       const playerColor  = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
       const isActiveIcon = icon?.id === gameState.activeIconId;
 
-      // range checks
+      // ranges
       const inMove    = movementRange.some(c => c.q === q && c.r === r);
       const inAttack  = attackRange.some(c => c.q === q && c.r === r);
       const inAbility = abilityRange.some(c => c.q === q && c.r === r);
@@ -123,6 +121,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             isInAttackRange={inAttack}
             isInAbilityRange={inAbility}
           />
+
           {icon && (
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
               <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
@@ -138,11 +137,14 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
     gameState.activeIconId,
     gameState.targetingMode,
     gameState.respawnPlacement,
-    movementRange, attackRange, abilityRange,
-    containerWidth, containerHeight
+    movementRange,
+    attackRange,
+    abilityRange,
+    offsetX,
+    offsetY
   ]);
 
-  // 4) Pan & zoom handlers
+  // 6) Pan & zoom handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -173,7 +175,6 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         }
       }}
     >
-      {/* Centered, zoomable board */}
       <div className="relative w-full h-full flex items-center justify-center">
         <div
           className="relative"
@@ -183,14 +184,11 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
           }}
         >
           {renderBoard}
-
           <BeastCampHPBar
             gameState={gameState}
-            boardWidth={containerWidth}
-            boardHeight={containerHeight}
-            panX={panOffset.x}
-            panY={panOffset.y}
-            zoom={zoom}
+            hexSize={hexSize}
+            offsetX={offsetX}
+            offsetY={offsetY}
           />
         </div>
       </div>
@@ -199,3 +197,4 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
 };
 
 export default GameBoard;
+
