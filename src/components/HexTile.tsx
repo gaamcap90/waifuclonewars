@@ -8,7 +8,8 @@ interface HexTileProps {
   onTerrainClick?: (e: React.MouseEvent) => void;
   icon?: string;
   iconPortrait?: string;
-  playerColor?: "blue"|"red";
+  size?: number;  // hex “radius” from GameBoard
+  playerColor?: "blue" | "red";
   isActiveIcon?: boolean;
   isTargetable?: boolean;
   isValidMovement?: boolean;
@@ -23,6 +24,7 @@ export default function HexTile({
   onTerrainClick,
   icon,
   iconPortrait,
+  size = 50,
   playerColor,
   isActiveIcon,
   isTargetable,
@@ -31,12 +33,12 @@ export default function HexTile({
   isInAttackRange,
   isInAbilityRange,
 }: HexTileProps) {
-  // 1) Terrain → public asset map
-  const terrainMap: Record<string,string> = {
+  // 1) Map terrain types to /uploads URLs
+  const terrainMap: Record<string, string> = {
     forest:       "/uploads/Forest.png",
     mountain:     "/uploads/Mountains.png",
     river:        "/uploads/River.png",
-    plain:        "/uploads/Plains_2.png",
+    plain:        "/uploads/Plain.png",
     mana_crystal: "/uploads/Mana_Crystal.png",
     beast_camp:   "/uploads/Beast_Camp.png",
     base_blue:    "/uploads/Blue_Base.png",
@@ -45,16 +47,15 @@ export default function HexTile({
     spawn_red:    "/uploads/Spawn_Red.png",
   };
   let key = tile.terrain.type;
-  if (key === "base")  key = tile.coordinates.q<0 ? "base_blue"  :"base_red";
-  if (key === "spawn") key = tile.coordinates.q<0 ? "spawn_blue":"spawn_red";
+  if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
+  if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
   const imgSrc = terrainMap[key] || terrainMap.plain;
 
-  // 2) Fixed wrapper dims (1.5 : 1)
-  const wrapperWidth  = 150;
-  const wrapperHeight = 100;
+  // 2) Compute hex bounding‐box dims
+  const hexWidth  = size * 2;                 // e.g. 100px for size=50
+  const hexHeight = Math.sqrt(3) * size;      // ~86.6px for size=50
 
-  // 3) Hex SVG path uses a nominal size of 100 for math, but it's only for the ring
-  const svgSize = 100;
+  // 3) Build the SVG outline path for your rings
   const hexPath = [
     [ 0.866, 0.5],
     [ 0.866, 1.5],
@@ -63,30 +64,32 @@ export default function HexTile({
     [-0.866, 0.5],
     [ 0,     0   ],
   ]
-    .map(([x,y]) => `${x*svgSize},${y*svgSize}`)
+    .map(([x, y]) => `${x * size},${y * size}`)
     .join(" ");
 
   return (
     <div
       className="relative cursor-pointer hover:scale-105 transition-transform"
       onClick={onClick}
-      onContextMenu={e=>{ e.preventDefault(); onTerrainClick?.(e); }}
+      onContextMenu={e => {
+        e.preventDefault();
+        onTerrainClick?.(e);
+      }}
       style={{
-        width:             wrapperWidth,
-        height:            wrapperHeight,
+        width:             hexWidth,
+        height:            hexHeight,
         backgroundImage:   `url(${imgSrc})`,
         backgroundSize:    "cover",
         backgroundPosition:"center",
-        // exact pointy-top hex mask:
         clipPath:          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)"
       }}
     >
-      {/* outline & highlight rings */}
+      {/* SVG outline with your existing highlight‐and‐ring logic */}
       <svg
         className="absolute inset-0"
-        width={wrapperWidth}
-        height={wrapperHeight}
-        viewBox={`${-svgSize*0.9} 0 ${svgSize*1.8} ${svgSize*2}`}
+        width={hexWidth}
+        height={hexHeight}
+        viewBox={`${-size * 0.9} 0 ${size * 1.8} ${size * 2}`}
         preserveAspectRatio="xMidYMid slice"
       >
         <polygon
@@ -104,17 +107,19 @@ export default function HexTile({
         />
       </svg>
 
-      {/* character portrait/icon */}
+      {/* Character portrait / icon overlay */}
       {icon && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className={cn(
             "w-12 h-12 rounded-full border-2 overflow-hidden",
-            playerColor==="blue"?"border-blue-400":"border-red-400",
+            playerColor === "blue" ? "border-blue-400" : "border-red-400",
             isActiveIcon && "shadow-lg shadow-active-turn/50 animate-pulse"
           )}>
             {iconPortrait
-              ? <img src={iconPortrait} alt={icon} className="w-full h-full object-cover"/>
-              : <span className="w-full h-full flex items-center justify-center text-white font-bold">{icon}</span>
+              ? <img src={iconPortrait} alt={icon} className="w-full h-full object-cover" />
+              : <span className="w-full h-full flex items-center justify-center text-white font-bold">
+                  {icon}
+                </span>
             }
           </div>
         </div>
@@ -122,3 +127,4 @@ export default function HexTile({
     </div>
   );
 }
+
