@@ -24,7 +24,7 @@ export default function HexTile({
   onTerrainClick,
   icon,
   iconPortrait,
-  size = 50,  // match your hexSize in GameBoard
+  size = 50,
   playerColor,
   isActiveIcon,
   isTargetable,
@@ -33,13 +33,9 @@ export default function HexTile({
   isInAttackRange,
   isInAbilityRange,
 }: HexTileProps) {
-  // 1) Compute true hex dims:
-  const hexWidth  = size * 2;                       // 100px
-  const hexHeight = Math.sqrt(3) * size;            // ≈86.6px
-
-  // 2) Map terrain type → /public/uploads asset
+  // 1) Terrain → public URL map
   const terrainMap: Record<string,string> = {
-    forest:       "/uploads/Forest_2.png",
+    forest:       "/uploads/Forest.png",
     mountain:     "/uploads/Mountains.png",
     river:        "/uploads/River.png",
     plain:        "/uploads/Plain.png",
@@ -51,14 +47,17 @@ export default function HexTile({
     spawn_red:    "/uploads/Spawn_Red.png",
   };
 
-  // pick correct key for base/spawn
+  // pick the exact key for base/spawn variants
   let key = tile.terrain.type;
   if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
   if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
-
   const imgSrc = terrainMap[key] || terrainMap.plain;
 
-  // 3) Build the SVG hex outline path (unchanged)
+  // 2) Compute wrapper size
+  const hexWidth  = size * 2;                   // e.g. 100px
+  const hexHeight = Math.sqrt(3) * size;        // e.g. ~86.6px
+
+  // 3) SVG outline path (unchanged)
   const hexPath = [
     [ 0.866, 0.5],
     [ 0.866, 1.5],
@@ -75,16 +74,16 @@ export default function HexTile({
       className="relative cursor-pointer hover:scale-105 transition-transform"
       onClick={onClick}
       onContextMenu={e => { e.preventDefault(); onTerrainClick?.(e); }}
-      style={{ width: hexWidth, height: hexHeight }}
+      style={{
+        width:           hexWidth,
+        height:          hexHeight,
+        backgroundImage: `url(${imgSrc})`,
+        backgroundSize:  "cover",
+        backgroundPosition: "center",
+        clipPath:        "polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0% 50%)"
+      }}
     >
-      {/* === Terrain image fills full hex box === */}
-      <img
-        src={imgSrc}
-        alt={key}
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-      />
-
-      {/* === Hex outline & highlight rings === */}
+      {/* Hex outline & highlight rings */}
       <svg
         className="absolute inset-0"
         width={hexWidth}
@@ -107,7 +106,7 @@ export default function HexTile({
         />
       </svg>
 
-      {/* === Character portrait / icon overlay === */}
+      {/* Character portrait / icon overlay */}
       {icon && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className={cn(
@@ -116,7 +115,7 @@ export default function HexTile({
             isActiveIcon && "shadow-lg shadow-active-turn/50 animate-pulse"
           )}>
             {iconPortrait
-              ? <img src={iconPortrait} alt={icon} className="w-full h-full object-cover" />
+              ? <img src={iconPortrait} alt={icon} className="w-full h-full object-cover"/>
               : <span className="w-full h-full flex items-center justify-center text-white font-bold">{icon}</span>
             }
           </div>
@@ -125,5 +124,4 @@ export default function HexTile({
     </div>
   );
 }
-
 
