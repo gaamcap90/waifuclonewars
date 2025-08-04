@@ -36,7 +36,7 @@ export default function HexTile({
     forest:       "/uploads/Forest.png",
     mountain:     "/uploads/Mountains.png",
     river:        "/uploads/River.png",
-    plain:        "/uploads/Plain.png",
+    plain:        "/uploads/Plains_2.png",
     mana_crystal: "/uploads/Mana_Crystal.png",
     beast_camp:   "/uploads/Beast_Camp.png",
     base_blue:    "/uploads/Blue_Base.png",
