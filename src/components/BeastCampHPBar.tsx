@@ -15,19 +15,18 @@ const BeastCampHPBar: React.FC<BeastCampHPBarProps> = ({
   offsetX,
   offsetY
 }) => {
-  const hexWidth  = hexSize * 2;               // e.g. 100px
   const hexHeight = Math.sqrt(3) * hexSize;    // ~86.6px
 
-  // Positions of the two beast camps in axial coords
+  // Two fixed camp positions in axial coords
   const camps = [
     { q: -2, r:  2, idx: 0 },
     { q:  2, r: -2, idx: 1 },
   ];
 
-  // Convert axial coords → pixel coords (untransformed)
+  // axial → pixel (center of tile)
   const hexToPixel = (q: number, r: number) => ({
-    x: hexSize * (3 / 2 * q),
-    y: hexSize * ((Math.sqrt(3) / 2) * q + Math.sqrt(3) * r),
+    x: hexSize * (3/2 * q),
+    y: hexSize * ((Math.sqrt(3)/2) * q + Math.sqrt(3) * r),
   });
 
   return (
@@ -39,8 +38,8 @@ const BeastCampHPBar: React.FC<BeastCampHPBarProps> = ({
         if (defeated) return null;
 
         const { x, y } = hexToPixel(q, r);
-        // center under the hex tile and just below it
-        const left = x + offsetX - hexWidth / 2;
+        // position at the *center* of the tile, then drop down one hex height
+        const left = x + offsetX + hexSize;     // hexSize === half tile width
         const top  = y + offsetY + hexHeight;
 
         const pct = Math.round((hp / maxHp) * 100);
@@ -49,7 +48,11 @@ const BeastCampHPBar: React.FC<BeastCampHPBarProps> = ({
           <div
             key={idx}
             className="absolute pointer-events-none z-30"
-            style={{ left, top, width: hexWidth, textAlign: "center" }}
+            style={{
+              left,
+              top,
+              transform: "translateX(-50%)",  // center this wrapper horizontally
+            }}
           >
             {/* HP bar background */}
             <div className="inline-block w-16 h-3 bg-gray-800 rounded-full border border-gray-600 overflow-hidden">
@@ -75,5 +78,4 @@ const BeastCampHPBar: React.FC<BeastCampHPBarProps> = ({
 };
 
 export default BeastCampHPBar;
-
 
