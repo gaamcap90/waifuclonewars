@@ -35,7 +35,7 @@ export default function HexTile({
 }: HexTileProps) {
   // 1) Terrain → public URL
   const terrainMap: Record<string,string> = {
-    forest:       "/uploads/Forest.png",
+    forest:       "/uploads/Forest_2.png",
     mountain:     "/uploads/Mountains_2.png",
     river:        "/uploads/River.png",
     plain:        "/uploads/Plain.png",
