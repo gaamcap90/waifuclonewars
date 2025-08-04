@@ -1,5 +1,5 @@
 // src/components/GameBoard.tsx
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { GameState, Coordinates } from "@/types/game";
 import HexTile from "./HexTile";
 import HPBar from "./HPBar";
@@ -24,11 +24,15 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
   const hexWidth  = hexSize * 2;                // 100px
   const hexHeight = Math.sqrt(3) * hexSize;     // ~86.6px
 
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [panOffset, setPanOffset]   = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
+  const [zoom, setZoom]             = useState(1);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  // 1a) Measure container dimensions for BeastCampHPBar
+  const containerWidth  = boardRef.current?.clientWidth  ?? 800;
+  const containerHeight = boardRef.current?.clientHeight ?? 600;
 
   // 2) Compute ranges
   const activeIcon = gameState.players
@@ -46,9 +50,6 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
 
   // 3) Build the board
   const renderBoard = useMemo(() => {
-    // container dims for centering
-    const containerWidth  = boardRef.current?.clientWidth  || 800;
-    const containerHeight = boardRef.current?.clientHeight || 600;
     const offsetX = (containerWidth  - hexWidth)  / 2;
     const offsetY = (containerHeight - hexHeight) / 2;
 
@@ -122,7 +123,6 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             isInAttackRange={inAttack}
             isInAbilityRange={inAbility}
           />
-
           {icon && (
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
               <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
@@ -139,6 +139,7 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
     gameState.targetingMode,
     gameState.respawnPlacement,
     movementRange, attackRange, abilityRange,
+    containerWidth, containerHeight
   ]);
 
   // 4) Pan & zoom handlers
@@ -181,6 +182,24 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             transformOrigin: "0 0",
           }}
         >
+          {renderBoard}
+
+          <BeastCampHPBar
+            gameState={gameState}
+            boardWidth={containerWidth}
+            boardHeight={containerHeight}
+            panX={panOffset.x}
+            panY={panOffset.y}
+            zoom={zoom}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GameBoard;
+
           {renderBoard}
           <BeastCampHPBar
   gameState={gameState}
