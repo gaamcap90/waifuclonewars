@@ -465,11 +465,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   // 1) Compute buffed might & damage
   const mightBonusPct = prev.teamBuffs.mightBonus[activeIcon.playerId] || 0;
   const buffedMight = activeIcon.stats.might * (1 + mightBonusPct / 100);
-  const targetDefense = targetIcon.stats.defense;
-  const rawDamage = buffedMight - targetDefense;
-  const damage = Math.max(0.1, rawDamage);
 
-  // 2) Find the actual target icon on the board
+  // 2) Find the target (character) at the clicked coords
   const targetIcon = prev.players
     .flatMap(p => p.icons)
     .find(icon =>
@@ -482,11 +479,16 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   let updatedBaseHealth = [...prev.baseHealth];
 
   if (targetIcon) {
-    // 3) Apply damage to that icon
+    // 3) Calculate damage vs. that target’s defense
+    const targetDefense = targetIcon.stats.defense;
+    const rawDamage = buffedMight - targetDefense;
+    const damage = Math.max(0.1, rawDamage);
+
+    // 4) Apply damage to the target
     updatedPlayers = prev.players.map(player => ({
       ...player,
       icons: player.icons.map(icon => {
-        if (icon.id === targetIconEntity.id) {
+        if (icon.id === targetIcon.id) {
           const newHp = Math.max(0, icon.stats.hp - damage);
           return {
             ...icon,
@@ -499,13 +501,15 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       })
     }));
   } else {
-    // 4) Or attack the base
+    // 5) If no icon found, attack the base (no defense)
+    const rawDamage = buffedMight;
+    const damage = Math.max(0.1, rawDamage);
     if (target.q === -6 && target.r === 5) {
       updatedBaseHealth[0] = Math.max(0, prev.baseHealth[0] - damage);
     }
   }
 
-  // 5) Mark the AI attacker as having acted
+  // 6) Mark AI as acted & advance turn
   const updatedPlayersWithAction = updatedPlayers.map(player => ({
     ...player,
     icons: player.icons.map(icon =>
@@ -515,7 +519,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     )
   }));
 
-  // 6) Advance to next turn
   const aliveIcons = updatedPlayersWithAction
     .flatMap(p => p.icons)
     .filter(icon => icon.isAlive);
@@ -524,14 +527,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
 
   return {
     ...prev,
-    players: updatedPlayersWithAction,   // ← use the action‐marked players
+    players: updatedPlayersWithAction,
     baseHealth: updatedBaseHealth,
     targetingMode: undefined,
     activeIconId: nextIconId,
     queueIndex: nextIndex
   };
-});
-              
+});             
               return;
             }
           }
