@@ -8,8 +8,7 @@ interface HexTileProps {
   onTerrainClick?: (e: React.MouseEvent) => void;
   icon?: string;
   iconPortrait?: string;
-  size?: number;  // radius from GameBoard (e.g. 50)
-  playerColor?: "blue" | "red";
+  playerColor?: "blue"|"red";
   isActiveIcon?: boolean;
   isTargetable?: boolean;
   isValidMovement?: boolean;
@@ -24,7 +23,6 @@ export default function HexTile({
   onTerrainClick,
   icon,
   iconPortrait,
-  size = 50,
   playerColor,
   isActiveIcon,
   isTargetable,
@@ -33,12 +31,12 @@ export default function HexTile({
   isInAttackRange,
   isInAbilityRange,
 }: HexTileProps) {
-  // Terrain → public URL map
+  // 1) Terrain → public asset map
   const terrainMap: Record<string,string> = {
     forest:       "/uploads/Forest.png",
     mountain:     "/uploads/Mountains.png",
     river:        "/uploads/River.png",
-    plain:        "/uploads/Plains_2.png",
+    plain:        "/uploads/Plain.png",
     mana_crystal: "/uploads/Mana_Crystal.png",
     beast_camp:   "/uploads/Beast_Camp.png",
     base_blue:    "/uploads/Blue_Base.png",
@@ -46,18 +44,17 @@ export default function HexTile({
     spawn_blue:   "/uploads/Spawn_Blue.png",
     spawn_red:    "/uploads/Spawn_Red.png",
   };
-
-  // Pick correct key for base/spawn
   let key = tile.terrain.type;
-  if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
-  if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
+  if (key === "base")  key = tile.coordinates.q<0 ? "base_blue"  :"base_red";
+  if (key === "spawn") key = tile.coordinates.q<0 ? "spawn_blue":"spawn_red";
   const imgSrc = terrainMap[key] || terrainMap.plain;
 
-  // True hex bounding‐box dimensions
-  const hexWidth  = size * 2;                   // e.g. 100px
-  const hexHeight = Math.sqrt(3) * size;        // e.g. ~86.6px
+  // 2) Fixed wrapper dims (1.5 : 1)
+  const wrapperWidth  = 150;
+  const wrapperHeight = 100;
 
-  // Hex outline path for SVG rings
+  // 3) Hex SVG path uses a nominal size of 100 for math, but it's only for the ring
+  const svgSize = 100;
   const hexPath = [
     [ 0.866, 0.5],
     [ 0.866, 1.5],
@@ -66,30 +63,30 @@ export default function HexTile({
     [-0.866, 0.5],
     [ 0,     0   ],
   ]
-    .map(([x,y]) => `${x*size},${y*size}`)
+    .map(([x,y]) => `${x*svgSize},${y*svgSize}`)
     .join(" ");
 
   return (
     <div
       className="relative cursor-pointer hover:scale-105 transition-transform"
       onClick={onClick}
-      onContextMenu={e => { e.preventDefault(); onTerrainClick?.(e); }}
+      onContextMenu={e=>{ e.preventDefault(); onTerrainClick?.(e); }}
       style={{
-        width:             hexWidth,
-        height:            hexHeight,
+        width:             wrapperWidth,
+        height:            wrapperHeight,
         backgroundImage:   `url(${imgSrc})`,
         backgroundSize:    "cover",
         backgroundPosition:"center",
-        // ** Exact pointy‐top hex clip-path—no gaps **
-        clipPath:          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+        // exact pointy-top hex mask:
+        clipPath:          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)"
       }}
     >
-      {/* SVG outline & highlight rings */}
+      {/* outline & highlight rings */}
       <svg
         className="absolute inset-0"
-        width={hexWidth}
-        height={hexHeight}
-        viewBox={`${-size*0.9} 0 ${size*1.8} ${size*2}`}
+        width={wrapperWidth}
+        height={wrapperHeight}
+        viewBox={`${-svgSize*0.9} 0 ${svgSize*1.8} ${svgSize*2}`}
         preserveAspectRatio="xMidYMid slice"
       >
         <polygon
@@ -107,12 +104,12 @@ export default function HexTile({
         />
       </svg>
 
-      {/* Character portrait / icon */}
+      {/* character portrait/icon */}
       {icon && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className={cn(
             "w-12 h-12 rounded-full border-2 overflow-hidden",
-            playerColor === "blue" ? "border-blue-400" : "border-red-400",
+            playerColor==="blue"?"border-blue-400":"border-red-400",
             isActiveIcon && "shadow-lg shadow-active-turn/50 animate-pulse"
           )}>
             {iconPortrait
@@ -125,4 +122,3 @@ export default function HexTile({
     </div>
   );
 }
-
