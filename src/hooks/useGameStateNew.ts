@@ -470,7 +470,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   const damage = Math.max(0.1, rawDamage);
 
   // 2) Find the actual target icon on the board
-  const targetIconEntity = prev.players
+  const targetIcon = prev.players
     .flatMap(p => p.icons)
     .find(icon =>
       icon.position.q === target.q &&
@@ -481,7 +481,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
   let updatedPlayers = prev.players;
   let updatedBaseHealth = [...prev.baseHealth];
 
-  if (targetIconEntity) {
+  if (targetIcon) {
     // 3) Apply damage to that icon
     updatedPlayers = prev.players.map(player => ({
       ...player,
