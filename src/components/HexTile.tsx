@@ -35,16 +35,16 @@ export default function HexTile({
 }: HexTileProps) {
   // 1) Terrain → public URL
   const terrainMap: Record<string,string> = {
-    forest:       "/uploads/Forest.png",
-    mountain:     "/uploads/Mountains_2.png",
-    river:        "/uploads/River.png",
-    plain:        "/uploads/Plain.png",
-    mana_crystal: "/uploads/Mana_Crystal.png",
-    beast_camp:   "/uploads/Beast_Camp.png",
-    base_blue:    "/uploads/Blue_Base.png",
-    base_red:     "/uploads/Red_Base.png",
-    spawn_blue:   "/uploads/Spawn_Blue.png",
-    spawn_red:    "/uploads/Spawn_Red.png",
+    forest:       "/uploads/Forest_180.png",
+    mountain:     "/uploads/Mountains_2_180.png",
+    river:        "/uploads/River_180.png",
+    plain:        "/uploads/Plains_180.png",
+    mana_crystal: "/uploads/Mana_Crystal_180.png",
+    beast_camp:   "/uploads/Beast_Camp_180.png",
+    base_blue:    "/uploads/Blue_Base_180.png",
+    base_red:     "/uploads/Red_Base_180.png",
+    spawn_blue:   "/uploads/Spawn_Blue_180.png",
+    spawn_red:    "/uploads/Spawn_Red_180.png",
   };
   let key = tile.terrain.type;
   if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
