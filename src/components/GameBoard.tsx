@@ -1,3 +1,4 @@
+// src/components/GameBoard.tsx
 import { useMemo, useState, useRef } from "react";
 import { GameState, Coordinates, HexTile as HexTileType } from "@/types/game";
 import HexTile from "./HexTile";
@@ -18,8 +19,9 @@ interface GameBoardProps {
 }
 
 const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
-  const hexSize = 50;
-  const hexWidth = hexSize * 2;
+  // 1) Hex geometry & pan/zoom state
+  const hexSize   = 50;
+  const hexWidth  = hexSize * 2;
   const hexHeight = Math.sqrt(3) * hexSize;
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -27,109 +29,86 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
   const [zoom, setZoom] = useState(1);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  const calculateDistance = (from: Coordinates, to: Coordinates): number => {
-    return Math.max(
-      Math.abs(to.q - from.q),
-      Math.abs(to.r - from.r),
-      Math.abs((to.q + to.r) - (from.q + from.r))
-    );
-  };
+  // 2) Range calculations
+  const activeIcon = gameState.players
+    .flatMap(p => p.icons)
+    .find(i => i.id === gameState.activeIconId);
+  const { movementRange, attackRange, abilityRange } = useRangeCalculation(
+    gameState,
+    gameState.activeIconId,
+    !gameState.targetingMode && activeIcon && !activeIcon.actionTaken,
+    gameState.targetingMode?.abilityId === 'basic_attack',
+    Boolean(gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack'),
+    gameState.targetingMode?.range
+  );
 
-  // Standard axial-to-pixel conversion (pointy-top)
-  const hexToPixel = (q: number, r: number) => {
-    const x = hexSize * (3/2 * q);
-    const y = hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
-    return { x, y };
-  };
-
+  // 3) Render loop memoized
   const renderBoard = useMemo(() => {
-    const activeIcon = gameState.players
-      .flatMap(p => p.icons)
-      .find(i => i.id === gameState.activeIconId);
-
-    // Calculate range indicators
-    const { movementRange, attackRange, abilityRange } = useRangeCalculation(
-      gameState,
-      gameState.activeIconId,
-      !gameState.targetingMode && activeIcon && !activeIcon.actionTaken, // Show movement range when not targeting and can move
-      gameState.targetingMode?.abilityId === 'basic_attack', // Show attack range when in basic attack mode
-      gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack', // Show ability range when using ability
-      gameState.targetingMode?.range
-    );
-
-    // Get container dimensions for centering
-    const containerWidth = boardRef.current?.clientWidth || 800;
+    const containerWidth  = boardRef.current?.clientWidth  || 800;
     const containerHeight = boardRef.current?.clientHeight || 600;
 
-    return gameState.board.map((tile) => {
-      const { x, y } = hexToPixel(tile.coordinates.q, tile.coordinates.r);
+    // Center offsets
+    const offsetX = (containerWidth  - hexWidth)  / 2;
+    const offsetY = (containerHeight - hexHeight) / 2;
+
+    // Axial → pixel
+    const hexToPixel = (q: number, r: number) => ({
+      x: hexSize * (3/2 * q),
+      y: hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r),
+    });
+
+    return gameState.board.map(tile => {
+      const { q, r } = tile.coordinates;
+      const { x, y } = hexToPixel(q, r);
+
+      // Icon on this tile?
       const icon = gameState.players
         .flatMap(p => p.icons)
-        .find(icon => 
-          icon.position.q === tile.coordinates.q && 
-          icon.position.r === tile.coordinates.r && 
-          icon.isAlive
+        .find(ic =>
+          ic.position.q === q &&
+          ic.position.r === r &&
+          ic.isAlive
         );
-
-      const playerColor = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
+      const playerColor  = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
       const isActiveIcon = icon?.id === gameState.activeIconId;
-      
-      // Check range indicators
-      const isInMovementRange = movementRange.some(coord => 
-        coord.q === tile.coordinates.q && coord.r === tile.coordinates.r
-      );
-      const isInAttackRange = attackRange.some(coord => 
-        coord.q === tile.coordinates.q && coord.r === tile.coordinates.r
-      );
-      const isInAbilityRange = abilityRange.some(coord => 
-        coord.q === tile.coordinates.q && coord.r === tile.coordinates.r
-      );
-      
-      // Check if tile is targetable in targeting mode
-      const isTargetable = isInAttackRange || isInAbilityRange;
 
-      // Check if tile is valid for movement (only when active icon is selected and no targeting)
-      const isValidMovement = isInMovementRange;
-
-      // Check if tile is valid for respawn placement
-      const isRespawnTarget = gameState.respawnPlacement ? 
-        (() => {
-          const respawningIcon = gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.respawnPlacement);
-          if (!respawningIcon) return false;
-          
-          const isValidSpawn = respawningIcon.playerId === 0 
-            ? (tile.coordinates.q >= -6 && tile.coordinates.q <= -4 && tile.coordinates.r >= 3 && tile.coordinates.r <= 5)
-            : (tile.coordinates.q >= 4 && tile.coordinates.q <= 6 && tile.coordinates.r >= -5 && tile.coordinates.r <= -3);
-            
-          const occupied = gameState.players
-            .flatMap(p => p.icons)
-            .some(icon => icon.position.q === tile.coordinates.q && icon.position.r === tile.coordinates.r && icon.isAlive);
-            
-          return isValidSpawn && !occupied;
-        })() : false;
-
-      // Center the board in the container
-      const offsetX = (containerWidth - hexWidth) / 2;
-      const offsetY = (containerHeight - hexHeight) / 2;
+      // Ranges
+      const inMovement = movementRange.some(c => c.q === q && c.r === r);
+      const inAttack   = attackRange.some(c => c.q === q && c.r === r);
+      const inAbility  = abilityRange.some(c => c.q === q && c.r === r);
+      const isTargetable      = inAttack || inAbility;
+      const isValidMovement   = inMovement;
+      const isRespawnTarget   = Boolean(gameState.respawnPlacement && (() => {
+        const respawning = gameState.players
+          .flatMap(p => p.icons)
+          .find(i => i.id === gameState.respawnPlacement);
+        if (!respawning) return false;
+        const validZone = respawning.playerId === 0
+          ? (q >= -6 && q <= -4 && r >= 3 && r <= 5)
+          : (q >= 4  && q <= 6 && r >= -5 && r <= -3);
+        const occupied = gameState.players
+          .flatMap(p => p.icons)
+          .some(i => i.position.q === q && i.position.r === r && i.isAlive);
+        return validZone && !occupied;
+      })());
 
       return (
         <div
-          key={`${tile.coordinates.q}-${tile.coordinates.r}`}
+          key={`${q}-${r}`}
           className="absolute cursor-pointer"
           style={{
-            left: x + offsetX,
-            top: y + offsetY,
-            width: hexWidth,
-            height: hexHeight,
-          }}
-          onClick={() => {
-            console.log('HexTile clicked:', tile.coordinates, 'occupied by:', icon?.name);
-            onTileClick(tile.coordinates);
+            left:   x + offsetX + panOffset.x,
+            top:    y + offsetY + panOffset.y,
+            width:  hexWidth * zoom,
+            height: hexHeight * zoom,
+            transform: `scale(${zoom})`
           }}
         >
+          {/* Pass size=hexSize so HexTile.fill wrapper correctly */}
           <HexTile
             tile={tile}
-            onClick={() => {}}
+            onClick={() => onTileClick(tile.coordinates)}
+            onTerrainClick={() => {}}
             icon={icon ? icon.name.charAt(0) : undefined}
             iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
             size={hexSize}
@@ -138,85 +117,63 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
             isTargetable={isTargetable}
             isValidMovement={isValidMovement}
             isRespawnTarget={isRespawnTarget}
-            isInAttackRange={isInAttackRange}
-            isInAbilityRange={isInAbilityRange}
+            isInAttackRange={inAttack}
+            isInAbilityRange={inAbility}
           />
-          {/* HP Bar under character */}
+
+          {/* Under-character HP bar */}
           {icon && (
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
-              <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+              <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small"/>
             </div>
           )}
         </div>
       );
     });
-  }, [gameState.board, gameState.players, gameState.activeIconId, gameState.targetingMode, gameState.respawnPlacement, hexSize, hexWidth, hexHeight]);
+  }, [
+    gameState.board,
+    gameState.players,
+    gameState.activeIconId,
+    gameState.targetingMode,
+    gameState.respawnPlacement,
+    hexSize, hexWidth, hexHeight,
+    movementRange, attackRange, abilityRange,
+    panOffset, zoom
+  ]);
 
+  // 4) Pan/Zoom handlers (unchanged)
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
-
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging) {
-      setPanOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
-      });
+      setPanOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
     }
   };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
+  const handleMouseUp = () => setIsDragging(false);
   const handleWheel = (e: React.WheelEvent) => {
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(prev => Math.min(Math.max(prev * delta, 0.5), 2));
+    setZoom(z => Math.min(Math.max(z * delta, 0.5), 2));
   };
 
   return (
-    <div 
+    <div
       ref={boardRef}
       className="absolute inset-0 bg-gradient-to-b from-space-dark via-space-medium to-space-dark cursor-grab"
-      style={{
-        backgroundImage: `
-          radial-gradient(circle at 20% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 40% 60%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)
-        `,
-      }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
-      onClick={(e) => {
-        // Close any open character popups when clicking on empty space
+      onClick={e => {
         if (e.target === e.currentTarget) {
           window.dispatchEvent(new CustomEvent('closeCharacterPopup'));
         }
       }}
     >
-      {/* Alien audience background elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-2 left-4 w-8 h-8 bg-alien-green/20 rounded-full animate-pulse"></div>
-        <div className="absolute top-8 right-8 w-6 h-6 bg-purple-400/20 rounded-full animate-pulse delay-500"></div>
-        <div className="absolute bottom-4 left-8 w-10 h-10 bg-blue-400/20 rounded-full animate-pulse delay-1000"></div>
-        <div className="absolute bottom-8 right-4 w-7 h-7 bg-yellow-400/20 rounded-full animate-pulse delay-700"></div>
-      </div>
-      
-      <div className="relative w-full h-full flex items-center justify-center">
-        <div 
-          className="relative"
-          style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`
-          }}
-        >
-          {renderBoard}
-        </div>
-        
-        {/* Beast Camp HP Bars */}
+      <div className="relative w-full h-full">
+        {renderBoard}
         <BeastCampHPBar gameState={gameState} />
       </div>
     </div>
