@@ -169,119 +169,95 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
       </div>
 
 
-      {/* Center Left: Player 1 - Same size as Player 2 */}
-      <div className="absolute top-1/2 left-4 transform -translate-y-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-player1">{gameState.players[0].name} (Blue)</CardTitle>
-            <div className="text-sm">Mana: {gameState.globalMana[0]}/20 (+1/turn)</div>
-            <div className="text-sm">Base HP: {gameState.baseHealth[0]}/5</div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex gap-2 justify-center">
-                {gameState.players[0].icons.filter(icon => icon.isAlive).map(icon => {
-                  const portrait = getCharacterPortrait(icon.name);
-                  
-                  return (
-                    <div key={icon.id} className="relative w-14 h-14 mx-auto">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setSelectedCharacter({
-                            id: icon.id,
-                            position: { x: rect.left + rect.width / 2, y: rect.top }
-                          });
-                        }}
-                        className={`w-full h-full rounded-full border-2 overflow-hidden ${icon.playerId === 0 ? "border-blue-400" : ""} ${
-                          icon.playerId === 0 ? "border-blue-400 hover:border-blue-300" : ""
-                        } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
-                      >
-                        {portrait ? (
-                          <img 
-                            src={portrait || fallback}
-                            alt={icon.name}
-                            className="absolute inset-0 w-full h-full object-cover rounded-full"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white rounded-full">
-                            {icon.name.charAt(0)}
-                          </div>
-                        )}
-                      </button>
-                      <div className="text-xs mt-1 text-center">{icon.stats.hp}/{icon.stats.maxHp}</div>
-                      <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                    </div>
-                  );
-                })}
-                <RespawnUI 
-                  deadCharacters={gameState.players[0].icons.filter(icon => !icon.isAlive)}
-                  onRespawn={onRespawn}
-                  isMyTurn={gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.activeIconId)?.playerId === 0}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Center Left: Player 1 */}
+<div className="absolute top-1/2 left-4 transform -translate-y-1/2 pointer-events-auto z-10">
+  <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
+    {/* … header … */}
+    <CardContent>
+      <div className="flex gap-2 justify-center">
+        {gameState.players[0].icons.filter(icon => icon.isAlive).map(icon => {
+          const portrait = getCharacterPortrait(icon.name)!; // non-null
 
-      {/* Center Right: Player 2 - Expanded Width */}
-      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-player2">{gameState.players[1].name} (Red)</CardTitle>
-            <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
-            <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex gap-2 justify-center">
-                {gameState.players[1].icons.filter(icon => icon.isAlive).map(icon => {
-                  const portrait = getCharacterPortrait(icon.name);
-                  
-                  return (
-                    <div key={icon.id} className="text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setSelectedCharacter({
-                            id: icon.id,
-                            position: { x: rect.left + rect.width / 2, y: rect.top }
-                          });
-                        }}
-                        className={`w-full h-full rounded-full border-2 overflow-hidden ${icon.playerId === 0 ? "border-blue-400" : ""${
-                          icon.playerId === 1 ? "border-red-400 hover:border-red-300" : ""
-                        } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
-                      >
-                        {portrait ? (
-                          <img 
-                            src={portrait}
-                            alt={icon.name}
-                            className="absolute inset-0 w-full h-full object-cover rounded-full"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white rounded-full">
-                            {icon.name.charAt(0)}
-                          </div>
-                        )}
-                      </button>
-                      <div className="text-xs mt-1 text-center">{icon.stats.hp}/{icon.stats.maxHp}</div>
-                      <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                    </div>
-                  );
-                })}
-                <RespawnUI 
-                  deadCharacters={gameState.players[1].icons.filter(icon => !icon.isAlive)}
-                  onRespawn={onRespawn}
-                  isMyTurn={gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.activeIconId)?.playerId === 1}
+          return (
+            <div key={icon.id} className="relative w-14 h-14 mx-auto">
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setSelectedCharacter({
+                    id: icon.id,
+                    position: { x: rect.left + rect.width/2, y: rect.top }
+                  });
+                }}
+                className={`
+                  w-full h-full rounded-full border-2 overflow-hidden
+                  ${icon.playerId === 0 ? "border-blue-400 hover:border-blue-300" : ""}
+                  ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}
+                `}
+              >
+                <img
+                  src={portrait}
+                  alt={icon.name}
+                  className="absolute inset-0 w-full h-full object-cover rounded-full"
                 />
+              </button>
+              <div className="text-xs mt-1 text-center">
+                {icon.stats.hp}/{icon.stats.maxHp}
               </div>
+              <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
             </div>
-          </CardContent>
-        </Card>
+          );
+        })}
+        {/* RespawnUI… */}
       </div>
+    </CardContent>
+  </Card>
+</div>
+
+      {/* Center Left: Player 2 */}
+<div className="absolute top-1/2 left-4 transform -translate-y-1/2 pointer-events-auto z-10">
+  <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
+    {/* … header … */}
+    <CardContent>
+      <div className="flex gap-2 justify-center">
+        {gameState.players[0].icons.filter(icon => icon.isAlive).map(icon => {
+          const portrait = getCharacterPortrait(icon.name)!; // non-null
+
+          return (
+            <div key={icon.id} className="relative w-14 h-14 mx-auto">
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setSelectedCharacter({
+                    id: icon.id,
+                    position: { x: rect.left + rect.width/2, y: rect.top }
+                  });
+                }}
+                className={`
+                  w-full h-full rounded-full border-2 overflow-hidden
+                  ${icon.playerId === 0 ? "border-red-400 hover:border-red-300" : ""}
+                  ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}
+                `}
+              >
+                <img
+                  src={portrait}
+                  alt={icon.name}
+                  className="absolute inset-0 w-full h-full object-cover rounded-full"
+                />
+              </button>
+              <div className="text-xs mt-1 text-center">
+                {icon.stats.hp}/{icon.stats.maxHp}
+              </div>
+              <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+            </div>
+          );
+        })}
+        {/* RespawnUI… */}
+      </div>
+    </CardContent>
+  </Card>
+</div>
 
       {/* Bottom Center: Active Character Panel - Made Wider */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
