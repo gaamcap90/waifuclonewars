@@ -61,7 +61,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if ((q === -2 && r === 2) || (q === 2 && r === -2)) {
     return {
       type: 'beast_camp',
-      effects: {}
+      effects: { movementModifier: -999 }  // Impassable
     };
   }
 
