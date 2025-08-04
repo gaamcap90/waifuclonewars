@@ -184,7 +184,7 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                   const portrait = getCharacterPortrait(icon.name);
                   
                   return (
-                    <div key={icon.id} className="text-center">
+                    <div key={icon.id} className="relative w-14 h-14 mx-auto">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -194,23 +194,23 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                             position: { x: rect.left + rect.width / 2, y: rect.top }
                           });
                         }}
-                        className={`w-10 h-10 rounded-full border-2 transition-all overflow-hidden ${
+                        className={`w-full h-full rounded-full border-2 overflow-hidden ${icon.playerId === 0 ? "border-blue-400" : ""} ${
                           icon.playerId === 0 ? "border-blue-400 hover:border-blue-300" : ""
                         } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
                       >
                         {portrait ? (
                           <img 
-                            src={portrait} 
+                            src={portrait || fallback}
                             alt={icon.name}
-                            className="w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-cover rounded-full"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white">
+                          <div className="absolute inset-0 flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white rounded-full">
                             {icon.name.charAt(0)}
                           </div>
                         )}
                       </button>
-                      <div className="text-xs mt-1">{icon.stats.hp}/{icon.stats.maxHp}</div>
+                      <div className="text-xs mt-1 text-center">{icon.stats.hp}/{icon.stats.maxHp}</div>
                       <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                     </div>
                   );
@@ -251,23 +251,23 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                             position: { x: rect.left + rect.width / 2, y: rect.top }
                           });
                         }}
-                        className={`w-10 h-10 rounded-full border-2 transition-all overflow-hidden ${
+                        className={`w-full h-full rounded-full border-2 overflow-hidden ${icon.playerId === 0 ? "border-blue-400" : ""${
                           icon.playerId === 1 ? "border-red-400 hover:border-red-300" : ""
                         } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
                       >
                         {portrait ? (
                           <img 
-                            src={portrait} 
+                            src={portrait}
                             alt={icon.name}
-                            className="w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-cover rounded-full"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-red-500/90 text-white">
+                          <div className="absolute inset-0 flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white rounded-full">
                             {icon.name.charAt(0)}
                           </div>
                         )}
                       </button>
-                      <div className="text-xs mt-1">{icon.stats.hp}/{icon.stats.maxHp}</div>
+                      <div className="text-xs mt-1 text-center">{icon.stats.hp}/{icon.stats.maxHp}</div>
                       <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                     </div>
                   );
