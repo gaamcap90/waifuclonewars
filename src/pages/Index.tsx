@@ -16,12 +16,15 @@ const Index = () => {
     gameMode === 'menu' || gameMode === 'characterSelect' ? 'singleplayer' : gameMode
   );
 
+  const [selectedGameMode, setSelectedGameMode] = useState<'singleplayer' | 'multiplayer'>('singleplayer');
+
   const handleStartGame = (mode: 'singleplayer' | 'multiplayer') => {
+    setSelectedGameMode(mode);
     setGameMode('characterSelect');
   };
 
   const handleCharacterSelectionComplete = (selectedIcons: any[]) => {
-    setGameMode('singleplayer'); // Start the actual game
+    setGameMode(selectedGameMode); // Start the actual game with the selected mode
   };
 
   const handleBackToMenu = () => {
@@ -51,7 +54,7 @@ const Index = () => {
   }
 
   if (gameMode === 'characterSelect') {
-    return <CharacterSelection onStartGame={handleCharacterSelectionComplete} gameMode="singleplayer" />;
+    return <CharacterSelection onStartGame={handleCharacterSelectionComplete} gameMode={selectedGameMode} />;
   }
 
   return (

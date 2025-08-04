@@ -21,6 +21,7 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
   const activePlayer = activeIcon ? gameState.players.find(p => p.id === activeIcon.playerId) : null;
 
   // Don't show action bar for AI players in singleplayer mode
+  // In multiplayer mode, show for both players (local hotseat)
   if (!activeIcon || !activePlayer || (gameState.gameMode === 'singleplayer' && activeIcon.playerId === 1)) return null;
 
   const handleActionSelect = (actionType: 'attack' | string) => {
@@ -91,7 +92,7 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
                      <span className={ability.id === "ultimate" ? "text-red-400 font-bold" : ""}>
                        {ability.id === "ultimate" ? "ULTIMATE: " : ""}{ability.name}
                      </span>
-                     <span className="text-xs">{ability.id === "ultimate" ? 0 : ability.manaCost} mana</span>
+                     <span className="text-xs">{ability.id === "ultimate" ? "0 mana" : `${ability.manaCost} mana`}</span>
                    </div>
                   <div className="text-xs text-muted-foreground">
                     {ability.description}
@@ -103,9 +104,9 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
         </div>
 
         {/* Ultimate Indicator */}
-        {selectedAction.includes('ultimate') && (
-          <div className="text-center p-2 bg-orange-500/20 border border-orange-500/50 rounded animate-pulse">
-            <span className="text-orange-400 font-bold text-lg">🌟 ULTIMATE SELECTED 🌟</span>
+        {selectedAction && selectedAction.includes('ultimate') && (
+          <div className="text-center p-2 bg-red-500/20 border border-red-500/50 rounded animate-pulse">
+            <span className="text-red-400 font-bold text-lg">🌟 ULTIMATE SELECTED 🌟</span>
           </div>
         )}
 
