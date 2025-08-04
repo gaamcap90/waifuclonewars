@@ -35,7 +35,7 @@ export default function HexTile({
 }: HexTileProps) {
   // 1) Terrain → public URL
   const terrainMap: Record<string,string> = {
-    forest:       "/uploads/Forest_2.png",
+    forest:       "/uploads/Forest.png",
     mountain:     "/uploads/Mountains.png",
     river:        "/uploads/River.png",
     plain:        "/uploads/Plain.png",
@@ -101,18 +101,18 @@ export default function HexTile({
 
         {/* Outline & highlight rings */}
         <polygon
-          points={pts}
-          className={cn(
-            "stroke-gray-300 stroke-1 fill-transparent transition-colors",
-            tile.highlighted      && "ring-2 ring-primary",
-            isTargetable          && "ring-2 ring-destructive bg-red-500/20",
-            isValidMovement       && "ring-2 ring-green-400 bg-green-400/20",
-            isInAttackRange       && "ring-2 ring-red-400 bg-red-400/20",
-            isInAbilityRange      && "ring-2 ring-orange-400 bg-orange-400/20",
-            isRespawnTarget       && "ring-2 ring-blue-400 bg-blue-400/20",
-            isActiveIcon          && "ring-2 ring-active-turn"
-          )}
-        />
+  points={pts}
+  className={cn(
+    "fill-transparent transition-colors",
+    tile.highlighted      && "stroke-gray-300 stroke-[1px]",
+    isTargetable          && "stroke-red-400 stroke-[2px] fill-red-500/20",
+    isValidMovement       && "stroke-green-400 stroke-[2px] fill-green-400/20",
+    isInAttackRange       && "stroke-red-400 stroke-[2px] fill-red-400/20",
+    isInAbilityRange      && "stroke-orange-400 stroke-[2px] fill-orange-400/20",
+    isRespawnTarget       && "stroke-blue-400 stroke-[2px] fill-blue-400/20",
+    isActiveIcon          && "stroke-active-turn stroke-[2px]"
+  )}
+/>
       </svg>
 
       {/* Character portrait / icon overlay */}
