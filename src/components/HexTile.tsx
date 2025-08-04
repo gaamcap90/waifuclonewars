@@ -52,27 +52,27 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
     const getTerrainImage = () => {
       switch (tile.terrain.type) {
         case 'forest':
-          return '/lovable-uploads/493c4d6b-8b5d-4487-a831-66eddfdec6f3.png';
+          return '/uploads/Forest.png';
         case 'mountain':
-          return '/lovable-uploads/e9086300-33ac-4134-b7fb-6cfb072109b0.png';
+          return '/uploads/Mountains.png';
         case 'river':
-          return '/lovable-uploads/1fa33b45-24b9-4103-8fd2-f124c71352b1.png';
+          return '/uploads/River.png';
         case 'plain':
-          return '/lovable-uploads/4490f506-21ad-4e64-a28f-95b37d50757f.png';
+          return '/uploads/Plain.png';
         case 'mana_crystal':
-          return '/lovable-uploads/a8428c44-c61f-456c-8137-8c4331725735.png';
+          return '/uploads/Mana_Crystal.png';
         case 'beast_camp':
-          return '/lovable-uploads/e310141e-0067-46c5-a9e5-62952395e90d.png';
+          return '/uploads/Beast_Camp.png';
         case 'base':
           // Use different bases for different teams
           return tile.coordinates.q === -6 && tile.coordinates.r === 5 
-            ? '/lovable-uploads/11c0b5c8-e6e9-48ce-885a-677941a39b34.png' // Blue base
-            : '/lovable-uploads/e1847c21-e38f-4c86-9b11-552a73df6e42.png'; // Red base
+            ? '/uploads/Blue_Base.png'; // Blue base
+            : '/uploads/Red_Base.png'; // Red base
         case 'spawn':
           // Use different spawn zones for different teams
           return tile.coordinates.q < 0 
-            ? '/lovable-uploads/109b82ae-12f8-45f5-8f44-bdc6418cef73.png' // Blue spawn
-            : '/lovable-uploads/09350478-8e38-48b3-91ed-a7e86107feb5.png'; // Red spawn
+            ? '/uploads/Spawn_Blue.png'; // Blue spawn
+            : '/uploads/Spawn_Red.png'; // Red spawn
         default:
           return null;
       }
