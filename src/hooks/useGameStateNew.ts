@@ -721,7 +721,16 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                        // Check if camp is defeated
                        if (newHp <= 0 && !newDefeatedArray[campIndex]) {
                          newDefeatedArray[campIndex] = true;
-                         
+                        //Transform the tile into plain grass
+                          const updatedBoard = prev.board.map(tile =>
+       tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+         ? {
+             ...tile,
+             terrain: { type: 'plain', effects: {} },
+             occupiable: true
+           }
+         : tile
+     );    
                          // Apply 15% might and power buff to player's team
                          const newMightBonus = [...prev.teamBuffs.mightBonus];
                          const newPowerBonus = [...prev.teamBuffs.powerBonus];
@@ -731,30 +740,32 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                          toast.success(`Beast Camp defeated! Team gains +15% might and power!`);
                          
                          return {
-                           ...prev,
-                           targetingMode: undefined,
-                           players: prev.players.map(player => ({
-                             ...player,
-                             icons: player.icons.map(icon => 
-                               icon.id === activeIcon.id 
-                                 ? { ...icon, actionTaken: true }
-                                 : icon
-                             )
-                           })),
-                           objectives: {
-                             ...prev.objectives,
-                             beastCamps: {
-                               ...prev.objectives.beastCamps,
-                               hp: newHpArray,
-                               defeated: newDefeatedArray
-                             }
-                           },
-                           teamBuffs: {
-                             mightBonus: newMightBonus,
-                             powerBonus: newPowerBonus
-                           }
-                         };
-                       } else {
+        ...prev,
+        board: updatedBoard,
+        objectives: {
+          ...prev.objectives,
+          beastCamps: {
+            ...prev.objectives.beastCamps,
+            hp: newHpArray,
+            defeated: newDefeatedArray
+          }
+        },
+        teamBuffs: {
+          mightBonus: newMightBonus,
+          powerBonus: newPowerBonus
+        },
+        // Mark attacker as having acted
+        players: prev.players.map(player => ({
+          ...player,
+          icons: player.icons.map(icon =>
+            icon.id === activeIcon.id
+              ? { ...icon, actionTaken: true }
+              : icon
+          )
+        })),
+        targetingMode: undefined
+      };
+    } else {
                          return {
                            ...prev,
                            targetingMode: undefined,
