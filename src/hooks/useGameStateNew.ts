@@ -186,20 +186,13 @@ const calculateDistance = (from: Coordinates, to: Coordinates): number => {
   );
 };
 
-const isValidMovement = (from: Coordinates, to: Coordinates, moveRange: number, board: HexTile[], gameState?: GameState): boolean => {
+const isValidMovement = (from: Coordinates, to: Coordinates, moveRange: number, board: HexTile[]): boolean => {
   const distance = calculateDistance(from, to);
   if (distance > moveRange) return false;
   
   // Check if destination is passable
   const destinationTile = board.find(tile => tile.coordinates.q === to.q && tile.coordinates.r === to.r);
   if (!destinationTile) return false;
-  
-  // Block movement into alive beast camps
-  if (destinationTile.terrain.type === 'beast_camp' && gameState) {
-    const beastCampIndex = destinationTile.coordinates.q === -2 && destinationTile.coordinates.r === 2 ? 0 : 1;
-    const isCampDefeated = gameState.objectives.beastCamps.defeated[beastCampIndex];
-    if (!isCampDefeated) return false;
-  }
   
   // Check if terrain is impassable
   if (destinationTile.terrain.effects.movementModifier === -999) return false;
@@ -846,7 +839,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             }
 
             const manaCost = prev.targetingMode.abilityId === 'basic_attack' ? 0 : 
-              prev.targetingMode.abilityId === 'ultimate' ? 0 :
               activeIcon.abilities.find(a => a.id === prev.targetingMode!.abilityId)?.manaCost || 0;
 
             return {
@@ -885,33 +877,20 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           i.isAlive
         );
 
-      // Bail early if no icon found
-      if (!clickedIcon) {
-        // If we're in targeting mode and click on empty space, cancel targeting
-        if (prev.targetingMode) {
-          console.log('Canceling targeting mode');
-          return {
-            ...prev,
-            targetingMode: null
-          };
-        }
-        return prev;
-      }
-
       // If clicking on the active icon, select it
-      if (clickedIcon.id === prev.activeIconId) {
+      if (clickedIcon && clickedIcon.id === prev.activeIconId) {
         return {
           ...prev,
           selectedIcon: clickedIcon.id
         };
       }
 
-      // Check if clicking on other characters (not active)
-      if (clickedIcon.id !== prev.activeIconId) {
-        // Select this icon if it belongs to the current player
+      // If we're in targeting mode and click on empty space, cancel targeting
+      if (prev.targetingMode && !clickedIcon) {
+        console.log('Canceling targeting mode');
         return {
           ...prev,
-          selectedIcon: clickedIcon.id
+          targetingMode: undefined
         };
       }
 
@@ -939,17 +918,6 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           const destinationTile = prev.board.find(tile => 
             tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
           );
-          
-          // Check if destination is blocked by beast camp (only block if camp is alive)
-          if (destinationTile.terrain.type === 'beast_camp') {
-            const beastCampIndex = destinationTile.coordinates.q === -2 && destinationTile.coordinates.r === 2 ? 0 : 1;
-            const isCampDefeated = prev.objectives.beastCamps.defeated[beastCampIndex];
-            if (!isCampDefeated) {
-              console.log('Beast camp blocks movement');
-              toast.error("Cannot enter Beast Camp territory until defeated!");
-              return prev;
-            }
-          }
           
           if (!destinationTile || destinationTile.terrain.effects.movementModifier === -999) {
             console.log('Destination is impassable:', destinationTile?.terrain.type);
@@ -1009,9 +977,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       // Check ultimate usage
       if (abilityId === 'ultimate' && activeIcon.ultimateUsed) return prev;
       
-      // Check mana cost - ultimates cost 0 mana
-      const manaCost = abilityId === 'ultimate' ? 0 : ability.manaCost;
-      if (prev.globalMana[activeIcon.playerId] < manaCost) {
+      // Check mana cost - new system: no cooldowns, only mana
+      if (prev.globalMana[activeIcon.playerId] < ability.manaCost) {
         toast.error("Not enough mana!");
         return prev;
       }
