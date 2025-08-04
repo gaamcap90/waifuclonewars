@@ -182,7 +182,14 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
           }}
         >
           {renderBoard}
-          <BeastCampHPBar gameState={gameState} />
+          <BeastCampHPBar
+  gameState={gameState}
+  boardWidth={containerWidth}
+  boardHeight={containerHeight}
+  panX={panOffset.x}
+  panY={panOffset.y}
+  zoom={zoom}
+/>
         </div>
       </div>
     </div>
