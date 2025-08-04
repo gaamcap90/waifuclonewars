@@ -737,7 +737,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                          newMightBonus[activeIcon.playerId] = 15;
                          newPowerBonus[activeIcon.playerId] = 15;
 
-                         console.log(%c[Buffs Applied]",
+                         console.log(
+                           "%c[Buffs Applied]",
                         "color: purple; font-weight: bold",
                         { newMightBonus, newPowerBonus }
                            );
