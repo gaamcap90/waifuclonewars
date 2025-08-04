@@ -183,7 +183,10 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
         >
           {renderBoard}
           <BeastCampHPBar
-  gameState={gameState}/>
+  gameState={gameState}
+boardWidth={containerWidth}
+boardHeight={containerHeight}
+/>
         </div>
       </div>
     </div>
