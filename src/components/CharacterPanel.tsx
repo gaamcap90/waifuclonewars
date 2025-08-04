@@ -9,6 +9,16 @@ interface CharacterPanelProps {
 }
 
 const CharacterPanel = ({ character, visible, gameState }: CharacterPanelProps) => {
+  // 🐞 DEBUG LOGS:
+  console.log("[CP] visible, character:", visible, character?.name);
+  console.log("[CP] gameState.teamBuffs:", gameState?.teamBuffs);
+  if (character && gameState) {
+    console.log(
+      `[CP] player ${character.playerId} raw mightBonus =`,
+      gameState.teamBuffs.mightBonus[character.playerId]
+    );
+  }
+
   if (!visible || !character) return null;
 
    // base values
