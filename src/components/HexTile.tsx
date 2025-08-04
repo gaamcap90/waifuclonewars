@@ -52,27 +52,27 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
     const getTerrainImage = () => {
       switch (tile.terrain.type) {
         case 'forest':
-          return '/lovable-uploads/04c976e4-64a9-409a-b803-4510824e88c5.png';
+          return '/lovable-uploads/493c4d6b-8b5d-4487-a831-66eddfdec6f3.png';
         case 'mountain':
-          return '/lovable-uploads/new-mountain-tile.png';
+          return '/lovable-uploads/e9086300-33ac-4134-b7fb-6cfb072109b0.png';
         case 'river':
-          return '/lovable-uploads/05c34c82-9e2d-4cbf-ad0f-01232315e270.png';
+          return '/lovable-uploads/1fa33b45-24b9-4103-8fd2-f124c71352b1.png';
         case 'plain':
           return '/lovable-uploads/4490f506-21ad-4e64-a28f-95b37d50757f.png';
         case 'mana_crystal':
-          return '/lovable-uploads/c5003197-3858-422f-911a-92d0122902c7.png';
+          return '/lovable-uploads/a8428c44-c61f-456c-8137-8c4331725735.png';
         case 'beast_camp':
-          return '/lovable-uploads/ed85b6df-3fb1-4f6a-89ce-53010aae0c0f.png';
+          return '/lovable-uploads/e310141e-0067-46c5-a9e5-62952395e90d.png';
         case 'base':
           // Use different bases for different teams
           return tile.coordinates.q === -6 && tile.coordinates.r === 5 
-            ? '/lovable-uploads/49d9e3e0-76f2-42c5-8126-79023cf5cea2.png' // Blue base
-            : '/lovable-uploads/53e73cfa-d834-41d6-a6be-5c7246a07c40.png'; // Red base
+            ? '/lovable-uploads/11c0b5c8-e6e9-48ce-885a-677941a39b34.png' // Blue base
+            : '/lovable-uploads/e1847c21-e38f-4c86-9b11-552a73df6e42.png'; // Red base
         case 'spawn':
           // Use different spawn zones for different teams
           return tile.coordinates.q < 0 
-            ? '/lovable-uploads/48b26504-94cd-4656-95ad-a47a067fa509.png' // Blue spawn
-            : '/lovable-uploads/6751baaa-0c93-4c53-9aac-987fbdca6626.png'; // Red spawn
+            ? '/lovable-uploads/109b82ae-12f8-45f5-8f44-bdc6418cef73.png' // Blue spawn
+            : '/lovable-uploads/09350478-8e38-48b3-91ed-a7e86107feb5.png'; // Red spawn
         default:
           return null;
       }
@@ -81,19 +81,18 @@ const HexTile = ({ tile, onClick, onTerrainClick, icon, iconPortrait, size = 40,
     const terrainImage = getTerrainImage();
     if (terrainImage) {
       return (
-            <img 
-              src={terrainImage} 
-              alt={tile.terrain.type}
-              className="absolute inset-0 opacity-90"
-                style={{ 
-                  zIndex: -1,
-                  width: `${size * 1.8}px`,
-                  height: `${size * 1.8}px`,
-                  objectFit: 'cover',
-                  clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                  transform: 'translate(-12.5%, -12.5%)' // Proper centering
-                }}
-          />
+        <img 
+          src={terrainImage} 
+          alt={tile.terrain.type}
+          className="absolute inset-0"
+          style={{ 
+            zIndex: -1,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            transform: 'scale(1.1)', // Slight scale to ensure full coverage
+          }}
+        />
       );
     }
 
