@@ -18,9 +18,9 @@ interface GameBoardProps {
 }
 
 const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
-  const hexSize = 50; // Improved size for better spacing and art display
-  const boardWidth = 15;
-  const boardHeight = 11;
+  const hexSize = 50;
+  const hexWidth = hexSize * 2;
+  const hexHeight = Math.sqrt(3) * hexSize;
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -35,9 +35,9 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
     );
   };
 
-  // Convert axial coordinates to pixel coordinates with better spacing
+  // Standard axial-to-pixel conversion (pointy-top)
   const hexToPixel = (q: number, r: number) => {
-    const x = hexSize * (1.8 * q); // Improved spacing to prevent hex overlap
+    const x = hexSize * (3/2 * q);
     const y = hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
     return { x, y };
   };
@@ -56,6 +56,10 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
       gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack', // Show ability range when using ability
       gameState.targetingMode?.range
     );
+
+    // Get container dimensions for centering
+    const containerWidth = boardRef.current?.clientWidth || 800;
+    const containerHeight = boardRef.current?.clientHeight || 600;
 
     return gameState.board.map((tile) => {
       const { x, y } = hexToPixel(tile.coordinates.q, tile.coordinates.r);
@@ -104,44 +108,49 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
           return isValidSpawn && !occupied;
         })() : false;
 
+      // Center the board in the container
+      const offsetX = (containerWidth - hexWidth) / 2;
+      const offsetY = (containerHeight - hexHeight) / 2;
+
       return (
         <div
           key={`${tile.coordinates.q}-${tile.coordinates.r}`}
-          className="absolute"
+          className="absolute cursor-pointer"
           style={{
-            left: x + (boardWidth * hexSize * 0.7),
-            top: y + (boardHeight * hexSize * 0.7),
+            left: x + offsetX,
+            top: y + offsetY,
+            width: hexWidth,
+            height: hexHeight,
+          }}
+          onClick={() => {
+            console.log('HexTile clicked:', tile.coordinates, 'occupied by:', icon?.name);
+            onTileClick(tile.coordinates);
           }}
         >
-          <div>
-            <HexTile
-              tile={tile}
-              onClick={() => {
-                console.log('HexTile clicked:', tile.coordinates, 'occupied by:', icon?.name);
-                onTileClick(tile.coordinates);
-              }}
-              icon={icon ? icon.name.charAt(0) : undefined}
-              iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
-              size={hexSize}
-              playerColor={playerColor}
-              isActiveIcon={isActiveIcon}
-              isTargetable={isTargetable}
-              isValidMovement={isValidMovement}
-              isRespawnTarget={isRespawnTarget}
-              isInAttackRange={isInAttackRange}
-              isInAbilityRange={isInAbilityRange}
-            />
-            {/* HP Bar under character */}
-            {icon && (
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
-                <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-              </div>
-            )}
-          </div>
+          <HexTile
+            tile={tile}
+            onClick={() => {}}
+            icon={icon ? icon.name.charAt(0) : undefined}
+            iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
+            size={hexSize}
+            playerColor={playerColor}
+            isActiveIcon={isActiveIcon}
+            isTargetable={isTargetable}
+            isValidMovement={isValidMovement}
+            isRespawnTarget={isRespawnTarget}
+            isInAttackRange={isInAttackRange}
+            isInAbilityRange={isInAbilityRange}
+          />
+          {/* HP Bar under character */}
+          {icon && (
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
+              <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+            </div>
+          )}
         </div>
       );
     });
-  }, [gameState.board, gameState.players, gameState.activeIconId, gameState.targetingMode, gameState.respawnPlacement, hexSize]);
+  }, [gameState.board, gameState.players, gameState.activeIconId, gameState.targetingMode, gameState.respawnPlacement, hexSize, hexWidth, hexHeight]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);

@@ -872,9 +872,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       const clickedIcon = prev.players
         .flatMap(p => p.icons)
         .find(i => 
-          i && i.position && 
-          i.position.q === coordinates.q && 
-          i.position.r === coordinates.r && 
+          i?.position?.q === coordinates.q && 
+          i.position?.r === coordinates.r && 
           i.isAlive
         );
 

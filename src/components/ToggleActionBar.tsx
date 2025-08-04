@@ -12,7 +12,7 @@ interface ToggleActionBarProps {
 }
 
 const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn }: ToggleActionBarProps) => {
-  const [selectedAction, setSelectedAction] = useState<'attack' | string>('attack');
+  const [selectedAction, setSelectedAction] = useState<'attack' | string | null>(null);
   
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
@@ -24,11 +24,14 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
   if (!activeIcon || !activePlayer || (gameState.gameMode === 'singleplayer' && activeIcon.playerId === 1)) return null;
 
   const handleActionSelect = (actionType: 'attack' | string) => {
-    setSelectedAction(actionType);
-    if (actionType === 'attack') {
+    // Toggle behavior: if same action is selected, deselect it
+    const newAction = selectedAction === actionType ? null : actionType;
+    setSelectedAction(newAction);
+    
+    if (newAction === 'attack') {
       onBasicAttack();
-    } else {
-      onAbilitySelect(actionType);
+    } else if (newAction) {
+      onAbilitySelect(newAction);
     }
   };
 
@@ -45,7 +48,7 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
         <Button
           onClick={() => handleActionSelect('attack')}
           disabled={activeIcon.actionTaken}
-          className={`w-full justify-start ${selectedAction === 'attack' ? 'bg-background text-foreground' : 'bg-muted text-muted-foreground'}`}
+          className={`w-full justify-start ${selectedAction === 'attack' ? 'bg-black text-white' : 'bg-white text-gray-900 hover:bg-gray-200'}`}
           variant="outline"
         >
           <Swords className="w-4 h-4 mr-2" />
@@ -77,12 +80,8 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
                 disabled={!canUse}
                  className={`w-full justify-start ${
                    isSelected 
-                     ? 'bg-background text-foreground' 
-                     : 'bg-muted text-muted-foreground'
-                 } ${
-                   ability.id === "ultimate" 
-                     ? 'border-red-500 ring-2 ring-red-500/50 bg-red-500/10' 
-                     : ''
+                     ? (ability.id === "ultimate" ? 'bg-red-900 text-white border-red-500' : 'bg-black text-white') 
+                     : (ability.id === "ultimate" ? 'bg-red-600 text-white hover:bg-red-700 border-red-700' : 'bg-white text-gray-900 hover:bg-gray-200')
                  }`}
                  variant="outline"
                >
@@ -92,7 +91,7 @@ const ToggleActionBar = ({ gameState, onBasicAttack, onAbilitySelect, onEndTurn 
                      <span className={ability.id === "ultimate" ? "text-red-400 font-bold" : ""}>
                        {ability.id === "ultimate" ? "ULTIMATE: " : ""}{ability.name}
                      </span>
-                     <span className="text-xs">{ability.manaCost} mana</span>
+                     <span className="text-xs">{ability.id === "ultimate" ? 0 : ability.manaCost} mana</span>
                    </div>
                   <div className="text-xs text-muted-foreground">
                     {ability.description}
