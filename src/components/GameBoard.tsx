@@ -199,17 +199,3 @@ const GameBoard = ({ gameState, onTileClick }: GameBoardProps) => {
 };
 
 export default GameBoard;
-
-          {renderBoard}
-          <BeastCampHPBar
-  gameState={gameState}
-boardWidth={containerWidth}
-boardHeight={containerHeight}
-/>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default GameBoard;
