@@ -66,10 +66,6 @@ const BeastCampHPBar: React.FC<BeastCampHPBarProps> = ({
                 style={{ width: `${pct}%` }}
               />
             </div>
-            {/* Numeric HP text */}
-            <div className="text-xs text-white bg-black/60 rounded px-1 mt-1 inline-block">
-              {hp}/{maxHp}
-            </div>
           </div>
         );
       })}
