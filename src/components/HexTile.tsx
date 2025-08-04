@@ -8,7 +8,7 @@ interface HexTileProps {
   onTerrainClick?: (e: React.MouseEvent) => void;
   icon?: string;
   iconPortrait?: string;
-  size?: number;  // hex “radius” from GameBoard
+  size?: number;  // hex “radius”
   playerColor?: "blue" | "red";
   isActiveIcon?: boolean;
   isTargetable?: boolean;
@@ -33,8 +33,8 @@ export default function HexTile({
   isInAttackRange,
   isInAbilityRange,
 }: HexTileProps) {
-  // 1) Map terrain types to /uploads URLs
-  const terrainMap: Record<string, string> = {
+  // 1) Terrain → public URL
+  const terrainMap: Record<string,string> = {
     forest:       "/uploads/Forest.png",
     mountain:     "/uploads/Mountains.png",
     river:        "/uploads/River.png",
@@ -51,49 +51,57 @@ export default function HexTile({
   if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
   const imgSrc = terrainMap[key] || terrainMap.plain;
 
-  // 2) Compute hex bounding‐box dims
-  const hexWidth  = size * 2;                 // e.g. 100px for size=50
-  const hexHeight = Math.sqrt(3) * size;      // ~86.6px for size=50
+  // 2) Compute bounding‐box from radius
+  const hexWidth  = size * 2;                         // e.g. 100px
+  const hexHeight = Math.sqrt(3) * size;              // e.g. ~86.6px
 
-  // 3) Build the SVG outline path for your rings
-  const hexPath = [
-    [ 0.866, 0.5],
-    [ 0.866, 1.5],
-    [ 0,     2.0],
-    [-0.866, 1.5],
-    [-0.866, 0.5],
-    [ 0,     0   ],
-  ]
-    .map(([x, y]) => `${x * size},${y * size}`)
-    .join(" ");
+  // 3) Precompute the six points of a pointy‐top hex in pixel coords
+  //    Starting at top center and going clockwise:
+  const pts = [
+    `${hexWidth  / 2},0`,
+    `${hexWidth},${hexHeight / 4}`,
+    `${hexWidth},${(hexHeight * 3) / 4}`,
+    `${hexWidth  / 2},${hexHeight}`,
+    `0,${(hexHeight * 3) / 4}`,
+    `0,${hexHeight / 4}`,
+  ].join(" ");
+
+  // Unique clipPath ID per tile
+  const clipId = `hex-clip-${tile.coordinates.q}-${tile.coordinates.r}`;
 
   return (
     <div
       className="relative cursor-pointer hover:scale-105 transition-transform"
       onClick={onClick}
-      onContextMenu={e => {
-        e.preventDefault();
-        onTerrainClick?.(e);
-      }}
-      style={{
-        width:             hexWidth,
-        height:            hexHeight,
-        backgroundImage:   `url(${imgSrc})`,
-        backgroundSize:    "cover",
-        backgroundPosition:"center",
-        clipPath:          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)"
-      }}
+      onContextMenu={e => { e.preventDefault(); onTerrainClick?.(e); }}
+      style={{ width: hexWidth, height: hexHeight }}
     >
-      {/* SVG outline with your existing highlight‐and‐ring logic */}
       <svg
-        className="absolute inset-0"
+        className="absolute inset-0 select-none pointer-events-none"
         width={hexWidth}
         height={hexHeight}
-        viewBox={`${-size * 0.9} 0 ${size * 1.8} ${size * 2}`}
-        preserveAspectRatio="xMidYMid slice"
+        viewBox={`0 0 ${hexWidth} ${hexHeight}`}
       >
+        <defs>
+          <clipPath id={clipId}>
+            <polygon points={pts} />
+          </clipPath>
+        </defs>
+
+        {/* Terrain image, clipped to exactly the hex */}
+        <image
+          href={imgSrc}
+          x="0"
+          y="0"
+          width={hexWidth}
+          height={hexHeight}
+          preserveAspectRatio="xMidYMid slice"
+          clipPath={`url(#${clipId})`}
+        />
+
+        {/* Outline & highlight rings */}
         <polygon
-          points={hexPath}
+          points={pts}
           className={cn(
             "stroke-gray-300 stroke-1 fill-transparent transition-colors",
             tile.highlighted      && "ring-2 ring-primary",
@@ -127,4 +135,3 @@ export default function HexTile({
     </div>
   );
 }
-
