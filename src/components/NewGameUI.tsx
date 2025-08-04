@@ -273,6 +273,11 @@ const NewGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: NewGam
         </Button>
       </div>
 
+console.log(
+  "[NewGameUI] selectedCharacter & teamBuffs:",
+  selectedCharacter,
+  gameState.teamBuffs
+);
       {/* Character Panel */}
       <CharacterPanel character={selectedCharacter} visible={!!selectedCharacter} gameState={gameState} />
     </div>
