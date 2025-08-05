@@ -46,7 +46,7 @@ export default function HexTile({
     spawn_blue:   "/uploads/Spawn_Blue_180.png",
     spawn_red:    "/uploads/Spawn_Red_180.png",
   };
-  let key = tile.terrain.type;
+  let key: string = tile.terrain.type;
   if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
   if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
   const imgSrc = terrainMap[key] || terrainMap.plain;
@@ -115,21 +115,30 @@ export default function HexTile({
 />
       </svg>
 
-      {/* Character portrait / icon overlay */}
+      {/* Character portrait / icon overlay - full bleed */}
       {icon && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
+        <div 
+          className="absolute inset-0 z-10"
+          style={{ clipPath: `url(#${clipId})` }}
+        >
+          {iconPortrait ? (
+            <img 
+              src={iconPortrait} 
+              alt={icon} 
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-600 text-white font-bold text-lg">
+              {icon}
+            </div>
+          )}
+          
+          {/* Player color border overlay */}
           <div className={cn(
-            "w-12 h-12 rounded-full border-2 overflow-hidden",
+            "absolute inset-0 border-2 rounded-none",
             playerColor === "blue" ? "border-blue-400" : "border-red-400",
-            isActiveIcon && "shadow-lg shadow-active-turn/50 animate-pulse"
-          )}>
-            {iconPortrait
-              ? <img src={iconPortrait} alt={icon} className="w-full h-full object-cover" />
-              : <span className="w-full h-full flex items-center justify-center text-white font-bold">
-                  {icon}
-                </span>
-            }
-          </div>
+            isActiveIcon && "shadow-lg shadow-active-turn/50 animate-pulse border-4"
+          )} style={{ clipPath: `url(#${clipId})` }} />
         </div>
       )}
     </div>

@@ -740,14 +740,14 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                          newDefeatedArray[campIndex] = true;
                         //Transform the tile into plain grass
                           const updatedBoard = prev.board.map(tile =>
-       tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
-         ? {
-             ...tile,
-             terrain: { type: 'plain', effects: {} },
-             occupiable: true
-           }
-         : tile
-     );    
+        tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+          ? {
+              ...tile,
+              terrain: { type: 'plain' as const, effects: {} },
+              occupiable: true
+            }
+          : tile
+      );
                          // Apply 15% might and power buff to player's team
                          const newMightBonus = [...prev.teamBuffs.mightBonus];
                          const newPowerBonus = [...prev.teamBuffs.powerBonus];
@@ -818,25 +818,26 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                  }
               }
             } else {
-              // Ability logic with NEW FORMULA: Ability Damage = (Power × multiplier) - Target Defense
+              // Ability logic using defined damage/healing values with buffs
               const ability = activeIcon.abilities.find(a => a.id === prev.targetingMode!.abilityId);
               if (ability) {
-                // Calculate damage based on ability description multipliers
+                // Use the power bonus from team buffs for damage abilities
+                const powerBonusPct = prev.teamBuffs.powerBonus[activeIcon.playerId] || 0;
+                const buffedPower = activeIcon.stats.power * (1 + powerBonusPct / 100);
+                
                 let damage = 0;
                 let healing = 0;
                 
-                if (ability.description.includes("Power × 0.8")) {
-                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 0.8) - (targetIcon?.stats.defense || 0));
-                } else if (ability.description.includes("Power × 1.2")) {
-                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 1.2) - (targetIcon?.stats.defense || 0));
-                } else if (ability.description.includes("Power × 1.5")) {
-                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 1.5) - (targetIcon?.stats.defense || 0));
-                } else if (ability.description.includes("Power × 0.5")) {
-                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 0.5) - (targetIcon?.stats.defense || 0));
-                } else if (ability.description.includes("Power × 0.6")) {
-                  damage = Math.max(1, Math.floor(activeIcon.stats.power * 0.6) - (targetIcon?.stats.defense || 0));
-                } else if (ability.description.includes("Power × 0.9")) {
-                  healing = Math.floor(activeIcon.stats.power * 0.9);
+                // Use ability's defined damage value if it exists
+                if (ability.damage && ability.damage > 0) {
+                  // Apply power buff to fixed ability damage
+                  damage = Math.max(1, Math.floor(ability.damage * (1 + powerBonusPct / 100)) - (targetIcon?.stats.defense || 0));
+                }
+                
+                // Use ability's defined healing value if it exists
+                if (ability.healing && ability.healing > 0) {
+                  // Apply power buff to healing
+                  healing = Math.floor(ability.healing * (1 + powerBonusPct / 100));
                 }
                 
                 updatedPlayers = prev.players.map(player => ({
@@ -972,6 +973,20 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
           
           if (!occupied) {
             console.log('MOVING ICON TO:', coordinates);
+            
+            // Calculate movement cost considering terrain
+            const destinationTile = prev.board.find(tile => 
+              tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+            );
+            
+            let movementCost = distance;
+            if (destinationTile?.terrain.type === 'forest') {
+              movementCost = distance * 2; // Forest costs double movement
+            }
+            
+            // Store previous position for undo
+            const previousPosition = movementActiveIcon.position;
+            
             return {
               ...prev,
               players: prev.players.map(player => ({
@@ -980,9 +995,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                   icon.id === movementActiveIcon.id 
                     ? { 
                         ...icon, 
-                        position: coordinates, 
+                        position: coordinates,
+                        previousPosition: previousPosition, // Store for undo
                         movedThisTurn: true,
-                        stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - distance) }
+                        stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - movementCost) }
                       }
                     : icon
                 )
@@ -1207,13 +1223,12 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         return prev;
       }
 
-      // Store the previous position in a more robust way
-      // For now, we'll implement a single-step undo
-      const player1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
-      const player2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
-      const iconIndex = parseInt(activeIcon.id.split('-')[1]);
-      const spawns = activeIcon.playerId === 0 ? player1Spawns : player2Spawns;
-      const originalPosition = spawns[iconIndex];
+      // Use the stored previous position instead of going back to spawn
+      const previousPosition = (activeIcon as any).previousPosition;
+      if (!previousPosition) {
+        console.log('No previous position stored for undo');
+        return prev;
+      }
 
       return {
         ...prev,
@@ -1223,7 +1238,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             icon.id === activeIcon.id 
               ? { 
                   ...icon, 
-                  position: originalPosition, 
+                  position: previousPosition, 
                   movedThisTurn: false,
                   stats: { ...icon.stats, movement: icon.stats.moveRange }
                 }

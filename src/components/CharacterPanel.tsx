@@ -21,7 +21,11 @@ const CharacterPanel = ({ character, visible, gameState }: CharacterPanelProps) 
 
   if (!visible || !character) return null;
 
-   // base values
+  // Get buffs from gameState
+  const mightBonus = gameState?.teamBuffs?.mightBonus?.[character.playerId] || 0;
+  const powerBonus = gameState?.teamBuffs?.powerBonus?.[character.playerId] || 0;
+
+  // base values
   const baseMight = character.stats.might;
   const basePower = character.stats.power;
 

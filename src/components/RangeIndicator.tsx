@@ -48,21 +48,30 @@ export const useRangeCalculation = (
     )?.terrain;
   };
 
-  // Calculate movement range
+  // Calculate movement range based on remaining movement points
   const movementRange: Coordinates[] = [];
   if (showMovement && activeIcon) {
-    const maxRange = activeIcon.stats.moveRange;
+    const remainingMovement = activeIcon.stats.movement; // Use remaining movement points
+    
+    // If no movement left, show no movement highlights
+    if (remainingMovement <= 0) {
+      return { movementRange: [], attackRange: [], abilityRange: [] };
+    }
     
     for (let q = -7; q <= 7; q++) {
       for (let r = -7; r <= 7; r++) {
         const coords = { q, r };
         if (isValidHex(coords) && !isOccupied(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
-          if (distance <= maxRange && distance > 0) {
+          if (distance > 0 && distance <= remainingMovement) {
+            // Calculate movement cost considering forest terrain (costs 2 movement)
+            let movementCost = distance;
             const terrain = getTerrainAt(coords);
-            // Forest halves movement range
-            const effectiveRange = terrain?.type === 'forest' ? maxRange * 0.5 : maxRange;
-            if (distance <= effectiveRange) {
+            if (terrain?.type === 'forest') {
+              movementCost = distance * 2; // Forest costs double movement
+            }
+            
+            if (movementCost <= remainingMovement) {
               movementRange.push(coords);
             }
           }
@@ -71,10 +80,14 @@ export const useRangeCalculation = (
     }
   }
 
-  // Calculate attack range (basic attack range is 1)
+  // Calculate attack range based on character type
   const attackRange: Coordinates[] = [];
   if (showAttack && activeIcon) {
-    const baseAttackRange = 1;
+    // Get character-specific attack range
+    let baseAttackRange = 1; // Default melee
+    if (activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan") {
+      baseAttackRange = 2; // Ranged characters
+    }
     
     for (let q = -7; q <= 7; q++) {
       for (let r = -7; r <= 7; r++) {
@@ -82,11 +95,15 @@ export const useRangeCalculation = (
         if (isValidHex(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance <= baseAttackRange && distance > 0) {
+            // Calculate path through forests (reduces effective range)
+            let effectiveRange = baseAttackRange;
             const terrain = getTerrainAt(coords);
-            // Forest halves range
-            const effectiveRange = terrain?.type === 'forest' ? baseAttackRange * 0.5 : baseAttackRange;
+            if (terrain?.type === 'forest') {
+              effectiveRange = Math.floor(baseAttackRange * 0.5); // Forest reduces range
+            }
+            
             if (distance <= effectiveRange) {
-              // Only show if there's an enemy target
+              // Show if there's an enemy target or attackable structure
               const targetIcon = gameState.players
                 .flatMap(p => p.icons)
                 .find(icon => 
@@ -95,7 +112,14 @@ export const useRangeCalculation = (
                   icon.playerId !== activeIcon.playerId &&
                   icon.isAlive
                 );
-              if (targetIcon) {
+              
+              const attackableTile = gameState.board.find(tile =>
+                tile.coordinates.q === coords.q &&
+                tile.coordinates.r === coords.r &&
+                (tile.terrain.type === 'base' || tile.terrain.type === 'beast_camp')
+              );
+              
+              if (targetIcon || attackableTile) {
                 attackRange.push(coords);
               }
             }
@@ -105,7 +129,7 @@ export const useRangeCalculation = (
     }
   }
 
-  // Calculate ability range
+  // Calculate ability range with forest modifiers
   const abilityRangeCoords: Coordinates[] = [];
   if (showAbility && activeIcon && abilityRange) {
     for (let q = -7; q <= 7; q++) {
@@ -114,9 +138,13 @@ export const useRangeCalculation = (
         if (isValidHex(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance <= abilityRange && distance > 0) {
+            // Count forest tiles crossed to reduce effective range
+            let effectiveRange = abilityRange;
             const terrain = getTerrainAt(coords);
-            // Forest halves range
-            const effectiveRange = terrain?.type === 'forest' ? abilityRange * 0.5 : abilityRange;
+            if (terrain?.type === 'forest') {
+              effectiveRange = Math.floor(abilityRange * 0.5); // Forest reduces ability range
+            }
+            
             if (distance <= effectiveRange) {
               abilityRangeCoords.push(coords);
             }
