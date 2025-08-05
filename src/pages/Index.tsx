@@ -12,7 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'characterSelect' | 'singleplayer' | 'multiplayer'>('menu');
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
-  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement } = useGameState(
+  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, resetGame } = useGameState(
     gameMode === 'menu' || gameMode === 'characterSelect' ? 'singleplayer' : gameMode
   );
 
@@ -25,6 +25,7 @@ const Index = () => {
   };
 
   const handleBackToMenu = () => {
+    resetGame(); // Reset the game state completely
     setGameMode('menu');
     setShowEscapeMenu(false);
   };

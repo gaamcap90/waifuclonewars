@@ -840,24 +840,65 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                   healing = Math.floor(ability.healing * (1 + powerBonusPct / 100));
                 }
                 
-                updatedPlayers = prev.players.map(player => ({
-                  ...player,
-                  icons: player.icons.map(icon => {
-                    if (icon.id === targetIcon.id && damage > 0) {
-                      const newHp = Math.max(0, icon.stats.hp - damage);
-                      return { 
-                        ...icon, 
-                        stats: { ...icon.stats, hp: newHp },
-                        isAlive: newHp > 0,
-                        respawnTurns: newHp <= 0 ? 5 : icon.respawnTurns
-                      };
-                    }
-                    if (icon.id === activeIcon.id && healing > 0) {
-                      return { ...icon, stats: { ...icon.stats, hp: Math.min(icon.stats.maxHp, icon.stats.hp + healing) } };
-                    }
-                    return icon;
-                  })
-                }));
+                // Handle different ability types
+                if (targetIcon && damage > 0) {
+                  // Damage ability targeting a character
+                  updatedPlayers = prev.players.map(player => ({
+                    ...player,
+                    icons: player.icons.map(icon => {
+                      if (icon.id === targetIcon.id) {
+                        const newHp = Math.max(0, icon.stats.hp - damage);
+                        return { 
+                          ...icon, 
+                          stats: { ...icon.stats, hp: newHp },
+                          isAlive: newHp > 0,
+                          respawnTurns: newHp <= 0 ? 5 : icon.respawnTurns
+                        };
+                      }
+                      return icon;
+                    })
+                  }));
+                } else if (healing > 0) {
+                  // Healing ability - apply to active icon
+                  updatedPlayers = prev.players.map(player => ({
+                    ...player,
+                    icons: player.icons.map(icon => {
+                      if (icon.id === activeIcon.id) {
+                        return { ...icon, stats: { ...icon.stats, hp: Math.min(icon.stats.maxHp, icon.stats.hp + healing) } };
+                      }
+                      return icon;
+                    })
+                  }));
+                } else if (ability.name === "Flying Machine" || ability.name === "Teleport") {
+                  // Teleport abilities - move to target location
+                  const destinationTile = prev.board.find(tile => 
+                    tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+                  );
+                  
+                  // Check if destination is valid and not occupied
+                  const occupied = prev.players
+                    .flatMap(p => p.icons)
+                    .some(icon => 
+                      icon.position.q === coordinates.q && 
+                      icon.position.r === coordinates.r && 
+                      icon.isAlive
+                    );
+                  
+                  if (destinationTile && !occupied && destinationTile.terrain.type !== 'beast_camp') {
+                    updatedPlayers = prev.players.map(player => ({
+                      ...player,
+                      icons: player.icons.map(icon => {
+                        if (icon.id === activeIcon.id) {
+                          return { ...icon, position: coordinates };
+                        }
+                        return icon;
+                      })
+                    }));
+                  } else {
+                    toast.error("Invalid teleport destination!");
+                    return prev;
+                  }
+                }
                 
                 // Handle ultimate abilities - mark as used
                 if (ability.id === 'ultimate') {
@@ -981,11 +1022,22 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             
             let movementCost = distance;
             if (destinationTile?.terrain.type === 'forest') {
-              movementCost = distance * 2; // Forest costs double movement
+              movementCost = distance + 1; // Forest adds +1 cost per hex
             }
             
-            // Store previous position for undo
-            const previousPosition = movementActiveIcon.position;
+            // Check if we have enough movement points for this move
+            if (movementCost > movementActiveIcon.stats.movement) {
+              console.log('Not enough movement points:', movementCost, 'required,', movementActiveIcon.stats.movement, 'available');
+              return prev;
+            }
+            
+            // Store move history for undo
+            const currentMoveHistory = movementActiveIcon.moveHistory || [];
+            const newMoveHistory = [...currentMoveHistory, {
+              from: movementActiveIcon.position,
+              to: coordinates,
+              cost: movementCost
+            }];
             
             return {
               ...prev,
@@ -996,7 +1048,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                     ? { 
                         ...icon, 
                         position: coordinates,
-                        previousPosition: previousPosition, // Store for undo
+                        moveHistory: newMoveHistory, // Store move history for undo
                         movedThisTurn: true,
                         stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - movementCost) }
                       }
@@ -1061,10 +1113,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       const updatedPlayers = prev.players.map(player => ({
         ...player,
         icons: player.icons.map(icon => {
-          if (icon.id === prev.activeIconId) {
-            // Reset movement and action for the current icon
-            return { ...icon, actionTaken: false, movedThisTurn: false, stats: { ...icon.stats, movement: 2 } };
-          }
+           if (icon.id === prev.activeIconId) {
+             // Reset movement and action for the current icon
+             return { ...icon, actionTaken: false, movedThisTurn: false, moveHistory: [], stats: { ...icon.stats, movement: 2 } };
+           }
           
           // Handle respawn countdown on every turn completion
           if (!icon.isAlive && icon.respawnTurns > 0) {
@@ -1219,16 +1271,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
 
-      if (!activeIcon || !activeIcon.movedThisTurn || activeIcon.actionTaken) {
+      if (!activeIcon || !activeIcon.movedThisTurn || !activeIcon.moveHistory || activeIcon.moveHistory.length === 0) {
         return prev;
       }
 
-      // Use the stored previous position instead of going back to spawn
-      const previousPosition = (activeIcon as any).previousPosition;
-      if (!previousPosition) {
-        console.log('No previous position stored for undo');
-        return prev;
-      }
+      // Get the last move from history
+      const lastMove = activeIcon.moveHistory[activeIcon.moveHistory.length - 1];
+      const newMoveHistory = activeIcon.moveHistory.slice(0, -1);
 
       return {
         ...prev,
@@ -1238,9 +1287,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             icon.id === activeIcon.id 
               ? { 
                   ...icon, 
-                  position: previousPosition, 
-                  movedThisTurn: false,
-                  stats: { ...icon.stats, movement: icon.stats.moveRange }
+                  position: lastMove.from,
+                  moveHistory: newMoveHistory,
+                  movedThisTurn: newMoveHistory.length > 0,
+                  stats: { ...icon.stats, movement: icon.stats.movement + lastMove.cost }
                 }
               : icon
           )
@@ -1283,6 +1333,42 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     });
   }, []);
 
+  const resetGame = useCallback(() => {
+    const initialIcons = createInitialIcons();
+    const speedQueue = createSpeedQueue(initialIcons);
+    
+    setGameState({
+      currentTurn: 1,
+      activeIconId: speedQueue[0],
+      phase: 'combat',
+      players: [
+        { id: 0, name: "Player 1", icons: initialIcons.filter(i => i.playerId === 0), color: "blue", isAI: false },
+        { id: 1, name: gameMode === 'singleplayer' ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter(i => i.playerId === 1), color: "red", isAI: gameMode === 'singleplayer' }
+      ],
+      board: createInitialBoard(),
+      globalMana: [15, 15],
+      turnTimer: 20,
+      speedQueue,
+      queueIndex: 0,
+      objectives: {
+        manaCrystal: { controlled: false },
+        beastCamps: { 
+          hp: [75, 75],
+          maxHp: 75,
+          defeated: [false, false]
+        }
+      },
+      teamBuffs: {
+        mightBonus: [0, 0],
+        powerBonus: [0, 0]
+      },
+      baseHealth: [5, 5],
+      matchTimer: 600,
+      gameMode
+    });
+    setCurrentTurnTimer(20);
+  }, [gameMode]);
+
   return {
     gameState,
     selectTile,
@@ -1293,7 +1379,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
     currentTurnTimer,
     selectIcon,
     undoMovement,
-    startRespawnPlacement
+    startRespawnPlacement,
+    resetGame
   };
 };
 

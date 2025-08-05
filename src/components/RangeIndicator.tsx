@@ -64,11 +64,11 @@ export const useRangeCalculation = (
         if (isValidHex(coords) && !isOccupied(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance > 0 && distance <= remainingMovement) {
-            // Calculate movement cost considering forest terrain (costs 2 movement)
+            // Calculate movement cost considering terrain - forest hexes cost 2 movement each
             let movementCost = distance;
             const terrain = getTerrainAt(coords);
             if (terrain?.type === 'forest') {
-              movementCost = distance * 2; // Forest costs double movement
+              movementCost = distance + 1; // Forest adds +1 cost per hex (so 2 total for forest hex)
             }
             
             if (movementCost <= remainingMovement) {
@@ -95,14 +95,14 @@ export const useRangeCalculation = (
         if (isValidHex(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance <= baseAttackRange && distance > 0) {
-            // Calculate path through forests (reduces effective range)
-            let effectiveRange = baseAttackRange;
+            // Apply forest cost to attack range
+            let effectiveDistance = distance;
             const terrain = getTerrainAt(coords);
             if (terrain?.type === 'forest') {
-              effectiveRange = Math.floor(baseAttackRange * 0.5); // Forest reduces range
+              effectiveDistance = distance + 1; // Forest adds +1 to effective distance
             }
             
-            if (distance <= effectiveRange) {
+            if (effectiveDistance <= baseAttackRange) {
               // Show if there's an enemy target or attackable structure
               const targetIcon = gameState.players
                 .flatMap(p => p.icons)
@@ -138,14 +138,14 @@ export const useRangeCalculation = (
         if (isValidHex(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance <= abilityRange && distance > 0) {
-            // Count forest tiles crossed to reduce effective range
-            let effectiveRange = abilityRange;
+            // Apply forest cost to ability range
+            let effectiveDistance = distance;
             const terrain = getTerrainAt(coords);
             if (terrain?.type === 'forest') {
-              effectiveRange = Math.floor(abilityRange * 0.5); // Forest reduces ability range
+              effectiveDistance = distance + 1; // Forest adds +1 to effective distance
             }
             
-            if (distance <= effectiveRange) {
+            if (effectiveDistance <= abilityRange) {
               abilityRangeCoords.push(coords);
             }
           }

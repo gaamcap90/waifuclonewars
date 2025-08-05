@@ -122,14 +122,18 @@ export default function HexTile({
           style={{ clipPath: `url(#${clipId})` }}
         >
           {iconPortrait ? (
-            <img 
-              src={iconPortrait} 
-              alt={icon} 
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img 
+                src={iconPortrait} 
+                alt={icon} 
+                className="w-4/5 h-4/5 object-cover rounded-sm"
+              />
+            </div>
           ) : (
-            <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-600 text-white font-bold text-lg">
-              {icon}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-4/5 h-4/5 flex items-center justify-center bg-gray-600 text-white font-bold text-lg rounded-sm">
+                {icon}
+              </div>
             </div>
           )}
           
