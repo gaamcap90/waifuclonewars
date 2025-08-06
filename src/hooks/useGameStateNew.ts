@@ -494,9 +494,24 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               
               // Execute the attack immediately instead of calling selectTile
               setGameState(prev => {
-  // 1) Compute buffed might & damage
+  // 1) Compute buffed might & damage including home base bonus
   const mightBonusPct = prev.teamBuffs.mightBonus[activeIcon.playerId] || 0;
-  const buffedMight = activeIcon.stats.might * (1 + mightBonusPct / 100);
+  
+  // Check if on home base for additional 20% buff
+  const isOnHomeBase = (() => {
+    const baseTile = prev.board.find(tile => 
+      tile.coordinates.q === activeIcon.position.q && 
+      tile.coordinates.r === activeIcon.position.r &&
+      tile.terrain.type === 'base'
+    );
+    if (!baseTile) return false;
+    // Blue base is at negative coords, red base at positive coords
+    return (activeIcon.playerId === 0 && baseTile.coordinates.q < 0) ||
+           (activeIcon.playerId === 1 && baseTile.coordinates.q > 0);
+  })();
+  
+  const totalMightBonus = mightBonusPct + (isOnHomeBase ? 20 : 0);
+  const buffedMight = activeIcon.stats.might * (1 + totalMightBonus / 100);
 
   // 2) Find the target (character) at the clicked coords
   const targetIcon = prev.players
