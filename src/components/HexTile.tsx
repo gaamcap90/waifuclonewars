@@ -99,6 +99,12 @@ export default function HexTile({
           clipPath={`url(#${clipId})`}
         />
 
+        {/* Tile border */}
+        <polygon
+          points={pts}
+          className="fill-transparent stroke-black stroke-[2px]"
+        />
+        
         {/* Outline & highlight rings */}
         <polygon
   points={pts}
@@ -128,12 +134,22 @@ export default function HexTile({
                 alt={icon} 
                 className="w-4/5 h-4/5 object-cover rounded-sm"
               />
+              {/* Team affiliation ring */}
+              <div className={cn(
+                "absolute inset-0 ring-4 ring-opacity-80",
+                playerColor === "blue" ? "ring-blue-400" : "ring-red-400"
+              )} style={{ clipPath: `url(#${clipId})` }} />
             </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-4/5 h-4/5 flex items-center justify-center bg-gray-600 text-white font-bold text-lg rounded-sm">
                 {icon}
               </div>
+              {/* Team affiliation ring for fallback */}
+              <div className={cn(
+                "absolute inset-0 ring-4 ring-opacity-80",
+                playerColor === "blue" ? "ring-blue-400" : "ring-red-400"
+              )} style={{ clipPath: `url(#${clipId})` }} />
             </div>
           )}
           

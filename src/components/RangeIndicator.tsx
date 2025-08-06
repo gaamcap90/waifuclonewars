@@ -48,6 +48,28 @@ export const useRangeCalculation = (
     )?.terrain;
   };
 
+  // Make mana crystal impassable for movement
+  const isPassable = (coords: Coordinates): boolean => {
+    const tile = gameState.board.find(t => 
+      t.coordinates.q === coords.q && t.coordinates.r === coords.r
+    );
+    
+    // Mana crystal is now impassable
+    if (tile?.terrain.type === 'mana_crystal') {
+      return false;
+    }
+    
+    const isOccupied = gameState.players
+      .flatMap(p => p.icons)
+      .some(icon => 
+        icon.position.q === coords.q && 
+        icon.position.r === coords.r && 
+        icon.isAlive
+      );
+    
+    return !isOccupied;
+  };
+
   // Calculate movement range based on remaining movement points
   const movementRange: Coordinates[] = [];
   if (showMovement && activeIcon) {
@@ -61,7 +83,7 @@ export const useRangeCalculation = (
     for (let q = -7; q <= 7; q++) {
       for (let r = -7; r <= 7; r++) {
         const coords = { q, r };
-        if (isValidHex(coords) && !isOccupied(coords)) {
+        if (isValidHex(coords) && isPassable(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance > 0 && distance <= remainingMovement) {
             // Calculate movement cost considering terrain - forest hexes cost 2 movement each

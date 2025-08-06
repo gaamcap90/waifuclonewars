@@ -371,7 +371,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       },
       teamBuffs: {
         mightBonus: [0, 0], // No buffs initially
-        powerBonus: [0, 0]
+        powerBonus: [0, 0],
+        homeBaseBonus: [0, 0]
       },
       baseHealth: [5, 5],
       matchTimer: 600,
@@ -423,6 +424,20 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       });
         
       if (activeIcon?.playerId === 1 && activeIcon.isAlive) {
+        // Check if AI has no valid moves or attacks - auto end turn
+        const canMove = activeIcon.stats.movement > 0 && !activeIcon.movedThisTurn;
+        const canAttack = !activeIcon.actionTaken;
+        const hasAbilities = activeIcon.abilities.some(ability => 
+          ability.currentCooldown === 0 && 
+          gameState.globalMana[activeIcon.playerId] >= ability.manaCost
+        );
+        
+        if (!canMove && !canAttack && !hasAbilities) {
+          console.log('AI has no valid moves, auto-ending turn');
+          endTurn();
+          return;
+        }
+        
         const timer = setTimeout(() => {
           console.log('AI Timer triggered');
           
@@ -439,13 +454,30 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             
             let target = null;
             
-            // Priority: Attack characters first, then base
+            // Priority: Attack characters first, then beast camps, then base
             for (const enemy of enemyIcons) {
               const distance = calculateDistance(activeIcon.position, enemy.position);
               if (distance <= gameState.targetingMode.range) {
                 target = enemy.position;
                 console.log('AI targeting enemy:', enemy.name, 'at', target);
                 break;
+              }
+            }
+            
+            // Try beast camps if no enemy characters in range
+            if (!target) {
+              const beastCamps = gameState.board.filter(tile => 
+                tile.terrain.type === 'beast_camp' && 
+                !gameState.objectives.beastCamps.defeated[tile.coordinates.q === -2 ? 0 : 1]
+              );
+              
+              for (const camp of beastCamps) {
+                const distance = calculateDistance(activeIcon.position, camp.coordinates);
+                if (distance <= gameState.targetingMode.range) {
+                  target = camp.coordinates;
+                  console.log('AI targeting beast camp at', target);
+                  break;
+                }
               }
             }
             
@@ -775,7 +807,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         },
         teamBuffs: {
           mightBonus: newMightBonus,
-          powerBonus: newPowerBonus
+          powerBonus: newPowerBonus,
+          homeBaseBonus: prev.teamBuffs.homeBaseBonus
         },
         // Mark attacker as having acted
         players: prev.players.map(player => ({
@@ -1360,7 +1393,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       },
       teamBuffs: {
         mightBonus: [0, 0],
-        powerBonus: [0, 0]
+        powerBonus: [0, 0],
+        homeBaseBonus: [0, 0]
       },
       baseHealth: [5, 5],
       matchTimer: 600,
