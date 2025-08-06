@@ -174,7 +174,20 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
         <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-player1">{gameState.players[0].name} (Blue)</CardTitle>
-            <div className="text-sm">Mana: {gameState.globalMana[0]}/20 (+1/turn)</div>
+            <div className="text-sm">Mana: {gameState.globalMana[0]}/20 ({(() => {
+              const crystalTile = gameState.board.find(tile => tile.terrain.type === 'mana_crystal');
+              if (crystalTile) {
+                const adjacentAllies = gameState.players[0].icons.filter(icon => {
+                  if (!icon.isAlive) return false;
+                  const distance = Math.abs(icon.position.q - crystalTile.coordinates.q) + 
+                                    Math.abs(icon.position.r - crystalTile.coordinates.r) + 
+                                    Math.abs((-icon.position.q - icon.position.r) - (-crystalTile.coordinates.q - crystalTile.coordinates.r));
+                  return distance === 2; // Adjacent in hex grid
+                }).length;
+                return `+${1 + Math.min(adjacentAllies, 3)}/turn`;
+              }
+              return '+1/turn';
+            })()})</div>
             <div className="text-sm">Base HP: {gameState.baseHealth[0]}/5</div>
           </CardHeader>
           <CardContent>
@@ -231,7 +244,20 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
         <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-player2">{gameState.players[1].name} (Red)</CardTitle>
-            <div className="text-sm">Mana: {gameState.globalMana[1]}/20 (+1/turn)</div>
+            <div className="text-sm">Mana: {gameState.globalMana[1]}/20 ({(() => {
+              const crystalTile = gameState.board.find(tile => tile.terrain.type === 'mana_crystal');
+              if (crystalTile) {
+                const adjacentAllies = gameState.players[1].icons.filter(icon => {
+                  if (!icon.isAlive) return false;
+                  const distance = Math.abs(icon.position.q - crystalTile.coordinates.q) + 
+                                    Math.abs(icon.position.r - crystalTile.coordinates.r) + 
+                                    Math.abs((-icon.position.q - icon.position.r) - (-crystalTile.coordinates.q - crystalTile.coordinates.r));
+                  return distance === 2; // Adjacent in hex grid
+                }).length;
+                return `+${1 + Math.min(adjacentAllies, 3)}/turn`;
+              }
+              return '+1/turn';
+            })()})</div>
             <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
           </CardHeader>
           <CardContent>

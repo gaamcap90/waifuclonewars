@@ -121,7 +121,8 @@ export const createFreshGameState = (gameMode: 'singleplayer' | 'multiplayer', s
     },
     teamBuffs: {
       mightBonus: [0, 0],
-      powerBonus: [0, 0]
+      powerBonus: [0, 0],
+      homeBaseBonus: [0, 0]
     },
     baseHealth: [5, 5],
     matchTimer: 600,

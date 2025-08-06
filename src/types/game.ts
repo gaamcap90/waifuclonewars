@@ -86,6 +86,7 @@ export interface GameState {
   teamBuffs: {
     mightBonus: number[]; // % bonus for each player [player1, player2]
     powerBonus: number[]; // % bonus for each player
+    homeBaseBonus: number[]; // % bonus for characters on home base
   };
   baseHealth: number[];
   matchTimer: number; // In seconds (600 = 10 minutes)
