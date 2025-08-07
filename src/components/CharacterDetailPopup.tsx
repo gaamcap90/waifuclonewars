@@ -3,6 +3,7 @@ import { Icon, GameState } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
+import { useBuffCalculation } from "@/hooks/useBuffCalculation";
 
 interface CharacterDetailPopupProps {
   character: Icon;
@@ -26,40 +27,25 @@ const CharacterDetailPopup = ({
     return () => document.removeEventListener("click", handleClickOutside);
   }, [onClose]);
 
-  // Compute buffs including home base bonus
-  const teamMightBonus = gameState.teamBuffs.mightBonus[character.playerId] || 0;
-  const teamPowerBonus = gameState.teamBuffs.powerBonus[character.playerId] || 0;
-  
-  // Check if on home base for additional 20% buff
-  const isOnHomeBase = (() => {
-    const baseTile = gameState.board.find(tile => 
-      tile.coordinates.q === character.position.q && 
-      tile.coordinates.r === character.position.r &&
-      tile.terrain.type === 'base'
-    );
-    if (!baseTile) return false;
-    return (character.playerId === 0 && baseTile.coordinates.q < 0) ||
-           (character.playerId === 1 && baseTile.coordinates.q > 0);
-  })();
-  
-  const homeBaseBonus = isOnHomeBase ? 20 : 0;
-  const totalMightBonus = teamMightBonus + homeBaseBonus;
-  const totalPowerBonus = teamPowerBonus + homeBaseBonus;
+  // Use buff calculation hook
+  const { calculateBuffedStats } = useBuffCalculation();
+  const buffedStats = calculateBuffedStats(character, gameState);
 
   const baseMight = character.stats.might;
   const basePower = character.stats.power;
   const baseDefense = character.stats.defense;
 
-  const extraMightRaw = (baseMight * totalMightBonus) / 100;
-  const extraPowerRaw = (basePower * totalPowerBonus) / 100;
-  const extraDefenseRaw = (baseDefense * homeBaseBonus) / 100;
+  // Calculate individual buff contributions
+  const beastCampMightBonus = (baseMight * buffedStats.beastCampMightBonus) / 100;
+  const beastCampPowerBonus = (basePower * buffedStats.beastCampPowerBonus) / 100;
+  const homeBaseMightBonus = buffedStats.isOnHomeBase ? (baseMight * 20) / 100 : 0;
+  const homeBasePowerBonus = buffedStats.isOnHomeBase ? (basePower * 20) / 100 : 0;
+  const homeBaseDefenseBonus = buffedStats.isOnHomeBase ? (baseDefense * 20) / 100 : 0;
+  const forestDefenseBonus = buffedStats.isOnForest ? (baseDefense * 50) / 100 : 0;
 
-  const extraMight = Number(
-    extraMightRaw % 1 === 0 ? extraMightRaw : extraMightRaw.toFixed(1)
-  );
-  const extraPower = Number(
-    extraPowerRaw % 1 === 0 ? extraPowerRaw : extraPowerRaw.toFixed(1)
-  );
+  const formatBonus = (value: number) => {
+    return value % 1 === 0 ? value.toString() : value.toFixed(1);
+  };
 
   const getCharacterPortrait = (name: string) => {
     if (name.includes("Napoleon"))
@@ -149,37 +135,46 @@ const CharacterDetailPopup = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <div className="space-y-3 text-sm">
               <div>
                 <span className="text-muted-foreground">Might:</span>
                 <span className="ml-2 text-red-400 font-semibold">
-                  {totalMightBonus > 0 ? (
-                    <>
-                      {baseMight} + {extraMight}
-                    </>
-                  ) : (
-                    baseMight
-                  )}
+                  {buffedStats.might}
                 </span>
+                {(beastCampMightBonus > 0 || homeBaseMightBonus > 0) && (
+                  <div className="text-xs text-muted-foreground ml-4">
+                    {beastCampMightBonus > 0 && `+${formatBonus(beastCampMightBonus)} (Beast Camp) `}
+                    {homeBaseMightBonus > 0 && `+${formatBonus(homeBaseMightBonus)} (Base)`}
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="text-muted-foreground">Defense:</span>
-                <span className="ml-2 text-green-400 font-semibold">
-                  {character.stats.defense}
-                </span>
-              </div>
+              
               <div>
                 <span className="text-muted-foreground">Power:</span>
                 <span className="ml-2 text-blue-400 font-semibold">
-                  {totalPowerBonus > 0 ? (
-                    <>
-                      {basePower} + {extraPower}
-                    </>
-                  ) : (
-                    basePower
-                  )}
+                  {buffedStats.power}
                 </span>
+                {(beastCampPowerBonus > 0 || homeBasePowerBonus > 0) && (
+                  <div className="text-xs text-muted-foreground ml-4">
+                    {beastCampPowerBonus > 0 && `+${formatBonus(beastCampPowerBonus)} (Beast Camp) `}
+                    {homeBasePowerBonus > 0 && `+${formatBonus(homeBasePowerBonus)} (Base)`}
+                  </div>
+                )}
               </div>
+              
+              <div>
+                <span className="text-muted-foreground">Defense:</span>
+                <span className="ml-2 text-green-400 font-semibold">
+                  {buffedStats.defense}
+                </span>
+                {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0) && (
+                  <div className="text-xs text-muted-foreground ml-4">
+                    {homeBaseDefenseBonus > 0 && `+${formatBonus(homeBaseDefenseBonus)} (Base) `}
+                    {forestDefenseBonus > 0 && `+${formatBonus(forestDefenseBonus)} (Forest)`}
+                  </div>
+                )}
+              </div>
+              
               <div>
                 <span className="text-muted-foreground">Speed:</span>
                 <span className="ml-2 text-yellow-400 font-semibold">

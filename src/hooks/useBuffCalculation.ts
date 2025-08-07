@@ -24,12 +24,23 @@ export const useBuffCalculation = () => {
              (icon.playerId === 1 && baseTile.coordinates.q > 0);
     })();
 
+    // Check if on forest for defense bonus
+    const isOnForest = (() => {
+      const forestTile = gameState.board.find(tile => 
+        tile.coordinates.q === icon.position.q && 
+        tile.coordinates.r === icon.position.r &&
+        tile.terrain.type === 'forest'
+      );
+      return !!forestTile;
+    })();
+
     const homeBaseBuff = isOnHomeBase ? 20 : 0;
+    const forestDefenseBuff = isOnForest ? 50 : 0; // +50% defense in forest
 
     // Calculate total buffs (additive)
     const totalMightBonus = mightBonusPct + homeBaseBuff;
     const totalPowerBonus = powerBonusPct + homeBaseBuff;
-    const totalDefenseBonus = defenseBonusPct + homeBaseBuff;
+    const totalDefenseBonus = defenseBonusPct + homeBaseBuff + forestDefenseBuff;
 
     // Apply buffs to stats
     const buffedMight = Math.floor(icon.stats.might * (1 + totalMightBonus / 100));
@@ -45,9 +56,14 @@ export const useBuffCalculation = () => {
       speed: icon.stats.speed,
       movement: icon.stats.movement,
       isOnHomeBase,
+      isOnForest,
       mightBonus: totalMightBonus,
       powerBonus: totalPowerBonus,
-      defenseBonus: totalDefenseBonus
+      defenseBonus: totalDefenseBonus,
+      beastCampMightBonus: mightBonusPct,
+      beastCampPowerBonus: powerBonusPct,
+      homeBaseBonus: homeBaseBuff,
+      forestDefenseBonus: forestDefenseBuff
     };
   };
 

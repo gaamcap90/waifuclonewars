@@ -102,7 +102,7 @@ export default function HexTile({
         {/* Tile border */}
         <polygon
           points={pts}
-          className="fill-transparent stroke-black stroke-[2px]"
+          className="fill-transparent stroke-black stroke-[1px]"
         />
         
         {/* Outline & highlight rings */}
