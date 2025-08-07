@@ -1,0 +1,55 @@
+// src/hooks/useBuffCalculation.ts - Calculate character stat buffs
+
+import { GameState, Icon, Coordinates } from "@/types/game";
+
+export const useBuffCalculation = () => {
+  const calculateBuffedStats = (icon: Icon, gameState: GameState) => {
+    const teamBuffs = gameState.teamBuffs;
+    
+    // Base team buffs from beast camps
+    const mightBonusPct = teamBuffs.mightBonus[icon.playerId] || 0;
+    const powerBonusPct = teamBuffs.powerBonus[icon.playerId] || 0;
+    const defenseBonusPct = 0; // No team defense bonus yet
+
+    // Check if on home base for additional 20% buff
+    const isOnHomeBase = (() => {
+      const baseTile = gameState.board.find(tile => 
+        tile.coordinates.q === icon.position.q && 
+        tile.coordinates.r === icon.position.r &&
+        tile.terrain.type === 'base'
+      );
+      if (!baseTile) return false;
+      // Blue base is at negative coords, red base at positive coords
+      return (icon.playerId === 0 && baseTile.coordinates.q < 0) ||
+             (icon.playerId === 1 && baseTile.coordinates.q > 0);
+    })();
+
+    const homeBaseBuff = isOnHomeBase ? 20 : 0;
+
+    // Calculate total buffs (additive)
+    const totalMightBonus = mightBonusPct + homeBaseBuff;
+    const totalPowerBonus = powerBonusPct + homeBaseBuff;
+    const totalDefenseBonus = defenseBonusPct + homeBaseBuff;
+
+    // Apply buffs to stats
+    const buffedMight = Math.floor(icon.stats.might * (1 + totalMightBonus / 100));
+    const buffedPower = Math.floor(icon.stats.power * (1 + totalPowerBonus / 100));
+    const buffedDefense = Math.floor(icon.stats.defense * (1 + totalDefenseBonus / 100));
+
+    return {
+      might: buffedMight,
+      power: buffedPower,
+      defense: buffedDefense,
+      hp: icon.stats.hp,
+      maxHp: icon.stats.maxHp,
+      speed: icon.stats.speed,
+      movement: icon.stats.movement,
+      isOnHomeBase,
+      mightBonus: totalMightBonus,
+      powerBonus: totalPowerBonus,
+      defenseBonus: totalDefenseBonus
+    };
+  };
+
+  return { calculateBuffedStats };
+};
