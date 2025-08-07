@@ -198,31 +198,37 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                   
                   return (
                     <div key={icon.id} className="text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setSelectedCharacter({
-                            id: icon.id,
-                            position: { x: rect.left + rect.width / 2, y: rect.top }
-                          });
-                        }}
-                        className={`w-10 h-10 rounded-full border-2 transition-all overflow-hidden ${
-                          icon.playerId === 0 ? "border-blue-400 hover:border-blue-300" : ""
-                        } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
-                      >
-                        {portrait ? (
-                          <img 
-                            src={portrait} 
-                            alt={icon.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white">
-                            {icon.name.charAt(0)}
-                          </div>
-                        )}
-                      </button>
+                       <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setSelectedCharacter({
+                              id: icon.id,
+                              position: { x: rect.left + rect.width / 2, y: rect.top }
+                            });
+                          }}
+                          className={`w-10 h-10 rounded-full border-2 transition-all overflow-hidden ${
+                            icon.playerId === 0 ? "border-blue-400 hover:border-blue-300" : ""
+                          } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
+                        >
+                          {portrait ? (
+                            <img 
+                              src={portrait} 
+                              alt={icon.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white">
+                              {icon.name.charAt(0)}
+                            </div>
+                          )}
+                        </button>
+                        {/* Team indicator badge */}
+                        <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border ${
+                          icon.playerId === 0 ? "bg-blue-500 border-blue-300" : "bg-red-500 border-red-300"
+                        }`} />
+                      </div>
                       <div className="text-xs mt-1">{icon.stats.hp}/{icon.stats.maxHp}</div>
                       <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                     </div>
@@ -268,31 +274,37 @@ const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, o
                   
                   return (
                     <div key={icon.id} className="text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setSelectedCharacter({
-                            id: icon.id,
-                            position: { x: rect.left + rect.width / 2, y: rect.top }
-                          });
-                        }}
-                        className={`w-10 h-10 rounded-full border-2 transition-all overflow-hidden ${
-                          icon.playerId === 1 ? "border-red-400 hover:border-red-300" : ""
-                        } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
-                      >
-                        {portrait ? (
-                          <img 
-                            src={portrait} 
-                            alt={icon.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-red-500/90 text-white">
-                            {icon.name.charAt(0)}
-                          </div>
-                        )}
-                      </button>
+                       <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setSelectedCharacter({
+                              id: icon.id,
+                              position: { x: rect.left + rect.width / 2, y: rect.top }
+                            });
+                          }}
+                          className={`w-10 h-10 rounded-full border-2 transition-all overflow-hidden ${
+                            icon.playerId === 1 ? "border-red-400 hover:border-red-300" : ""
+                          } ${icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : ""}`}
+                        >
+                          {portrait ? (
+                            <img 
+                              src={portrait} 
+                              alt={icon.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-red-500/90 text-white">
+                              {icon.name.charAt(0)}
+                            </div>
+                          )}
+                        </button>
+                        {/* Team indicator badge */}
+                        <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border ${
+                          icon.playerId === 1 ? "bg-red-500 border-red-300" : "bg-blue-500 border-blue-300"
+                        }`} />
+                      </div>
                       <div className="text-xs mt-1">{icon.stats.hp}/{icon.stats.maxHp}</div>
                       <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                     </div>

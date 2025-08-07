@@ -111,43 +111,31 @@ export const useRangeCalculation = (
       baseAttackRange = 2; // Ranged characters
     }
 
-    // If standing in forest, halve all ranges (rounded up)
-    const isOnForest = getTerrainAt(activeIcon.position)?.type === 'forest';
-    const effectiveRange = Math.ceil(baseAttackRange / (isOnForest ? 2 : 1));
-    
+    // Use raw hex distance for indicators, ignore terrain costs
     for (let q = -7; q <= 7; q++) {
       for (let r = -7; r <= 7; r++) {
         const coords = { q, r };
         if (isValidHex(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
-          if (distance <= effectiveRange && distance > 0) {
-            // Apply forest cost to attack range
-            let movementCost = distance;
-            const terrain = getTerrainAt(coords);
-            if (terrain?.type === 'forest') {
-              movementCost = distance * 2; // Forest costs double for attacks too
-            }
-            
-            if (movementCost <= effectiveRange) {
-              // Show if there's an enemy target or attackable structure
-              const targetIcon = gameState.players
-                .flatMap(p => p.icons)
-                .find(icon => 
-                  icon.position.q === coords.q && 
-                  icon.position.r === coords.r &&
-                  icon.playerId !== activeIcon.playerId &&
-                  icon.isAlive
-                );
-              
-              const attackableTile = gameState.board.find(tile =>
-                tile.coordinates.q === coords.q &&
-                tile.coordinates.r === coords.r &&
-                (tile.terrain.type === 'base' || tile.terrain.type === 'beast_camp')
+          if (distance <= baseAttackRange && distance > 0) {
+            // Show if there's an enemy target or attackable structure
+            const targetIcon = gameState.players
+              .flatMap(p => p.icons)
+              .find(icon => 
+                icon.position.q === coords.q && 
+                icon.position.r === coords.r &&
+                icon.playerId !== activeIcon.playerId &&
+                icon.isAlive
               );
-              
-              if (targetIcon || attackableTile) {
-                attackRange.push(coords);
-              }
+            
+            const attackableTile = gameState.board.find(tile =>
+              tile.coordinates.q === coords.q &&
+              tile.coordinates.r === coords.r &&
+              (tile.terrain.type === 'base' || tile.terrain.type === 'beast_camp')
+            );
+            
+            if (targetIcon || attackableTile) {
+              attackRange.push(coords);
             }
           }
         }
@@ -155,7 +143,7 @@ export const useRangeCalculation = (
     }
   }
 
-  // Calculate ability range with forest modifiers
+  // Calculate ability range - use raw hex distance for indicators
   const abilityRangeCoords: Coordinates[] = [];
   if (showAbility && activeIcon && abilityRange) {
     for (let q = -7; q <= 7; q++) {
@@ -164,16 +152,7 @@ export const useRangeCalculation = (
         if (isValidHex(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance <= abilityRange && distance > 0) {
-            // Apply forest cost to ability range
-            let movementCost = distance;
-            const terrain = getTerrainAt(coords);
-            if (terrain?.type === 'forest') {
-              movementCost = distance * 2; // Forest costs double for abilities too
-            }
-            
-            if (movementCost <= abilityRange) {
-              abilityRangeCoords.push(coords);
-            }
+            abilityRangeCoords.push(coords);
           }
         }
       }
