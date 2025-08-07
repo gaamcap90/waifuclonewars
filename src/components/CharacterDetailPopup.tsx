@@ -26,15 +26,33 @@ const CharacterDetailPopup = ({
     return () => document.removeEventListener("click", handleClickOutside);
   }, [onClose]);
 
-  // Compute buffs
-  const mightBonus = gameState.teamBuffs.mightBonus[character.playerId] || 0;
-  const powerBonus = gameState.teamBuffs.powerBonus[character.playerId] || 0;
+  // Compute buffs including home base bonus
+  const teamMightBonus = gameState.teamBuffs.mightBonus[character.playerId] || 0;
+  const teamPowerBonus = gameState.teamBuffs.powerBonus[character.playerId] || 0;
+  
+  // Check if on home base for additional 20% buff
+  const isOnHomeBase = (() => {
+    const baseTile = gameState.board.find(tile => 
+      tile.coordinates.q === character.position.q && 
+      tile.coordinates.r === character.position.r &&
+      tile.terrain.type === 'base'
+    );
+    if (!baseTile) return false;
+    return (character.playerId === 0 && baseTile.coordinates.q < 0) ||
+           (character.playerId === 1 && baseTile.coordinates.q > 0);
+  })();
+  
+  const homeBaseBonus = isOnHomeBase ? 20 : 0;
+  const totalMightBonus = teamMightBonus + homeBaseBonus;
+  const totalPowerBonus = teamPowerBonus + homeBaseBonus;
 
   const baseMight = character.stats.might;
   const basePower = character.stats.power;
+  const baseDefense = character.stats.defense;
 
-  const extraMightRaw = (baseMight * mightBonus) / 100;
-  const extraPowerRaw = (basePower * powerBonus) / 100;
+  const extraMightRaw = (baseMight * totalMightBonus) / 100;
+  const extraPowerRaw = (basePower * totalPowerBonus) / 100;
+  const extraDefenseRaw = (baseDefense * homeBaseBonus) / 100;
 
   const extraMight = Number(
     extraMightRaw % 1 === 0 ? extraMightRaw : extraMightRaw.toFixed(1)
@@ -135,7 +153,7 @@ const CharacterDetailPopup = ({
               <div>
                 <span className="text-muted-foreground">Might:</span>
                 <span className="ml-2 text-red-400 font-semibold">
-                  {mightBonus > 0 ? (
+                  {totalMightBonus > 0 ? (
                     <>
                       {baseMight} + {extraMight}
                     </>
@@ -153,7 +171,7 @@ const CharacterDetailPopup = ({
               <div>
                 <span className="text-muted-foreground">Power:</span>
                 <span className="ml-2 text-blue-400 font-semibold">
-                  {powerBonus > 0 ? (
+                  {totalPowerBonus > 0 ? (
                     <>
                       {basePower} + {extraPower}
                     </>

@@ -25,11 +25,11 @@ const createInitialBoard = (): HexTile[] => {
 };
 
 const getTerrainForPosition = (q: number, r: number): TerrainType => {
-  // Center mana crystal (purple in image)
+  // Center mana crystal (purple in image) - IMPASSABLE
   if (q === 0 && r === 0) {
     return {
       type: 'mana_crystal',
-      effects: { manaRegen: 2 }
+      effects: { manaRegen: 2, movementModifier: -999 }
     };
   }
 
@@ -906,6 +906,82 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                       return icon;
                     })
                   }));
+                } else if (damage > 0) {
+                  // Check if targeting a beast camp with damage ability
+                  const targetTile = prev.board.find(tile =>
+                    tile.coordinates.q === coordinates.q &&
+                    tile.coordinates.r === coordinates.r &&
+                    tile.terrain.type === 'beast_camp'
+                  );
+                  
+                  if (targetTile) {
+                    // Apply damage to beast camp
+                    const campIndex = targetTile.coordinates.q === -2 ? 0 : 1;
+                    const currentHp = prev.objectives.beastCamps.hp[campIndex];
+                    const newHp = Math.max(0, currentHp - damage);
+                    const newHpArray = [...prev.objectives.beastCamps.hp];
+                    newHpArray[campIndex] = newHp;
+                    
+                    if (newHp === 0 && !prev.objectives.beastCamps.defeated[campIndex]) {
+                      // Beast camp defeated by ability
+                      const newDefeatedArray = [...prev.objectives.beastCamps.defeated];
+                      newDefeatedArray[campIndex] = true;
+                      
+                      const newMightBonus = [...prev.teamBuffs.mightBonus];
+                      const newPowerBonus = [...prev.teamBuffs.powerBonus];
+                      newMightBonus[activeIcon.playerId] = 15;
+                      newPowerBonus[activeIcon.playerId] = 15;
+                      
+                      toast.success(`Beast Camp defeated by ${ability.name}! Team gains +15% might and power!`);
+                      
+                      return {
+                        ...prev,
+                        objectives: {
+                          ...prev.objectives,
+                          beastCamps: {
+                            ...prev.objectives.beastCamps,
+                            hp: newHpArray,
+                            defeated: newDefeatedArray
+                          }
+                        },
+                        teamBuffs: {
+                          mightBonus: newMightBonus,
+                          powerBonus: newPowerBonus,
+                          homeBaseBonus: prev.teamBuffs.homeBaseBonus
+                        },
+                        players: prev.players.map(player => ({
+                          ...player,
+                          icons: player.icons.map(icon =>
+                            icon.id === activeIcon.id
+                              ? { ...icon, actionTaken: true, abilities: icon.abilities.map(a => a.id === ability.id ? { ...a, currentCooldown: a.cooldown } : a) }
+                              : icon
+                          )
+                        })),
+                        targetingMode: undefined
+                      };
+                    } else {
+                      // Damage applied but camp not defeated
+                      return {
+                        ...prev,
+                        objectives: {
+                          ...prev.objectives,
+                          beastCamps: {
+                            ...prev.objectives.beastCamps,
+                            hp: newHpArray
+                          }
+                        },
+                        players: prev.players.map(player => ({
+                          ...player,
+                          icons: player.icons.map(icon =>
+                            icon.id === activeIcon.id
+                              ? { ...icon, actionTaken: true, abilities: icon.abilities.map(a => a.id === ability.id ? { ...a, currentCooldown: a.cooldown } : a) }
+                              : icon
+                          )
+                        })),
+                        targetingMode: undefined
+                      };
+                    }
+                  }
                 } else if (healing > 0) {
                   // Healing ability - apply to active icon
                   updatedPlayers = prev.players.map(player => ({
@@ -1079,11 +1155,10 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
               return prev;
             }
             
-            // Store move history for undo
-            const currentMoveHistory = movementActiveIcon.moveHistory || [];
+            // Store move history for undo (store previous position, not new one)
+            const currentMoveHistory = movementActiveIcon.movementHistory || [];
             const newMoveHistory = [...currentMoveHistory, {
-              from: movementActiveIcon.position,
-              to: coordinates,
+              position: movementActiveIcon.position, // Store current position before moving
               cost: movementCost
             }];
             
@@ -1096,7 +1171,7 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
                     ? { 
                         ...icon, 
                         position: coordinates,
-                        moveHistory: newMoveHistory, // Store move history for undo
+                        movementHistory: newMoveHistory, // Store move history for undo
                         movedThisTurn: true,
                         stats: { ...icon.stats, movement: Math.max(0, icon.stats.movement - movementCost) }
                       }
@@ -1228,20 +1303,18 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         winner,
         globalMana: nextQueueIndex === 0 
           ? prev.globalMana.map((mana, playerIndex) => {
-              // Base mana gain
-              let manaGain = 1;
+              // Base mana gain: always +1 per turn
+              const baseGain = 1;
               
-              // Check if any player character is on mana crystal
+              // Count allies adjacent to mana crystal (range 1) for bonus mana
               const playerIcons = updatedPlayers[playerIndex].icons.filter(icon => icon.isAlive);
-              const hasCharacterOnCrystal = playerIcons.some(icon => 
-                icon.position.q === 0 && icon.position.r === 0
-              );
+              const adjacentAllies = playerIcons.filter(icon => {
+                const distance = Math.abs(icon.position.q) + Math.abs(icon.position.r) + Math.abs(icon.position.q + icon.position.r);
+                return distance === 2; // Adjacent to center crystal (0,0)
+              }).length;
               
-              if (hasCharacterOnCrystal) {
-                manaGain += 2; // +2 bonus from mana crystal
-              }
-              
-              return Math.min(mana + manaGain, 20);
+              const totalGain = baseGain + Math.min(adjacentAllies, 3); // Max +3 from adjacency
+              return Math.min(mana + totalGain, 20);
             })
           : prev.globalMana
       };
@@ -1319,13 +1392,13 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
         .flatMap(p => p.icons)
         .find(i => i.id === prev.activeIconId);
 
-      if (!activeIcon || !activeIcon.movedThisTurn || !activeIcon.moveHistory || activeIcon.moveHistory.length === 0) {
+      if (!activeIcon || !activeIcon.movedThisTurn || !activeIcon.movementHistory || activeIcon.movementHistory.length === 0) {
         return prev;
       }
 
       // Get the last move from history
-      const lastMove = activeIcon.moveHistory[activeIcon.moveHistory.length - 1];
-      const newMoveHistory = activeIcon.moveHistory.slice(0, -1);
+      const lastMove = activeIcon.movementHistory[activeIcon.movementHistory.length - 1];
+      const newMoveHistory = activeIcon.movementHistory.slice(0, -1);
 
       return {
         ...prev,
@@ -1335,8 +1408,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
             icon.id === activeIcon.id 
               ? { 
                   ...icon, 
-                  position: lastMove.from,
-                  moveHistory: newMoveHistory,
+                  position: lastMove.position,
+                  movementHistory: newMoveHistory,
                   movedThisTurn: newMoveHistory.length > 0,
                   stats: { ...icon.stats, movement: icon.stats.movement + lastMove.cost }
                 }

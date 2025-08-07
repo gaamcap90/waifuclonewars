@@ -39,7 +39,7 @@ export interface Icon {
   movedThisTurn: boolean; // Has this icon moved this turn?
   hasUltimate: boolean; // Can use ultimate this match
   ultimateUsed: boolean; // Has used ultimate this match
-  moveHistory?: Array<{ from: Coordinates; to: Coordinates; cost: number }>; // Move history for undo
+  movementHistory?: { position: Coordinates; cost: number }[]; // Move history for undo
 }
 
 export interface Ability {

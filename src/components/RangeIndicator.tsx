@@ -110,21 +110,25 @@ export const useRangeCalculation = (
     if (activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan") {
       baseAttackRange = 2; // Ranged characters
     }
+
+    // If standing in forest, halve all ranges (rounded up)
+    const isOnForest = getTerrainAt(activeIcon.position)?.type === 'forest';
+    const effectiveRange = Math.ceil(baseAttackRange / (isOnForest ? 2 : 1));
     
     for (let q = -7; q <= 7; q++) {
       for (let r = -7; r <= 7; r++) {
         const coords = { q, r };
         if (isValidHex(coords)) {
           const distance = calculateDistance(activeIcon.position, coords);
-          if (distance <= baseAttackRange && distance > 0) {
+          if (distance <= effectiveRange && distance > 0) {
             // Apply forest cost to attack range
-            let effectiveDistance = distance;
+            let movementCost = distance;
             const terrain = getTerrainAt(coords);
             if (terrain?.type === 'forest') {
-              effectiveDistance = distance + 1; // Forest adds +1 to effective distance
+              movementCost = distance * 2; // Forest costs double for attacks too
             }
             
-            if (effectiveDistance <= baseAttackRange) {
+            if (movementCost <= effectiveRange) {
               // Show if there's an enemy target or attackable structure
               const targetIcon = gameState.players
                 .flatMap(p => p.icons)
@@ -161,13 +165,13 @@ export const useRangeCalculation = (
           const distance = calculateDistance(activeIcon.position, coords);
           if (distance <= abilityRange && distance > 0) {
             // Apply forest cost to ability range
-            let effectiveDistance = distance;
+            let movementCost = distance;
             const terrain = getTerrainAt(coords);
             if (terrain?.type === 'forest') {
-              effectiveDistance = distance + 1; // Forest adds +1 to effective distance
+              movementCost = distance * 2; // Forest costs double for abilities too
             }
             
-            if (effectiveDistance <= abilityRange) {
+            if (movementCost <= abilityRange) {
               abilityRangeCoords.push(coords);
             }
           }
