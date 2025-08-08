@@ -8,6 +8,7 @@ import CharacterSelection from "@/components/CharacterSelection";
 import UltimateIndicator from "@/components/UltimateIndicator";
 import useGameState from "@/hooks/useGameStateNew";
 import { Toaster } from "@/components/ui/sonner";
+import CombatLogPanel from "@/ui/CombatLogPanel";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'characterSelect' | 'singleplayer' | 'multiplayer'>('menu');
@@ -81,6 +82,22 @@ const Index = () => {
       
       {/* Ultimate Indicator */}
       <UltimateIndicator gameState={gameState} />
+
+      {/* Combat Logs */}
+      <div className="pointer-events-auto">
+        <CombatLogPanel
+          entries={(gameState as any).combatLog ?? []}
+          side="left"
+          title="Blue Actions"
+          storageKey="combatLog:leftCollapsed"
+        />
+        <CombatLogPanel
+          entries={(gameState as any).combatLog ?? []}
+          side="right"
+          title="Red Actions"
+          storageKey="combatLog:rightCollapsed"
+        />
+      </div>
       
       {/* Escape Menu */}
       {showEscapeMenu && (
