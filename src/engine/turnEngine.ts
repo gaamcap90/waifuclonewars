@@ -52,27 +52,26 @@ export function findFreeSpawnTile(board: HexTile[], state: GameState, playerId: 
 
 export function applyRoundBoundary(state: GameState) {
   // Mana
-  for (const pid of [0,1]) {
-    const adj = Math.min(3, countAlliesAdjacentToCrystal(state, pid)); // cap adjacency at 3
-    state.globalMana[pid] = Math.min(20, (state.globalMana[pid] ?? 0) + 1 + adj);
+  for (const pid of [1,2]) {
+    const adj = Math.min(4 - 1, countAlliesAdjacentToCrystal(state, pid)); // cap total at 4
+    state.mana[pid] = (state.mana[pid] ?? 0) + 1 + adj;
   }
 
   // Respawn tick
-  const allIcons = state.players.flatMap(p => p.icons);
-  for (const icon of allIcons) {
-    if (!icon.isAlive && icon.respawnTurns > 0) {
+  for (const icon of state.icons) {
+    if (icon.isDead && icon.respawnTurns > 0) {
       icon.respawnTurns -= 1;
     }
   }
   // Auto-respawn anyone who reached 0 this boundary
-  for (const icon of allIcons) {
-    if (!icon.isAlive && icon.respawnTurns <= 0) {
+  for (const icon of state.icons) {
+    if (icon.isDead && icon.respawnTurns <= 0) {
       const tile = findFreeSpawnTile(state.board, state, icon.playerId);
       if (tile) {
-        icon.isAlive = true;
-        icon.stats.hp = icon.stats.maxHp;
-        icon.position.q = tile.q;
-        icon.position.r = tile.r;
+        icon.isDead = false;
+        icon.hp = icon.maxHp;
+        icon.q = tile.q;
+        icon.r = tile.r;
       } else {
         // if no space, keep at 0 and try next round
       }

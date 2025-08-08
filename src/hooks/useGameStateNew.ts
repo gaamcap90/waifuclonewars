@@ -385,7 +385,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         manaCrystal: { controlled: false },
         beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
       },
-      teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0], beastStacks: [0, 0] },
+      teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0] },
       baseHealth: [5, 5],
       matchTimer: 600,
       gameMode,
@@ -534,12 +534,12 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                     if (newHp <= 0 && !defArr[campIndex]) {
                       defArr[campIndex] = true;
 
-                        const updatedBoard = prev.board.map((tile) =>
-                          tile.coordinates.q === target!.q &&
-                          tile.coordinates.r === target!.r
-                            ? { ...tile, terrain: { type: "plain" as const, effects: {} } }
-                            : tile
-                        );
+                      const updatedBoard = prev.board.map((tile) =>
+                        tile.coordinates.q === target!.q &&
+                        tile.coordinates.r === target!.r
+                          ? { ...tile, terrain: { type: "plain", effects: {} } }
+                          : tile
+                      );
 
                       const newMight = [...prev.teamBuffs.mightBonus];
                       const newPower = [...prev.teamBuffs.powerBonus];
@@ -572,7 +572,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                           },
                         },
                         teamBuffs: {
-                          ...prev.teamBuffs,
                           mightBonus: newMight,
                           powerBonus: newPower,
                         },
@@ -649,12 +648,12 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                       if (newHp <= 0 && !defArr[campIndex]) {
                         defArr[campIndex] = true;
 
-                          const updatedBoard = prev.board.map((tile) =>
-                            tile.coordinates.q === target!.q &&
-                            tile.coordinates.r === target!.r
-                              ? { ...tile, terrain: { type: "plain" as const, effects: {} } }
-                              : tile
-                          );
+                        const updatedBoard = prev.board.map((tile) =>
+                          tile.coordinates.q === target!.q &&
+                          tile.coordinates.r === target!.r
+                            ? { ...tile, terrain: { type: "plain", effects: {} } }
+                            : tile
+                        );
 
                         const newMight = [...prev.teamBuffs.mightBonus];
                         const newPower = [...prev.teamBuffs.powerBonus];
@@ -691,7 +690,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                             },
                           },
                           teamBuffs: {
-                            ...prev.teamBuffs,
                             mightBonus: newMight,
                             powerBonus: newPower,
                           },
@@ -969,7 +967,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                     const updatedBoard = prev.board.map((tile) =>
                       tile.coordinates.q === coordinates.q &&
                       tile.coordinates.r === coordinates.r
-                        ? { ...tile, terrain: { type: "plain" as const, effects: {} } }
+                        ? { ...tile, terrain: { type: "plain", effects: {} } }
                         : tile
                     );
 
@@ -1007,11 +1005,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                           defeated: defArr,
                         },
                       },
-                          teamBuffs: {
-                            ...prev.teamBuffs,
-                            mightBonus: newMight,
-                            powerBonus: newPower,
-                          },
+                      teamBuffs: {
+                        mightBonus: newMight,
+                        powerBonus: newPower,
+                      },
                       targetingMode: undefined,
                     };
                   } else {
@@ -1105,7 +1102,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                     const updatedBoard = prev.board.map((tile) =>
                       tile.coordinates.q === coordinates.q &&
                       tile.coordinates.r === coordinates.r
-                        ? { ...tile, terrain: { type: "plain" as const, effects: {} } }
+                        ? { ...tile, terrain: { type: "plain", effects: {} } }
                         : tile
                     );
 
@@ -1144,7 +1141,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                         },
                       },
                       teamBuffs: {
-                        ...prev.teamBuffs,
                         mightBonus: newMight,
                         powerBonus: newPower,
                       },
@@ -1353,7 +1349,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       // 3) Round boundary?
       const roundBoundary =
         typeof isRoundBoundary === "function"
-          ? isRoundBoundary(prev.queueIndex, nextIndex, prev.speedQueue.length)
+          ? isRoundBoundary(prev.queueIndex, nextIndex, prev.speedQueue)
           : nextIndex === 0;
 
       let mana = [...prev.globalMana];
@@ -1533,46 +1529,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     selectIcon,
     undoMovement, // hook to your real undo logic
     startRespawnPlacement,
-    resetGame: () => {
-      const initialIcons = createInitialIcons();
-      const queueRaw = initSpeedQueue(initialIcons) as any[];
-      const speedQueue: string[] = queueRaw.map((e) => getId(e));
-      
-      setGameState({
-        currentTurn: 1,
-        activeIconId: speedQueue[0],
-        phase: "combat",
-        players: [
-          {
-            id: 0,
-            name: "Player 1",
-            icons: initialIcons.filter((i) => i.playerId === 0),
-            color: "blue",
-            isAI: false,
-          },
-          {
-            id: 1,
-            name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2",
-            icons: initialIcons.filter((i) => i.playerId === 1),
-            color: "red",
-            isAI: gameMode === "singleplayer",
-          },
-        ],
-        board: createInitialBoard(),
-        globalMana: [15, 15],
-        turnTimer: 20,
-        speedQueue,
-        queueIndex: 0,
-        objectives: {
-          manaCrystal: { controlled: false },
-          beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
-        },
-        teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0], beastStacks: [0, 0] },
-        baseHealth: [5, 5],
-        matchTimer: 600,
-        gameMode,
-      });
-    },
   };
 };
 
