@@ -5,7 +5,7 @@ import { toast } from "sonner";
 // TURN/COMBAT HELPERS (external)
 import {
   initSpeedQueue,
-  isRoundBoundary,                  // keep using, but we’ll also detect boundary during skip
+  isRoundBoundary, // not relied on exclusively; we also detect during skip
   countAlliesAdjacentToCrystal,
   findFreeSpawnTile,
   hexDistance,
@@ -14,19 +14,18 @@ import { resolveBasicAttackDamage, resolveAbilityDamage } from "@/combat/resolve
 import { calcEffectiveStats } from "@/combat/buffs";
 
 /* =========================
-   Board / Icons init
+   Small helpers
    ========================= */
-
-const tileKey = (q: number, r: number) => `${q},${r}`;
-const getId = (x: any): string => (typeof x === "string" ? x : x?.id ?? "");
 
 type Qr = { q: number; r: number };
 type MoveStep = { from: Coordinates; to: Coordinates; cost: number };
 
+const tileKey = (q: number, r: number) => `${q},${r}`;
+
 function movementCostForTile(tile: HexTile): number {
   if (tile.terrain.effects.movementModifier === -999) return Infinity; // impassable
-  if (tile.terrain.type === "forest") return 2;                         // ALWAYS 2 in forests
-  return 1;                                                              // plains/spawn/etc
+  if (tile.terrain.type === "forest") return 2;                         // ALWAYS 2
+  return 1;
 }
 function neighborsAxial({ q, r }: Qr): Qr[] {
   return [
@@ -67,7 +66,7 @@ function reachableWithCosts(
       const nbTile = byKey.get(nbKey);
       if (!nbTile) continue;
 
-      if (nbKey !== startKey && occupiedKeys.has(nbKey)) continue; // can move OUT of start
+      if (nbKey !== startKey && occupiedKeys.has(nbKey)) continue; // can move out of start
       const step = movementCostForTile(nbTile);
       if (!isFinite(step)) continue;
 
@@ -83,6 +82,10 @@ function reachableWithCosts(
   dist.delete(startKey);
   return dist;
 }
+
+/* =========================
+   Board / Icons init
+   ========================= */
 
 const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (q === 0 && r === 0) return { type: "mana_crystal", effects: { movementModifier: -999 } };
@@ -162,17 +165,17 @@ const createInitialIcons = (): Icon[] => {
   ];
 
   const icons: Icon[] = [];
-  const player1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
-  const player2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
+  const p1 = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
+  const p2 = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
 
-  for (let playerId = 0; playerId < 2; playerId++) {
-    iconTemplates.forEach((template, index) => {
-      const spawns = playerId === 0 ? player1Spawns : player2Spawns;
+  for (let pid = 0; pid < 2; pid++) {
+    iconTemplates.forEach((t, i) => {
+      const spawns = pid === 0 ? p1 : p2;
       icons.push({
-        id: `${playerId}-${index}`,
-        ...template,
-        position: spawns[index],
-        playerId,
+        id: `${pid}-${i}`,
+        ...t,
+        position: spawns[i],
+        playerId: pid,
         isAlive: true,
         respawnTurns: 0,
         actionTaken: false,
@@ -194,8 +197,7 @@ type ExtState = GameState & { movementStack: Record<string, MoveStep[]> };
 const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer") => {
   const [gameState, setGameState] = useState<ExtState>(() => {
     const initialIcons = createInitialIcons();
-    const queueRaw = initSpeedQueue(initialIcons) as any[];
-    const speedQueue: string[] = queueRaw.map((e) => getId(e)); // normalize to ids
+    const speedQueue = initSpeedQueue(initialIcons) as unknown as string[]; // should be array of iconIds
 
     return {
       currentTurn: 1,
@@ -260,139 +262,90 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
   useEffect(() => setCurrentTurnTimer(20), [gameState.activeIconId]);
 
   /* =========================
-     AI — deterministic & synchronous (no targetingMode)
-     Runs shortly after the AI becomes active.
+     AI — deterministic & synchronous (no targetingMode for AI)
      ========================= */
   useEffect(() => {
     if (gameState.gameMode !== "singleplayer" || gameState.phase !== "combat") return;
 
-    const active = gameState.players.flatMap((p) => p.icons).find((i) => i.id === gameState.activeIconId);
-    const isAI = !!active && active.playerId === 1 && active.isAlive;
-    if (!isAI) return;
+    const me = gameState.players.flatMap((p) => p.icons).find((i) => i.id === gameState.activeIconId);
+    if (!me || !me.isAlive || me.playerId !== 1) return;
 
     const t = setTimeout(() => {
       setGameState((prev) => {
         const state = { ...prev } as ExtState;
-        const me = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
-        if (!me || !me.isAlive || me.playerId !== 1) return prev;
+        const ai = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
+        if (!ai || !ai.isAlive || ai.playerId !== 1) return prev;
 
-        // Helper getters
         const enemyTeam = 0;
         const enemies = state.players[enemyTeam].icons.filter((i) => i.isAlive);
+        const basicRange = (ai.name === "Napoleon-chan" || ai.name === "Da Vinci-chan") ? 2 : 1;
 
-        const basicRange = (me.name === "Napoleon-chan" || me.name === "Da Vinci-chan") ? 2 : 1;
-
-        const canBasicNow = () =>
-          enemies.find((e) => hexDistance(me.position, e.position) <= basicRange);
-
-        const canAbilityNow = () => {
-          // pick a damaging ability that is affordable and in range (prefer lethal)
-          let choice: { abilityId: string; target: Icon } | null = null;
-          let lethal: { abilityId: string; target: Icon; dmg: number } | null = null;
-
-          for (const ab of me.abilities) {
-            const manaOk = state.globalMana[me.playerId] >= ab.manaCost;
-            if (!manaOk) continue;
-
-            const isDamage =
-              typeof ab.damage === "number" && ab.damage > 0;
-
-            if (!isDamage) continue;
-
+        const pickAbility = () => {
+          let best: { ab: typeof ai.abilities[number]; target: Icon; lethal: boolean } | null = null;
+          for (const ab of ai.abilities) {
+            if (state.globalMana[ai.playerId] < ab.manaCost) continue;
+            const isDmg = typeof ab.damage === "number" && ab.damage > 0;
+            if (!isDmg) continue;
             for (const e of enemies) {
-              if (hexDistance(me.position, e.position) <= ab.range) {
-                const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(state, me, e, 1.0);
-                if (e.stats.hp - dmg <= 0) {
-                  lethal = { abilityId: ab.id, target: e, dmg };
-                } else if (!choice) {
-                  choice = { abilityId: ab.id, target: e };
-                }
+              if (hexDistance(ai.position, e.position) <= ab.range) {
+                const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(state, ai, e, 1.0);
+                const lethal = e.stats.hp - dmg <= 0;
+                if (lethal) return { ab, target: e, lethal: true };
+                if (!best) best = { ab, target: e, lethal: false };
               }
             }
-            if (lethal) break;
           }
-          return lethal ?? choice;
+          return best;
         };
 
-        // --- 1) Try ability (prefer lethal) ---
-        const abPick = canAbilityNow();
+        // 1) Lethal ability > any ability > basic
+        const abPick = pickAbility();
         if (abPick) {
-          const { abilityId, target } = abPick;
-          const ab = me.abilities.find((a) => a.id === abilityId)!;
+          const { ab, target } = abPick;
+          const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(state, ai, target, 1.0);
 
-          let dmg = ab.damage && ab.damage > 0
-            ? ab.damage
-            : resolveAbilityDamage(state, me, target, 1.0);
-
-          // Apply damage
           state.players = state.players.map((p) => ({
             ...p,
             icons: p.icons.map((ic) => {
               if (ic.id !== target.id) return ic;
               const newHp = Math.max(0, ic.stats.hp - dmg);
-              return {
-                ...ic,
-                stats: { ...ic.stats, hp: newHp },
-                isAlive: newHp > 0,
-                respawnTurns: newHp > 0 ? ic.respawnTurns : 3,
-              };
+              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3 };
             }),
           }));
-
-          // Consume mana & mark action
-          state.globalMana = state.globalMana.map((m, idx) =>
-            idx === me.playerId ? Math.max(0, m - ab.manaCost) : m
-          ) as any;
-
+          state.globalMana = state.globalMana.map((m, idx) => (idx === ai.playerId ? Math.max(0, m - ab.manaCost) : m)) as any;
           state.players = state.players.map((p) => ({
             ...p,
-            icons: p.icons.map((ic) =>
-              ic.id === me.id ? { ...ic, actionTaken: true, ultimateUsed: ic.ultimateUsed || abilityId === "ultimate" } : ic
-            ),
+            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, actionTaken: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic)),
           }));
-
           return state;
         }
 
-        // --- 2) Try basic attack ---
-        const basicTarget = canBasicNow();
-        if (basicTarget && !me.actionTaken) {
-          const damage = resolveBasicAttackDamage(state, me, basicTarget);
-
+        const basicTarget = enemies.find((e) => hexDistance(ai.position, e.position) <= basicRange);
+        if (basicTarget && !ai.actionTaken) {
+          const dmg = resolveBasicAttackDamage(state, ai, basicTarget);
           state.players = state.players.map((p) => ({
             ...p,
             icons: p.icons.map((ic) => {
               if (ic.id !== basicTarget.id) return ic;
-              const newHp = Math.max(0, ic.stats.hp - damage);
-              return {
-                ...ic,
-                stats: { ...ic.stats, hp: newHp },
-                isAlive: newHp > 0,
-                respawnTurns: newHp > 0 ? ic.respawnTurns : 3,
-              };
+              const newHp = Math.max(0, ic.stats.hp - dmg);
+              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3 };
             }),
           }));
-
           state.players = state.players.map((p) => ({
             ...p,
-            icons: p.icons.map((ic) => (ic.id === me.id ? { ...ic, actionTaken: true } : ic)),
+            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, actionTaken: true } : ic)),
           }));
-
           return state;
         }
 
-        // --- 3) Move once (terrain aware) toward closest enemy, and if after move can attack, do so ---
-        if (!me.movedThisTurn && me.stats.movement > 0 && enemies.length) {
-          const budget = Math.min(me.stats.movement, me.stats.moveRange);
+        // 2) Move once toward nearest enemy (terrain-aware), then try basic
+        if (!ai.movedThisTurn && ai.stats.movement > 0 && enemies.length) {
+          const budget = Math.min(ai.stats.movement, ai.stats.moveRange);
           const occupied = new Set(
-            state.players
-              .flatMap((p) => p.icons)
-              .filter((ic) => ic.isAlive && ic.id !== me.id)
-              .map((ic) => tileKey(ic.position.q, ic.position.r))
+            state.players.flatMap((p) => p.icons).filter((ic) => ic.isAlive && ic.id !== ai.id).map((ic) => tileKey(ic.position.q, ic.position.r))
           );
-          const costMap = reachableWithCosts(state.board, me.position, budget, occupied);
-          if (costMap.size > 0) {
-            // pick tile minimizing raw hex distance to nearest enemy; tie-break: cheaper cost
+          const costMap = reachableWithCosts(state.board, ai.position, budget, occupied);
+          if (costMap.size) {
             let best: { coord: Coordinates; cost: number; score: number } | null = null;
             for (const [key, cost] of costMap.entries()) {
               const [qStr, rStr] = key.split(",");
@@ -406,74 +359,58 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                 best = { coord: cand, cost, score: minD };
               }
             }
-
             if (best) {
-              const from = { ...me.position };
-              const to = best.coord;
-              const spent = best.cost;
-
-              // move
               state.players = state.players.map((p) => ({
                 ...p,
                 icons: p.icons.map((ic) =>
-                  ic.id === me.id
+                  ic.id === ai.id
                     ? {
                         ...ic,
-                        position: to,
+                        position: best!.coord,
                         movedThisTurn: true,
-                        stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - spent) },
+                        stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - best!.cost) },
                       }
                     : ic
                 ),
               }));
 
-              // after move, see if basic attack is now possible
-              const meAfter = state.players.flatMap((p) => p.icons).find((i) => i.id === me.id)!;
+              const aiAfter = state.players.flatMap((p) => p.icons).find((i) => i.id === ai.id)!;
               const tgtAfter = state.players[enemyTeam].icons
                 .filter((i) => i.isAlive)
-                .find((e) => hexDistance(meAfter.position, e.position) <= basicRange);
-
-              if (tgtAfter && !meAfter.actionTaken) {
-                const damage = resolveBasicAttackDamage(state, meAfter, tgtAfter);
+                .find((e) => hexDistance(aiAfter.position, e.position) <= basicRange);
+              if (tgtAfter && !aiAfter.actionTaken) {
+                const dmg = resolveBasicAttackDamage(state, aiAfter, tgtAfter);
                 state.players = state.players.map((p) => ({
                   ...p,
                   icons: p.icons.map((ic) => {
                     if (ic.id !== tgtAfter.id) return ic;
-                    const newHp = Math.max(0, ic.stats.hp - damage);
-                    return {
-                      ...ic,
-                      stats: { ...ic.stats, hp: newHp },
-                      isAlive: newHp > 0,
-                      respawnTurns: newHp > 0 ? ic.respawnTurns : 3,
-                    };
+                    const newHp = Math.max(0, ic.stats.hp - dmg);
+                    return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3 };
                   }),
                 }));
                 state.players = state.players.map((p) => ({
                   ...p,
-                  icons: p.icons.map((ic) => (ic.id === meAfter.id ? { ...ic, actionTaken: true } : ic)),
+                  icons: p.icons.map((ic) => (ic.id === aiAfter.id ? { ...ic, actionTaken: true } : ic)),
                 }));
               }
               return state;
             }
           }
         }
-
-        // --- 4) Nothing else → end turn happens via timer below ---
         return state;
       });
 
-      // End the AI turn if it spent its action or cannot act
+      // End AI turn if done / cannot act
       setTimeout(() => {
-        setGameState((prev) => {
-          const me = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
-          if (!me || me.playerId !== 1) return prev;
-          // If action is taken OR no movement left / already moved and no target reachable → end
+        const s = (cb: (prev: ExtState) => ExtState) => setGameState(cb as any);
+        s((prev) => {
+          const ai = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
+          if (!ai || ai.playerId !== 1) return prev;
           const enemies = prev.players[0].icons.filter((i) => i.isAlive);
-          const basicRange = (me.name === "Napoleon-chan" || me.name === "Da Vinci-chan") ? 2 : 1;
-          const hasBasicNow = enemies.some((e) => hexDistance(me.position, e.position) <= basicRange);
-          const canStillAct = !me.actionTaken && (hasBasicNow || me.stats.movement > 0);
-          if (canStillAct) return prev;
-          return prev; // endTurn called outside setState to avoid nested reducers
+          const rng = (ai.name === "Napoleon-chan" || ai.name === "Da Vinci-chan") ? 2 : 1;
+          const canBasic = enemies.some((e) => hexDistance(ai.position, e.position) <= rng);
+          const canAct = !ai.actionTaken && (canBasic || ai.stats.movement > 0);
+          return canAct ? prev : prev;
         });
         endTurn();
       }, 10);
@@ -484,63 +421,232 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
   }, [gameState.activeIconId, gameState.phase, gameState.gameMode]);
 
   /* =========================
-     Input handlers
+     Input handlers (PLAYER targeting restored)
      ========================= */
 
   const selectTile = useCallback((coordinates: Coordinates) => {
     setGameState((prev) => {
       const state = { ...prev } as ExtState;
-      const activeIcon = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
-      if (!activeIcon) return prev;
+      const me = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
+      if (!me) return prev;
 
       // Prevent controlling AI in singleplayer
-      if (state.gameMode === "singleplayer" && activeIcon.playerId === 1) return prev;
+      if (state.gameMode === "singleplayer" && me.playerId === 1) return prev;
 
-      // Targeting path removed from this hook for determinism.
-      // Movement or selection only.
+      // Targeting path restored
+      if (state.targetingMode) {
+        const { range, abilityId } = state.targetingMode;
+        if (hexDistance(me.position, coordinates) > range) return prev;
 
-      const clickedIcon = state.players
-        .flatMap((p) => p.icons)
-        .find((i) => i.isAlive && i.position.q === coordinates.q && i.position.r === coordinates.r);
+        const targetIcon = state.players
+          .flatMap((p) => p.icons)
+          .find((ic) => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r);
 
-      if (clickedIcon && clickedIcon.id === state.activeIconId) {
-        return { ...state, selectedIcon: clickedIcon.id };
+        let updated = state as ExtState;
+        let updatedBaseHealth = [...state.baseHealth];
+        let updatedObjectives = { ...state.objectives };
+
+        if (abilityId === "basic_attack") {
+          if (targetIcon) {
+            if (targetIcon.playerId === me.playerId) {
+              toast.error("Cannot attack your own character!");
+              return prev;
+            }
+            const dmg = resolveBasicAttackDamage(updated, me, targetIcon);
+            updated.players = updated.players.map((player) => ({
+              ...player,
+              icons: player.icons.map((ic) =>
+                ic.id !== targetIcon.id
+                  ? ic
+                  : {
+                      ...ic,
+                      stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+                      isAlive: ic.stats.hp - dmg > 0,
+                      respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 3,
+                    }
+              ),
+            }));
+          } else {
+            // ENV → Might vs 0 DEF
+            const envDamage = Math.max(0.1, calcEffectiveStats(updated, me).might);
+
+            const isBase =
+              (coordinates.q === -6 && coordinates.r === 5) ||
+              (coordinates.q === 6 && coordinates.r === -5);
+            if (isBase) {
+              const enemyId = me.playerId === 0 ? 1 : 0;
+              updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - envDamage);
+            } else {
+              // Beast camp
+              const campIndex = coordinates.q === -2 && coordinates.r === 2 ? 0 : coordinates.q === 2 && coordinates.r === -2 ? 1 : -1;
+              if (campIndex !== -1 && !state.objectives.beastCamps.defeated[campIndex]) {
+                const newHp = Math.max(0, state.objectives.beastCamps.hp[campIndex] - envDamage);
+                const hpArr = [...state.objectives.beastCamps.hp];
+                const defArr = [...state.objectives.beastCamps.defeated];
+                hpArr[campIndex] = newHp;
+
+                if (newHp <= 0 && !defArr[campIndex]) {
+                  defArr[campIndex] = true;
+                  updated.board = updated.board.map((tile) =>
+                    tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+                      ? { ...tile, terrain: { type: "plain", effects: {} } }
+                      : tile
+                  );
+                  const newM = [...updated.teamBuffs.mightBonus];
+                  const newP = [...updated.teamBuffs.powerBonus];
+                  newM[me.playerId] = Math.min((newM[me.playerId] ?? 0) + 15, 30);
+                  newP[me.playerId] = Math.min((newP[me.playerId] ?? 0) + 15, 30);
+                  updated.teamBuffs = { mightBonus: newM, powerBonus: newP };
+                  toast.success("Beast Camp defeated! Team gains +15% Might and Power!");
+                }
+                updatedObjectives = { ...updatedObjectives, beastCamps: { ...updatedObjectives.beastCamps, hp: hpArr, defeated: defArr } };
+              } else {
+                toast.error("No target to attack!");
+                return prev;
+              }
+            }
+          }
+        } else {
+          // Ability path
+          const ability = me.abilities.find((a) => a.id === abilityId);
+          if (!ability) return prev;
+
+          if (typeof (ability as any).healing === "number" && (ability as any).healing > 0) {
+            if (!targetIcon || targetIcon.playerId !== me.playerId) {
+              toast.error("Healing can only target allies!");
+              return prev;
+            }
+            const heal = (ability as any).healing as number;
+            updated.players = updated.players.map((player) => ({
+              ...player,
+              icons: player.icons.map((ic) =>
+                ic.id !== targetIcon.id
+                  ? ic
+                  : { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + heal) } }
+              ),
+            }));
+          } else if (typeof ability.damage === "number") {
+            if (targetIcon) {
+              const dmg = ability.damage > 0 ? ability.damage : resolveAbilityDamage(updated, me, targetIcon, 1.0);
+              updated.players = updated.players.map((player) => ({
+                ...player,
+                icons: player.icons.map((ic) =>
+                  ic.id !== targetIcon.id
+                    ? ic
+                    : {
+                        ...ic,
+                        stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+                        isAlive: ic.stats.hp - dmg > 0,
+                        respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 3,
+                      }
+                ),
+              }));
+            } else {
+              // ENV → Power vs 0 DEF
+              const envDamage = Math.max(0.1, calcEffectiveStats(updated, me).power);
+
+              const isBase =
+                (coordinates.q === -6 && coordinates.r === 5) ||
+                (coordinates.q === 6 && coordinates.r === -5);
+              if (isBase) {
+                const enemyId = me.playerId === 0 ? 1 : 0;
+                updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - envDamage);
+              } else {
+                const campIndex = coordinates.q === -2 && coordinates.r === 2 ? 0 : coordinates.q === 2 && coordinates.r === -2 ? 1 : -1;
+                if (campIndex !== -1 && !state.objectives.beastCamps.defeated[campIndex]) {
+                  const newHp = Math.max(0, state.objectives.beastCamps.hp[campIndex] - envDamage);
+                  const hpArr = [...state.objectives.beastCamps.hp];
+                  const defArr = [...state.objectives.beastCamps.defeated];
+                  hpArr[campIndex] = newHp;
+
+                  if (newHp <= 0 && !defArr[campIndex]) {
+                    defArr[campIndex] = true;
+                    updated.board = updated.board.map((tile) =>
+                      tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+                        ? { ...tile, terrain: { type: "plain", effects: {} } }
+                        : tile
+                    );
+                    const newM = [...updated.teamBuffs.mightBonus];
+                    const newP = [...updated.teamBuffs.powerBonus];
+                    newM[me.playerId] = Math.min((newM[me.playerId] ?? 0) + 15, 30);
+                    newP[me.playerId] = Math.min((newP[me.playerId] ?? 0) + 15, 30);
+                    updated.teamBuffs = { mightBonus: newM, powerBonus: newP };
+                    toast.success("Beast Camp defeated! Team gains +15% Might and Power!");
+                  }
+                  updatedObjectives = { ...updatedObjectives, beastCamps: { ...updatedObjectives.beastCamps, hp: hpArr, defeated: defArr } };
+                } else {
+                  toast.error("No target to hit!");
+                  return prev;
+                }
+              }
+            }
+
+            if (ability.id === "ultimate") {
+              updated.players = updated.players.map((p) => ({
+                ...p,
+                icons: p.icons.map((ic) => (ic.id === me.id ? { ...ic, ultimateUsed: true } : ic)),
+              }));
+            }
+          } else {
+            // non-dmg, non-heal: just consume mana + mark action
+          }
+        }
+
+        // Consume mana if ability (not basic) and mark actionTaken
+        const manaCost = state.targetingMode.abilityId === "basic_attack"
+          ? 0
+          : me.abilities.find((a) => a.id === state.targetingMode.abilityId)?.manaCost || 0;
+
+        updated.players = updated.players.map((p) => ({
+          ...p,
+          icons: p.icons.map((ic) => (ic.id === me.id ? { ...ic, actionTaken: true } : ic)),
+        }));
+        updated.globalMana = updated.globalMana.map((m, idx) => (idx === me.playerId ? Math.max(0, m - manaCost) : m)) as any;
+
+        return {
+          ...updated,
+          baseHealth: updatedBaseHealth,
+          objectives: updatedObjectives,
+          targetingMode: undefined,
+        };
       }
 
-      const destinationTile = state.board.find((t) => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
-      if (!destinationTile) return prev;
-      if (destinationTile.terrain.effects.movementModifier === -999) return prev; // impassable
+      // No targeting → selection or movement
+      const clicked = state.players.flatMap((p) => p.icons).find(
+        (i) => i.isAlive && i.position.q === coordinates.q && i.position.r === coordinates.r
+      );
+      if (clicked && clicked.id === state.activeIconId) {
+        return { ...state, selectedIcon: clicked.id };
+      }
 
-      const occupied = state.players
-        .flatMap((p) => p.icons)
-        .some((ic) => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r);
+      const dest = state.board.find((t) => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+      if (!dest) return prev;
+      if (dest.terrain.effects.movementModifier === -999) return prev;
+
+      const occupied = state.players.flatMap((p) => p.icons).some(
+        (ic) => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+      );
       if (occupied) return prev;
 
-      // terrain-aware move (plain=1, forest=2) within movement & moveRange
-      const budget = Math.min(activeIcon.stats.movement, activeIcon.stats.moveRange);
+      const budget = Math.min(me.stats.movement, me.stats.moveRange);
       const occupiedKeys = new Set(
-        state.players
-          .flatMap((p) => p.icons)
-          .filter((ic) => ic.isAlive && ic.id !== activeIcon.id)
-          .map((ic) => tileKey(ic.position.q, ic.position.r))
+        state.players.flatMap((p) => p.icons).filter((ic) => ic.isAlive && ic.id !== me.id).map((ic) => tileKey(ic.position.q, ic.position.r))
       );
-      const costMap = reachableWithCosts(state.board, activeIcon.position, budget, occupiedKeys);
+      const costMap = reachableWithCosts(state.board, me.position, budget, occupiedKeys);
       const destKey = tileKey(coordinates.q, coordinates.r);
       const moveCost = costMap.get(destKey);
-      if (moveCost === undefined) return prev; // not reachable this turn
+      if (moveCost === undefined) return prev;
 
-      const from = { ...activeIcon.position };
-
-      // Move and push to movement stack for undo
+      const from = { ...me.position };
       const movementStack = { ...(state.movementStack ?? {}) };
-      const stack = movementStack[activeIcon.id] ?? [];
+      const stack = movementStack[me.id] ?? [];
       stack.push({ from, to: coordinates, cost: moveCost });
-      movementStack[activeIcon.id] = stack;
+      movementStack[me.id] = stack;
 
       state.players = state.players.map((p) => ({
         ...p,
         icons: p.icons.map((ic) =>
-          ic.id === activeIcon.id
+          ic.id === me.id
             ? {
                 ...ic,
                 position: coordinates,
@@ -558,123 +664,20 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
 
   const useAbility = useCallback((abilityId: string) => {
     setGameState((prev) => {
-      const state = { ...prev } as ExtState;
-      const me = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
+      const me = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
       if (!me || me.actionTaken) return prev;
+      if (prev.gameMode === "singleplayer" && me.playerId === 1) return prev;
 
       const ability = me.abilities.find((a) => a.id === abilityId);
       if (!ability) return prev;
       if (abilityId === "ultimate" && me.ultimateUsed) return prev;
 
-      if (state.globalMana[me.playerId] < ability.manaCost) {
+      if (prev.globalMana[me.playerId] < ability.manaCost) {
         toast.error("Not enough mana!");
         return prev;
       }
 
-      // Simple manual targeting: prefer enemy in range; otherwise camp/base in range
-      const enemies = state.players[(me.playerId === 0 ? 1 : 0)].icons.filter((i) => i.isAlive);
-      let targetIcon: Icon | undefined;
-      for (const e of enemies) {
-        if (hexDistance(me.position, e.position) <= ability.range) {
-          targetIcon = e;
-          break;
-        }
-      }
-
-      let updatedState = state;
-
-      if (typeof (ability as any).healing === "number" && (ability as any).healing > 0) {
-        // heal ally in range (lowest hp% first)
-        const allies = state.players[me.playerId].icons
-          .filter((i) => i.isAlive && hexDistance(me.position, i.position) <= ability.range)
-          .sort((a, b) => a.stats.hp / a.stats.maxHp - b.stats.hp / b.stats.maxHp);
-        if (!allies.length) {
-          toast.error("No ally in range to heal.");
-          return prev;
-        }
-        const healTarget = allies[0];
-        const heal = (ability as any).healing as number;
-        updatedState.players = updatedState.players.map((p) => ({
-          ...p,
-          icons: p.icons.map((ic) =>
-            ic.id === healTarget.id ? { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + heal) } } : ic
-          ),
-        }));
-      } else if (typeof ability.damage === "number" && ability.damage > 0) {
-        if (targetIcon) {
-          const dmg = ability.damage > 0 ? ability.damage : resolveAbilityDamage(updatedState, me, targetIcon, 1.0);
-          updatedState.players = updatedState.players.map((p) => ({
-            ...p,
-            icons: p.icons.map((ic) =>
-              ic.id === targetIcon!.id
-                ? {
-                    ...ic,
-                    stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
-                    isAlive: ic.stats.hp - dmg > 0,
-                    respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 3,
-                  }
-                : ic
-            ),
-          }));
-        } else {
-          // ENV: base/camp in range → Power vs 0
-          const envDamage = Math.max(0.1, calcEffectiveStats(updatedState, me).power);
-          const inRange = (q: number, r: number) => hexDistance(me.position, { q, r }) <= ability.range;
-
-          if (inRange(-6, 5)) {
-            updatedState.baseHealth = [Math.max(0, updatedState.baseHealth[0] - envDamage), updatedState.baseHealth[1]];
-          } else if (inRange(6, -5)) {
-            updatedState.baseHealth = [updatedState.baseHealth[0], Math.max(0, updatedState.baseHealth[1] - envDamage)];
-          } else {
-            const camps: Coordinates[] = [{ q: -2, r: 2 }, { q: 2, r: -2 }];
-            for (let idx = 0; idx < camps.length; idx++) {
-              const c = camps[idx];
-              if (inRange(c.q, c.r) && !updatedState.objectives.beastCamps.defeated[idx]) {
-                const newHp = Math.max(0, updatedState.objectives.beastCamps.hp[idx] - envDamage);
-                const hpArr = [...updatedState.objectives.beastCamps.hp];
-                const defArr = [...updatedState.objectives.beastCamps.defeated];
-                hpArr[idx] = newHp;
-
-                if (newHp <= 0 && !defArr[idx]) {
-                  defArr[idx] = true;
-                  updatedState.board = updatedState.board.map((t) =>
-                    t.coordinates.q === c.q && t.coordinates.r === c.r
-                      ? { ...t, terrain: { type: "plain", effects: {} } }
-                      : t
-                  );
-                  const newM = [...updatedState.teamBuffs.mightBonus];
-                  const newP = [...updatedState.teamBuffs.powerBonus];
-                  newM[me.playerId] = Math.min((newM[me.playerId] ?? 0) + 15, 30);
-                  newP[me.playerId] = Math.min((newP[me.playerId] ?? 0) + 15, 30);
-                  updatedState.teamBuffs = { mightBonus: newM, powerBonus: newP };
-                  toast.success("Beast Camp defeated! Team gains +15% Might and Power!");
-                }
-
-                updatedState.objectives = {
-                  ...updatedState.objectives,
-                  beastCamps: { ...updatedState.objectives.beastCamps, hp: hpArr, defeated: defArr },
-                };
-                break;
-              }
-            }
-          }
-        }
-      } else {
-        // non-damaging, non-heal ability: just consume mana
-      }
-
-      // consume mana, mark action
-      updatedState.globalMana = updatedState.globalMana.map((m, idx) =>
-        idx === me.playerId ? Math.max(0, m - ability.manaCost) : m
-      ) as any;
-      updatedState.players = updatedState.players.map((p) => ({
-        ...p,
-        icons: p.icons.map((ic) =>
-          ic.id === me.id ? { ...ic, actionTaken: true, ultimateUsed: ic.ultimateUsed || abilityId === "ultimate" } : ic
-        ),
-      }));
-
-      return updatedState;
+      return { ...prev, targetingMode: { abilityId, iconId: me.id, range: ability.range } };
     });
   }, []);
 
@@ -685,87 +688,52 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       if (prev.gameMode === "singleplayer" && me.playerId === 1) return prev;
 
       const range = me.name === "Napoleon-chan" || me.name === "Da Vinci-chan" ? 2 : 1;
-      const enemies = prev.players[(me.playerId === 0 ? 1 : 0)].icons.filter((i) => i.isAlive);
-      const target = enemies.find((e) => hexDistance(me.position, e.position) <= range);
-      if (!target) return prev;
-
-      const damage = resolveBasicAttackDamage(prev, me, target);
-      const players = prev.players.map((p) => ({
-        ...p,
-        icons: p.icons.map((ic) => {
-          if (ic.id !== target.id) return ic;
-          const newHp = Math.max(0, ic.stats.hp - damage);
-          return {
-            ...ic,
-            stats: { ...ic.stats, hp: newHp },
-            isAlive: newHp > 0,
-            respawnTurns: newHp > 0 ? ic.respawnTurns : 3,
-          };
-        }),
-      }));
-      const players2 = players.map((p) => ({
-        ...p,
-        icons: p.icons.map((ic) => (ic.id === me.id ? { ...ic, actionTaken: true } : ic)),
-      }));
-      return { ...prev, players: players2 };
+      return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
     });
   }, []);
 
   /* =========================
-     End Turn — robust boundary handling while skipping dead entries
+     End Turn — robust boundary handling during skip
      ========================= */
   const endTurn = useCallback(() => {
     setCurrentTurnTimer(20);
     setGameState((prev) => {
       if (!prev.speedQueue.length) return prev;
 
-      // 1) reset only current icon & clear its movement stack
+      // reset only current icon & clear its movement stack
       const movementStack = { ...(prev.movementStack ?? {}) };
-      movementStack[prev.activeIconId] = []; // clear undo stack at end of this unit’s turn
+      movementStack[prev.activeIconId] = [];
 
       const resetPlayers = prev.players.map((player) => ({
         ...player,
         icons: player.icons.map((ic) =>
           ic.id === prev.activeIconId
-            ? {
-                ...ic,
-                actionTaken: false,
-                movedThisTurn: false,
-                stats: { ...ic.stats, movement: ic.stats.moveRange },
-              }
+            ? { ...ic, actionTaken: false, movedThisTurn: false, stats: { ...ic.stats, movement: ic.stats.moveRange } }
             : ic
         ),
       }));
 
-      // 2) compute the *first* next index
       const len = prev.speedQueue.length;
-      const nextIndexRaw = (prev.queueIndex + 1) % len;
+      let nextIdx = (prev.queueIndex + 1) % len;
+      let boundaryCrossed = nextIdx === 0;
 
-      // 3) Determine if we cross a round boundary while skipping dead entries.
-      //    We mark boundary if we *ever* hit index 0 during the skip scan.
-      let boundaryCrossed = nextIndexRaw === 0;
-      let scanIdx = nextIndexRaw;
+      // skip dead; record if we pass through index 0 at any time
       let guard = 0;
+      let playersScan = resetPlayers;
+      while (guard++ < len) {
+        const id = prev.speedQueue[nextIdx];
+        const ic = playersScan.flatMap((p) => p.icons).find((x) => x.id === id);
+        if (ic?.isAlive) break;
+        nextIdx = (nextIdx + 1) % len;
+        if (nextIdx === 0) boundaryCrossed = true;
+      }
 
-      const scanAlive = (playersArr = resetPlayers) => {
-        while (guard++ < len) {
-          const id = prev.speedQueue[scanIdx];
-          const ic = playersArr.flatMap((p) => p.icons).find((x) => x.id === id);
-          if (ic?.isAlive) break;
-          scanIdx = (scanIdx + 1) % len;
-          if (scanIdx === 0) boundaryCrossed = true;
-        }
-      };
-      scanAlive(resetPlayers);
-
-      // 4) If boundary crossed at any point, apply round boundary (mana + respawn tick + auto-respawn),
-      //    then re-select next living from index 0 forward.
       let playersAfter = resetPlayers;
       let mana = [...prev.globalMana];
       let turnNum = prev.currentTurn;
 
       if (boundaryCrossed) {
-        // Mana: +1 baseline + adjacency (cap GAIN to 4). Also cap pool to 20.
+        // Mana: +1 baseline + adjacency (cap gain to 4) and cap pool to 20
         mana = mana.map((m, pid) => {
           const adj = countAlliesAdjacentToCrystal({ ...prev, players: playersAfter } as GameState, pid);
           const gain = Math.min(4, 1 + adj);
@@ -775,24 +743,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         // Respawn tick ONCE per round, then auto-respawn anyone at 0
         playersAfter = playersAfter.map((player) => ({
           ...player,
-          icons: player.icons.map((ic) =>
-            !ic.isAlive && ic.respawnTurns > 0 ? { ...ic, respawnTurns: ic.respawnTurns - 1 } : ic
-          ),
+          icons: player.icons.map((ic) => (!ic.isAlive && ic.respawnTurns > 0 ? { ...ic, respawnTurns: ic.respawnTurns - 1 } : ic)),
         }));
-
         playersAfter = playersAfter.map((player) => ({
           ...player,
           icons: player.icons.map((ic) => {
             if (!ic.isAlive && ic.respawnTurns <= 0) {
               const free = findFreeSpawnTile(prev.board, { ...prev, players: playersAfter } as GameState, player.id);
               if (free) {
-                return {
-                  ...ic,
-                  isAlive: true,
-                  position: free,
-                  stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 },
-                  respawnTurns: 0,
-                };
+                return { ...ic, isAlive: true, position: free, stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, respawnTurns: 0 };
               }
             }
             return ic;
@@ -801,16 +760,20 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
 
         turnNum = prev.currentTurn + 1;
 
-        // After boundary, start scanning from index 0
-        scanIdx = 0;
+        // after boundary, re-scan from index 0 for first living icon
+        nextIdx = 0;
         guard = 0;
-        scanAlive(playersAfter);
+        while (guard++ < len) {
+          const id = prev.speedQueue[nextIdx];
+          const ic = playersAfter.flatMap((p) => p.icons).find((x) => x.id === id);
+          if (ic?.isAlive) break;
+          nextIdx = (nextIdx + 1) % len;
+        }
       }
 
-      // 5) Apply the chosen active index
-      const nextActiveId = prev.speedQueue[scanIdx];
+      const nextActiveId = prev.speedQueue[nextIdx];
 
-      // 6) victory conditions
+      // victory conditions
       const baseHealth = [...prev.baseHealth];
       const p1Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
       const p2Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
@@ -837,11 +800,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         players: playersAfter,
         movementStack,
         globalMana: mana,
-        queueIndex: scanIdx,
+        queueIndex: nextIdx,
         activeIconId: nextActiveId,
         currentTurn: turnNum,
         selectedIcon: undefined,
-        targetingMode: undefined, // we don't rely on this for AI anymore
+        targetingMode: undefined,
         phase: newPhase,
         winner,
       };
@@ -861,9 +824,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       const tile = prev.board.find((t) => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
       if (!tile || tile.terrain.type !== "spawn") return prev;
 
-      const occupied = prev.players
-        .flatMap((p) => p.icons)
-        .some((i) => i.isAlive && i.position.q === coordinates.q && i.position.r === coordinates.r);
+      const occupied = prev.players.flatMap((p) => p.icons).some((i) => i.isAlive && i.position.q === coordinates.q && i.position.r === coordinates.r);
       if (occupied) return prev;
 
       return {
@@ -872,13 +833,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
           ...p,
           icons: p.icons.map((i) =>
             i.id === iconId
-              ? {
-                  ...i,
-                  isAlive: true,
-                  position: coordinates,
-                  stats: { ...i.stats, hp: i.stats.maxHp, movement: 0 },
-                  respawnTurns: 0,
-                }
+              ? { ...i, isAlive: true, position: coordinates, stats: { ...i.stats, hp: i.stats.maxHp, movement: 0 }, respawnTurns: 0 }
               : i
           ),
         })),
@@ -887,7 +842,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
   }, []);
 
   /* =========================
-     Undo movement — last step only (refund exact cost, forest=2)
+     Undo movement — last step only
      ========================= */
   const undoMovement = useCallback(() => {
     setGameState((prev) => {
@@ -908,7 +863,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             ? {
                 ...ic,
                 position: last.from,
-                movedThisTurn: stack.length > 0, // if stack empty, you fully undone movement
+                movedThisTurn: stack.length > 0,
                 stats: { ...ic.stats, movement: Math.min(ic.stats.moveRange, ic.stats.movement + last.cost) },
               }
             : ic
@@ -923,8 +878,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       const icon = prev.players.flatMap((p) => p.icons).find((i) => i.id === iconId);
       if (!icon || icon.isAlive || icon.respawnTurns > 0) return prev;
 
-      const activeIcon = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
-      if (activeIcon?.playerId !== icon.playerId) {
+      const me = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
+      if (me?.playerId !== icon.playerId) {
         toast.error("You can only respawn on your turn!");
         return prev;
       }
@@ -948,13 +903,14 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     respawnCharacter,
     currentTurnTimer,
     selectIcon,
-    undoMovement,          // now actually undoes last step and refunds movement
+    undoMovement,
     startRespawnPlacement,
-    toggleMenu,            // ESC also toggles this internally
+    toggleMenu,
   };
 };
 
 export default useGameState;
+
 
 
 
