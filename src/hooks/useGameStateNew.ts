@@ -363,7 +363,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             icons: p.icons.map((ic) => {
               if (ic.id !== target.id) return ic;
               const newHp = Math.max(0, ic.stats.hp - dmg);
-              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3 };
+              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+};
             }),
           }));
 
@@ -387,7 +388,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             icons: p.icons.map((ic) => {
               if (ic.id !== basicTarget.id) return ic;
               const newHp = Math.max(0, ic.stats.hp - dmg);
-              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3 };
+              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+ };
             }),
           }));
           state.players = state.players.map((p) => ({
@@ -445,7 +447,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   icons: p.icons.map((ic) => {
                     if (ic.id !== tgtAfter.id) return ic;
                     const newHp = Math.max(0, ic.stats.hp - dmg);
-                    return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3 };
+                    return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+ };
                   }),
                 }));
                 state.players = state.players.map((p) => ({
