@@ -26,7 +26,7 @@ const AI_END_TURN_MS = 450; // delay before ending AI turn after acting
 
 type Qr = { q: number; r: number };
 type MoveStep = { from: Coordinates; to: Coordinates; cost: number };
-type LogEntry = { id: string; turn: number; text: string };
+type LogEntry = { id: string; turn: number; text: string; playerId: 0 | 1 };
 
 const tileKey = (q: number, r: number) => `${q},${r}`;
 
@@ -35,10 +35,11 @@ function makeId() {
     ? crypto.randomUUID()
     : String(Date.now() + Math.random());
 }
-function pushLog(state: any, text: string) {
+function pushLog(state: any, text: string, playerId: number) {
+  const pid: 0 | 1 = playerId === 0 ? 0 : 1;
   const max = 40;
   const log: LogEntry[] = state.combatLog ?? [];
-  const next = [...log, { id: makeId(), turn: state.currentTurn, text }];
+  const next = [...log, { id: makeId(), turn: state.currentTurn, text, playerId: pid }];
   state.combatLog = next.slice(-max);
 }
 
@@ -264,7 +265,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         manaCrystal: { controlled: false },
         beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
       },
-      teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0] },
+      teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
       baseHealth: [5, 5],
       matchTimer: 600,
       gameMode,
@@ -372,7 +373,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, actionTaken: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic)),
           }));
 
-          pushLog(state, `${ai.name} cast ${ab.name} on ${target.name} for ${dmg.toFixed(0)} dmg`);
+          pushLog(state, `${ai.name} cast ${ab.name} on ${target.name} for ${dmg.toFixed(0)} dmg`, ai.playerId);
           return state;
         }
 
@@ -392,7 +393,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             ...p,
             icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, actionTaken: true } : ic)),
           }));
-          pushLog(state, `${ai.name} basic-attacked ${basicTarget.name} for ${dmg.toFixed(0)} dmg`);
+          pushLog(state, `${ai.name} basic-attacked ${basicTarget.name} for ${dmg.toFixed(0)} dmg`, ai.playerId);
           return state;
         }
 
@@ -450,7 +451,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   ...p,
                   icons: p.icons.map((ic) => (ic.id === aiAfter.id ? { ...ic, actionTaken: true } : ic)),
                 }));
-                pushLog(state, `${aiAfter.name} basic-attacked ${tgtAfter.name} for ${dmg.toFixed(0)} dmg`);
+                pushLog(state, `${aiAfter.name} basic-attacked ${tgtAfter.name} for ${dmg.toFixed(0)} dmg`, aiAfter.playerId);
               }
               return state;
             }
@@ -525,7 +526,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             icons: p.icons.map((ic) => (ic.id === me.id ? { ...ic, actionTaken: true } : ic)),
           }));
 
-          pushLog(updated, `${me.name} used ${ability.name} to teleport`);
+          pushLog(updated, `${me.name} used ${ability.name} to teleport`, me.playerId);
           return { ...updated, targetingMode: undefined };
         }
 
@@ -537,7 +538,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
               return prev;
             }
             const dmg = resolveBasicAttackDamage(updated, me, targetIcon);
-            pushLog(updated, `${me.name} basic-attacked ${targetIcon.name} for ${dmg.toFixed(0)} dmg`);
+            pushLog(updated, `${me.name} basic-attacked ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, me.playerId);
 
             updated.players = updated.players.map((player) => ({
               ...player,
@@ -565,7 +566,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             if (isBase) {
               const enemyId = me.playerId === 0 ? 1 : 0;
               updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - envDamage);
-              pushLog(updated, `${me.name} hit the enemy base for ${envDamage.toFixed(0)} dmg`);
+              pushLog(updated, `${me.name} hit the enemy base for ${envDamage.toFixed(0)} dmg`, me.playerId);
             } else {
               const campIndex = coordinates.q === -2 && coordinates.r === 2 ? 0 : coordinates.q === 2 && coordinates.r === -2 ? 1 : -1;
               if (campIndex !== -1 && !state.objectives.beastCamps.defeated[campIndex]) {
@@ -573,7 +574,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                 const hpArr = [...state.objectives.beastCamps.hp];
                 const defArr = [...state.objectives.beastCamps.defeated];
                 hpArr[campIndex] = newHp;
-                pushLog(updated, `${me.name} hit a beast camp for ${envDamage.toFixed(0)} dmg`);
+                pushLog(updated, `${me.name} hit a beast camp for ${envDamage.toFixed(0)} dmg`, me.playerId);
 
                 if (newHp <= 0 && !defArr[campIndex]) {
                   defArr[campIndex] = true;
@@ -586,9 +587,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   const newP = [...updated.teamBuffs.powerBonus];
                   newM[me.playerId] = Math.min((newM[me.playerId] ?? 0) + 15, 30);
                   newP[me.playerId] = Math.min((newP[me.playerId] ?? 0) + 15, 30);
-                  updated.teamBuffs = { mightBonus: newM, powerBonus: newP };
+                  updated.teamBuffs = { mightBonus: newM, powerBonus: newP, homeBaseBonus: updated.teamBuffs.homeBaseBonus ?? [0, 0] };
                   toast.success("Beast Camp defeated! Team gains +15% Might and Power!");
-                  pushLog(updated, `Beast camp defeated! Team +15% Might & Power`);
+                  pushLog(updated, `Beast camp defeated! Team +15% Might & Power`, me.playerId);
                 }
                 updatedObjectives = { ...updatedObjectives, beastCamps: { ...updatedObjectives.beastCamps, hp: hpArr, defeated: defArr } };
               } else {
@@ -615,7 +616,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   : { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + heal) } }
               ),
             }));
-            pushLog(updated, `${me.name} cast ${ability.name} on ${targetIcon.name}, healing ${heal} HP`);
+            pushLog(updated, `${me.name} cast ${ability.name} on ${targetIcon.name}, healing ${heal} HP`, me.playerId);
           } else if (typeof (ability as any).damage === "number") {
             if (targetIcon) {
               const dmg = (ability as any).damage > 0 ? (ability as any).damage : resolveAbilityDamage(updated, me, targetIcon, 1.0);
@@ -632,7 +633,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                       }
                 ),
               }));
-              pushLog(updated, `${me.name} cast ${ability.name} on ${targetIcon.name} for ${dmg.toFixed(0)} dmg`);
+              pushLog(updated, `${me.name} cast ${ability.name} on ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, me.playerId);
             } else {
               if (isOwnBase) {
                 toast.error("Cannot attack your own base!");
@@ -646,7 +647,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
               if (isBase) {
                 const enemyId = me.playerId === 0 ? 1 : 0;
                 updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - envDamage);
-                pushLog(updated, `${me.name} used ${ability.name} on the enemy base for ${envDamage.toFixed(0)} dmg`);
+                pushLog(updated, `${me.name} used ${ability.name} on the enemy base for ${envDamage.toFixed(0)} dmg`, me.playerId);
               } else {
                 const campIndex = coordinates.q === -2 && coordinates.r === 2 ? 0 : coordinates.q === 2 && coordinates.r === -2 ? 1 : -1;
                 if (campIndex !== -1 && !state.objectives.beastCamps.defeated[campIndex]) {
@@ -654,7 +655,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   const hpArr = [...state.objectives.beastCamps.hp];
                   const defArr = [...state.objectives.beastCamps.defeated];
                   hpArr[campIndex] = newHp;
-                  pushLog(updated, `${me.name} used ${ability.name} on a camp for ${envDamage.toFixed(0)} dmg`);
+                  pushLog(updated, `${me.name} used ${ability.name} on a camp for ${envDamage.toFixed(0)} dmg`, me.playerId);
 
                   if (newHp <= 0 && !defArr[campIndex]) {
                     defArr[campIndex] = true;
@@ -667,9 +668,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                     const newP = [...updated.teamBuffs.powerBonus];
                     newM[me.playerId] = Math.min((newM[me.playerId] ?? 0) + 15, 30);
                     newP[me.playerId] = Math.min((newP[me.playerId] ?? 0) + 15, 30);
-                    updated.teamBuffs = { mightBonus: newM, powerBonus: newP };
+                    updated.teamBuffs = { mightBonus: newM, powerBonus: newP, homeBaseBonus: updated.teamBuffs.homeBaseBonus ?? [0, 0] };
                     toast.success("Beast Camp defeated! Team gains +15% Might and Power!");
-                    pushLog(updated, `Beast camp defeated! Team +15% Might & Power`);
+                    pushLog(updated, `Beast camp defeated! Team +15% Might & Power`, me.playerId);
                   }
                   updatedObjectives = { ...updatedObjectives, beastCamps: { ...updatedObjectives.beastCamps, hp: hpArr, defeated: defArr } };
                 } else {
@@ -852,7 +853,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             if (!ic.isAlive && ic.respawnTurns <= 0) {
               const free = findFreeSpawnTile(prev.board, { ...prev, players: playersAfter } as GameState, player.id);
               if (free) {
-                pushLog(prev, `${ic.name} has respawned`);
+                pushLog(prev, `${ic.name} has respawned`, ic.playerId);
                 return { ...ic, isAlive: true, position: free, stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, respawnTurns: 0 };
               }
             }
@@ -998,6 +999,39 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     setGameState((prev) => ({ ...prev, menuOpen: false, phase: "menu" as any }));
   }, []);
 
+  const resetGame = useCallback(() => {
+    setGameState(() => {
+      const initialIcons = createInitialIcons();
+      const speedQueueRaw = initSpeedQueue(initialIcons);
+      const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
+      return {
+        currentTurn: 1,
+        activeIconId: speedQueue[0] ?? initialIcons[0].id,
+        phase: "combat",
+        players: [
+          { id: 0, name: "Player 1", icons: initialIcons.filter((i) => i.playerId === 0), color: "blue", isAI: false },
+          { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter((i) => i.playerId === 1), color: "red", isAI: gameMode === "singleplayer" },
+        ],
+        board: createInitialBoard(),
+        globalMana: [15, 15],
+        turnTimer: 20,
+        speedQueue,
+        queueIndex: 0,
+        objectives: {
+          manaCrystal: { controlled: false },
+          beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
+        },
+        teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
+        baseHealth: [5, 5],
+        matchTimer: 600,
+        gameMode,
+        movementStack: {},
+        menuOpen: false,
+        combatLog: [],
+      } as ExtState;
+    });
+  }, [gameMode]);
+
   return {
     gameState,
     selectTile,
@@ -1011,6 +1045,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     startRespawnPlacement,
     toggleMenu,
     goToMainMenu,
+    resetGame,
   };
 };
 
