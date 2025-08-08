@@ -40,6 +40,8 @@ export interface Icon {
   hasUltimate: boolean; // Can use ultimate this match
   ultimateUsed: boolean; // Has used ultimate this match
   movementHistory?: { position: Coordinates; cost: number }[]; // Move history for undo
+  hasRespawned?: boolean;
+
 }
 
 export interface Ability {
