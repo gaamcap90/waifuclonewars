@@ -854,13 +854,19 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         playersAfter = playersAfter.map((player) => ({
           ...player,
           icons: player.icons.map((ic) => {
-            if (!ic.isAlive && ic.respawnTurns <= 0) {
-              const free = findFreeSpawnTile(prev.board, { ...prev, players: playersAfter } as GameState, player.id);
-              if (free) {
-                pushLog(prev, `${ic.name} has respawned`, ic.playerId);
-                return { ...ic, isAlive: true, position: free, stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, respawnTurns: 0 };
-              }
-            }
+            if (!ic.isAlive && ic.respawnTurns <= 0 && !ic.hasRespawned) {
+  const free = findFreeSpawnTile(prev.board, { ...prev, players: playersAfterRespawn } as GameState, player.id);
+  if (free) {
+    return {
+      ...ic,
+      isAlive: true,
+      hasRespawned: true,       // ← mark so they never respawn again
+      position: free,
+      stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, // no movement on spawn turn
+      respawnTurns: 0,
+    };
+  }
+}
             return ic;
           }),
         }));
