@@ -41,6 +41,7 @@ export interface Icon {
   ultimateUsed: boolean; // Has used ultimate this match
   movementHistory?: { position: Coordinates; cost: number }[]; // Move history for undo
   hasRespawned?: boolean;
+  justRespawned?: boolean;
 
 }
 
