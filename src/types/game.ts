@@ -87,6 +87,7 @@ export interface GameState {
     mightBonus: number[]; // % bonus for each player [player1, player2]
     powerBonus: number[]; // % bonus for each player
     homeBaseBonus: number[]; // % bonus for characters on home base
+    beastStacks: number[]; // Number of beast camps defeated per player
   };
   baseHealth: number[];
   matchTimer: number; // In seconds (600 = 10 minutes)

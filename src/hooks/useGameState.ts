@@ -205,7 +205,8 @@ const useGameState = (gameMode: 'singleplayer' | 'multiplayer' = 'singleplayer')
       teamBuffs: {
         mightBonus: [0, 0],
         powerBonus: [0, 0],
-        homeBaseBonus: [0, 0]
+        homeBaseBonus: [0, 0],
+        beastStacks: [0, 0]
       },
       baseHealth: [10, 10],
       matchTimer: 0, // Timer in seconds
