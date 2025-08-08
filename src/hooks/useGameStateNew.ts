@@ -226,7 +226,8 @@ const createInitialIcons = (): Icon[] => {
         movedThisTurn: false,
         hasUltimate: true,
         ultimateUsed: false,
-        hasRespawned: false
+        hasRespawned: false,
+        justRespawned: false
       });
     });
   }
@@ -814,7 +815,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         ...player,
         icons: player.icons.map((ic) =>
           ic.id === prev.activeIconId
-            ? { ...ic, actionTaken: false, movedThisTurn: false, stats: { ...ic.stats, movement: ic.stats.moveRange } }
+            ? { ...ic, actionTaken: false, movedThisTurn: false, justRespawned: false, stats: { ...ic.stats, movement: ic.stats.moveRange } }
             : ic
         ),
       }));
@@ -860,7 +861,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     return {
       ...ic,
       isAlive: true,
-      hasRespawned: true,       // ← mark so they never respawn again
+      hasRespawned: true,   // ← mark so they never respawn again
+      justRespawned: true,      
       position: free,
       stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, // no movement on spawn turn
       respawnTurns: 0,
