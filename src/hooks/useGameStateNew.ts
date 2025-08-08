@@ -5,7 +5,7 @@ import { toast } from "sonner";
 // TURN/COMBAT HELPERS (external)
 import {
   initSpeedQueue,
-  isRoundBoundary, // not relied on exclusively; we also detect during skip
+  isRoundBoundary, // kept for compatibility, not strictly required
   countAlliesAdjacentToCrystal,
   findFreeSpawnTile,
   hexDistance,
@@ -83,6 +83,18 @@ function reachableWithCosts(
   return dist;
 }
 
+/** Normalize a speedQueue (whatever the helper returns) into an array of string icon IDs. */
+function normalizeSpeedQueue(q: any, icons: Icon[]): string[] {
+  if (!Array.isArray(q)) return icons.map((i) => i.id);
+  return q
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object" && "id" in item) return (item as any).id as string;
+      return String(item || "");
+    })
+    .filter((id) => typeof id === "string" && id.length > 0);
+}
+
 /* =========================
    Board / Icons init
    ========================= */
@@ -93,7 +105,8 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (
     (q >= -6 && q <= -4 && r >= 3 && r <= 5) ||
     (q >= 4 && q <= 6 && r >= -5 && r <= -3)
-  ) return { type: "spawn", effects: {} };
+  )
+    return { type: "spawn", effects: {} };
   if ((q === -2 && r === 2) || (q === 2 && r === -2)) return { type: "beast_camp", effects: { movementModifier: -999 } };
   if (Math.abs(q) >= 6 || Math.abs(r) >= 6 || Math.abs(q + r) >= 6)
     return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
@@ -192,16 +205,21 @@ const createInitialIcons = (): Icon[] => {
    Hook
    ========================= */
 
-type ExtState = GameState & { movementStack: Record<string, MoveStep[]> };
+type ExtState = GameState & {
+  movementStack: Record<string, MoveStep[]>;
+  menuOpen: boolean;
+};
 
 const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer") => {
   const [gameState, setGameState] = useState<ExtState>(() => {
     const initialIcons = createInitialIcons();
-    const speedQueue = initSpeedQueue(initialIcons) as unknown as string[]; // should be array of iconIds
+
+    const speedQueueRaw = initSpeedQueue(initialIcons);
+    const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
 
     return {
       currentTurn: 1,
-      activeIconId: speedQueue[0],
+      activeIconId: speedQueue[0] ?? initialIcons[0].id,
       phase: "combat",
       players: [
         { id: 0, name: "Player 1", icons: initialIcons.filter((i) => i.playerId === 0), color: "blue", isAI: false },
@@ -221,25 +239,26 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       matchTimer: 600,
       gameMode,
       movementStack: {},
+      menuOpen: false,
     } as ExtState;
   });
 
   const [currentTurnTimer, setCurrentTurnTimer] = useState(20);
 
   /* =========================
-     ESC → toggle Menu
+     ESC → toggle Menu (also sets phase)
      ========================= */
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setGameState((prev) => {
-          if (prev.phase === "victory" || prev.phase === "defeat") return prev;
-          return { ...prev, phase: prev.phase === "menu" ? "combat" : ("menu" as any) };
+          const menuOpen = !prev.menuOpen;
+          return { ...prev, menuOpen, phase: menuOpen ? ("menu" as any) : "combat" };
         });
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, { passive: true });
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
   /* =========================
@@ -273,22 +292,28 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     const t = setTimeout(() => {
       setGameState((prev) => {
         const state = { ...prev } as ExtState;
+
+        // normalize queue on the fly if needed
+        const allIcons = state.players.flatMap((p) => p.icons);
+        const normalizedQueue = normalizeSpeedQueue(state.speedQueue, allIcons);
+        if (normalizedQueue !== state.speedQueue) (state as any).speedQueue = normalizedQueue;
+
         const ai = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
         if (!ai || !ai.isAlive || ai.playerId !== 1) return prev;
 
         const enemyTeam = 0;
         const enemies = state.players[enemyTeam].icons.filter((i) => i.isAlive);
-        const basicRange = (ai.name === "Napoleon-chan" || ai.name === "Da Vinci-chan") ? 2 : 1;
+        const basicRange = ai.name === "Napoleon-chan" || ai.name === "Da Vinci-chan" ? 2 : 1;
 
         const pickAbility = () => {
           let best: { ab: typeof ai.abilities[number]; target: Icon; lethal: boolean } | null = null;
           for (const ab of ai.abilities) {
             if (state.globalMana[ai.playerId] < ab.manaCost) continue;
-            const isDmg = typeof ab.damage === "number" && ab.damage > 0;
+            const isDmg = typeof (ab as any).damage === "number" && (ab as any).damage > 0;
             if (!isDmg) continue;
             for (const e of enemies) {
               if (hexDistance(ai.position, e.position) <= ab.range) {
-                const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(state, ai, e, 1.0);
+                const dmg = (ab as any).damage > 0 ? (ab as any).damage : resolveAbilityDamage(state, ai, e, 1.0);
                 const lethal = e.stats.hp - dmg <= 0;
                 if (lethal) return { ab, target: e, lethal: true };
                 if (!best) best = { ab, target: e, lethal: false };
@@ -298,11 +323,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
           return best;
         };
 
-        // 1) Lethal ability > any ability > basic
+        // 1) Lethal ability > any ability
         const abPick = pickAbility();
         if (abPick) {
           const { ab, target } = abPick;
-          const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(state, ai, target, 1.0);
+          const dmg = (ab as any).damage > 0 ? (ab as any).damage : resolveAbilityDamage(state, ai, target, 1.0);
 
           state.players = state.players.map((p) => ({
             ...p,
@@ -320,6 +345,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
           return state;
         }
 
+        // 2) Basic attack if in range
         const basicTarget = enemies.find((e) => hexDistance(ai.position, e.position) <= basicRange);
         if (basicTarget && !ai.actionTaken) {
           const dmg = resolveBasicAttackDamage(state, ai, basicTarget);
@@ -338,7 +364,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
           return state;
         }
 
-        // 2) Move once toward nearest enemy (terrain-aware), then try basic
+        // 3) Move once toward nearest enemy (terrain-aware), then try basic
         if (!ai.movedThisTurn && ai.stats.movement > 0 && enemies.length) {
           const budget = Math.min(ai.stats.movement, ai.stats.moveRange);
           const occupied = new Set(
@@ -401,19 +427,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       });
 
       // End AI turn if done / cannot act
-      setTimeout(() => {
-        const s = (cb: (prev: ExtState) => ExtState) => setGameState(cb as any);
-        s((prev) => {
-          const ai = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
-          if (!ai || ai.playerId !== 1) return prev;
-          const enemies = prev.players[0].icons.filter((i) => i.isAlive);
-          const rng = (ai.name === "Napoleon-chan" || ai.name === "Da Vinci-chan") ? 2 : 1;
-          const canBasic = enemies.some((e) => hexDistance(ai.position, e.position) <= rng);
-          const canAct = !ai.actionTaken && (canBasic || ai.stats.movement > 0);
-          return canAct ? prev : prev;
-        });
-        endTurn();
-      }, 10);
+      setTimeout(() => endTurn(), 10);
     }, 150);
 
     return () => clearTimeout(t);
@@ -446,6 +460,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         let updatedBaseHealth = [...state.baseHealth];
         let updatedObjectives = { ...state.objectives };
 
+        const isOwnBase =
+          (me.playerId === 0 && coordinates.q === -6 && coordinates.r === 5) ||
+          (me.playerId === 1 && coordinates.q === 6 && coordinates.r === -5);
+
         if (abilityId === "basic_attack") {
           if (targetIcon) {
             if (targetIcon.playerId === me.playerId) {
@@ -468,6 +486,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             }));
           } else {
             // ENV → Might vs 0 DEF
+            if (isOwnBase) {
+              toast.error("Cannot attack your own base!");
+              return prev;
+            }
             const envDamage = Math.max(0.1, calcEffectiveStats(updated, me).might);
 
             const isBase =
@@ -525,9 +547,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   : { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + heal) } }
               ),
             }));
-          } else if (typeof ability.damage === "number") {
+          } else if (typeof (ability as any).damage === "number") {
             if (targetIcon) {
-              const dmg = ability.damage > 0 ? ability.damage : resolveAbilityDamage(updated, me, targetIcon, 1.0);
+              const dmg = (ability as any).damage > 0 ? (ability as any).damage : resolveAbilityDamage(updated, me, targetIcon, 1.0);
               updated.players = updated.players.map((player) => ({
                 ...player,
                 icons: player.icons.map((ic) =>
@@ -543,6 +565,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
               }));
             } else {
               // ENV → Power vs 0 DEF
+              if (isOwnBase) {
+                toast.error("Cannot attack your own base!");
+                return prev;
+              }
               const envDamage = Math.max(0.1, calcEffectiveStats(updated, me).power);
 
               const isBase =
@@ -593,9 +619,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         }
 
         // Consume mana if ability (not basic) and mark actionTaken
-        const manaCost = state.targetingMode.abilityId === "basic_attack"
-          ? 0
-          : me.abilities.find((a) => a.id === state.targetingMode.abilityId)?.manaCost || 0;
+        const manaCost =
+          state.targetingMode.abilityId === "basic_attack"
+            ? 0
+            : me.abilities.find((a) => a.id === state.targetingMode.abilityId)?.manaCost || 0;
 
         updated.players = updated.players.map((p) => ({
           ...p,
@@ -700,6 +727,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     setGameState((prev) => {
       if (!prev.speedQueue.length) return prev;
 
+      // normalize queue snapshot
+      const allIcons = prev.players.flatMap((p) => p.icons);
+      const normalizedQueue = normalizeSpeedQueue(prev.speedQueue, allIcons);
+
       // reset only current icon & clear its movement stack
       const movementStack = { ...(prev.movementStack ?? {}) };
       movementStack[prev.activeIconId] = [];
@@ -713,15 +744,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         ),
       }));
 
-      const len = prev.speedQueue.length;
+      const len = normalizedQueue.length;
       let nextIdx = (prev.queueIndex + 1) % len;
-      let boundaryCrossed = nextIdx === 0;
 
-      // skip dead; record if we pass through index 0 at any time
+      // detect boundary crossing while skipping dead
+      let boundaryCrossed = nextIdx === 0;
       let guard = 0;
       let playersScan = resetPlayers;
       while (guard++ < len) {
-        const id = prev.speedQueue[nextIdx];
+        const id = normalizedQueue[nextIdx];
         const ic = playersScan.flatMap((p) => p.icons).find((x) => x.id === id);
         if (ic?.isAlive) break;
         nextIdx = (nextIdx + 1) % len;
@@ -733,7 +764,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       let turnNum = prev.currentTurn;
 
       if (boundaryCrossed) {
-        // Mana: +1 baseline + adjacency (cap gain to 4) and cap pool to 20
+        // Mana: +1 baseline + adjacency (cap gain to 4) / pool cap 20
         mana = mana.map((m, pid) => {
           const adj = countAlliesAdjacentToCrystal({ ...prev, players: playersAfter } as GameState, pid);
           const gain = Math.min(4, 1 + adj);
@@ -764,14 +795,14 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         nextIdx = 0;
         guard = 0;
         while (guard++ < len) {
-          const id = prev.speedQueue[nextIdx];
+          const id = normalizedQueue[nextIdx];
           const ic = playersAfter.flatMap((p) => p.icons).find((x) => x.id === id);
           if (ic?.isAlive) break;
           nextIdx = (nextIdx + 1) % len;
         }
       }
 
-      const nextActiveId = prev.speedQueue[nextIdx];
+      const nextActiveId = normalizedQueue[nextIdx];
 
       // victory conditions
       const baseHealth = [...prev.baseHealth];
@@ -799,6 +830,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         ...prev,
         players: playersAfter,
         movementStack,
+        speedQueue: normalizedQueue,
         globalMana: mana,
         queueIndex: nextIdx,
         activeIconId: nextActiveId,
@@ -889,8 +921,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
 
   const toggleMenu = useCallback(() => {
     setGameState((prev) => {
-      if (prev.phase === "victory" || prev.phase === "defeat") return prev;
-      return { ...prev, phase: prev.phase === "menu" ? "combat" : ("menu" as any) };
+      const menuOpen = !prev.menuOpen;
+      return { ...prev, menuOpen, phase: menuOpen ? ("menu" as any) : "combat" };
     });
   }, []);
 
@@ -910,6 +942,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
 };
 
 export default useGameState;
+
 
 
 
