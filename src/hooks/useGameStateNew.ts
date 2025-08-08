@@ -231,7 +231,8 @@ const createInitialIcons = (): Icon[] => {
 const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer") => {
   const [gameState, setGameState] = useState<GameState>(() => {
     const initialIcons = createInitialIcons();
-    const speedQueue = initSpeedQueue(initialIcons); // EXTERNAL (array of iconIds)
+    const queueRaw = initSpeedQueue(initialIcons); // may be Icon[] or string[]
+    const speedQueue: string[] = queueRaw.map((e: any) => (typeof e === "string" ? e : e.id));
 
     return {
       currentTurn: 1,
@@ -939,16 +940,16 @@ return {
 
       // 4) pick next active — skip dead but keep queue intact (UI greys them)
       let activeIdx = nextIndex;
-      let safety = prev.speedQueue.length;
-      let nextActiveId = prev.speedQueue[activeIdx];
+let safety = prev.speedQueue.length;
+let nextActiveId = getId(prev.speedQueue[activeIdx]);
 
-      const allIcons = playersAfterRespawn.flatMap((p) => p.icons);
-      while (safety-- > 0) {
-        const ic = allIcons.find((i) => i.id === nextActiveId);
-        if (ic?.isAlive) break;
-        activeIdx = (activeIdx + 1) % prev.speedQueue.length;
-        nextActiveId = prev.speedQueue[activeIdx];
-      }
+const allIcons = playersAfterRespawn.flatMap((p) => p.icons);
+while (safety-- > 0) {
+  const ic = allIcons.find((i) => i.id === nextActiveId);
+  if (ic?.isAlive) break;
+  activeIdx = (activeIdx + 1) % prev.speedQueue.length;
+  nextActiveId = getId(prev.speedQueue[activeIdx]);
+}
 
       // 5) victory conditions
       const baseHealth = [...prev.baseHealth];
