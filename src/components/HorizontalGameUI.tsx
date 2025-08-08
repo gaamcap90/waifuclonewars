@@ -8,6 +8,7 @@ import { Sparkles, Crown, Swords, Zap, Shield, Target, Crosshair, Sword, Heart }
 import HPBar from "./HPBar";
 import CharacterDetailPopup from "./CharacterDetailPopup";
 import RespawnUI from "./RespawnUI";
+import { TurnQueueBar } from "./TurnQueueBar";
 // Use the uploaded character portraits directly
 
 interface HorizontalGameUIProps {
@@ -19,6 +20,8 @@ interface HorizontalGameUIProps {
   onRespawn: (iconId: string) => void;
   currentTurnTimer: number;
 }
+
+<TurnQueueBar gameState={gameState} onEndTurn={onEndTurn} />
 
 const HorizontalGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn, onUndoMovement, onRespawn, currentTurnTimer }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{id: string, position: {x: number, y: number}} | null>(null);
