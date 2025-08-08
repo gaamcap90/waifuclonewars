@@ -36,7 +36,7 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
   const base = icon.stats;
 
   // Beast camp team buff: Might/Power +15% per camp (max 2)
-  const beastStacks = Math.min(2, state.teamBuffs?.beastStacks?.[icon.playerId] ?? 0);
+  const beastStacks = Math.min(2, state.teamBuffs.beastStacks[icon.playerId] || 0);
   const beastMult = 1 + beastStacks * 0.15;
 
   // Base tile buff: +20% Might/Power/Defense if on own base
