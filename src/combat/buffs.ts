@@ -1,63 +1,40 @@
 import { GameState, Icon } from "@/types/game";
 
-export type EffectiveStats = {
-  might: number;
-  power: number;
-  defense: number;
-};
+// Optional helpers if you want them here
+const isForestAt = (state: GameState, q: number, r: number) =>
+  state.board.find(t => t.coordinates.q === q && t.coordinates.r === r)?.terrain.type === "forest";
 
-export function isOwnBaseTile(state: GameState, icon: Icon): boolean {
-  const { q, r } = icon.position;
-  // P1 base: (-6,5); P2 base: (6,-5)
-  if (icon.playerId === 0) return q === -6 && r === 5;
-  return q === 6 && r === -5;
-}
+const isOwnBaseAt = (icon: Icon, q: number, r: number) =>
+  (icon.playerId === 0 && q === -6 && r === 5) ||
+  (icon.playerId === 1 && q === 6 && r === -5);
 
-export function isForestTile(state: GameState, iconOrPos: Icon | {q:number;r:number}): boolean {
-  const pos = "position" in iconOrPos ? iconOrPos.position : iconOrPos;
-  const tile = state.board.find(t => t.coordinates.q === pos.q && t.coordinates.r === pos.r);
-  return tile?.terrain.type === "forest";
-}
-
-/** Beast Camp provides team might/power only in your current game; defense buff is 0% */
-function teamMightPct(state: GameState, playerId: number): number {
-  return state.teamBuffs?.mightBonus?.[playerId] ?? 0;
-}
-function teamPowerPct(state: GameState, playerId: number): number {
-  return state.teamBuffs?.powerBonus?.[playerId] ?? 0;
-}
-function teamDefensePct(_state: GameState, _playerId: number): number {
-  return 0; // no beast-camp defense bonus (by design)
-}
-
-/** Compute effective stats with stacking buffs (Beast + Base + Forest) */
-// types: assume Icon has base stats; state holds board/tiles, team buffs, etc.
 export function calcEffectiveStats(state: GameState, icon: Icon) {
-  const base = icon.stats;
+  const baseMight   = icon.stats.might;
+  const basePower   = icon.stats.power;
+  const baseDefense = icon.stats.defense;
 
-  // Beast camp team buff: Might/Power +15% per camp (max 2)
-  const beastStacks = Math.min(2, state.teamBuffs.beastStacks[icon.playerId] || 0);
-  const beastMult = 1 + beastStacks * 0.15;
+  // 💪 Make team buffs SAFE even if state.teamBuffs is missing or has wrong shape
+  const teamMightPct =
+    ((state.teamBuffs?.mightBonus ?? [0, 0])[icon.playerId] ?? 0) / 100;
+  const teamPowerPct =
+    ((state.teamBuffs?.powerBonus ?? [0, 0])[icon.playerId] ?? 0) / 100;
 
-  // Base tile buff: +20% Might/Power/Defense if on own base
-  const onBase = isOwnBaseTile(state, icon);
-  const baseMult = onBase ? 1.2 : 1;
+  let might   = baseMight   * (1 + teamMightPct);
+  let power   = basePower   * (1 + teamPowerPct);
+  let defense = baseDefense;
 
-  // Forest tile buff: +50% Defense if on forest
-  const onForest = isForestTile(state, icon);
-  const forestDefMult = onForest ? 1.5 : 1;
+  // 🏰 Base tile buff (+20% Might/Power/Defense on own base)
+  if (isOwnBaseAt(icon, icon.position.q, icon.position.r)) {
+    might   *= 1.20;
+    power   *= 1.20;
+    defense *= 1.20;
+  }
 
-  const might = base.might * beastMult * baseMult;
-  const power = base.power * beastMult * baseMult;
-  const defense = base.defense * baseMult * forestDefMult;
+  // 🌲 Forest defense buff (+50% Defense while on forest)
+  if (isForestAt(state, icon.position.q, icon.position.r)) {
+    defense *= 1.50;
+  }
 
-  // Return full-precision; UI can format
-  return { might, power, defense, // for UI breakdowns:
-           breakdown: {
-             beastStacks,
-             onBase,
-             onForest,
-             multipliers: { beastMult, baseMult, forestDefMult }
-           } };
+  return { might, power, defense };
 }
 
