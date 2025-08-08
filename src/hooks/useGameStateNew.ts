@@ -226,6 +226,7 @@ const createInitialIcons = (): Icon[] => {
         movedThisTurn: false,
         hasUltimate: true,
         ultimateUsed: false,
+        hasRespawned: false
       });
     });
   }
