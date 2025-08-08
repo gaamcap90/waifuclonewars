@@ -554,7 +554,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                       ...ic,
                       stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
                       isAlive: ic.stats.hp - dmg > 0,
-                      respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 3,
+                      respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
                     }
               ),
             }));
@@ -634,7 +634,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                         ...ic,
                         stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
                         isAlive: ic.stats.hp - dmg > 0,
-                        respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 3,
+                        respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
                       }
                 ),
               }));
@@ -856,7 +856,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
           ...player,
           icons: player.icons.map((ic) => {
             if (!ic.isAlive && ic.respawnTurns <= 0 && !ic.hasRespawned) {
-  const free = findFreeSpawnTile(prev.board, { ...prev, players: playersAfterRespawn } as GameState, player.id);
+  const free = findFreeSpawnTile(
+  prev.board,
+  { ...prev, players: playersAfter } as GameState,
+  player.id
+);
   if (free) {
     return {
       ...ic,
