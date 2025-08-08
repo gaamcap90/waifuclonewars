@@ -1046,7 +1046,6 @@ return {
     undoMovement,          // hook to your real undo logic
     startRespawnPlacement,
   };
-};
 
 export default useGameState;
 
