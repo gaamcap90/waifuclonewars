@@ -29,41 +29,96 @@ const NewGameUI = ({ gameState, onBasicAttack, onUseAbility, onEndTurn }: NewGam
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Bar: Turn Queue */}
-      <div className="flex justify-center">
-        <Card className="bg-card/90 backdrop-blur border-arena-glow/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-center text-lg font-orbitron text-arena-glow">Arena Turn Queue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-center gap-3">
-              {gameState.speedQueue.slice(0, 6).map((iconId, index) => {
-                const icon = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
-                if (!icon) return null;
-                return (
-                  <TooltipProvider key={iconId}>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <div 
-                          className={`w-12 h-12 rounded-full border-3 flex items-center justify-center font-bold font-orbitron text-sm transition-all
-                            ${index === 0 ? 'border-active-turn bg-active-turn/20 scale-110 shadow-lg shadow-active-turn/50' : 
-                              icon.playerId === 0 ? 'border-player1 bg-player1/80 text-white' : 'border-player2 bg-player2/80 text-white'}`}
-                        >
-                          {icon.name.charAt(0)}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-orbitron">{icon.name}</p>
-                        <p className="text-xs">Speed: {icon.stats.speed}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+  {/* Top Bar: Turn Queue */}
+  <div className="flex justify-center">
+    <Card className="bg-card/90 backdrop-blur border-arena-glow/30">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-center text-lg font-orbitron text-arena-glow">
+          Arena Turn Queue
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-center gap-3">
+          {gameState.speedQueue.slice(0, 6).map((iconId) => {
+            const icon = gameState.players
+              .flatMap((p) => p.icons)
+              .find((i) => i.id === iconId);
+            if (!icon) return null;
+
+            // Active based on actual activeIconId
+            const isActive = iconId === gameState.activeIconId;
+
+            // Grey-out conditions
+            const isDead = !icon.isAlive;
+            const isRespawnLocked =
+              !!icon.justRespawned && (icon.stats.movement ?? 0) === 0;
+            const greyOut = isDead || isRespawnLocked;
+
+            // Team styles
+            const teamCls =
+              icon.playerId === 0
+                ? "border-player1 bg-player1/80 text-white"
+                : "border-player2 bg-player2/80 text-white";
+
+            const baseCls =
+              "w-12 h-12 rounded-full border-3 flex items-center justify-center font-bold font-orbitron text-sm transition-all";
+            const activeCls = isActive
+              ? "border-active-turn bg-active-turn/20 scale-110 shadow-lg shadow-active-turn/50"
+              : teamCls;
+
+            return (
+              <TooltipProvider key={iconId}>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div
+                      className={[
+                        baseCls,
+                        activeCls,
+                        greyOut ? "opacity-40 grayscale" : "",
+                      ].join(" ")}
+                      title={
+                        isDead
+                          ? "Dead"
+                          : isRespawnLocked
+                          ? "Just respawned — cannot move this turn"
+                          : "Ready"
+                      }
+                    >
+                      {/* Show portrait if you have one, else initial */}
+                      {(icon as any).portraitUrl ? (
+                        <img
+                          src={(icon as any).portraitUrl}
+                          alt={icon.name}
+                          className="w-full h-full rounded-full object-cover"
+                          draggable={false}
+                        />
+                      ) : (
+                        icon.name.charAt(0)
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-orbitron">{icon.name}</p>
+                    <p className="text-xs">Speed: {icon.stats.speed}</p>
+                    {isDead && (
+                      <p className="text-xs text-red-600">Dead</p>
+                    )}
+                    {isRespawnLocked && (
+                      <p className="text-xs text-amber-600">
+                        Just respawned — cannot move
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+</div>
+
 
       {/* Objectives */}
       <div className="flex justify-center">
