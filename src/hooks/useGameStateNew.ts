@@ -848,7 +848,8 @@ return {
   })),
   selectedIcon: undefined,
 };
-
+});         
+}, []);
 
   const useAbility = useCallback((abilityId: string) => {
     setGameState((prev) => {
