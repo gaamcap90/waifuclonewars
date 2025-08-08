@@ -31,17 +31,33 @@ function teamDefensePct(_state: GameState, _playerId: number): number {
 }
 
 /** Compute effective stats with stacking buffs (Beast + Base + Forest) */
-export function calcEffectiveStats(state: GameState, icon: Icon): EffectiveStats {
-  const baseOnOwn = isOwnBaseTile(state, icon) ? 20 : 0;
-  const forestPct = isForestTile(state, icon) ? 50 : 0;
+// types: assume Icon has base stats; state holds board/tiles, team buffs, etc.
+export function calcEffectiveStats(state: GameState, icon: Icon) {
+  const base = icon.stats;
 
-  const mightPct = teamMightPct(state, icon.playerId) + baseOnOwn;
-  const powerPct = teamPowerPct(state, icon.playerId) + baseOnOwn;
-  const defensePct = teamDefensePct(state, icon.playerId) + baseOnOwn + forestPct;
+  // Beast camp team buff: Might/Power +15% per camp (max 2)
+  const beastStacks = Math.min(2, state.teamBuffs.beastStacks[icon.playerId] || 0);
+  const beastMult = 1 + beastStacks * 0.15;
 
-  return {
-    might: icon.stats.might * (1 + mightPct / 100),
-    power: icon.stats.power * (1 + powerPct / 100),
-    defense: icon.stats.defense * (1 + defensePct / 100)
-  };
+  // Base tile buff: +20% Might/Power/Defense if on own base
+  const onBase = isOwnBaseTile(state, icon);
+  const baseMult = onBase ? 1.2 : 1;
+
+  // Forest tile buff: +50% Defense if on forest
+  const onForest = isForestTile(state, icon);
+  const forestDefMult = onForest ? 1.5 : 1;
+
+  const might = base.might * beastMult * baseMult;
+  const power = base.power * beastMult * baseMult;
+  const defense = base.defense * baseMult * forestDefMult;
+
+  // Return full-precision; UI can format
+  return { might, power, defense, // for UI breakdowns:
+           breakdown: {
+             beastStacks,
+             onBase,
+             onForest,
+             multipliers: { beastMult, baseMult, forestDefMult }
+           } };
 }
+
