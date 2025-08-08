@@ -1,15 +1,15 @@
 import { GameState, Coordinates, Icon, HexTile } from "@/types/game";
 
 /** Build a stable speed queue once, sorted by speed desc */
-export function initSpeedQueue(icons: Icon[]): string[] {
-  return [...icons]
-    .sort((a, b) => b.stats.speed - a.stats.speed)
-    .map(i => i.id);
+export function initSpeedQueue(icons: Icon[]) {
+  return [...icons].sort((a,b) =>
+    b.stats.speed - a.stats.speed || a.id.localeCompare(b.id)
+  );
 }
 
 /** Is this index the round boundary? We tick mana/respawns here. */
-export function isRoundBoundary(nextIndex: number): boolean {
-  return nextIndex === 0;
+export function isRoundBoundary(prevIdx: number, nextIdx: number, queueLen: number) {
+  return queueLen > 0 && nextIdx === 0 && prevIdx === queueLen - 1;
 }
 
 /** Axial hex distance (matches your existing helper) */
