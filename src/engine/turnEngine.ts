@@ -49,3 +49,33 @@ export function findFreeSpawnTile(board: HexTile[], state: GameState, playerId: 
   }
   return undefined;
 }
+
+export function applyRoundBoundary(state: GameState) {
+  // Mana
+  for (const pid of [1,2]) {
+    const adj = Math.min(4 - 1, countAlliesAdjacentToCrystal(state, pid)); // cap total at 4
+    state.mana[pid] = (state.mana[pid] ?? 0) + 1 + adj;
+  }
+
+  // Respawn tick
+  for (const icon of state.icons) {
+    if (icon.isDead && icon.respawnTurns > 0) {
+      icon.respawnTurns -= 1;
+    }
+  }
+  // Auto-respawn anyone who reached 0 this boundary
+  for (const icon of state.icons) {
+    if (icon.isDead && icon.respawnTurns <= 0) {
+      const tile = findFreeSpawnTile(state.board, state, icon.playerId);
+      if (tile) {
+        icon.isDead = false;
+        icon.hp = icon.maxHp;
+        icon.q = tile.q;
+        icon.r = tile.r;
+      } else {
+        // if no space, keep at 0 and try next round
+      }
+    }
+  }
+}
+
