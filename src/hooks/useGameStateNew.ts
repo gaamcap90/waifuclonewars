@@ -773,6 +773,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       if (!me || me.actionTaken) return prev;
       if (prev.gameMode === "singleplayer" && me.playerId === 1) return prev;
 
+      // Toggle off if already targeting this ability for this icon
+      if (prev.targetingMode?.abilityId === abilityId && prev.targetingMode.iconId === me.id) {
+        return { ...prev, targetingMode: undefined };
+      }
+
       const ability = me.abilities.find((a) => a.id === abilityId);
       if (!ability) return prev;
       if (abilityId === "ultimate" && me.ultimateUsed) return prev;
@@ -791,6 +796,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
       const me = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
       if (!me || me.actionTaken) return prev;
       if (prev.gameMode === "singleplayer" && me.playerId === 1) return prev;
+
+      // Toggle off if already targeting basic for this icon
+      if (prev.targetingMode?.abilityId === "basic_attack" && prev.targetingMode.iconId === me.id) {
+        return { ...prev, targetingMode: undefined };
+      }
 
       const range = me.name === "Napoleon-chan" || me.name === "Da Vinci-chan" ? 2 : 1;
       return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
@@ -1048,6 +1058,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     });
   }, [gameMode]);
 
+  // Cancel targeting helper
+  const cancelTargeting = useCallback(() => {
+    setGameState(prev =>
+      prev.targetingMode ? { ...prev, targetingMode: undefined } : prev
+    );
+  }, []);
+
   return {
     gameState,
     selectTile,
@@ -1062,6 +1079,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
     toggleMenu,
     goToMainMenu,
     resetGame,
+    cancelTargeting,
   };
 };
 
