@@ -8,33 +8,43 @@ import CharacterDetailPopup from "./CharacterDetailPopup";
 import RespawnUI from "./RespawnUI";
 import { Sparkles, Crown, Swords, Zap, Shield, Target } from "lucide-react";
 import { countAlliesAdjacentToCrystal } from "@/engine/turnEngine";
+import { TurnQueueBar } from "@/components/ui/TurnQueueBar";
 
+/** Props kept loose because our state carries a few extensions (combatLog, justRespawned, etc.) */
 interface HorizontalGameUIProps {
-  gameState: GameState;
+  gameState: any;
   onBasicAttack: () => void;
   onUseAbility: (abilityId: string) => void;
   onEndTurn: () => void;
   onUndoMovement: () => void;
   onRespawn: (iconId: string) => void;
-  onCancelTargeting: () => void;
   currentTurnTimer: number;
 }
 
+/* ===== Helpers (portraits, icons, pill styles) ===== */
+
 const getCharacterPortrait = (name: string) => {
+  if (!name) return null;
   if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
-  if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
+  if (name.includes("Genghis"))  return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
   if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
   return null;
 };
 
-const manaGain = (gs: GameState, pid: 0 | 1) => {
-  try {
-    const adj = countAlliesAdjacentToCrystal(gs as any, pid);
-    return Math.min(4, 1 + adj);
-  } catch {
-    return 1;
-  }
+const abilityIcon = (name: string) => {
+  const n = (name || "").toLowerCase();
+  if (n.includes("ultimate")) return Target;
+  if (n.includes("charge") || n.includes("flying")) return Zap;
+  if (n.includes("masterpiece") || n.includes("shield")) return Shield;
+  return Shield;
 };
+
+// unified pill styles
+const pillBase = "h-12 px-4 rounded-md border transition font-medium flex items-center gap-2";
+const pillOff  = "bg-white text-slate-900 hover:bg-slate-50";
+const pillOn   = "bg-slate-900 text-white ring-2 ring-yellow-400 animate-pulse";
+
+/* ===== Component ===== */
 
 const HorizontalGameUI = ({
   gameState,
@@ -43,30 +53,31 @@ const HorizontalGameUI = ({
   onEndTurn,
   onUndoMovement,
   onRespawn,
-  onCancelTargeting,
   currentTurnTimer,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
 
-  const activeIcon = gameState.players.flatMap((p) => p.icons).find((i) => i.id === gameState.activeIconId);
+  const activeIcon = gameState.players.flatMap((p: any) => p.icons).find((i: any) => i.id === gameState.activeIconId);
+  const selectedId = gameState.targetingMode?.abilityId as string | undefined;
 
-  // close the popover programmatically
+  // ESC to clear the character popup (not targeting; targeting is toggled by clicking again)
   useEffect(() => {
     const handleGlobalClose = () => setSelectedCharacter(null);
     window.addEventListener("closeCharacterPopup", handleGlobalClose);
     return () => window.removeEventListener("closeCharacterPopup", handleGlobalClose);
   }, []);
 
-  const handleClosePopup = () => setSelectedCharacter(null);
-
-  const disabledForTurnBar = (icon: any) =>
-    !icon.isAlive || icon.justRespawned || (icon.stats?.movement ?? 0) <= 0;
-
-  const disabledForActions = (icon: any) =>
-    !icon || !icon.isAlive || icon.justRespawned;
+  // Convenience flags
+  const isUnavailable = !activeIcon?.isAlive || !!activeIcon?.justRespawned;
+  const canUndo = !!activeIcon && activeIcon.movedThisTurn && !activeIcon.actionTaken;
 
   return (
     <>
+      {/* Top Center: Turn Queue bar */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto z-10">
+        <TurnQueueBar gameState={gameState} onEndTurn={onEndTurn} />
+      </div>
+
       {/* Top Left: Turn Number */}
       <div className="absolute top-0 left-0 pointer-events-auto z-10">
         <Card className="bg-background/80 backdrop-blur-sm border-border/50 rounded-none rounded-br-lg">
@@ -97,7 +108,7 @@ const HorizontalGameUI = ({
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Control the center crystal for +2 mana regeneration per turn.</p>
+                    <p>Control the center crystal for +2 mana regeneration per turn</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -106,19 +117,23 @@ const HorizontalGameUI = ({
                 <Tooltip>
                   <TooltipTrigger>
                     <div className="text-center p-2 rounded border flex items-center gap-2">
-                      <Crown className={`w-4 h-4 ${gameState.objectives.beastCamps.defeated.some((d) => d) ? "text-yellow-400" : "text-red-400"}`} />
+                      <Crown className={`w-4 h-4 ${gameState.objectives.beastCamps.defeated.some((d: boolean) => d) ? "text-yellow-400" : "text-red-400"}`} />
                       <div>
                         <div className="font-semibold">Beast Camps</div>
-                        <div className={gameState.objectives.beastCamps.defeated.some((d) => d) ? "text-green-500" : "text-gray-500"}>
-                          {gameState.objectives.beastCamps.defeated.every((d) => d)
+                        <div
+                          className={
+                            gameState.objectives.beastCamps.defeated.some((d: boolean) => d) ? "text-green-500" : "text-gray-500"
+                          }
+                        >
+                          {gameState.objectives.beastCamps.defeated.every((d: boolean) => d)
                             ? "All Cleared"
-                            : `${gameState.objectives.beastCamps.defeated.filter((d) => d).length}/2 Cleared`}
+                            : `${gameState.objectives.beastCamps.defeated.filter((d: boolean) => d).length}/2 Cleared`}
                         </div>
                       </div>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Defeat camps for permanent team-wide +15% damage buffs.</p>
+                    <p>Defeat beast camps for permanent team-wide +15% damage buff</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -127,307 +142,143 @@ const HorizontalGameUI = ({
         </Card>
       </div>
 
-      {/* Top Center: Turn Queue + End Turn */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto z-10">
-        <div className="flex flex-col items-center gap-3">
-          <Card className="bg-background/80 backdrop-blur-sm border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-center text-lg font-orbitron">Arena Turn Queue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center gap-3">
-                {Array.isArray(gameState.speedQueue) &&
-                  gameState.speedQueue.slice(0, 8).map((iconId) => {
-                    const icon = gameState.players.flatMap((p) => p.icons).find((i) => i.id === iconId);
-                    if (!icon) return null;
-
-                    const isActive = icon.id === gameState.activeIconId && icon.isAlive;
-                    const isDisabled = disabledForTurnBar(icon);
-                    const teamRing = icon.playerId === 0 ? "ring-blue-400" : "ring-red-400";
-                    const portrait = getCharacterPortrait(icon.name);
-
-                    return (
-                      <div
-                        key={icon.id}
-                        className={[
-                          "relative w-12 h-12 rounded-full overflow-hidden ring-2 transition-all select-none",
-                          isActive ? "ring-yellow-400 scale-110 shadow" : teamRing,
-                          isDisabled ? "grayscale opacity-40" : "",
-                        ].join(" ")}
-                        title={
-                          !icon.isAlive && icon.respawnTurns > 0
-                            ? `${icon.name} — respawns in ${icon.respawnTurns}`
-                            : icon.name
-                        }
-                      >
-                        {portrait ? (
-                          <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-muted text-foreground">
-                            {icon.name?.charAt(0) ?? "?"}
-                          </div>
-                        )}
-
-                        {!icon.isAlive && typeof icon.respawnTurns === "number" && icon.respawnTurns > 0 && (
-                          <span className="absolute -bottom-1 -right-1 px-1 rounded text-[10px] leading-none bg-black/70 text-white">
-                            {icon.respawnTurns}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Button
-            onClick={onEndTurn}
-            size="lg"
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-2 text-lg shadow-lg border-2 border-red-400"
-          >
-            End Turn
-          </Button>
-        </div>
-      </div>
-
-      {/* Center Left: Player 1 */}
+      {/* Center Left: Player 1 panel */}
       <div className="absolute top-1/2 left-4 -translate-y-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-player1">{gameState.players[0].name} (Blue)</CardTitle>
-            <div className="text-sm">
-              Mana: {gameState.globalMana[0]}/20 (+{manaGain(gameState, 0)}/turn)
-            </div>
-            <div className="text-sm">Base HP: {gameState.baseHealth[0]}/5</div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex gap-2 justify-center">
-                {gameState.players[0].icons
-                  .filter((icon) => icon.isAlive)
-                  .map((icon) => {
-                    const portrait = getCharacterPortrait(icon.name);
-                    return (
-                      <div key={icon.id} className="text-center">
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setSelectedCharacter({
-                                id: icon.id,
-                                position: { x: rect.left + rect.width / 2, y: rect.top },
-                              });
-                            }}
-                            className={[
-                              "w-10 h-10 rounded-full border-2 transition-all overflow-hidden",
-                              "border-blue-400 hover:border-blue-300",
-                              icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : "",
-                            ].join(" ")}
-                          >
-                            {portrait ? (
-                              <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-blue-500/90 text-white">
-                                {icon.name.charAt(0)}
-                              </div>
-                            )}
-                          </button>
-                          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border bg-blue-500 border-blue-300" />
-                        </div>
-                        <div className="text-xs mt-1">
-                          {icon.stats.hp}/{icon.stats.maxHp}
-                        </div>
-                        <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                      </div>
-                    );
-                  })}
-                <RespawnUI
-                  deadCharacters={gameState.players[0].icons.filter((icon) => !icon.isAlive)}
-                  onRespawn={onRespawn}
-                  isMyTurn={
-                    gameState.players.flatMap((p) => p.icons).find((i) => i.id === gameState.activeIconId)?.playerId === 0
-                  }
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <PlayerPanel
+          player={gameState.players[0]}
+          activeIconId={gameState.activeIconId}
+          side="blue"
+          onRespawn={onRespawn}
+        />
       </div>
 
-      {/* Center Right: Player 2 */}
+      {/* Center Right: Player 2 panel */}
       <div className="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-player2">{gameState.players[1].name} (Red)</CardTitle>
-            <div className="text-sm">
-              Mana: {gameState.globalMana[1]}/20 (+{manaGain(gameState, 1)}/turn)
-            </div>
-            <div className="text-sm">Base HP: {gameState.baseHealth[1]}/5</div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex gap-2 justify-center">
-                {gameState.players[1].icons
-                  .filter((icon) => icon.isAlive)
-                  .map((icon) => {
-                    const portrait = getCharacterPortrait(icon.name);
-                    return (
-                      <div key={icon.id} className="text-center">
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setSelectedCharacter({
-                                id: icon.id,
-                                position: { x: rect.left + rect.width / 2, y: rect.top },
-                              });
-                            }}
-                            className={[
-                              "w-10 h-10 rounded-full border-2 transition-all overflow-hidden",
-                              "border-red-400 hover:border-red-300",
-                              icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : "",
-                            ].join(" ")}
-                          >
-                            {portrait ? (
-                              <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-red-500/90 text-white">
-                                {icon.name.charAt(0)}
-                              </div>
-                            )}
-                          </button>
-                          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border bg-red-500 border-red-300" />
-                        </div>
-                        <div className="text-xs mt-1">
-                          {icon.stats.hp}/{icon.stats.maxHp}
-                        </div>
-                        <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                      </div>
-                    );
-                  })}
-                <RespawnUI
-                  deadCharacters={gameState.players[1].icons.filter((icon) => !icon.isAlive)}
-                  onRespawn={onRespawn}
-                  isMyTurn={
-                    gameState.players.flatMap((p) => p.icons).find((i) => i.id === gameState.activeIconId)?.playerId === 1
-                  }
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <PlayerPanel
+          player={gameState.players[1]}
+          activeIconId={gameState.activeIconId}
+          side="red"
+          onRespawn={onRespawn}
+        />
       </div>
 
-      {/* Bottom Center: Active Character Panel */}
+      {/* Bottom Center: NEW Active Bar */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-auto z-10">
-        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[600px]">
-          <CardHeader className="pb-2">
-            <CardTitle>Active: {activeIcon?.name ?? "-"}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[780px]">
+          <CardContent className={`p-4 ${isUnavailable ? "opacity-60" : ""}`}>
             {activeIcon && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">
-                    Movement: {activeIcon.stats.movement}/{activeIcon.stats.moveRange}
-                  </span>
-                  <div className="flex items-center gap-4">
-                    <Card className="bg-background/80 backdrop-blur-sm border-border/50">
-                      <CardContent className="p-3">
-                        <div className="text-center min-w-[80px]">
-                          <div className="text-xs font-semibold">Timer</div>
-                          <div className="text-lg font-bold">{currentTurnTimer}s</div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={onUndoMovement}
-                      disabled={disabledForActions(activeIcon) || !activeIcon.movedThisTurn || activeIcon.actionTaken}
+              <div className="space-y-4">
+                {/* Row 1: Identity + status */}
+                <div className="flex items-center justify-between gap-4">
+                  {/* Left: portrait + name */}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={[
+                        "w-12 h-12 rounded-full overflow-hidden ring-2",
+                        activeIcon.playerId === 0 ? "ring-blue-400" : "ring-red-400",
+                      ].join(" ")}
                     >
+                      {getCharacterPortrait(activeIcon.name) ? (
+                        <img
+                          src={getCharacterPortrait(activeIcon.name)!}
+                          alt={activeIcon.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-700 text-white font-semibold">
+                          {activeIcon.name?.charAt(0) ?? "?"}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground leading-tight">Active</div>
+                      <div className="text-xl font-semibold">{activeIcon.name}</div>
+                    </div>
+                  </div>
+
+                  {/* Right: movement, timer, undo */}
+                  <div className="flex items-center gap-3">
+                    <BadgeBox label="Movement" value={`${activeIcon.stats.movement}/${activeIcon.stats.moveRange}`} />
+                    <BadgeBox label="Timer" value={`${currentTurnTimer}s`} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onUndoMovement}
+                      disabled={!canUndo || isUnavailable}
+                      className="flex items-center gap-2"
+                    >
+                      <Undo2 className="w-4 h-4" />
                       Undo Movement
                     </Button>
                   </div>
                 </div>
 
-                 <div className="flex gap-2 justify-center">
-                   <TooltipProvider>
-                     <Tooltip>
-                       <TooltipTrigger asChild>
-                         <Button
-                           onClick={onBasicAttack}
-                           disabled={disabledForActions(activeIcon) || activeIcon.actionTaken}
-                           size="sm"
-                           className="bg-primary flex items-center gap-2"
-                         >
-                           <Swords className="w-4 h-4" />
-                           Attack
-                         </Button>
-                       </TooltipTrigger>
-                       <TooltipContent>
-                         <p>Basic Attack</p>
-                       </TooltipContent>
-                     </Tooltip>
-                   </TooltipProvider>
+                {/* Row 2: Pills */}
+                <div className={`flex items-center gap-3 flex-wrap ${isUnavailable ? "pointer-events-none" : ""}`}>
+                  {/* Attack pill (toggle) */}
+                  <button
+                    onClick={onBasicAttack}
+                    disabled={activeIcon.actionTaken}
+                    aria-pressed={selectedId === "basic_attack"}
+                    className={[
+                      pillBase,
+                      selectedId === "basic_attack" ? pillOn : pillOff,
+                      "min-w-[160px]",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                    ].join(" ")}
+                  >
+                    <Swords className="w-4 h-4" />
+                    Attack
+                  </button>
 
-                   {(gameState as any).targetingMode && (
-                     <Button
-                       size="sm"
-                       variant="outline"
-                       onClick={onCancelTargeting}
-                       className="ml-2"
-                     >
-                       Cancel Targeting
-                     </Button>
-                   )}
-
-                  {activeIcon.abilities.slice(0, 3).map((ability) => {
-                    const getAbilityIcon = (abilityName: string) => {
-                      if (abilityName.toLowerCase().includes("charge")) return Zap;
-                      if (abilityName.toLowerCase().includes("ultimate")) return Target;
-                      return Shield;
-                    };
-                    const IconComponent = getAbilityIcon(ability.name);
-                    const isUltimate = ability.name.toLowerCase().includes("ultimate");
+                  {/* Ability pills */}
+                  {(activeIcon.abilities ?? []).slice(0, 3).map((ab: any) => {
+                    const Icon = abilityIcon(ab.name);
+                    const disabled =
+                      activeIcon.actionTaken ||
+                      (ab.currentCooldown ?? 0) > 0 ||
+                      (gameState.globalMana?.[activeIcon.playerId] ?? 0) < (ab.manaCost ?? 0);
+                    const pressed = selectedId === ab.id;
 
                     return (
-                      <TooltipProvider key={ability.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              onClick={() => onUseAbility(ability.id)}
-                              disabled={
-                                disabledForActions(activeIcon) ||
-                                activeIcon.actionTaken ||
-                                ability.currentCooldown > 0 ||
-                                gameState.globalMana[activeIcon.playerId] < ability.manaCost
-                              }
-                              size="sm"
-                              variant={gameState.targetingMode?.abilityId === ability.id ? "default" : "outline"}
-                              className={`flex items-center gap-2 ${isUltimate ? "bg-red-600 hover:bg-red-700 text-white" : ""}`}
-                            >
-                              <IconComponent className="w-4 h-4" />
-                              {isUltimate ? "Ultimate" : ability.name.slice(0, 8)} ({ability.manaCost})
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="max-w-xs">
-                              <p className="font-semibold">
-                                {ability.name} {isUltimate ? "(ULTIMATE)" : ""}
-                              </p>
-                              <p className="text-sm">{ability.description}</p>
-                              <p className="text-xs mt-1">Range: {ability.range}</p>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <button
+                        key={ab.id}
+                        onClick={() => onUseAbility(ab.id)}
+                        disabled={disabled}
+                        aria-pressed={pressed}
+                        className={[
+                          pillBase,
+                          pressed ? pillOn : pillOff,
+                          "min-w-[200px] justify-between",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                        ].join(" ")}
+                        title={ab.description}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          <span className="truncate">{ab.name}</span>
+                        </span>
+                        <span className="flex items-center gap-2 text-xs">
+                          {(ab.currentCooldown ?? 0) > 0 && (
+                            <span className="px-1.5 py-0.5 rounded bg-muted">CD {ab.currentCooldown}</span>
+                          )}
+                          {(ab.manaCost ?? 0) > 0 && (
+                            <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-600">
+                              {ab.manaCost}
+                            </span>
+                          )}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
+
+                {/* Tiny hint when targeting any action */}
+                {selectedId && (
+                  <div className="text-xs text-muted-foreground">
+                    Targeting active — click the same action again to cancel.
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -435,22 +286,122 @@ const HorizontalGameUI = ({
       </div>
 
       {/* Character Detail Popup */}
-      {selectedCharacter &&
-        (() => {
-          const character = gameState.players.flatMap((p) => p.icons).find((icon) => icon.id === selectedCharacter.id);
-          if (!character) return null;
-          return (
-            <CharacterDetailPopup
-              character={character}
-              gameState={gameState}
-              onClose={handleClosePopup}
-              position={selectedCharacter.position}
-            />
-          );
-        })()}
+      {selectedCharacter && (() => {
+        const character = gameState.players.flatMap((p: any) => p.icons).find((icon: any) => icon.id === selectedCharacter.id);
+        if (!character) return null;
+        return (
+          <CharacterDetailPopup
+            character={character}
+            gameState={gameState}
+            onClose={() => setSelectedCharacter(null)}
+            position={selectedCharacter.position}
+          />
+        );
+      })()}
     </>
   );
 };
 
 export default HorizontalGameUI;
+
+/* ===== Small subcomponents used above ===== */
+
+function BadgeBox({ label, value }: { label: string; value: string }) {
+  return (
+    <Card className="bg-background/80 backdrop-blur-sm border-border/50">
+      <CardContent className="px-3 py-2">
+        <div className="text-center min-w-[86px]">
+          <div className="text-[11px] font-semibold text-muted-foreground">{label}</div>
+          <div className="text-base font-bold">{value}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlayerPanel({
+  player,
+  activeIconId,
+  side,
+  onRespawn,
+}: {
+  player: any;
+  activeIconId: string;
+  side: "blue" | "red";
+  onRespawn: (iconId: string) => void;
+}) {
+  return (
+    <Card className="bg-background/80 backdrop-blur-sm border-border/50 min-w-[280px]">
+      <CardHeader className="pb-2">
+        <CardTitle className={side === "blue" ? "text-player1" : "text-player2"}>
+          {player.name} {side === "blue" ? "(Blue)" : "(Red)"}
+        </CardTitle>
+        <div className="text-sm">Mana: {player.id === 0 ? player.gameState?.globalMana?.[0] : player.gameState?.globalMana?.[1]}</div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex gap-2 justify-center">
+            {player.icons
+              .filter((icon: any) => icon.isAlive)
+              .map((icon: any) => {
+                const portrait = getCharacterPortrait(icon.name);
+                return (
+                  <div key={icon.id} className="text-center">
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          window.dispatchEvent(
+                            new CustomEvent("closeCharacterPopup") // just to ensure only one popup lives
+                          );
+                          // You can hook in a “quick stats” popover here later if you want
+                        }}
+                        className={[
+                          "w-10 h-10 rounded-full border-2 transition-all overflow-hidden",
+                          side === "blue" ? "border-blue-400 hover:border-blue-300" : "border-red-400 hover:border-red-300",
+                          icon.id === activeIconId ? "ring-2 ring-yellow-400" : "",
+                        ].join(" ")}
+                        title={icon.name}
+                      >
+                        {portrait ? (
+                          <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div
+                            className={[
+                              "w-full h-full flex items-center justify-center text-sm font-bold",
+                              side === "blue" ? "bg-blue-500/90 text-white" : "bg-red-500/90 text-white",
+                            ].join(" ")}
+                          >
+                            {icon.name.charAt(0)}
+                          </div>
+                        )}
+                      </button>
+                      {/* Team indicator badge */}
+                      <div
+                        className={[
+                          "absolute -top-1 -right-1 w-3 h-3 rounded-full border",
+                          side === "blue" ? "bg-blue-500 border-blue-300" : "bg-red-500 border-red-300",
+                        ].join(" ")}
+                      />
+                    </div>
+                    <div className="text-xs mt-1">
+                      {icon.stats.hp}/{icon.stats.maxHp}
+                    </div>
+                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
+                  </div>
+                );
+              })}
+            <RespawnUI
+              deadCharacters={player.icons.filter((icon: any) => !icon.isAlive)}
+              onRespawn={onRespawn}
+              isMyTurn={player.icons.some((i: any) => i.id === activeIconId && i.playerId === player.id)}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 
