@@ -1,69 +1,201 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { GameState, Icon } from "@/types/game";
+import { Icon, GameState } from "@/types/game";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Crosshair, Sword, Heart } from "lucide-react";
+import HPBar from "./HPBar";
+import { useBuffCalculation } from "@/hooks/useBuffCalculation";
 
-type Props = {
+interface CharacterDetailPopupProps {
   character: Icon;
-  gameState: GameState;
-  position: { x: number; y: number }; // page coordinates we set from the portrait click
+  gameState: GameState;            // ← added
   onClose: () => void;
-};
+  position: { x: number; y: number };
+}
 
-const CharacterDetailPopup: React.FC<Props> = ({ character, gameState, position, onClose }) => {
-  if (!character) return null;
+const CharacterDetailPopup = ({
+  character,
+  gameState,
+  onClose,
+  position
+}: CharacterDetailPopupProps) => {
+  // Close popup when clicking anywhere
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      onClose();
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [onClose]);
+
+  // Use buff calculation hook
+  const { calculateBuffedStats } = useBuffCalculation();
+  const buffedStats = calculateBuffedStats(character, gameState);
+
+  const baseMight = character.stats.might;
+  const basePower = character.stats.power;
+  const baseDefense = character.stats.defense;
+
+  // Calculate individual buff contributions
+  const beastCampMightBonus = (baseMight * buffedStats.beastCampMightBonus) / 100;
+  const beastCampPowerBonus = (basePower * buffedStats.beastCampPowerBonus) / 100;
+  const homeBaseMightBonus = buffedStats.isOnHomeBase ? (baseMight * 20) / 100 : 0;
+  const homeBasePowerBonus = buffedStats.isOnHomeBase ? (basePower * 20) / 100 : 0;
+  const homeBaseDefenseBonus = buffedStats.isOnHomeBase ? (baseDefense * 20) / 100 : 0;
+  const forestDefenseBonus = buffedStats.isOnForest ? (baseDefense * 50) / 100 : 0;
+
+  const formatBonus = (value: number) => {
+    return value % 1 === 0 ? value.toString() : value.toFixed(1);
+  };
+
+  const getCharacterPortrait = (name: string) => {
+    if (name.includes("Napoleon"))
+      return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
+    if (name.includes("Genghis"))
+      return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
+    if (name.includes("Da Vinci"))
+      return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
+    return null;
+  };
 
   return (
-    <div
-      className="fixed z-50"
-      style={{
-        left: position.x,
-        top: position.y, // BELOW the portrait (we already added gap in the caller)
-      }}
-    >
-      {/* Center on X only, sit below on Y */}
-      <div className="-translate-x-1/2 mt-1 relative">
-        {/* little arrow pointing up to the portrait */}
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-white shadow" />
+    <>
+      {/* Backdrop to close popup */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
 
-        <Card className="shadow-xl border">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                <span className="font-bold">{character.name.charAt(0)}</span>
+      {/* Popup Card */}
+      <div
+        className="absolute z-50 pointer-events-auto"
+        style={{
+          left: position.x,
+          top: position.y,
+          transform: "translate(-50%, -100%)"
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Card className="bg-background/95 backdrop-blur-sm border-border shadow-xl min-w-[200px] max-w-[220px]">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-12 h-12 rounded-full border-2 overflow-hidden ${
+                  character.playerId === 0 ? "border-blue-400" : "border-red-400"
+                }`}
+              >
+                {getCharacterPortrait(character.name) ? (
+                  <img
+                    src={getCharacterPortrait(character.name)!}
+                    alt={character.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full flex items-center justify-center text-lg font-bold ${
+                      character.playerId === 0
+                        ? "bg-blue-500/90 text-white"
+                        : "bg-red-500/90 text-white"
+                    }`}
+                  >
+                    {character.name.charAt(0)}
+                  </div>
+                )}
               </div>
-              <div className="font-semibold">{character.name}</div>
+              <div>
+                <CardTitle className="text-lg">{character.name}</CardTitle>
+                <div className="text-sm text-muted-foreground flex items-center gap-1">
+                  {character.role === "dps_ranged" && (
+                    <>
+                      <Crosshair className="w-3 h-3" /> Ranged DPS
+                    </>
+                  )}
+                  {character.role === "dps_melee" && (
+                    <>
+                      <Sword className="w-3 h-3" /> Melee DPS
+                    </>
+                  )}
+                  {character.role === "support" && (
+                    <>
+                      <Heart className="w-3 h-3" /> Support
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <div className="text-sm font-semibold mb-1">HP:</div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">
+                  {character.stats.hp}/{character.stats.maxHp}
+                </span>
+                <HPBar
+                  currentHP={character.stats.hp}
+                  maxHP={character.stats.maxHp}
+                  size="medium"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div>HP: <b>{character.stats.hp}/{character.stats.maxHp}</b></div>
-              <div>Move: <b>{character.stats.movement}/{character.stats.moveRange}</b></div>
-              <div>Might: <b>{character.stats.might}</b></div>
-              <div>Power: <b>{character.stats.power}</b></div>
-              <div>Defense: <b>{character.stats.defense}</b></div>
-              <div>Speed: <b>{character.stats.speed}</b></div>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">Might:</span>
+                <span className="ml-2 text-red-400 font-semibold">
+                  {buffedStats.might}
+                </span>
+                {(beastCampMightBonus > 0 || homeBaseMightBonus > 0) && (
+                  <div className="text-xs text-muted-foreground ml-4">
+                    {beastCampMightBonus > 0 && `+${formatBonus(beastCampMightBonus)} (Beast Camp) `}
+                    {homeBaseMightBonus > 0 && `+${formatBonus(homeBaseMightBonus)} (Base)`}
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <span className="text-muted-foreground">Power:</span>
+                <span className="ml-2 text-blue-400 font-semibold">
+                  {buffedStats.power}
+                </span>
+                {(beastCampPowerBonus > 0 || homeBasePowerBonus > 0) && (
+                  <div className="text-xs text-muted-foreground ml-4">
+                    {beastCampPowerBonus > 0 && `+${formatBonus(beastCampPowerBonus)} (Beast Camp) `}
+                    {homeBasePowerBonus > 0 && `+${formatBonus(homeBasePowerBonus)} (Base)`}
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <span className="text-muted-foreground">Defense:</span>
+                <span className="ml-2 text-green-400 font-semibold">
+                  {buffedStats.defense}
+                </span>
+                {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0) && (
+                  <div className="text-xs text-muted-foreground ml-4">
+                    {homeBaseDefenseBonus > 0 && `+${formatBonus(homeBaseDefenseBonus)} (Base) `}
+                    {forestDefenseBonus > 0 && `+${formatBonus(forestDefenseBonus)} (Forest)`}
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <span className="text-muted-foreground">Speed:</span>
+                <span className="ml-2 text-yellow-400 font-semibold">
+                  {character.stats.speed}
+                </span>
+              </div>
             </div>
 
-            {character.passive && (
-              <div className="mt-3 text-xs text-muted-foreground">
-                <div className="font-medium text-foreground mb-1">Passive:</div>
-                <div>{character.passive}</div>
+            {character.abilities.length > 0 && (
+              <div>
+                <div className="text-sm font-semibold mb-1">Passive:</div>
+                <div className="text-xs text-muted-foreground">
+                  {character.abilities[0]?.description || "No passive ability"}
+                </div>
               </div>
             )}
-
-            <div className="mt-3 text-right">
-              <button
-                className="text-xs underline text-muted-foreground hover:text-foreground"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </div>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   );
 };
 
 export default CharacterDetailPopup;
-
