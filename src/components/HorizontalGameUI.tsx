@@ -77,30 +77,34 @@ const HorizontalGameUI = ({
 
   /* ========= Small UI helpers ========= */
   const Pill = ({
-    selected,
-    disabled,
-    children,
-    onClick,
-  }: {
-    selected?: boolean;
-    disabled?: boolean;
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={[
-        "px-4 py-2 rounded-lg border transition-all flex items-center gap-2 whitespace-nowrap",
-        selected
-          ? "bg-foreground text-background border-foreground"
-          : "bg-background/70 text-foreground border-border hover:bg-background",
-        disabled ? "opacity-50 cursor-not-allowed" : "",
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
+  selected,
+  disabled,
+  children,
+  onClick,
+}: {
+  selected?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={[
+      "px-4 py-2 rounded-lg border transition-all flex items-center gap-2 whitespace-nowrap",
+      // base
+      "relative will-change-transform",
+      selected
+        // selected look: strong contrast + ring + soft shadow + pulse
+        ? "bg-foreground text-background border-foreground ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/30 animate-pulse"
+        // idle look
+        : "bg-background/70 text-foreground border-border hover:bg-background",
+      disabled ? "opacity-50 cursor-not-allowed" : "hover:-translate-y-0.5 active:translate-y-0",
+    ].join(" ")}
+  >
+    {children}
+  </button>
+);
 
   const StatBadge = ({ label, value }: { label: string; value: string }) => (
     <Card className="bg-background/80 backdrop-blur-sm border-border/50">
@@ -164,7 +168,9 @@ const HorizontalGameUI = ({
             <BaseHPBar pid={0} />
 
             <div className="flex gap-3 justify-center pt-2">
-              {gameState.players[0].icons.map(icon => {
+              {gameState.players[0].icons
+                .filter(icon => icon.isAlive && (icon.stats?.hp ?? 0) > 0)
+                .map(icon => {
                 const portrait = getCharacterPortrait(icon.name);
                 return (
                   <div key={icon.id} className="text-center">
@@ -175,7 +181,10 @@ const HorizontalGameUI = ({
                           const rect = e.currentTarget.getBoundingClientRect();
                           setSelectedCharacter({
                             id: icon.id,
-                            position: { x: rect.left + rect.width / 2, y: rect.top },
+                            position: {
+                              x: rect.left + rect.width / 2 + window.scrollX,
+                              y: rect.bottom + 8 + window.scrollY,   
+                            },
                           });
                         }}
                         className={[
@@ -204,10 +213,16 @@ const HorizontalGameUI = ({
               })}
 
               <RespawnUI
-                deadCharacters={gameState.players[0].icons.filter(i => !i.isAlive)}
-                onRespawn={onRespawn}
-                isMyTurn={gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.activeIconId)?.playerId === 0}
-              />
+  deadCharacters={gameState.players[0].icons.filter(
+    icon => !icon.isAlive && (icon.respawnTurns ?? 0) > 0
+  )}
+  onRespawn={onRespawn}
+  isMyTurn={
+    gameState.players
+      .flatMap(p => p.icons)
+      .find(i => i.id === gameState.activeIconId)?.playerId === 0
+  }
+/>
             </div>
           </CardContent>
         </Card>
@@ -224,7 +239,9 @@ const HorizontalGameUI = ({
             <BaseHPBar pid={1} />
 
             <div className="flex gap-3 justify-center pt-2">
-              {gameState.players[1].icons.map(icon => {
+              {gameState.players[1].icons
+  .filter(icon => icon.isAlive && (icon.stats?.hp ?? 0) > 0)
+  .map(icon => {
                 const portrait = getCharacterPortrait(icon.name);
                 return (
                   <div key={icon.id} className="text-center">
@@ -235,7 +252,10 @@ const HorizontalGameUI = ({
                           const rect = e.currentTarget.getBoundingClientRect();
                           setSelectedCharacter({
                             id: icon.id,
-                            position: { x: rect.left + rect.width / 2, y: rect.top },
+                            position: {
+                              x: rect.left + rect.width / 2 + window.scrollX,
+                              y: rect.bottom + 8 + window.scrollY,   
+                            },
                           });
                         }}
                         className={[
@@ -264,10 +284,17 @@ const HorizontalGameUI = ({
               })}
 
               <RespawnUI
-                deadCharacters={gameState.players[1].icons.filter(i => !i.isAlive)}
-                onRespawn={onRespawn}
-                isMyTurn={gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.activeIconId)?.playerId === 1}
-              />
+  deadCharacters={gameState.players[1].icons.filter(
+    icon => !icon.isAlive && (icon.respawnTurns ?? 0) > 0
+  )}
+  onRespawn={onRespawn}
+  isMyTurn={
+    gameState.players
+      .flatMap(p => p.icons)
+      .find(i => i.id === gameState.activeIconId)?.playerId === 1
+  }
+/>
+
             </div>
           </CardContent>
         </Card>
