@@ -176,21 +176,14 @@ const HorizontalGameUI = ({
                   <div key={icon.id} className="text-center">
                     <div className="relative">
                       <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-const gap = 8;
-const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
-const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-
-setSelectedCharacter({
-  id: icon.id,
-  position: {
-    x: rect.left + rect.width / 2 + scrollX,
-    y: rect.bottom + gap + scrollY,
-  },
-});
-                        }}
+  onClick={(e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSelectedCharacter({
+      id: icon.id,
+      position: { x: rect.left + rect.width / 2, y: rect.bottom } // ↓ below portrait
+    });
+  }}
                         className={[
                           "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
                           "border-blue-400 hover:border-blue-300",
@@ -251,21 +244,14 @@ setSelectedCharacter({
                   <div key={icon.id} className="text-center">
                     <div className="relative">
                       <button
-                        onClick={e => {
-                          e.stopPropagation();
-                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-const gap = 8;
-const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
-const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-
-setSelectedCharacter({
-  id: icon.id,
-  position: {
-    x: rect.left + rect.width / 2 + scrollX,
-    y: rect.bottom + gap + scrollY,
-  },
-});
-                        }}
+  onClick={(e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSelectedCharacter({
+      id: icon.id,
+      position: { x: rect.left + rect.width / 2, y: rect.bottom } // ↓ below portrait
+    });
+  }}
                         className={[
                           "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
                           "border-red-400 hover:border-red-300",
