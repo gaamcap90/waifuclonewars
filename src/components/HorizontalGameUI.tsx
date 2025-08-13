@@ -16,6 +16,7 @@ interface HorizontalGameUIProps {
   onEndTurn: () => void;
   onUndoMovement: () => void;
   onRespawn: (iconId: string) => void;
+  onCancelTargeting: () => void;
   currentTurnTimer: number;
 }
 
@@ -42,6 +43,7 @@ const HorizontalGameUI = ({
   onEndTurn,
   onUndoMovement,
   onRespawn,
+  onCancelTargeting,
   currentTurnTimer,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
@@ -352,25 +354,36 @@ const HorizontalGameUI = ({
                   </div>
                 </div>
 
-                <div className="flex gap-2 justify-center">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={onBasicAttack}
-                          disabled={disabledForActions(activeIcon) || activeIcon.actionTaken}
-                          size="sm"
-                          className="bg-primary flex items-center gap-2"
-                        >
-                          <Swords className="w-4 h-4" />
-                          Attack
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Basic Attack</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                 <div className="flex gap-2 justify-center">
+                   <TooltipProvider>
+                     <Tooltip>
+                       <TooltipTrigger asChild>
+                         <Button
+                           onClick={onBasicAttack}
+                           disabled={disabledForActions(activeIcon) || activeIcon.actionTaken}
+                           size="sm"
+                           className="bg-primary flex items-center gap-2"
+                         >
+                           <Swords className="w-4 h-4" />
+                           Attack
+                         </Button>
+                       </TooltipTrigger>
+                       <TooltipContent>
+                         <p>Basic Attack</p>
+                       </TooltipContent>
+                     </Tooltip>
+                   </TooltipProvider>
+
+                   {(gameState as any).targetingMode && (
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       onClick={onCancelTargeting}
+                       className="ml-2"
+                     >
+                       Cancel Targeting
+                     </Button>
+                   )}
 
                   {activeIcon.abilities.slice(0, 3).map((ability) => {
                     const getAbilityIcon = (abilityName: string) => {

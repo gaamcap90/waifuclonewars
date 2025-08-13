@@ -13,7 +13,7 @@ import CombatLogPanel from "@/ui/CombatLogPanel";
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'characterSelect' | 'singleplayer' | 'multiplayer'>('menu');
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
-  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, resetGame } = useGameState(
+  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, resetGame, cancelTargeting } = useGameState(
     gameMode === 'menu' || gameMode === 'characterSelect' ? 'singleplayer' : gameMode
   );
 
@@ -34,19 +34,40 @@ const Index = () => {
   // ESC key handler - pauses game automatically in single player
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && gameMode !== 'menu') {
-        // Auto-pause in single player, just show menu in multiplayer
-        if (gameMode === 'singleplayer') {
-          setShowEscapeMenu(true);
-        } else {
-          setShowEscapeMenu(prev => !prev);
+      if (event.key === 'Escape') {
+        // If targeting, cancel and do NOT open menu
+        if ((gameState as any).targetingMode) {
+          event.stopPropagation();
+          cancelTargeting();
+          return;
+        }
+
+        // Otherwise, original ESC behavior
+        if (gameMode !== 'menu') {
+          if (gameMode === 'singleplayer') {
+            setShowEscapeMenu(true);
+          } else {
+            setShowEscapeMenu(prev => !prev);
+          }
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameMode]);
+  }, [gameMode, (gameState as any).targetingMode, cancelTargeting]);
+
+  // Right-click to cancel targeting
+  useEffect(() => {
+    const onContextMenu = (e: MouseEvent) => {
+      if ((gameState as any).targetingMode) {
+        e.preventDefault();
+        cancelTargeting();
+      }
+    };
+    document.addEventListener('contextmenu', onContextMenu);
+    return () => document.removeEventListener('contextmenu', onContextMenu);
+  }, [(gameState as any).targetingMode, cancelTargeting]);
 
   if (gameMode === 'menu') {
     return <MainMenu onStartGame={handleStartGame} />;
@@ -76,6 +97,7 @@ const Index = () => {
           onEndTurn={endTurn}
           onUndoMovement={undoMovement}
           onRespawn={startRespawnPlacement}
+          onCancelTargeting={cancelTargeting}
           currentTurnTimer={currentTurnTimer}
         />
       </div>
