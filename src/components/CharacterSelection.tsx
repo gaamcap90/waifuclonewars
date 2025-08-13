@@ -1,181 +1,232 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Icon } from "@/types/game";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
 
-interface CharacterSelectionProps {
-  onStartGame: (selectedIcons: Icon[]) => void;
-  gameMode: 'singleplayer' | 'multiplayer';
+type Role = "dps_ranged" | "dps_melee" | "support";
+
+interface Character {
+  id: string;
+  name: string;
+  role: Role;
+  stats: { hp: number; might: number; power: number };
+  keyAbilityName: string;
+  keyAbilityDesc: string;
 }
 
-const availableCharacters = [
-  {
-    name: "Napoleon-chan",
-    role: "dps_ranged" as const,
-    stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 70, power: 60, defense: 15, movement: 2 },
-    abilities: [
-      { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 48 },
-      { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
-      { id: "ultimate", name: "Final Salvo", manaCost: 0, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 30 }
-    ],
-    passive: "Tactical Genius: +1 movement range when commanding from high ground",
-    portrait: "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png"
-  },
-  {
-    name: "Genghis-chan",
-    role: "dps_melee" as const,
-    stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 40, defense: 25, movement: 2 },
-    abilities: [
-      { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack through enemies. Deals 48 damage.", damage: 48 },
-      { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Teleport behind target. Deals 60 damage + fear effect.", damage: 60 },
-      { id: "ultimate", name: "Rider's Fury", manaCost: 0, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Charge through up to 3 enemies, dealing 24 damage each", damage: 24 }
-    ],
-    passive: "Conqueror's Fury: +15% damage for each enemy defeated this match",
-    portrait: "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png"
-  },
-  {
-    name: "Da Vinci-chan", 
-    role: "support" as const,
-    stats: { hp: 80, maxHp: 80, moveRange: 2, speed: 4, might: 35, power: 50, defense: 20, movement: 2 },
-    abilities: [
-      { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Teleport to any hex + gain aerial view for 2 turns.", damage: 0 },
-      { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals 45 HP + shields allies from next attack.", healing: 45 },
-      { id: "ultimate", name: "Vitruvian Guardian", manaCost: 0, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons a 2-turn drone that auto-attacks nearby enemies", damage: 0 }
-    ],
-    passive: "Renaissance Mind: Gains +1 mana when casting spells near mana crystals",
-    portrait: "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png"
+interface Props {
+  onStartGame: (selected: Character[]) => void;
+  gameMode: "singleplayer" | "multiplayer";
+}
+
+const portraits: Record<"Napoleon" | "Genghis" | "DaVinci", string> = {
+  Napoleon: "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png",
+  Genghis: "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png",
+  DaVinci: "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png",
+};
+
+function getPortrait(name: string) {
+  if (name.includes("Napoleon")) return portraits.Napoleon;
+  if (name.includes("Genghis")) return portraits.Genghis;
+  if (name.includes("Da Vinci")) return portraits.DaVinci;
+  return undefined;
+}
+
+function rolePill(role: Role) {
+  switch (role) {
+    case "dps_ranged":
+      return { label: "DPS RANGED", ring: "ring-fuchsia-400", text: "text-fuchsia-400", border: "border-fuchsia-400" };
+    case "dps_melee":
+      return { label: "DPS MELEE", ring: "ring-rose-400", text: "text-rose-400", border: "border-rose-400" };
+    case "support":
+      return { label: "SUPPORT", ring: "ring-emerald-400", text: "text-emerald-400", border: "border-emerald-400" };
   }
+}
+
+const AVAILABLE: Character[] = [
+  {
+    id: "napoleon",
+    name: "Napoleon-chan",
+    role: "dps_ranged",
+    stats: { hp: 100, might: 70, power: 60 },
+    keyAbilityName: "Artillery Barrage",
+    keyAbilityDesc: "Long-range bombardment. Deals 48 damage.",
+  },
+  {
+    id: "genghis",
+    name: "Genghis-chan",
+    role: "dps_melee",
+    stats: { hp: 120, might: 50, power: 40 },
+    keyAbilityName: "Mongol Charge",
+    keyAbilityDesc: "Rush attack through enemies. Deals 48 damage.",
+  },
+  {
+    id: "davinci",
+    name: "Da Vinci-chan",
+    role: "support",
+    stats: { hp: 80, might: 35, power: 50 },
+    keyAbilityName: "Flying Machine",
+    keyAbilityDesc: "Teleport to any hex + gain aerial view for 2 turns.",
+  },
 ];
 
-const CharacterSelection = ({ onStartGame, gameMode }: CharacterSelectionProps) => {
-  const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
+export default function CharacterSelection({ onStartGame }: Props) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const handleCharacterClick = (characterName: string) => {
-    setSelectedCharacters(prev => {
-      if (prev.includes(characterName)) {
-        // Deselect if already selected
-        return prev.filter(name => name !== characterName);
-      } else if (prev.length < 3) {
-        // Select if under 3 characters
-        return [...prev, characterName];
-      }
-      return prev; // Can't select more than 3
-    });
-  };
+  const selected = useMemo(
+    () => AVAILABLE.filter((c) => selectedIds.includes(c.id)),
+    [selectedIds]
+  );
+  const maxed = selectedIds.length >= 3;
 
-  const handleStartGame = () => {
-    if (selectedCharacters.length !== 3) return;
-    
-    const initialIcons: Icon[] = [];
-    
-    // Create icons for both players using only selected characters
-    const player1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
-    const player2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
-    
-    for (let playerId = 0; playerId < 2; playerId++) {
-      selectedCharacters.forEach((characterName, index) => {
-        const template = availableCharacters.find(char => char.name === characterName);
-        if (!template) return;
-        
-        const spawns = playerId === 0 ? player1Spawns : player2Spawns;
-        initialIcons.push({
-          id: `${playerId}-${index}`,
-          ...template,
-          position: spawns[index],
-          playerId,
-          isAlive: true,
-          respawnTurns: 0,
-          actionTaken: false,
-          movedThisTurn: false,
-          hasUltimate: true,
-          ultimateUsed: false,
-        });
-      });
-    }
-    
-    onStartGame(initialIcons);
+  const toggle = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : prev.length < 3
+        ? [...prev, id]
+        : prev
+    );
   };
 
   return (
-    <div className="fixed inset-0 bg-space-dark/95 flex items-center justify-center z-50">
-      <Card className="max-w-4xl mx-4 border-alien-green/50">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl text-alien-green">Select Your Team</CardTitle>
-          <p className="text-gray-300">Choose your historical champions for battle</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {availableCharacters.map((character) => {
-              const isSelected = selectedCharacters.includes(character.name);
-              return (
-                <Card 
-                  key={character.name} 
-                  className={`cursor-pointer transition-all duration-200 ${
-                    isSelected 
-                      ? 'border-alien-green bg-alien-green/20 ring-2 ring-alien-green' 
-                      : 'border-alien-green/30 bg-space-medium/50 hover:border-alien-green/60'
-                  }`}
-                  onClick={() => handleCharacterClick(character.name)}
-                >
-                  <CardHeader className="text-center">
-                    <div className={`w-20 h-20 mx-auto mb-2 rounded-full overflow-hidden border-2 ${
-                      isSelected ? 'border-alien-green ring-2 ring-alien-green/50' : 'border-alien-green'
-                    }`}>
-                      <img 
-                        src={character.portrait} 
-                        alt={character.name}
-                        className="w-full h-full object-cover"
-                      />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
+      <div className="w-[1100px] max-w-[92vw] mx-auto">
+        {/* Title */}
+        <div className="text-center mb-8">
+          <h1 className="font-orbitron text-3xl text-white drop-shadow-sm">Select Your Team</h1>
+          <p className="text-slate-300 mt-1">Choose up to three champions</p>
+        </div>
+
+        {/* Counter */}
+        <div className="flex items-center justify-center mb-6">
+          <div className="px-4 py-2 rounded-full border border-indigo-400/40 bg-indigo-500/10 text-indigo-200 font-semibold">
+            Selected: {selectedIds.length}/3
+          </div>
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {AVAILABLE.map((c) => {
+            const picked = selectedIds.includes(c.id);
+            const role = rolePill(c.role);
+            const disabled = maxed && !picked;
+
+            return (
+              <button
+                key={c.id}
+                onClick={() => toggle(c.id)}
+                aria-pressed={picked}
+                disabled={disabled}
+                className={[
+                  "group relative text-left rounded-2xl transition-all",
+                  "bg-slate-900/70 backdrop-blur border border-slate-700/70",
+                  "hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
+                  disabled ? "opacity-40 cursor-not-allowed" : "hover:shadow-lg",
+                  picked
+                    ? `ring-4 ${role.ring} shadow-[0_0_40px_rgba(251,191,36,0.35)] animate-pulse`
+                    : "ring-0",
+                ].join(" ")}
+              >
+                <Card className="bg-transparent border-0 shadow-none">
+                  <CardHeader className="items-center">
+                    <div className="relative">
+                      <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-white/20 transition">
+                        <img
+                          src={getPortrait(c.name)}
+                          alt={c.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+
+                      {/* Selected check badge */}
+                      {picked && (
+                        <div className="absolute -top-2 -right-2 bg-amber-400 text-slate-900 rounded-full p-1 shadow">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                      )}
                     </div>
-                    <CardTitle className="text-lg text-alien-green">{character.name}</CardTitle>
-                    <Badge variant="outline" className="text-xs">
-                      {character.role.replace('_', ' ').toUpperCase()}
-                    </Badge>
+
+                    <CardTitle className="mt-3 text-xl text-white">{c.name}</CardTitle>
+
+                    <div
+                      className={[
+                        "text-xs font-bold px-3 py-1 rounded-full border",
+                        role.text,
+                        role.border,
+                      ].join(" ")}
+                    >
+                      {role.label}
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between">
-                        <span>HP:</span>
-                        <span className="text-alien-green">{character.stats.hp}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Might:</span>
-                        <span className="text-alien-green">{character.stats.might}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Power:</span>
-                        <span className="text-alien-green">{character.stats.power}</span>
-                      </div>
+
+                  <CardContent className="px-6 pb-6">
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <Stat label="HP" value={c.stats.hp} />
+                      <Stat label="Might" value={c.stats.might} />
+                      <Stat label="Power" value={c.stats.power} />
                     </div>
-                    <div className="border-t border-alien-green/20 pt-2">
-                      <p className="text-xs text-gray-400 font-bold mb-1">KEY ABILITY:</p>
-                      <p className="text-xs text-gray-300">{character.abilities[0].name}</p>
-                      <p className="text-xs text-gray-400">{character.abilities[0].description}</p>
+
+                    <div className="mt-4 pt-4 border-t border-slate-700/70">
+                      <div className="text-slate-300 text-xs mb-1">KEY ABILITY</div>
+                      <div className="text-slate-100 font-semibold">{c.keyAbilityName}</div>
+                      <div className="text-slate-400 text-sm">{c.keyAbilityDesc}</div>
                     </div>
+
+                    {/* Selected ribbon */}
+                    {picked && (
+                      <div className="mt-4">
+                        <div className="inline-flex items-center gap-2 text-amber-300 font-semibold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-400/40">
+                          Selected
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
-              );
-            })}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-8">
+          <div className="flex items-center gap-2">
+            {selected.map((c) => (
+              <div
+                key={c.id}
+                className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/20"
+                title={c.name}
+              >
+                <img src={getPortrait(c.name)} alt={c.name} className="w-full h-full object-cover" />
+              </div>
+            ))}
           </div>
-          
-          <div className="text-center space-y-4">
-            <p className="text-sm text-gray-400">
-              Selected: {selectedCharacters.length}/3 characters
-            </p>
-            <Button 
-              onClick={handleStartGame} 
-              size="lg" 
-              className="min-w-48"
-              disabled={selectedCharacters.length !== 3}
-            >
-              Start Battle
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
+          <Button
+            size="lg"
+            disabled={selected.length !== 3}
+            onClick={() => onStartGame(selected)}
+            className={[
+              "px-8 text-white font-bold transition",
+              selected.length === 3
+                ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30"
+                : "bg-slate-600 cursor-not-allowed",
+            ].join(" ")}
+          >
+            Start Battle
+          </Button>
+        </div>
+      </div>
     </div>
   );
-};
+}
 
-export default CharacterSelection;
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-slate-800/60 border border-slate-700/70 px-3 py-2">
+      <div className="text-[11px] text-slate-400">{label}</div>
+      <div className="text-slate-100 font-bold">{value}</div>
+    </div>
+  );
+}
