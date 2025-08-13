@@ -178,14 +178,18 @@ const HorizontalGameUI = ({
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setSelectedCharacter({
-                            id: icon.id,
-                            position: {
-                              x: rect.left + rect.width / 2 + window.scrollX,
-                              y: rect.bottom + 8 + window.scrollY,   
-                            },
-                          });
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+const gap = 8;
+const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+setSelectedCharacter({
+  id: icon.id,
+  position: {
+    x: rect.left + rect.width / 2 + scrollX,
+    y: rect.bottom + gap + scrollY,
+  },
+});
                         }}
                         className={[
                           "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
@@ -249,14 +253,18 @@ const HorizontalGameUI = ({
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setSelectedCharacter({
-                            id: icon.id,
-                            position: {
-                              x: rect.left + rect.width / 2 + window.scrollX,
-                              y: rect.bottom + 8 + window.scrollY,   
-                            },
-                          });
+                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+const gap = 8;
+const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+setSelectedCharacter({
+  id: icon.id,
+  position: {
+    x: rect.left + rect.width / 2 + scrollX,
+    y: rect.bottom + gap + scrollY,
+  },
+});
                         }}
                         className={[
                           "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
