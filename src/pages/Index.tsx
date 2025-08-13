@@ -97,7 +97,6 @@ const Index = () => {
           onEndTurn={endTurn}
           onUndoMovement={undoMovement}
           onRespawn={startRespawnPlacement}
-          onCancelTargeting={cancelTargeting}
           currentTurnTimer={currentTurnTimer}
         />
       </div>

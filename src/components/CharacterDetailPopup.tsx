@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Icon, GameState } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crosshair, Sword, Heart } from "lucide-react";
@@ -48,7 +49,7 @@ const CharacterDetailPopup = ({
     return null;
   };
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop to close popup */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
@@ -160,7 +161,8 @@ const CharacterDetailPopup = ({
           </CardContent>
         </Card>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 
