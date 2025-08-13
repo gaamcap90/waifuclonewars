@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import HPBar from "./HPBar";
 import CharacterDetailPopup from "./CharacterDetailPopup";
 import RespawnUI from "./RespawnUI";
-import { Sparkles, Crown, Swords, Zap, Shield, Target } from "lucide-react";
+import { Sparkles, Crown, Swords, Zap, Shield, Target, Undo2 } from "lucide-react";
 import { countAlliesAdjacentToCrystal } from "@/engine/turnEngine";
 import { TurnQueueBar } from "./TurnQueueBar";
 
