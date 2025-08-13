@@ -8,7 +8,7 @@ import CharacterDetailPopup from "./CharacterDetailPopup";
 import RespawnUI from "./RespawnUI";
 import { Sparkles, Crown, Swords, Zap, Shield, Target } from "lucide-react";
 import { countAlliesAdjacentToCrystal } from "@/engine/turnEngine";
-import { TurnQueueBar } from "@/components/ui/TurnQueueBar";
+import { TurnQueueBar } from "./TurnQueueBar";
 
 /** Props kept loose because our state carries a few extensions (combatLog, justRespawned, etc.) */
 interface HorizontalGameUIProps {
