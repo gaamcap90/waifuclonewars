@@ -130,6 +130,28 @@ All colors MUST be HSL.
   }
 }
 
+@keyframes driftX {
+  0%   { transform: translateX(-10%); }
+  50%  { transform: translateX(10%); }
+  100% { transform: translateX(-10%); }
+}
+
+@keyframes floatY {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulseSoft {
+  0%,100% { opacity: .65; filter: saturate(100%); }
+  50%     { opacity: .95; filter: saturate(120%); }
+}
+
+.animate-drift-slow   { animation: driftX 32s linear infinite; }
+.animate-drift-slower { animation: driftX 48s linear infinite; }
+.animate-float-slower { animation: floatY 14s ease-in-out infinite; }
+.animate-pulse-soft   { animation: pulseSoft 6s ease-in-out infinite; }
+
 @layer base {
   * {
     @apply border-border;

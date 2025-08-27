@@ -9,6 +9,7 @@ import UltimateIndicator from "@/components/UltimateIndicator";
 import useGameState from "@/hooks/useGameStateNew";
 import { Toaster } from "@/components/ui/sonner";
 import CombatLogPanel from "@/ui/CombatLogPanel";
+import ArenaBackground from "@/ui/ArenaBackground";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'characterSelect' | 'singleplayer' | 'multiplayer'>('menu');
@@ -78,7 +79,8 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-space-dark via-space-medium to-space-dark relative overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
+      <ArenaBackground />
       <Toaster />
       
       {/* Full-screen game board */}

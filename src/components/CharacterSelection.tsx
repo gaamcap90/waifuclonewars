@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
+import ArenaBackground from "@/ui/ArenaBackground";
 
 type Role = "dps_ranged" | "dps_melee" | "support";
 
@@ -90,7 +91,8 @@ export default function CharacterSelection({ onStartGame }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <ArenaBackground />
       <div className="w-[1100px] max-w-[92vw] mx-auto">
         {/* Title */}
         <div className="text-center mb-8">
