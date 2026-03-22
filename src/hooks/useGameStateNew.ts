@@ -243,10 +243,75 @@ type ExtState = GameState & {
   menuOpen: boolean;
   combatLog: LogEntry[];
 };
+function buildIconsFromSelection(selected: any[]): Icon[] {
+  const p1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
+  const p2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
 
-const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer") => {
+  const toIcon = (template: any, pid: number, idx: number): Icon => ({
+    id: `${pid}-${idx}`,
+    name: template.name,
+    role: template.role,
+    stats: {
+      hp: template.stats.hp,
+      maxHp: template.stats.hp,
+      moveRange: 2,
+      speed: template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : 4,
+      might: template.stats.might,
+      power: template.stats.power ?? 50,
+      defense: template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : 15,
+      movement: 2,
+    },
+    abilities: getAbilitiesForCharacter(template.name),
+    passive: getPassiveForCharacter(template.name),
+    position: (pid === 0 ? p1Spawns : p2Spawns)[idx],
+    playerId: pid,
+    isAlive: true,
+    respawnTurns: 0,
+    actionTaken: false,
+    movedThisTurn: false,
+    hasUltimate: true,
+    ultimateUsed: false,
+    hasRespawned: false,
+    justRespawned: false,
+  });
+
+  const icons: Icon[] = [];
+  selected.forEach((char, i) => {
+    icons.push(toIcon(char, 0, i));
+    icons.push(toIcon(char, 1, i));
+  });
+  return icons;
+}
+
+function getAbilitiesForCharacter(name: string) {
+  if (name.includes("Napoleon")) return [
+    { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 48 },
+    { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "+20% damage to all allies for 3 turns.", damage: 0 },
+    { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 30 },
+  ];
+  if (name.includes("Genghis")) return [
+    { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack. Deals 48 damage.", damage: 48 },
+    { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Deals 60 damage + fear effect.", damage: 60 },
+    { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: 24 damage to up to 3 enemies", damage: 24 },
+  ];
+  return [
+    { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Teleport to any hex.", damage: 0, targetMode: "hex" as any },
+    { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals 45 HP.", healing: 45 },
+    { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons attack drone", damage: 0 },
+  ];
+}
+
+function getPassiveForCharacter(name: string) {
+  if (name.includes("Napoleon")) return "Tactical Genius: +1 movement range from high ground";
+  if (name.includes("Genghis")) return "Conqueror's Fury: +15% damage per enemy defeated";
+  return "Renaissance Mind: +1 mana near mana crystals";
+}
+
+const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer", selectedCharacters?: any[]) => {
   const [gameState, setGameState] = useState<ExtState>(() => {
-    const initialIcons = createInitialIcons();
+    const initialIcons = selectedCharacters && selectedCharacters.length === 3
+      ? buildIconsFromSelection(selectedCharacters)
+      : createInitialIcons();
     const speedQueueRaw = initSpeedQueue(initialIcons);
     const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
 
@@ -364,8 +429,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             icons: p.icons.map((ic) => {
               if (ic.id !== target.id) return ic;
               const newHp = Math.max(0, ic.stats.hp - dmg);
-              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
-};
+              return {
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+              };
             }),
           }));
 
@@ -389,8 +455,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
             icons: p.icons.map((ic) => {
               if (ic.id !== basicTarget.id) return ic;
               const newHp = Math.max(0, ic.stats.hp - dmg);
-              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
- };
+              return {
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+              };
             }),
           }));
           state.players = state.players.map((p) => ({
@@ -428,11 +495,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                 icons: p.icons.map((ic) =>
                   ic.id === ai.id
                     ? {
-                        ...ic,
-                        position: best!.coord,
-                        movedThisTurn: true,
-                        stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - best!.cost) },
-                      }
+                      ...ic,
+                      position: best!.coord,
+                      movedThisTurn: true,
+                      stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - best!.cost) },
+                    }
                     : ic
                 ),
               }));
@@ -448,8 +515,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   icons: p.icons.map((ic) => {
                     if (ic.id !== tgtAfter.id) return ic;
                     const newHp = Math.max(0, ic.stats.hp - dmg);
-                    return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
- };
+                    return {
+                      ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+                    };
                   }),
                 }));
                 state.players = state.players.map((p) => ({
@@ -551,11 +619,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                 ic.id !== targetIcon.id
                   ? ic
                   : {
-                      ...ic,
-                      stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
-                      isAlive: ic.stats.hp - dmg > 0,
-                      respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
-                    }
+                    ...ic,
+                    stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+                    isAlive: ic.stats.hp - dmg > 0,
+                    respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
+                  }
               ),
             }));
           } else {
@@ -631,11 +699,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
                   ic.id !== targetIcon.id
                     ? ic
                     : {
-                        ...ic,
-                        stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
-                        isAlive: ic.stats.hp - dmg > 0,
-                        respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
-                      }
+                      ...ic,
+                      stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+                      isAlive: ic.stats.hp - dmg > 0,
+                      respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
+                    }
                 ),
               }));
               pushLog(updated, `${me.name} cast ${ability.name} on ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, me.playerId);
@@ -753,11 +821,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         icons: p.icons.map((ic) =>
           ic.id === me.id
             ? {
-                ...ic,
-                position: coordinates,
-                movedThisTurn: true,
-                stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - moveCost) },
-              }
+              ...ic,
+              position: coordinates,
+              movedThisTurn: true,
+              stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - moveCost) },
+            }
             : ic
         ),
       }));
@@ -866,23 +934,23 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
           ...player,
           icons: player.icons.map((ic) => {
             if (!ic.isAlive && ic.respawnTurns <= 0 && !ic.hasRespawned) {
-  const free = findFreeSpawnTile(
-  prev.board,
-  { ...prev, players: playersAfter } as GameState,
-  player.id
-);
-  if (free) {
-    return {
-      ...ic,
-      isAlive: true,
-      hasRespawned: true,   // ← mark so they never respawn again
-      justRespawned: true,      
-      position: free,
-      stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, // no movement on spawn turn
-      respawnTurns: 0,
-    };
-  }
-}
+              const free = findFreeSpawnTile(
+                prev.board,
+                { ...prev, players: playersAfter } as GameState,
+                player.id
+              );
+              if (free) {
+                return {
+                  ...ic,
+                  isAlive: true,
+                  hasRespawned: true,   // ← mark so they never respawn again
+                  justRespawned: true,
+                  position: free,
+                  stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, // no movement on spawn turn
+                  respawnTurns: 0,
+                };
+              }
+            }
             return ic;
           }),
         }));
@@ -991,11 +1059,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer")
         icons: p.icons.map((ic) =>
           ic.id === me.id
             ? {
-                ...ic,
-                position: last.from,
-                movedThisTurn: stack.length > 0,
-                stats: { ...ic.stats, movement: Math.min(ic.stats.moveRange, ic.stats.movement + last.cost) },
-              }
+              ...ic,
+              position: last.from,
+              movedThisTurn: stack.length > 0,
+              stats: { ...ic.stats, movement: Math.min(ic.stats.moveRange, ic.stats.movement + last.cost) },
+            }
             : ic
         ),
       }));
