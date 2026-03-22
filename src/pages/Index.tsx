@@ -13,9 +13,11 @@ import ArenaBackground from "@/ui/ArenaBackground";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'characterSelect' | 'singleplayer' | 'multiplayer'>('menu');
+  const [selectedCharacters, setSelectedCharacters] = useState<any[]>([]);
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
   const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, resetGame, cancelTargeting } = useGameState(
-    gameMode === 'menu' || gameMode === 'characterSelect' ? 'singleplayer' : gameMode
+    gameMode === 'menu' || gameMode === 'characterSelect' ? 'singleplayer' : gameMode,
+    selectedCharacters
   );
 
   const handleStartGame = (mode: 'singleplayer' | 'multiplayer') => {
@@ -23,7 +25,8 @@ const Index = () => {
   };
 
   const handleCharacterSelectionComplete = (selectedIcons: any[]) => {
-    setGameMode('singleplayer'); // Start the actual game
+    setSelectedCharacters(selectedIcons);
+    setGameMode('singleplayer');
   };
 
   const handleBackToMenu = () => {
@@ -82,17 +85,17 @@ const Index = () => {
     <div className="relative min-h-screen overflow-hidden">
       <ArenaBackground />
       <Toaster />
-      
+
       {/* Full-screen game board */}
-      <GameBoard 
+      <GameBoard
         gameState={gameState}
         onTileClick={selectTile}
       />
-      
+
       {/* UI Overlays */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Game UI overlays */}
-        <HorizontalGameUI 
+        <HorizontalGameUI
           gameState={gameState}
           onBasicAttack={basicAttack}
           onUseAbility={useAbility}
@@ -102,7 +105,7 @@ const Index = () => {
           currentTurnTimer={currentTurnTimer}
         />
       </div>
-      
+
       {/* Ultimate Indicator */}
       <UltimateIndicator gameState={gameState} />
 
@@ -121,18 +124,18 @@ const Index = () => {
           storageKey="combatLog:rightCollapsed"
         />
       </div>
-      
+
       {/* Escape Menu */}
       {showEscapeMenu && (
-        <EscapeMenu 
+        <EscapeMenu
           onMainMenu={handleBackToMenu}
           onContinue={() => setShowEscapeMenu(false)}
         />
       )}
-      
+
       {(gameState.phase === 'victory' || gameState.phase === 'defeat') && (
-        <VictoryScreen 
-          isVictory={gameState.phase === 'victory'} 
+        <VictoryScreen
+          isVictory={gameState.phase === 'victory'}
           onBackToMenu={handleBackToMenu}
           onPlayAgain={() => {
             setGameMode('characterSelect'); // Go back to character selection for new game
