@@ -25,10 +25,14 @@ export interface Icon {
     moveRange: number;
     speed: number; // For turn queue
     might: number; // Physical attack power
-    power: number; // Magical/ability power  
+    power: number; // Magical/ability power
     defense: number; // Damage reduction
     movement: number; // Current movement points remaining
+    mana: number;    // Current mana (0–3 default)
+    maxMana: number; // Max mana per turn (default 3)
   };
+  cardBuffAtk?: number; // Temporary ATK bonus from cards this turn
+  cardBuffDef?: number; // Temporary DEF bonus from cards this turn
   abilities: Ability[];
   passive: string;
   position: Coordinates;
@@ -56,6 +60,50 @@ export interface Ability {
   damage?: number;
   healing?: number;
   effects?: string[];
+  exclusiveTo?: string | null; // characterId or null for shared
+}
+
+// ── Card System ──────────────────────────────────────────────────────────────
+
+export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate';
+export type CardRarity = 'common' | 'rare' | 'ultimate';
+
+export interface EffectValues {
+  damage?: number;
+  damageType?: 'atk' | 'flat'; // 'atk' = scales with executor might, 'flat' = literal value
+  healing?: number;
+  atkBonus?: number;
+  defBonus?: number;
+  moveBonus?: number;
+  teamDmgPct?: number;
+  range?: number;
+  turns?: number;
+  targets?: number;
+}
+
+export interface Card {
+  id: string;           // unique instance id (filled on draw)
+  definitionId: string; // links to CardDefinition
+  name: string;
+  manaCost: number;
+  type: CardType;
+  rarity: CardRarity;
+  description: string;
+  exclusiveTo: string | null; // characterId or null = shared
+  // Inline effect values (resolved at card-play time)
+  effect: EffectValues;
+  // Optional terrain bonus key: e.g. 'mountain' → +20% damage
+  terrainBonus?: Partial<Record<string, number>>;
+}
+
+export interface Hand {
+  cards: Card[];
+  maxSize: number; // default 10
+}
+
+export interface Deck {
+  drawPile: Card[];
+  discardPile: Card[];
 }
 
 export interface HexTile {
@@ -101,6 +149,8 @@ export interface GameState {
     range: number;
   };
   winner?: number; // Player ID who won
+  hand?: Hand;   // Active player's current hand
+  deck?: Deck;   // Active player's draw/discard piles
 }
 
 export interface Player {

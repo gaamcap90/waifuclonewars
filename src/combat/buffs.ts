@@ -19,9 +19,9 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
   const teamPowerPct =
     ((state.teamBuffs?.powerBonus ?? [0, 0])[icon.playerId] ?? 0) / 100;
 
-  let might   = baseMight   * (1 + teamMightPct);
+  let might   = baseMight   * (1 + teamMightPct) + (icon.cardBuffAtk ?? 0);
   let power   = basePower   * (1 + teamPowerPct);
-  let defense = baseDefense;
+  let defense = baseDefense + (icon.cardBuffDef ?? 0);
 
   // 🏰 Base tile buff (+20% Might/Power/Defense on own base)
   if (isOwnBaseAt(icon, icon.position.q, icon.position.r)) {

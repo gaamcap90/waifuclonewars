@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { GameState, Coordinates, Icon, HexTile, TerrainType } from "@/types/game";
+import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck } from "@/types/game";
+import { buildDeckForTeam, drawCards } from "@/data/cards";
 import { toast } from "sonner";
 
 // TURN/COMBAT HELPERS (external)
@@ -218,6 +219,7 @@ const createInitialIcons = (): Icon[] => {
       icons.push({
         id: `${pid}-${i}`,
         ...t,
+        stats: { ...t.stats, mana: 3, maxMana: 3 },
         position: spawns[i],
         playerId: pid,
         isAlive: true,
@@ -227,7 +229,7 @@ const createInitialIcons = (): Icon[] => {
         hasUltimate: true,
         ultimateUsed: false,
         hasRespawned: false,
-        justRespawned: false
+        justRespawned: false,
       });
     });
   }
@@ -242,7 +244,29 @@ type ExtState = GameState & {
   movementStack: Record<string, MoveStep[]>;
   menuOpen: boolean;
   combatLog: LogEntry[];
+  hands: [Hand, Hand];
+  decks: [Deck, Deck];
+  cardTargetingMode?: { card: Card; executorId: string };
 };
+
+/** Remove `card` from `playerId`'s hand, put it in discard, draw 1 replacement. */
+function consumeCardFromHand(state: ExtState, card: Card, playerId: number): ExtState {
+  const pid = playerId as 0 | 1;
+  const hand = { ...state.hands[pid], cards: state.hands[pid].cards.filter(c => c.id !== card.id) };
+  let deck = { ...state.decks[pid], discardPile: [...state.decks[pid].discardPile, card] };
+
+  if (hand.cards.length < hand.maxSize) {
+    const { drawn, newDraw, newDiscard } = drawCards(deck.drawPile, deck.discardPile, 1);
+    hand.cards = [...hand.cards, ...drawn];
+    deck = { drawPile: newDraw, discardPile: newDiscard };
+  }
+
+  const hands: [Hand, Hand] = [state.hands[0], state.hands[1]];
+  const decks: [Deck, Deck] = [state.decks[0], state.decks[1]];
+  hands[pid] = hand;
+  decks[pid] = deck;
+  return { ...state, hands, decks };
+}
 function buildIconsFromSelection(selected: any[]): Icon[] {
   const p1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
   const p2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
@@ -260,6 +284,8 @@ function buildIconsFromSelection(selected: any[]): Icon[] {
       power: template.stats.power ?? 50,
       defense: template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : 15,
       movement: 2,
+      mana: 3,
+      maxMana: 3,
     },
     abilities: getAbilitiesForCharacter(template.name),
     passive: getPassiveForCharacter(template.name),
@@ -315,6 +341,17 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     const speedQueueRaw = initSpeedQueue(initialIcons);
     const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
 
+    const p0Names = initialIcons.filter(i => i.playerId === 0).map(i => i.name);
+    const p1Names = initialIcons.filter(i => i.playerId === 1).map(i => i.name);
+    const buildHand = (names: string[]): [Hand, Deck] => {
+      const allCards = buildDeckForTeam(names);
+      const drawn = allCards.slice(0, 10);
+      const remaining = allCards.slice(10);
+      return [{ cards: drawn, maxSize: 10 }, { drawPile: remaining, discardPile: [] }];
+    };
+    const [hand0, deck0] = buildHand(p0Names);
+    const [hand1, deck1] = buildHand(p1Names);
+
     return {
       currentTurn: 1,
       activePlayerId: 0,
@@ -340,6 +377,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       movementStack: {},
       menuOpen: false,
       combatLog: [],
+      hands: [hand0, hand1],
+      decks: [deck0, deck1],
     } as ExtState;
   });
 
@@ -550,13 +589,126 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   const selectTile = useCallback((coordinates: Coordinates) => {
     setGameState((prev) => {
       const state = { ...prev } as ExtState;
-      const me = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
+
+      // ── Card targeting path ──────────────────────────────────────────────────
+      if (state.cardTargetingMode) {
+        const { card, executorId } = state.cardTargetingMode;
+        const executor = state.players.flatMap(p => p.icons).find(i => i.id === executorId);
+        if (!executor || !executor.isAlive) return { ...state, cardTargetingMode: undefined };
+
+        const range = card.effect.range ?? 3;
+        if (hexDistance(executor.position, coordinates) > range) {
+          toast.error("Out of range!");
+          return prev;
+        }
+
+        const targetIcon = state.players.flatMap(p => p.icons).find(
+          ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+        );
+
+        let updated = { ...state } as ExtState;
+        let updatedBaseHealth = [...state.baseHealth];
+        let updatedObjectives = { ...state.objectives };
+
+        if (card.effect.damage !== undefined) {
+          const isOwnBase =
+            (executor.playerId === 0 && coordinates.q === -6 && coordinates.r === 5) ||
+            (executor.playerId === 1 && coordinates.q === 6 && coordinates.r === -5);
+
+          const executorTile = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r);
+          const terrainMult = 1 + (executorTile ? (card.terrainBonus?.[executorTile.terrain.type] ?? 0) : 0);
+
+          const baseDmg = card.effect.damageType === 'atk'
+            ? resolveBasicAttackDamage(updated, executor, targetIcon ?? null)
+            : Math.max(0.1, card.effect.damage * terrainMult);
+          const finalDmg = card.effect.damageType === 'atk' ? baseDmg : Math.max(0.1, baseDmg);
+
+          if (targetIcon) {
+            if (targetIcon.playerId === executor.playerId) {
+              toast.error("Can't attack your own character!");
+              return prev;
+            }
+            const newHp = Math.max(0, targetIcon.stats.hp - finalDmg);
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                ...ic,
+                stats: { ...ic.stats, hp: newHp },
+                isAlive: newHp > 0,
+                respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
+              }),
+            }));
+            pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${finalDmg.toFixed(0)} dmg`, executor.playerId);
+          } else {
+            if (isOwnBase) { toast.error("Can't attack your own base!"); return prev; }
+            const isBase = (coordinates.q === -6 && coordinates.r === 5) || (coordinates.q === 6 && coordinates.r === -5);
+            if (isBase) {
+              const enemyId = executor.playerId === 0 ? 1 : 0;
+              updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - finalDmg);
+              pushLog(updated, `${executor.name} played ${card.name} on enemy base for ${finalDmg.toFixed(0)} dmg`, executor.playerId);
+            } else {
+              const campIdx = coordinates.q === -2 && coordinates.r === 2 ? 0 : coordinates.q === 2 && coordinates.r === -2 ? 1 : -1;
+              if (campIdx !== -1 && !state.objectives.beastCamps.defeated[campIdx]) {
+                const hpArr = [...state.objectives.beastCamps.hp];
+                const defArr = [...state.objectives.beastCamps.defeated];
+                hpArr[campIdx] = Math.max(0, hpArr[campIdx] - finalDmg);
+                pushLog(updated, `${executor.name} played ${card.name} on camp for ${finalDmg.toFixed(0)} dmg`, executor.playerId);
+                if (hpArr[campIdx] <= 0) {
+                  defArr[campIdx] = true;
+                  updated.board = updated.board.map(tile =>
+                    tile.coordinates.q === coordinates.q && tile.coordinates.r === coordinates.r
+                      ? { ...tile, terrain: { type: "plain", effects: {} } } : tile
+                  );
+                  const nm = [...updated.teamBuffs.mightBonus];
+                  const np = [...updated.teamBuffs.powerBonus];
+                  nm[executor.playerId] = Math.min((nm[executor.playerId] ?? 0) + 15, 30);
+                  np[executor.playerId] = Math.min((np[executor.playerId] ?? 0) + 15, 30);
+                  updated.teamBuffs = { ...updated.teamBuffs, mightBonus: nm, powerBonus: np };
+                  toast.success("Beast Camp defeated! Team +15% Might & Power!");
+                }
+                updatedObjectives = { ...updatedObjectives, beastCamps: { ...updatedObjectives.beastCamps, hp: hpArr, defeated: defArr } };
+              } else { toast.error("No target!"); return prev; }
+            }
+          }
+        }
+
+        if (card.effect.healing !== undefined) {
+          if (!targetIcon || targetIcon.playerId !== executor.playerId) {
+            toast.error("Healing targets allies only!");
+            return prev;
+          }
+          const newHp = Math.min(targetIcon.stats.maxHp, targetIcon.stats.hp + card.effect.healing);
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp } }),
+          }));
+          pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name}, healing ${card.effect.healing} HP`, executor.playerId);
+        }
+
+        // Deduct mana from executor
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+            ...ic, stats: { ...ic.stats, mana: Math.max(0, (ic.stats.mana ?? 0) - card.manaCost) },
+          }),
+        }));
+
+        updated = consumeCardFromHand(updated, card, executor.playerId);
+        return { ...updated, baseHealth: updatedBaseHealth, objectives: updatedObjectives, cardLockActive: true, cardTargetingMode: undefined };
+      }
+
+      // Use selectedIcon as the active mover/caster; fall back to first alive on active player's team
+      const me = state.players[state.activePlayerId]?.icons.find(
+        i => (i.id === state.selectedIcon || !state.selectedIcon) && i.isAlive
+      ) ?? state.players[state.activePlayerId]?.icons.find(i => i.isAlive);
       if (!me) return prev;
 
       if (state.gameMode === "singleplayer" && me.playerId === 1) return prev;
 
       // Targeting path
       if (state.targetingMode) {
+        // Use the iconId stored in targetingMode as the caster
+        const caster = state.players.flatMap(p => p.icons).find(i => i.id === state.targetingMode!.iconId) ?? me;
         const { range, abilityId } = state.targetingMode;
         if (hexDistance(me.position, coordinates) > range) return prev;
 
@@ -979,60 +1131,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     });
   }, []);
 
-  turnNum = prev.currentTurn + 1;
-
-  // after boundary, choose first living icon from 0
-  nextIdx = 0;
-  guard = 0;
-  while (guard++ < len) {
-    const id = normalizedQueue[nextIdx];
-    const ic = playersAfter.flatMap((p) => p.icons).find((x) => x.id === id);
-    if (ic?.isAlive) break;
-    nextIdx = (nextIdx + 1) % len;
-  }
-}
-
-const nextActiveId = normalizedQueue[nextIdx];
-
-// victory conditions
-const baseHealth = [...prev.baseHealth];
-const p1Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
-const p2Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
-
-let newPhase = prev.phase;
-let winner = prev.winner;
-
-if (!p1Alive && p2Alive) {
-  newPhase = "defeat";
-  winner = 1;
-} else if (!p2Alive && p1Alive) {
-  newPhase = "victory";
-  winner = 0;
-} else if (baseHealth[0] <= 0) {
-  newPhase = "defeat";
-  winner = 1;
-} else if (baseHealth[1] <= 0) {
-  newPhase = "victory";
-  winner = 0;
-}
-
-return {
-  ...prev,
-  players: playersAfter,
-  movementStack,
-  speedQueue: normalizedQueue,
-  globalMana: mana,
-  queueIndex: nextIdx,
-  activeIconId: nextActiveId,
-  currentTurn: turnNum,
-  selectedIcon: undefined,
-  targetingMode: undefined,
-  phase: newPhase,
-  winner,
-};
-    });
-  }, []);
-
 // Keep these for UI
 const selectIcon = useCallback((iconId: string) => {
   setGameState((prev) => ({ ...prev, selectedIcon: iconId }));
@@ -1100,8 +1198,7 @@ const startRespawnPlacement = useCallback((iconId: string) => {
     const icon = prev.players.flatMap((p) => p.icons).find((i) => i.id === iconId);
     if (!icon || icon.isAlive || icon.respawnTurns > 0) return prev;
 
-    const me = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
-    if (me?.playerId !== icon.playerId) {
+    if (icon.playerId !== prev.activePlayerId) {
       toast.error("You can only respawn on your turn!");
       return prev;
     }
