@@ -12,15 +12,15 @@ interface GameBoardProps {
 
 const getCharacterPortrait = (name: string) => {
   if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
-  if (name.includes("Genghis"))   return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
-  if (name.includes("Da Vinci"))  return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
+  if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
+  if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
   return null;
 };
 
 const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
   // 1) Hex dimensions
-  const hexSize   = 50;
-  const hexWidth  = hexSize * 2;                // 100px
+  const hexSize = 50;
+  const hexWidth = hexSize * 2;                // 100px
   const hexHeight = Math.sqrt(3) * hexSize;     // ~86.6px
 
   // 2) Pan & zoom state
@@ -31,15 +31,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
   const boardRef = useRef<HTMLDivElement>(null);
 
   // 3) Container size & centering math
-  const containerWidth  = boardRef.current?.clientWidth  ?? 800;
+  const containerWidth = boardRef.current?.clientWidth ?? 800;
   const containerHeight = boardRef.current?.clientHeight ?? 600;
-  const offsetX = (containerWidth  - hexWidth)  / 2;
+  const offsetX = (containerWidth - hexWidth) / 2;
   const offsetY = (containerHeight - hexHeight) / 2;
 
   // 4) Compute ranges for highlighting
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
-    .find(i => i.id === gameState.activeIconId);
+    .find(i => i.playerId === gameState.activePlayerId && i.isAlive);
 
   const { movementRange, attackRange, abilityRange } = useRangeCalculation(
     gameState,
@@ -53,8 +53,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
   // 5) Memoized board rendering
   const renderBoard = useMemo(() => {
     const hexToPixel = (q: number, r: number) => ({
-      x: hexSize * (3/2 * q),
-      y: hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r),
+      x: hexSize * (3 / 2 * q),
+      y: hexSize * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
     });
 
     return gameState.board.map(tile => {
@@ -70,15 +70,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
           ic.isAlive
         );
 
-      const playerColor  = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
+      const playerColor = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
       const isActiveIcon = icon?.id === gameState.activeIconId;
 
       // ranges
-      const inMove    = movementRange.some(c => c.q === q && c.r === r);
-      const inAttack  = attackRange.some(c => c.q === q && c.r === r);
+      const inMove = movementRange.some(c => c.q === q && c.r === r);
+      const inAttack = attackRange.some(c => c.q === q && c.r === r);
       const inAbility = abilityRange.some(c => c.q === q && c.r === r);
 
-      const isTargetable    = inAttack || inAbility;
+      const isTargetable = inAttack || inAbility;
       const isValidMovement = inMove;
       const isRespawnTarget = Boolean(gameState.respawnPlacement && (() => {
         const respawning = gameState.players
@@ -87,7 +87,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
         if (!respawning) return false;
         const validZone = respawning.playerId === 0
           ? (q >= -6 && q <= -4 && r >= 3 && r <= 5)
-          : (q >= 4  && q <= 6 && r >= -5 && r <= -3);
+          : (q >= 4 && q <= 6 && r >= -5 && r <= -3);
         const occupied = gameState.players
           .flatMap(p => p.icons)
           .some(i => i.position.q === q && i.position.r === r && i.isAlive);
@@ -99,9 +99,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
           key={`${q}-${r}`}
           className="absolute cursor-pointer"
           style={{
-            left:   x + offsetX,
-            top:    y + offsetY,
-            width:  hexWidth,
+            left: x + offsetX,
+            top: y + offsetY,
+            width: hexWidth,
             height: hexHeight,
           }}
           onClick={() => onTileClick(tile.coordinates)}
@@ -109,7 +109,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
           <HexTile
             tile={tile}
             onClick={() => onTileClick(tile.coordinates)}
-            onTerrainClick={() => {}}
+            onTerrainClick={() => { }}
             icon={icon ? icon.name.charAt(0) : undefined}
             iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
             size={hexSize}
@@ -131,18 +131,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
       );
     });
   },
-  [
-    gameState.board,
-    gameState.players,
-    gameState.activeIconId,
-    gameState.targetingMode,
-    gameState.respawnPlacement,
-    movementRange,
-    attackRange,
-    abilityRange,
-    offsetX,
-    offsetY
-  ]);
+    [
+      gameState.board,
+      gameState.players,
+      gameState.activeIconId,
+      gameState.targetingMode,
+      gameState.respawnPlacement,
+      movementRange,
+      attackRange,
+      abilityRange,
+      offsetX,
+      offsetY
+    ]);
 
   // 6) Pan & zoom handlers
   const handleMouseDown = (e: React.MouseEvent) => {
