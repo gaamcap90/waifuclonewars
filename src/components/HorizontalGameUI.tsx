@@ -63,7 +63,9 @@ const HorizontalGameUI = ({
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
 
-  const activeIcon = gameState.players.flatMap(p => p.icons).find(i => i.id === gameState.activeIconId);
+  const activeIcon = gameState.players
+    .flatMap(p => p.icons)
+    .find(i => i.playerId === gameState.activePlayerId && i.isAlive);
 
   // ability/attack toggle hint: show “Targeting active” helper while targeting
   const targetingActive = Boolean(gameState.targetingMode);
@@ -77,34 +79,34 @@ const HorizontalGameUI = ({
 
   /* ========= Small UI helpers ========= */
   const Pill = ({
-  selected,
-  disabled,
-  children,
-  onClick,
-}: {
-  selected?: boolean;
-  disabled?: boolean;
-  children: React.ReactNode;
-  onClick?: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={[
-      "px-4 py-2 rounded-lg border transition-all flex items-center gap-2 whitespace-nowrap",
-      // base
-      "relative will-change-transform",
-      selected
-        // selected look: strong contrast + ring + soft shadow + pulse
-        ? "bg-foreground text-background border-foreground ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/30 animate-pulse"
-        // idle look
-        : "bg-background/70 text-foreground border-border hover:bg-background",
-      disabled ? "opacity-50 cursor-not-allowed" : "hover:-translate-y-0.5 active:translate-y-0",
-    ].join(" ")}
-  >
-    {children}
-  </button>
-);
+    selected,
+    disabled,
+    children,
+    onClick,
+  }: {
+    selected?: boolean;
+    disabled?: boolean;
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "px-4 py-2 rounded-lg border transition-all flex items-center gap-2 whitespace-nowrap",
+        // base
+        "relative will-change-transform",
+        selected
+          // selected look: strong contrast + ring + soft shadow + pulse
+          ? "bg-foreground text-background border-foreground ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/30 animate-pulse"
+          // idle look
+          : "bg-background/70 text-foreground border-border hover:bg-background",
+        disabled ? "opacity-50 cursor-not-allowed" : "hover:-translate-y-0.5 active:translate-y-0",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
 
   const StatBadge = ({ label, value }: { label: string; value: string }) => (
     <Card className="bg-background/80 backdrop-blur-sm border-border/50">
@@ -171,55 +173,55 @@ const HorizontalGameUI = ({
               {gameState.players[0].icons
                 .filter(icon => icon.isAlive && (icon.stats?.hp ?? 0) > 0)
                 .map(icon => {
-                const portrait = getCharacterPortrait(icon.name);
-                return (
-                  <div key={icon.id} className="text-center">
-                    <div className="relative">
-                      <button
-  onClick={(e) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setSelectedCharacter({
-      id: icon.id,
-      position: { x: rect.left + rect.width / 2, y: rect.bottom } // ↓ below portrait
-    });
-  }}
-                        className={[
-                          "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
-                          "border-blue-400 hover:border-blue-300",
-                          icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : "",
-                        ].join(" ")}
-                        title={icon.name}
-                      >
-                        {portrait ? (
-                          <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-blue-500/90 text-white">
-                            {icon.name.charAt(0)}
-                          </div>
-                        )}
-                      </button>
-                      <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border bg-blue-500 border-blue-300" />
+                  const portrait = getCharacterPortrait(icon.name);
+                  return (
+                    <div key={icon.id} className="text-center">
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setSelectedCharacter({
+                              id: icon.id,
+                              position: { x: rect.left + rect.width / 2, y: rect.bottom } // ↓ below portrait
+                            });
+                          }}
+                          className={[
+                            "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
+                            "border-blue-400 hover:border-blue-300",
+                            icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : "",
+                          ].join(" ")}
+                          title={icon.name}
+                        >
+                          {portrait ? (
+                            <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-blue-500/90 text-white">
+                              {icon.name.charAt(0)}
+                            </div>
+                          )}
+                        </button>
+                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border bg-blue-500 border-blue-300" />
+                      </div>
+                      <div className="text-[11px] mt-1">
+                        {icon.stats.hp}/{icon.stats.maxHp}
+                      </div>
+                      <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                     </div>
-                    <div className="text-[11px] mt-1">
-                      {icon.stats.hp}/{icon.stats.maxHp}
-                    </div>
-                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                  </div>
-                );
-              })}
+                  );
+                })}
 
               <RespawnUI
-  deadCharacters={gameState.players[0].icons.filter(
-    icon => !icon.isAlive && (icon.respawnTurns ?? 0) > 0
-  )}
-  onRespawn={onRespawn}
-  isMyTurn={
-    gameState.players
-      .flatMap(p => p.icons)
-      .find(i => i.id === gameState.activeIconId)?.playerId === 0
-  }
-/>
+                deadCharacters={gameState.players[0].icons.filter(
+                  icon => !icon.isAlive && (icon.respawnTurns ?? 0) > 0
+                )}
+                onRespawn={onRespawn}
+                isMyTurn={
+                  gameState.players
+                    .flatMap(p => p.icons)
+                    .find(i => i.id === gameState.activeIconId)?.playerId === 0
+                }
+              />
             </div>
           </CardContent>
         </Card>
@@ -237,57 +239,57 @@ const HorizontalGameUI = ({
 
             <div className="flex gap-3 justify-center pt-2">
               {gameState.players[1].icons
-  .filter(icon => icon.isAlive && (icon.stats?.hp ?? 0) > 0)
-  .map(icon => {
-                const portrait = getCharacterPortrait(icon.name);
-                return (
-                  <div key={icon.id} className="text-center">
-                    <div className="relative">
-                      <button
-  onClick={(e) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setSelectedCharacter({
-      id: icon.id,
-      position: { x: rect.left + rect.width / 2, y: rect.bottom } // ↓ below portrait
-    });
-  }}
-                        className={[
-                          "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
-                          "border-red-400 hover:border-red-300",
-                          icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : "",
-                        ].join(" ")}
-                        title={icon.name}
-                      >
-                        {portrait ? (
-                          <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-red-500/90 text-white">
-                            {icon.name.charAt(0)}
-                          </div>
-                        )}
-                      </button>
-                      <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border bg-red-500 border-red-300" />
+                .filter(icon => icon.isAlive && (icon.stats?.hp ?? 0) > 0)
+                .map(icon => {
+                  const portrait = getCharacterPortrait(icon.name);
+                  return (
+                    <div key={icon.id} className="text-center">
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setSelectedCharacter({
+                              id: icon.id,
+                              position: { x: rect.left + rect.width / 2, y: rect.bottom } // ↓ below portrait
+                            });
+                          }}
+                          className={[
+                            "w-10 h-10 rounded-full border-2 overflow-hidden transition-all",
+                            "border-red-400 hover:border-red-300",
+                            icon.id === gameState.activeIconId ? "ring-2 ring-yellow-400" : "",
+                          ].join(" ")}
+                          title={icon.name}
+                        >
+                          {portrait ? (
+                            <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-red-500/90 text-white">
+                              {icon.name.charAt(0)}
+                            </div>
+                          )}
+                        </button>
+                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border bg-red-500 border-red-300" />
+                      </div>
+                      <div className="text-[11px] mt-1">
+                        {icon.stats.hp}/{icon.stats.maxHp}
+                      </div>
+                      <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
                     </div>
-                    <div className="text-[11px] mt-1">
-                      {icon.stats.hp}/{icon.stats.maxHp}
-                    </div>
-                    <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                  </div>
-                );
-              })}
+                  );
+                })}
 
               <RespawnUI
-  deadCharacters={gameState.players[1].icons.filter(
-    icon => !icon.isAlive && (icon.respawnTurns ?? 0) > 0
-  )}
-  onRespawn={onRespawn}
-  isMyTurn={
-    gameState.players
-      .flatMap(p => p.icons)
-      .find(i => i.id === gameState.activeIconId)?.playerId === 1
-  }
-/>
+                deadCharacters={gameState.players[1].icons.filter(
+                  icon => !icon.isAlive && (icon.respawnTurns ?? 0) > 0
+                )}
+                onRespawn={onRespawn}
+                isMyTurn={
+                  gameState.players
+                    .flatMap(p => p.icons)
+                    .find(i => i.id === gameState.activeIconId)?.playerId === 1
+                }
+              />
 
             </div>
           </CardContent>

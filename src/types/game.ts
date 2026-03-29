@@ -35,7 +35,7 @@ export interface Icon {
   playerId: number;
   isAlive: boolean;
   respawnTurns: number;
-  actionTaken: boolean; // Has this icon acted this turn?
+  cardUsedThisTurn: boolean;
   movedThisTurn: boolean; // Has this icon moved this turn?
   hasUltimate: boolean; // Can use ultimate this match
   ultimateUsed: boolean; // Has used ultimate this match
@@ -68,7 +68,8 @@ export interface HexTile {
 
 export interface GameState {
   currentTurn: number;
-  activeIconId?: string; // Current acting icon in speed queue
+  activePlayerId: 0 | 1;
+  cardLockActive: boolean; // true once first card played this turn
   phase: 'draft' | 'deploy' | 'combat' | 'victory' | 'defeat';
   players: Player[];
   board: HexTile[];
@@ -80,7 +81,7 @@ export interface GameState {
   queueIndex: number;
   objectives: {
     manaCrystal: { controlled: boolean; player?: number };
-    beastCamps: { 
+    beastCamps: {
       hp: number[]; // HP for each beast camp [camp1, camp2]
       maxHp: number;
       defeated: boolean[];

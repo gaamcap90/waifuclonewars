@@ -222,7 +222,7 @@ const createInitialIcons = (): Icon[] => {
         playerId: pid,
         isAlive: true,
         respawnTurns: 0,
-        actionTaken: false,
+        cardUsedThisTurn: false,
         movedThisTurn: false,
         hasUltimate: true,
         ultimateUsed: false,
@@ -267,7 +267,7 @@ function buildIconsFromSelection(selected: any[]): Icon[] {
     playerId: pid,
     isAlive: true,
     respawnTurns: 0,
-    actionTaken: false,
+    cardUsedThisTurn: false,
     movedThisTurn: false,
     hasUltimate: true,
     ultimateUsed: false,
@@ -317,7 +317,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
     return {
       currentTurn: 1,
-      activeIconId: speedQueue[0] ?? initialIcons[0].id,
+      activePlayerId: 0,
+      cardLockActive: false,
       phase: "combat",
       players: [
         { id: 0, name: "Player 1", icons: initialIcons.filter((i) => i.playerId === 0), color: "blue", isAI: false },
@@ -382,8 +383,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   useEffect(() => {
     if (gameState.gameMode !== "singleplayer") return;
 
-    const me = gameState.players.flatMap((p) => p.icons).find((i) => i.id === gameState.activeIconId);
-    if (!me || !me.isAlive || me.playerId !== 1) return;
+    if (gameState.activePlayerId !== 1) return;
+    const aiIcons = gameState.players[1].icons.filter(i => i.isAlive);
+    if (!aiIcons.length) return;
 
     const t = setTimeout(() => {
       setGameState((prev) => {
@@ -393,8 +395,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         const normalizedQueue = normalizeSpeedQueue(state.speedQueue, allIcons);
         if (normalizedQueue !== state.speedQueue) (state as any).speedQueue = normalizedQueue;
 
-        const ai = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
-        if (!ai || !ai.isAlive || ai.playerId !== 1) return prev;
+        const aiIcons = state.players[1].icons.filter(i => i.isAlive);
+        if (!aiIcons.length) return prev;
+        const ai = aiIcons[0]; // act with first available icon for now
 
         const enemyTeam = 0;
         const enemies = state.players[enemyTeam].icons.filter((i) => i.isAlive);
@@ -600,7 +603,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           }));
 
           pushLog(updated, `${me.name} used ${ability.name} to teleport`, me.playerId);
-          return { ...updated, targetingMode: undefined };
+          return {
+            ...updated,
+            baseHealth: updatedBaseHealth,
+            objectives: updatedObjectives,
+            targetingMode: undefined,
+            cardLockActive: true,
+          };
         }
 
         // BASIC ATTACK
@@ -815,7 +824,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const stack = movementStack[me.id] ?? [];
       stack.push({ from, to: coordinates, cost: moveCost });
       movementStack[me.id] = stack;
-
+      if (state.cardLockActive) return prev;
       state.players = state.players.map((p) => ({
         ...p,
         icons: p.icons.map((ic) =>
@@ -881,53 +890,41 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   const endTurn = useCallback(() => {
     setCurrentTurnTimer(20);
     setGameState((prev) => {
-      if (!prev.speedQueue.length) return prev;
+      const nextPlayer: 0 | 1 = prev.activePlayerId === 0 ? 1 : 0;
 
-      const allIcons = prev.players.flatMap((p) => p.icons);
-      const normalizedQueue = normalizeSpeedQueue(prev.speedQueue, allIcons);
-
-      const movementStack = { ...(prev.movementStack ?? {}) };
-      movementStack[prev.activeIconId] = [];
-
+      // Reset all icons for the player who just ended
       const resetPlayers = prev.players.map((player) => ({
         ...player,
         icons: player.icons.map((ic) =>
-          ic.id === prev.activeIconId
-            ? { ...ic, actionTaken: false, movedThisTurn: false, justRespawned: false, stats: { ...ic.stats, movement: ic.stats.moveRange } }
+          ic.playerId === prev.activePlayerId
+            ? {
+              ...ic,
+              movedThisTurn: false,
+              cardUsedThisTurn: false,
+              stats: { ...ic.stats, movement: ic.stats.moveRange },
+            }
             : ic
         ),
       }));
 
-      const len = normalizedQueue.length;
-      let nextIdx = (prev.queueIndex + 1) % len;
+      // Mana refill for the player whose turn is starting
+      const mana = [...prev.globalMana] as [number, number];
+      const adj = countAlliesAdjacentToCrystal(
+        { ...prev, players: resetPlayers } as GameState,
+        nextPlayer
+      );
+      mana[nextPlayer] = Math.min(20, mana[nextPlayer] + Math.min(4, 1 + adj));
 
-      let boundaryCrossed = nextIdx === 0;
-      let guard = 0;
-      let playersScan = resetPlayers;
-      while (guard++ < len) {
-        const id = normalizedQueue[nextIdx];
-        const ic = playersScan.flatMap((p) => p.icons).find((x) => x.id === id);
-        if (ic?.isAlive) break;
-        nextIdx = (nextIdx + 1) % len;
-        if (nextIdx === 0) boundaryCrossed = true;
-      }
-
+      // Respawn tick (once per full round, when player 0's turn starts)
       let playersAfter = resetPlayers;
-      let mana = [...prev.globalMana];
-      let turnNum = prev.currentTurn;
-
-      if (boundaryCrossed) {
-        // Mana: baseline + adjacency (cap gain=4), pool cap 20
-        mana = mana.map((m, pid) => {
-          const adj = countAlliesAdjacentToCrystal({ ...prev, players: playersAfter } as GameState, pid);
-          const gain = Math.min(4, 1 + adj);
-          return Math.min(20, m + gain);
-        });
-
-        // Respawn tick once per round, then auto-respawn
+      if (nextPlayer === 0) {
         playersAfter = playersAfter.map((player) => ({
           ...player,
-          icons: player.icons.map((ic) => (!ic.isAlive && ic.respawnTurns > 0 ? { ...ic, respawnTurns: ic.respawnTurns - 1 } : ic)),
+          icons: player.icons.map((ic) =>
+            !ic.isAlive && ic.respawnTurns > 0
+              ? { ...ic, respawnTurns: ic.respawnTurns - 1 }
+              : ic
+          ),
         }));
 
         playersAfter = playersAfter.map((player) => ({
@@ -943,10 +940,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 return {
                   ...ic,
                   isAlive: true,
-                  hasRespawned: true,   // ← mark so they never respawn again
+                  hasRespawned: true,
                   justRespawned: true,
                   position: free,
-                  stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 }, // no movement on spawn turn
+                  stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 },
                   respawnTurns: 0,
                 };
               }
@@ -954,201 +951,228 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             return ic;
           }),
         }));
-
-        turnNum = prev.currentTurn + 1;
-
-        // after boundary, choose first living icon from 0
-        nextIdx = 0;
-        guard = 0;
-        while (guard++ < len) {
-          const id = normalizedQueue[nextIdx];
-          const ic = playersAfter.flatMap((p) => p.icons).find((x) => x.id === id);
-          if (ic?.isAlive) break;
-          nextIdx = (nextIdx + 1) % len;
-        }
       }
 
-      const nextActiveId = normalizedQueue[nextIdx];
-
-      // victory conditions
-      const baseHealth = [...prev.baseHealth];
-      const p1Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
-      const p2Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
-
+      // Victory check
+      const p0Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
+      const p1Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
       let newPhase = prev.phase;
       let winner = prev.winner;
-
-      if (!p1Alive && p2Alive) {
-        newPhase = "defeat";
-        winner = 1;
-      } else if (!p2Alive && p1Alive) {
-        newPhase = "victory";
-        winner = 0;
-      } else if (baseHealth[0] <= 0) {
-        newPhase = "defeat";
-        winner = 1;
-      } else if (baseHealth[1] <= 0) {
-        newPhase = "victory";
-        winner = 0;
-      }
+      if (!p0Alive) { newPhase = "defeat"; winner = 1; }
+      else if (!p1Alive) { newPhase = "victory"; winner = 0; }
+      if (prev.baseHealth[0] <= 0) { newPhase = "defeat"; winner = 1; }
+      if (prev.baseHealth[1] <= 0) { newPhase = "victory"; winner = 0; }
 
       return {
         ...prev,
         players: playersAfter,
-        movementStack,
-        speedQueue: normalizedQueue,
+        activePlayerId: nextPlayer,
+        cardLockActive: false,
         globalMana: mana,
-        queueIndex: nextIdx,
-        activeIconId: nextActiveId,
-        currentTurn: turnNum,
+        currentTurn: nextPlayer === 0 ? prev.currentTurn + 1 : prev.currentTurn,
         selectedIcon: undefined,
         targetingMode: undefined,
+        movementStack: {},
         phase: newPhase,
         winner,
       };
     });
   }, []);
 
-  // Keep these for UI
-  const selectIcon = useCallback((iconId: string) => {
-    setGameState((prev) => ({ ...prev, selectedIcon: iconId }));
-  }, []);
+  turnNum = prev.currentTurn + 1;
 
-  const respawnCharacter = useCallback((iconId: string, coordinates: Coordinates) => {
-    setGameState((prev) => {
-      const icon = prev.players.flatMap((p) => p.icons).find((i) => i.id === iconId);
-      if (!icon || icon.isAlive || icon.respawnTurns > 0) return prev;
+  // after boundary, choose first living icon from 0
+  nextIdx = 0;
+  guard = 0;
+  while (guard++ < len) {
+    const id = normalizedQueue[nextIdx];
+    const ic = playersAfter.flatMap((p) => p.icons).find((x) => x.id === id);
+    if (ic?.isAlive) break;
+    nextIdx = (nextIdx + 1) % len;
+  }
+}
 
-      const tile = prev.board.find((t) => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
-      if (!tile || tile.terrain.type !== "spawn") return prev;
+const nextActiveId = normalizedQueue[nextIdx];
 
-      const occupied = prev.players.flatMap((p) => p.icons).some((i) => i.isAlive && i.position.q === coordinates.q && i.position.r === coordinates.r);
-      if (occupied) return prev;
+// victory conditions
+const baseHealth = [...prev.baseHealth];
+const p1Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
+const p2Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
 
-      return {
-        ...prev,
-        players: prev.players.map((p) => ({
-          ...p,
-          icons: p.icons.map((i) =>
-            i.id === iconId
-              ? { ...i, isAlive: true, position: coordinates, stats: { ...i.stats, hp: i.stats.maxHp, movement: 0 }, respawnTurns: 0 }
-              : i
-          ),
-        })),
-      };
+let newPhase = prev.phase;
+let winner = prev.winner;
+
+if (!p1Alive && p2Alive) {
+  newPhase = "defeat";
+  winner = 1;
+} else if (!p2Alive && p1Alive) {
+  newPhase = "victory";
+  winner = 0;
+} else if (baseHealth[0] <= 0) {
+  newPhase = "defeat";
+  winner = 1;
+} else if (baseHealth[1] <= 0) {
+  newPhase = "victory";
+  winner = 0;
+}
+
+return {
+  ...prev,
+  players: playersAfter,
+  movementStack,
+  speedQueue: normalizedQueue,
+  globalMana: mana,
+  queueIndex: nextIdx,
+  activeIconId: nextActiveId,
+  currentTurn: turnNum,
+  selectedIcon: undefined,
+  targetingMode: undefined,
+  phase: newPhase,
+  winner,
+};
     });
   }, []);
 
-  /* =========================
-     Undo movement — last step only
-     ========================= */
-  const undoMovement = useCallback(() => {
-    setGameState((prev) => {
-      const state = { ...prev } as ExtState;
-      const me = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
-      if (!me) return prev;
+// Keep these for UI
+const selectIcon = useCallback((iconId: string) => {
+  setGameState((prev) => ({ ...prev, selectedIcon: iconId }));
+}, []);
 
-      const stack = (state.movementStack?.[me.id] ?? []).slice();
-      if (!stack.length) return prev;
+const respawnCharacter = useCallback((iconId: string, coordinates: Coordinates) => {
+  setGameState((prev) => {
+    const icon = prev.players.flatMap((p) => p.icons).find((i) => i.id === iconId);
+    if (!icon || icon.isAlive || icon.respawnTurns > 0) return prev;
 
-      const last = stack.pop()!;
-      state.movementStack = { ...(state.movementStack ?? {}), [me.id]: stack };
+    const tile = prev.board.find((t) => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+    if (!tile || tile.terrain.type !== "spawn") return prev;
 
-      state.players = state.players.map((p) => ({
+    const occupied = prev.players.flatMap((p) => p.icons).some((i) => i.isAlive && i.position.q === coordinates.q && i.position.r === coordinates.r);
+    if (occupied) return prev;
+
+    return {
+      ...prev,
+      players: prev.players.map((p) => ({
         ...p,
-        icons: p.icons.map((ic) =>
-          ic.id === me.id
-            ? {
-              ...ic,
-              position: last.from,
-              movedThisTurn: stack.length > 0,
-              stats: { ...ic.stats, movement: Math.min(ic.stats.moveRange, ic.stats.movement + last.cost) },
-            }
-            : ic
+        icons: p.icons.map((i) =>
+          i.id === iconId
+            ? { ...i, isAlive: true, position: coordinates, stats: { ...i.stats, hp: i.stats.maxHp, movement: 0 }, respawnTurns: 0 }
+            : i
         ),
-      }));
-      return state;
-    });
-  }, []);
+      })),
+    };
+  });
+}, []);
 
-  const startRespawnPlacement = useCallback((iconId: string) => {
-    setGameState((prev) => {
-      const icon = prev.players.flatMap((p) => p.icons).find((i) => i.id === iconId);
-      if (!icon || icon.isAlive || icon.respawnTurns > 0) return prev;
+/* =========================
+   Undo movement — last step only
+   ========================= */
+const undoMovement = useCallback(() => {
+  setGameState((prev) => {
+    const state = { ...prev } as ExtState;
+    const me = state.players.flatMap((p) => p.icons).find((i) => i.id === state.activeIconId);
+    if (!me) return prev;
 
-      const me = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
-      if (me?.playerId !== icon.playerId) {
-        toast.error("You can only respawn on your turn!");
-        return prev;
-      }
-      return { ...prev, respawnPlacement: iconId };
-    });
-  }, []);
+    const stack = (state.movementStack?.[me.id] ?? []).slice();
+    if (!stack.length) return prev;
 
-  const toggleMenu = useCallback(() => {
-    setGameState((prev) => ({ ...prev, menuOpen: !prev.menuOpen }));
-  }, []);
+    const last = stack.pop()!;
+    state.movementStack = { ...(state.movementStack ?? {}), [me.id]: stack };
 
-  const goToMainMenu = useCallback(() => {
-    setGameState((prev) => ({ ...prev, menuOpen: false, phase: "menu" as any }));
-  }, []);
+    state.players = state.players.map((p) => ({
+      ...p,
+      icons: p.icons.map((ic) =>
+        ic.id === me.id
+          ? {
+            ...ic,
+            position: last.from,
+            movedThisTurn: stack.length > 0,
+            stats: { ...ic.stats, movement: Math.min(ic.stats.moveRange, ic.stats.movement + last.cost) },
+          }
+          : ic
+      ),
+    }));
+    return state;
+  });
+}, []);
 
-  const resetGame = useCallback(() => {
-    setGameState(() => {
-      const initialIcons = createInitialIcons();
-      const speedQueueRaw = initSpeedQueue(initialIcons);
-      const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
-      return {
-        currentTurn: 1,
-        activeIconId: speedQueue[0] ?? initialIcons[0].id,
-        phase: "combat",
-        players: [
-          { id: 0, name: "Player 1", icons: initialIcons.filter((i) => i.playerId === 0), color: "blue", isAI: false },
-          { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter((i) => i.playerId === 1), color: "red", isAI: gameMode === "singleplayer" },
-        ],
-        board: createInitialBoard(),
-        globalMana: [15, 15],
-        turnTimer: 20,
-        speedQueue,
-        queueIndex: 0,
-        objectives: {
-          manaCrystal: { controlled: false },
-          beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
-        },
-        teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
-        baseHealth: [5, 5],
-        matchTimer: 600,
-        gameMode,
-        movementStack: {},
-        menuOpen: false,
-        combatLog: [],
-      } as ExtState;
-    });
-  }, [gameMode]);
+const startRespawnPlacement = useCallback((iconId: string) => {
+  setGameState((prev) => {
+    const icon = prev.players.flatMap((p) => p.icons).find((i) => i.id === iconId);
+    if (!icon || icon.isAlive || icon.respawnTurns > 0) return prev;
 
-  // Cancel targeting helper
-  const cancelTargeting = useCallback(() => {
-    setGameState(prev =>
-      prev.targetingMode ? { ...prev, targetingMode: undefined } : prev
-    );
-  }, []);
+    const me = prev.players.flatMap((p) => p.icons).find((i) => i.id === prev.activeIconId);
+    if (me?.playerId !== icon.playerId) {
+      toast.error("You can only respawn on your turn!");
+      return prev;
+    }
+    return { ...prev, respawnPlacement: iconId };
+  });
+}, []);
 
-  return {
-    gameState,
-    selectTile,
-    useAbility,
-    endTurn,
-    basicAttack,
-    respawnCharacter,
-    currentTurnTimer,
-    selectIcon,
-    undoMovement,
-    startRespawnPlacement,
-    toggleMenu,
-    goToMainMenu,
-    resetGame,
-    cancelTargeting,
-  };
+const toggleMenu = useCallback(() => {
+  setGameState((prev) => ({ ...prev, menuOpen: !prev.menuOpen }));
+}, []);
+
+const goToMainMenu = useCallback(() => {
+  setGameState((prev) => ({ ...prev, menuOpen: false, phase: "menu" as any }));
+}, []);
+
+const resetGame = useCallback(() => {
+  setGameState(() => {
+    const initialIcons = createInitialIcons();
+    const speedQueueRaw = initSpeedQueue(initialIcons);
+    const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
+    return {
+      currentTurn: 1,
+      activeIconId: speedQueue[0] ?? initialIcons[0].id,
+      phase: "combat",
+      players: [
+        { id: 0, name: "Player 1", icons: initialIcons.filter((i) => i.playerId === 0), color: "blue", isAI: false },
+        { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter((i) => i.playerId === 1), color: "red", isAI: gameMode === "singleplayer" },
+      ],
+      board: createInitialBoard(),
+      globalMana: [15, 15],
+      turnTimer: 20,
+      speedQueue,
+      queueIndex: 0,
+      objectives: {
+        manaCrystal: { controlled: false },
+        beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
+      },
+      teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
+      baseHealth: [5, 5],
+      matchTimer: 600,
+      gameMode,
+      movementStack: {},
+      menuOpen: false,
+      combatLog: [],
+    } as ExtState;
+  });
+}, [gameMode]);
+
+// Cancel targeting helper
+const cancelTargeting = useCallback(() => {
+  setGameState(prev =>
+    prev.targetingMode ? { ...prev, targetingMode: undefined } : prev
+  );
+}, []);
+
+return {
+  gameState,
+  selectTile,
+  useAbility,
+  endTurn,
+  basicAttack,
+  respawnCharacter,
+  currentTurnTimer,
+  selectIcon,
+  undoMovement,
+  startRespawnPlacement,
+  toggleMenu,
+  goToMainMenu,
+  resetGame,
+  cancelTargeting,
+};
 };
 
 export default useGameState;

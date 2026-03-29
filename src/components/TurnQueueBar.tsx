@@ -31,7 +31,7 @@ export function TurnQueueBar({
     <div className="flex justify-center">
       <div className="bg-card/90 backdrop-blur border rounded-lg px-5 py-3">
         <div className="text-center text-lg font-orbitron text-arena-glow mb-2">
-        Turn Queue
+          Turn Queue
         </div>
 
         <div className="flex justify-center gap-3">
@@ -41,7 +41,9 @@ export function TurnQueueBar({
               .find((i: any) => i.id === iconId);
             if (!icon) return null;
 
-            const isActive = icon.id === gameState.activeIconId && icon.isAlive;
+            const activeIcon = gameState.players
+              .flatMap(p => p.icons)
+              .find(i => i.playerId === gameState.activePlayerId && i.isAlive);
 
             // Grey out if dead, just respawned, or has no movement left
             const isDisabled =
