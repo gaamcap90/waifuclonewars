@@ -14,29 +14,34 @@ interface CardDef {
   terrainBonus?: Partial<Record<string, number>>;
 }
 
-// ── Character IDs (must match Icon.id prefix pattern used in useGameStateNew) ─
-// Icons are created as `${playerId}-${index}`, e.g. "0-0" = player0 Napoleon.
-// We key exclusive cards to the character NAME substring for now so it works
-// across both players. The CardHand component resolves against icon.name.
+// ── Character IDs (must match Icon.name substring) ────────────────────────────
 export const CHARACTER_IDS = {
   napoleon: "Napoleon",
   genghis:  "Genghis",
   daVinci:  "Da Vinci",
 } as const;
 
+// ── Shared cards copy multipliers ─────────────────────────────────────────────
+// How many copies of each shared card go into a deck
+const SHARED_COPIES: Record<string, number> = {
+  shared_basic_attack: 4,
+  shared_quick_move:   3,
+  // all others default to 2
+};
+
 // ── Card Definitions ─────────────────────────────────────────────────────────
 
 const CARD_DEFS: CardDef[] = [
   // ── Shared cards ────────────────────────────────────────────────────────────
   {
-    definitionId: "shared_strike",
-    name: "Strike",
+    definitionId: "shared_basic_attack",
+    name: "Basic Attack",
     manaCost: 1,
     type: "attack",
     rarity: "common",
-    description: "Deal ATK damage to a target in range.",
+    description: "Deal Might damage to a target in attack range.",
     exclusiveTo: null,
-    effect: { damage: 1, damageType: 'atk' as const }, // scales with executor's might
+    effect: { damage: 1, damageType: 'atk' as const },
   },
   {
     definitionId: "shared_shield",
@@ -44,29 +49,29 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 1,
     type: "defense",
     rarity: "common",
-    description: "Gain DEF block equal to your defense stat.",
+    description: "Gain +10 DEF until the start of your next turn.",
     exclusiveTo: null,
-    effect: { defBonus: 1 }, // multiplied by executor's defense at resolve time
+    effect: { defBonus: 10 },
   },
   {
-    definitionId: "shared_atk_up",
-    name: "ATK +2",
+    definitionId: "shared_might_up",
+    name: "MIGHT +10",
     manaCost: 0,
     type: "buff",
     rarity: "common",
-    description: "+2 ATK this turn. Amplifies Strike.",
+    description: "+10 Might until the start of your next turn. Amplifies Basic Attack.",
     exclusiveTo: null,
-    effect: { atkBonus: 2 },
+    effect: { atkBonus: 10 },
   },
   {
     definitionId: "shared_def_up",
-    name: "DEF +2",
+    name: "DEF +10",
     manaCost: 0,
     type: "buff",
     rarity: "common",
-    description: "+2 DEF this turn. Amplifies Shield.",
+    description: "+10 Defense until the start of your next turn.",
     exclusiveTo: null,
-    effect: { defBonus: 2 },
+    effect: { defBonus: 10 },
   },
   {
     definitionId: "shared_quick_move",
@@ -77,6 +82,26 @@ const CARD_DEFS: CardDef[] = [
     description: "+1 movement range this turn.",
     exclusiveTo: null,
     effect: { moveBonus: 1 },
+  },
+  {
+    definitionId: "shared_mend",
+    name: "Mend",
+    manaCost: 1,
+    type: "defense",
+    rarity: "common",
+    description: "Heal a nearby ally for 20 HP.",
+    exclusiveTo: null,
+    effect: { healing: 20 },
+  },
+  {
+    definitionId: "shared_battle_cry",
+    name: "Battle Cry",
+    manaCost: 0,
+    type: "buff",
+    rarity: "common",
+    description: "+8 Might this turn. Great before a Basic Attack.",
+    exclusiveTo: null,
+    effect: { atkBonus: 8 },
   },
 
   // ── Napoleon exclusives ──────────────────────────────────────────────────────
@@ -107,7 +132,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 4,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE — 30 damage in a 3-tile line.",
+    description: "ULTIMATE (Exhaust) — 30 damage in a 3-tile line.",
     exclusiveTo: CHARACTER_IDS.napoleon,
     effect: { damage: 30, range: 3 },
   },
@@ -129,7 +154,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "attack",
     rarity: "rare",
-    description: "60 damage + fear effect.",
+    description: "60 damage to a nearby target.",
     exclusiveTo: CHARACTER_IDS.genghis,
     effect: { damage: 60 },
   },
@@ -139,7 +164,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 4,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE — 24 damage to up to 3 enemies.",
+    description: "ULTIMATE (Exhaust) — 24 damage to up to 3 enemies.",
     exclusiveTo: CHARACTER_IDS.genghis,
     effect: { damage: 24, targets: 3 },
   },
@@ -153,7 +178,7 @@ const CARD_DEFS: CardDef[] = [
     rarity: "rare",
     description: "Teleport to any hex within range 4.",
     exclusiveTo: CHARACTER_IDS.daVinci,
-    effect: { moveBonus: 0, range: 4 }, // special: teleport handled by resolver
+    effect: { moveBonus: 0, range: 4 },
   },
   {
     definitionId: "davinci_masterpiece",
@@ -161,7 +186,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "defense",
     rarity: "rare",
-    description: "Heal 45 HP.",
+    description: "Heal 45 HP to a nearby ally.",
     exclusiveTo: CHARACTER_IDS.daVinci,
     effect: { healing: 45 },
   },
@@ -171,7 +196,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 4,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE — Summon a combat drone for 2 turns.",
+    description: "ULTIMATE (Exhaust) — Summon a combat drone for 2 turns.",
     exclusiveTo: CHARACTER_IDS.daVinci,
     effect: { turns: 2 },
   },
@@ -184,26 +209,23 @@ function newInstanceId() {
   return `card_${Date.now()}_${_instanceCounter++}`;
 }
 
-/** Instantiate a CardDef as a Card with a unique runtime id. */
 export function instantiateCard(def: CardDef): Card {
   return { ...def, id: newInstanceId() };
 }
 
 /**
  * Build a full starting deck for a team given their icon names.
- * - 2× each shared card
- * - 1× each exclusive card for each character present
+ * - Shared cards: SHARED_COPIES[definitionId] copies (default 2)
+ * - Exclusive cards: 1 copy per character present
  */
 export function buildDeckForTeam(iconNames: string[]): Card[] {
   const deck: Card[] = [];
 
   for (const def of CARD_DEFS) {
     if (def.exclusiveTo === null) {
-      // shared: 2 copies
-      deck.push(instantiateCard(def));
-      deck.push(instantiateCard(def));
+      const n = SHARED_COPIES[def.definitionId] ?? 2;
+      for (let i = 0; i < n; i++) deck.push(instantiateCard(def));
     } else {
-      // exclusive: include only if the character is in this team
       const inTeam = iconNames.some((n) => n.includes(def.exclusiveTo as string));
       if (inTeam) deck.push(instantiateCard(def));
     }

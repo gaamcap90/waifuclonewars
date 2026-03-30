@@ -107,7 +107,7 @@ export const useRangeCalculation = (
   if (showAttack && activeIcon) {
     // Get character-specific attack range
     let baseAttackRange = 1; // Default melee
-    if (activeIcon.name === "Napoleon-chan" || activeIcon.name === "Da Vinci-chan") {
+    if (activeIcon.name.includes("Napoleon") || activeIcon.name.includes("Da Vinci")) {
       baseAttackRange = 2; // Ranged characters
     }
 
