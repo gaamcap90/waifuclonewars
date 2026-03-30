@@ -1,7 +1,5 @@
 import { Card, CardType, CardRarity, EffectValues } from "@/types/game";
 
-// ── Card Definition (template without runtime id) ───────────────────────────
-
 interface CardDef {
   definitionId: string;
   name: string;
@@ -9,30 +7,26 @@ interface CardDef {
   type: CardType;
   rarity: CardRarity;
   description: string;
-  exclusiveTo: string | null; // null = shared
+  exclusiveTo: string | null;
   effect: EffectValues;
   terrainBonus?: Partial<Record<string, number>>;
 }
 
-// ── Character IDs (must match Icon.name substring) ────────────────────────────
 export const CHARACTER_IDS = {
   napoleon: "Napoleon",
   genghis:  "Genghis",
   daVinci:  "Da Vinci",
 } as const;
 
-// ── Shared cards copy multipliers ─────────────────────────────────────────────
-// How many copies of each shared card go into a deck
+// How many copies of each shared card go into a deck (default 2)
 const SHARED_COPIES: Record<string, number> = {
   shared_basic_attack: 4,
   shared_quick_move:   3,
-  // all others default to 2
+  shared_gamble:       1,
 };
 
-// ── Card Definitions ─────────────────────────────────────────────────────────
-
 const CARD_DEFS: CardDef[] = [
-  // ── Shared cards ────────────────────────────────────────────────────────────
+  // ── Shared ───────────────────────────────────────────────────────────────────
   {
     definitionId: "shared_basic_attack",
     name: "Basic Attack",
@@ -41,7 +35,7 @@ const CARD_DEFS: CardDef[] = [
     rarity: "common",
     description: "Deal Might damage to a target in attack range.",
     exclusiveTo: null,
-    effect: { damage: 1, damageType: 'atk' as const },
+    effect: { damage: 1, damageType: 'atk' },
   },
   {
     definitionId: "shared_shield",
@@ -59,7 +53,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "buff",
     rarity: "common",
-    description: "+10 Might until the start of your next turn. Amplifies Basic Attack.",
+    description: "+10 Might this turn. Amplifies Basic Attack.",
     exclusiveTo: null,
     effect: { atkBonus: 10 },
   },
@@ -69,7 +63,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "buff",
     rarity: "common",
-    description: "+10 Defense until the start of your next turn.",
+    description: "+10 Defense this turn.",
     exclusiveTo: null,
     effect: { defBonus: 10 },
   },
@@ -79,9 +73,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 1,
     type: "movement",
     rarity: "common",
-    description: "+1 movement range this turn.",
+    description: "+2 movement this turn.",
     exclusiveTo: null,
-    effect: { moveBonus: 1 },
+    effect: { moveBonus: 2 },
   },
   {
     definitionId: "shared_mend",
@@ -89,9 +83,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 1,
     type: "defense",
     rarity: "common",
-    description: "Heal a nearby ally for 20 HP.",
+    description: "Heal an ally within range 3 for 20 HP.",
     exclusiveTo: null,
-    effect: { healing: 20 },
+    effect: { healing: 20, range: 3 },
   },
   {
     definitionId: "shared_battle_cry",
@@ -99,21 +93,31 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "buff",
     rarity: "common",
-    description: "+8 Might this turn. Great before a Basic Attack.",
+    description: "+8 Might this turn. Combos with Basic Attack.",
     exclusiveTo: null,
     effect: { atkBonus: 8 },
   },
+  {
+    definitionId: "shared_gamble",
+    name: "Gamble",
+    manaCost: 0,
+    type: "buff",
+    rarity: "common",
+    description: "Discard 2 random cards from your hand. Draw 2 new ones.",
+    exclusiveTo: null,
+    effect: { swapCount: 2 },
+  },
 
-  // ── Napoleon exclusives ──────────────────────────────────────────────────────
+  // ── Napoleon ──────────────────────────────────────────────────────────────────
   {
     definitionId: "napoleon_artillery_barrage",
     name: "Artillery Barrage",
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "48 damage at range 4. +20% from mountain.",
+    description: "Power×0.7 damage at range 4. +20% from mountain.",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { damage: 48, range: 4 },
+    effect: { powerMult: 0.7, range: 4 },
     terrainBonus: { mountain: 0.2 },
   },
   {
@@ -122,31 +126,31 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "buff",
     rarity: "rare",
-    description: "+20% team damage for 3 turns.",
+    description: "+20% Might AND Power to all allies for 2 turns.",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { teamDmgPct: 20, turns: 3 },
+    effect: { teamDmgPct: 20, turns: 2 },
   },
   {
     definitionId: "napoleon_final_salvo",
     name: "Final Salvo",
-    manaCost: 4,
+    manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — 30 damage in a 3-tile line.",
+    description: "ULTIMATE (Exhaust) — 3 hits of Power×0.35 on one target at range 3.",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { damage: 30, range: 3 },
+    effect: { powerMult: 0.35, multiHit: 3, range: 3 },
   },
 
-  // ── Genghis exclusives ───────────────────────────────────────────────────────
+  // ── Genghis ───────────────────────────────────────────────────────────────────
   {
     definitionId: "genghis_mongol_charge",
     name: "Mongol Charge",
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Rush attack — 48 damage at range 3.",
+    description: "Power×0.6 damage at range 3.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { damage: 48, range: 3 },
+    effect: { powerMult: 0.6, range: 3 },
   },
   {
     definitionId: "genghis_horde_tactics",
@@ -154,31 +158,31 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "attack",
     rarity: "rare",
-    description: "60 damage to a nearby target.",
+    description: "Power×0.4 damage to ALL enemies within range 2.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { damage: 60 },
+    effect: { powerMult: 0.4, allEnemiesInRange: true, range: 2 },
   },
   {
     definitionId: "genghis_riders_fury",
     name: "Rider's Fury",
-    manaCost: 4,
+    manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — 24 damage to up to 3 enemies.",
+    description: "ULTIMATE (Exhaust) — Power×0.35 to ALL enemies on a horizontal line, range 4.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { damage: 24, targets: 3 },
+    effect: { powerMult: 0.35, lineTarget: true, range: 4 },
   },
 
-  // ── Da Vinci exclusives ───────────────────────────────────────────────────────
+  // ── Da Vinci ─────────────────────────────────────────────────────────────────
   {
     definitionId: "davinci_flying_machine",
     name: "Flying Machine",
     manaCost: 2,
     type: "movement",
     rarity: "rare",
-    description: "Teleport to any hex within range 4.",
+    description: "Teleport to any hex within range 5.",
     exclusiveTo: CHARACTER_IDS.daVinci,
-    effect: { moveBonus: 0, range: 4 },
+    effect: { moveBonus: 0, range: 5 },
   },
   {
     definitionId: "davinci_masterpiece",
@@ -186,17 +190,17 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "defense",
     rarity: "rare",
-    description: "Heal 45 HP to a nearby ally.",
+    description: "Heal an ally within range 3 for 45 HP.",
     exclusiveTo: CHARACTER_IDS.daVinci,
-    effect: { healing: 45 },
+    effect: { healing: 45, range: 3 },
   },
   {
     definitionId: "davinci_vitruvian_guardian",
     name: "Vitruvian Guardian",
-    manaCost: 4,
+    manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Summon a combat drone for 2 turns.",
+    description: "ULTIMATE (Exhaust) — Summon a combat drone: 50 HP, 15 Might, 30 Defense.",
     exclusiveTo: CHARACTER_IDS.daVinci,
     effect: { turns: 2 },
   },
@@ -213,14 +217,8 @@ export function instantiateCard(def: CardDef): Card {
   return { ...def, id: newInstanceId() };
 }
 
-/**
- * Build a full starting deck for a team given their icon names.
- * - Shared cards: SHARED_COPIES[definitionId] copies (default 2)
- * - Exclusive cards: 1 copy per character present
- */
 export function buildDeckForTeam(iconNames: string[]): Card[] {
   const deck: Card[] = [];
-
   for (const def of CARD_DEFS) {
     if (def.exclusiveTo === null) {
       const n = SHARED_COPIES[def.definitionId] ?? 2;
@@ -230,11 +228,9 @@ export function buildDeckForTeam(iconNames: string[]): Card[] {
       if (inTeam) deck.push(instantiateCard(def));
     }
   }
-
   return shuffle(deck);
 }
 
-/** Draw up to `count` cards from the draw pile, reshuffling discard if needed. */
 export function drawCards(
   drawPile: Card[],
   discardPile: Card[],
@@ -243,7 +239,6 @@ export function drawCards(
   let draw = [...drawPile];
   let discard = [...discardPile];
   const drawn: Card[] = [];
-
   for (let i = 0; i < count; i++) {
     if (draw.length === 0) {
       if (discard.length === 0) break;
@@ -252,7 +247,6 @@ export function drawCards(
     }
     drawn.push(draw.shift()!);
   }
-
   return { drawn, newDraw: draw, newDiscard: discard };
 }
 

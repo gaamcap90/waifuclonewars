@@ -15,7 +15,7 @@ const getCharacterPortrait = (name: string) => {
   if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
   if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
   if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
-  return null;
+  return null; // Combat Drone uses null → renders initial "C" with gear tint
 };
 
 const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
@@ -60,6 +60,42 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
 
   // 5) Hover damage preview when a damage card is selected
   const cardTargetingMode = (gameState as any).cardTargetingMode as { card: any; executorId: string } | undefined;
+
+  // 5a) Terrain tooltip (shown when nothing is being targeted)
+  const hoveredTile = hoveredCoords
+    ? gameState.board.find(t => t.coordinates.q === hoveredCoords.q && t.coordinates.r === hoveredCoords.r)
+    : null;
+
+  const showTerrainTooltip = Boolean(hoveredTile && !cardTargetingMode && !gameState.targetingMode);
+
+  function terrainTooltipLines(tile: (typeof gameState.board)[0]): string[] {
+    const lines: string[] = [];
+    const t = tile.terrain.type;
+    if (t === 'forest') lines.push('+50% Defense');
+    if (t === 'mountain') lines.push('Artillery range bonus (+20%)');
+    if (t === 'river') lines.push('Movement penalty (-1 MOV)');
+    if (t === 'mana_crystal') lines.push('+1 or +2 Mana at end of turn');
+    if (t === 'beast_camp') {
+      const camps = (gameState as any).objectives?.beastCamps;
+      if (camps) {
+        const idx = gameState.board
+          .filter(b => b.terrain.type === 'beast_camp')
+          .findIndex(b => b.coordinates.q === tile.coordinates.q && b.coordinates.r === tile.coordinates.r);
+        const hp = camps.hp?.[idx] ?? 0;
+        const maxHp = camps.maxHp ?? 100;
+        const defeated = camps.defeated?.[idx];
+        lines.push(`HP: ${hp}/${maxHp}`);
+        if (defeated) lines.push('Defeated — +20% Might & Power to team');
+        else lines.push('Defeat for +20% Might & Power bonus');
+      } else {
+        lines.push('Defeat for team buff');
+      }
+    }
+    if (t === 'base') lines.push('+20% all stats for home team');
+    if (t === 'spawn') lines.push('Respawn zone');
+    if (t === 'plain') lines.push('No special effects');
+    return lines;
+  }
   const hoverDamagePreview = useMemo(() => {
     if (!hoveredCoords || !cardTargetingMode) return null;
     const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === cardTargetingMode.executorId);
@@ -145,7 +181,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
             tile={tile}
             onClick={() => onTileClick(tile.coordinates)}
             onTerrainClick={() => { }}
-            icon={icon ? icon.name.charAt(0) : undefined}
+            icon={icon ? (icon.name === "Combat Drone" ? "⚙" : icon.name.charAt(0)) : undefined}
             iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
             size={hexSize}
             playerColor={playerColor}
@@ -232,6 +268,31 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
           }}
         >
           {renderBoard}
+          {/* Terrain tooltip */}
+          {showTerrainTooltip && hoveredTile && hoveredCoords && (() => {
+            const lines = terrainTooltipLines(hoveredTile);
+            if (lines.length === 0) return null;
+            const hexToPixel = (q: number, r: number) => ({
+              x: hexSize * (3 / 2 * q),
+              y: hexSize * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
+            });
+            const { x, y } = hexToPixel(hoveredCoords.q, hoveredCoords.r);
+            return (
+              <div
+                className="absolute z-40 pointer-events-none"
+                style={{ left: x + offsetX + hexWidth / 2, top: y + offsetY - 8, transform: 'translate(-50%, -100%)' }}
+              >
+                <div className="bg-gray-900/95 border border-gray-600 rounded-lg px-3 py-2 shadow-xl min-w-[180px]">
+                  <div className="text-[10px] font-bold text-gray-300 mb-1 uppercase tracking-wide">
+                    {hoveredTile.terrain.type.replace('_', ' ')}
+                  </div>
+                  {lines.map((l, i) => (
+                    <div key={i} className="text-[11px] text-gray-400">{l.includes('—') ? l.split('—')[1].trim() : l}</div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           <BeastCampHPBar
             gameState={gameState}
             hexSize={hexSize}

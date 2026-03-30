@@ -145,9 +145,18 @@ const CharacterDetailPopup = ({
               </div>
 
               <div>
-                <span className="text-muted-foreground">Speed:</span>
-                <span className="ml-2 text-yellow-400 font-semibold">{character.stats.speed}</span>
+                <span className="text-muted-foreground">Range:</span>
+                <span className="ml-2 text-yellow-400 font-semibold">
+                  {character.name.includes("Napoleon") || character.name.includes("Da Vinci") ? 2 : 1}
+                </span>
               </div>
+              {(buffedStats.cardBuffAtk > 0 || buffedStats.cardBuffDef > 0) && (
+                <div className="text-xs text-yellow-300 border border-yellow-500/40 rounded px-2 py-1 bg-yellow-500/10">
+                  Card buffs this turn:
+                  {buffedStats.cardBuffAtk > 0 && <span className="ml-1">+{buffedStats.cardBuffAtk} MIGHT</span>}
+                  {buffedStats.cardBuffDef > 0 && <span className="ml-1">+{buffedStats.cardBuffDef} DEF</span>}
+                </div>
+              )}
             </div>
 
             {character.abilities.length > 0 && (

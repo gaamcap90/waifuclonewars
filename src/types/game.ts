@@ -71,6 +71,7 @@ export type CardRarity = 'common' | 'rare' | 'ultimate';
 export interface EffectValues {
   damage?: number;
   damageType?: 'atk' | 'flat'; // 'atk' = scales with executor might, 'flat' = literal value
+  powerMult?: number;           // damage = executor.power * powerMult (after defense reduction)
   healing?: number;
   atkBonus?: number;
   defBonus?: number;
@@ -79,6 +80,10 @@ export interface EffectValues {
   range?: number;
   turns?: number;
   targets?: number;
+  allEnemiesInRange?: boolean;  // hits every enemy within range (Horde Tactics)
+  lineTarget?: boolean;         // hits all enemies on a straight line (Rider's Fury)
+  multiHit?: number;            // hit same target N times (Final Salvo)
+  swapCount?: number;           // discard N cards, draw N new ones (Gamble)
 }
 
 export interface Card {
