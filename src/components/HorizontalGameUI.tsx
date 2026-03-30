@@ -19,13 +19,6 @@ const getCharacterPortrait = (name: string | undefined | null) => {
   return null;
 };
 
-const getAbilityIcon = (abilityName: string) => {
-  const n = abilityName.toLowerCase();
-  if (n.includes("charge")) return Zap;
-  if (n.includes("ultimate")) return Target;
-  return Shield;
-};
-
 // proper axial hex distance (adjacent === 1)
 const hexDistance = (a: { q: number; r: number }, b: { q: number; r: number }) => {
   const ax = a.q, az = a.r, ay = -ax - az;
@@ -322,7 +315,7 @@ const HorizontalGameUI = ({
               <div className="ml-auto flex items-center gap-3">
                 <StatBadge label="Movement" value={`${activeIcon?.stats.movement ?? 0}/${activeIcon?.stats.moveRange ?? 0}`} />
                 <StatBadge label="Timer" value={`${currentTurnTimer}s`} />
-                <Pill disabled={!activeIcon?.movedThisTurn || !!activeIcon?.actionTaken} onClick={onUndoMovement}>
+                <Pill disabled={!activeIcon?.movedThisTurn || !!activeIcon?.cardUsedThisTurn} onClick={onUndoMovement}>
                   <Undo2 className="h-4 w-4" />
                   Undo Movement
                 </Pill>
