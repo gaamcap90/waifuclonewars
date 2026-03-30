@@ -635,6 +635,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             movedThisTurn: false,
             hasUltimate: false,
             ultimateUsed: true,
+            droneExpiresTurn: state.currentTurn + 3,
           };
           updated.players = updated.players.map(p =>
             p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, drone] }
@@ -1272,6 +1273,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }));
       }
 
+      // Remove expired drones (Vitruvian Guardian lasts 3 rounds)
+      const newCurrentTurn = nextPlayer === 0 ? prev.currentTurn + 1 : prev.currentTurn;
+      playersAfter = playersAfter.map(p => ({
+        ...p,
+        icons: p.icons.filter(ic => !ic.droneExpiresTurn || ic.droneExpiresTurn > newCurrentTurn),
+      }));
+
       // Victory check — only trigger if no alive chars AND no pending respawns
       const p0Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
       const p1Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
@@ -1312,7 +1320,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         cardLockActive: false,
         cardTargetingMode: undefined,
         globalMana: mana,
-        currentTurn: nextPlayer === 0 ? prev.currentTurn + 1 : prev.currentTurn,
+        currentTurn: newCurrentTurn,
         selectedIcon: undefined,
         targetingMode: undefined,
         movementStack: {},
@@ -1387,8 +1395,13 @@ const playCard = useCallback((card: Card, executorId: string) => {
       };
     }
 
-    // Damage / healing cards → set cardTargetingMode + targetingMode so board highlights
-    if (card.effect.damage !== undefined || card.effect.healing !== undefined) {
+    // Damage / healing / single-target powerMult → enter targeting mode
+    const needsTarget =
+      card.effect.damage !== undefined ||
+      card.effect.healing !== undefined ||
+      (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget);
+
+    if (needsTarget) {
       const isBasicAttack = card.definitionId === "shared_basic_attack";
       const attackRange = executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") ? 2 : 1;
       const cardRange = card.effect.range ?? (isBasicAttack ? attackRange : 3);
@@ -1430,6 +1443,31 @@ const playCard = useCallback((card: Card, executorId: string) => {
       np[pid] = Math.min((np[pid] ?? 0) + card.effect.teamDmgPct, 60);
       updated.teamBuffs = { ...updated.teamBuffs, mightBonus: nm, powerBonus: np };
       pushLog(updated, `${executor.name} played ${card.name} (+${card.effect.teamDmgPct}% team dmg)`, executor.playerId);
+    } else if (card.effect.powerMult && (card.effect.allEnemiesInRange || card.effect.lineTarget)) {
+      // AoE cards fire immediately without requiring a target click
+      const range = card.effect.range ?? 2;
+      const executorTile = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r);
+      const terrainMult = 1 + (executorTile ? (card.terrainBonus?.[executorTile.terrain.type] ?? 0) : 0);
+      const enemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
+      );
+      if (enemies.length === 0) { toast.error("No enemies in range!"); return prev; }
+      for (const enemy of enemies) {
+        const atkStats = calcEffectiveStats(updated, executor);
+        const defStats = calcEffectiveStats(updated, enemy);
+        const dmg = Math.max(0.1, atkStats.power * card.effect.powerMult! * terrainMult - defStats.defense);
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic,
+            stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+            isAlive: ic.stats.hp - dmg > 0,
+            respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
+          }),
+        }));
+        pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
+      }
+      // falls through to mana deduction + consumeCard below
     }
     else if (card.effect.swapCount) {
       const pid = executor.playerId as 0 | 1;

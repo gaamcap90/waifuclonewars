@@ -44,6 +44,12 @@ function effectLabel(card: Card, executor: Icon | null): string {
     const buffed = might + (executor?.cardBuffAtk ?? 0);
     return buffed > 0 ? `${buffed} Might dmg` : "Might dmg";
   }
+  if (e.powerMult !== undefined) {
+    const power = executor?.stats.power ?? 0;
+    const est = Math.floor(power * e.powerMult);
+    const suffix = e.allEnemiesInRange ? " (AoE)" : e.lineTarget ? " (Line)" : e.multiHit ? ` ×${e.multiHit}` : "";
+    return `~${est} dmg${suffix}`;
+  }
   if (e.damage)    return `${e.damage} dmg`;
   if (e.healing)   return `+${e.healing} HP`;
   if (e.atkBonus)  return `+${e.atkBonus} MIGHT`;

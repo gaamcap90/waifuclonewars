@@ -46,6 +46,7 @@ export interface Icon {
   movementHistory?: { position: Coordinates; cost: number }[]; // Move history for undo
   hasRespawned?: boolean;
   justRespawned?: boolean;
+  droneExpiresTurn?: number; // Round number when this drone is removed (Vitruvian Guardian)
 
 }
 
