@@ -42,15 +42,19 @@ export const useBuffCalculation = () => {
     const totalPowerBonus = powerBonusPct + homeBaseBuff;
     const totalDefenseBonus = defenseBonusPct + homeBaseBuff + forestDefenseBuff;
 
-    // Apply buffs to stats
-    const buffedMight = Math.floor(icon.stats.might * (1 + totalMightBonus / 100));
+    // Apply buffs to stats (include temporary card buffs)
+    const cardBuffAtk = icon.cardBuffAtk ?? 0;
+    const cardBuffDef = icon.cardBuffDef ?? 0;
+    const buffedMight = Math.floor(icon.stats.might * (1 + totalMightBonus / 100)) + cardBuffAtk;
     const buffedPower = Math.floor(icon.stats.power * (1 + totalPowerBonus / 100));
-    const buffedDefense = Math.floor(icon.stats.defense * (1 + totalDefenseBonus / 100));
+    const buffedDefense = Math.floor(icon.stats.defense * (1 + totalDefenseBonus / 100)) + cardBuffDef;
 
     return {
       might: buffedMight,
       power: buffedPower,
       defense: buffedDefense,
+      cardBuffAtk,
+      cardBuffDef,
       hp: icon.stats.hp,
       maxHp: icon.stats.maxHp,
       speed: icon.stats.speed,

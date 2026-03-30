@@ -109,15 +109,41 @@ const HorizontalGameUI = ({
 
 const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
     const hp = gameState.baseHealth[pid];
-    const pct = Math.max(0, Math.min(100, (hp / 5) * 100));
+    const maxHp = 150;
+    const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between text-xs">
           <span>Base HP</span>
-          <span className="opacity-70">{hp}/5</span>
+          <span className="opacity-70">{hp}/{maxHp}</span>
         </div>
-        <div className="h-2 w-56 rounded-full bg-muted relative overflow-hidden">
-          <div className="absolute inset-y-0 left-0 bg-red-500" style={{ width: `${pct}%` }} />
+        <div className="h-2 w-full rounded-full bg-muted relative overflow-hidden">
+          <div className="absolute inset-y-0 left-0 bg-red-500 transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    );
+  };
+
+  const GlobalManaBar = ({ pid }: { pid: 0 | 1 }) => {
+    const extState = gameState as any;
+    const mana: number = extState.globalMana?.[pid] ?? 0;
+    const maxMana = 5;
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span>Mana</span>
+          <span className="opacity-70">{mana}/{maxMana}</span>
+        </div>
+        <div className="flex gap-1">
+          {Array.from({ length: maxMana }).map((_, i) => (
+            <div
+              key={i}
+              className={[
+                "flex-1 h-2 rounded-full border transition-colors",
+                i < mana ? "bg-blue-400 border-blue-300" : "bg-muted border-border"
+              ].join(" ")}
+            />
+          ))}
         </div>
       </div>
     );
@@ -138,6 +164,7 @@ const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
           </CardHeader>
           <CardContent className="space-y-3">
             <BaseHPBar pid={0} />
+            <GlobalManaBar pid={0} />
 
             <div className="flex gap-3 justify-center pt-2">
               {gameState.players[0].icons
@@ -166,7 +193,7 @@ const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
                             <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-blue-500/90 text-white">
-                              {icon.name.charAt(0)}
+                              {icon.name === "Combat Drone" ? "⚙" : icon.name.charAt(0)}
                             </div>
                           )}
                         </button>
@@ -176,7 +203,6 @@ const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
                         {icon.stats.hp}/{icon.stats.maxHp}
                       </div>
                       <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                      <ManaPips current={icon.stats.mana ?? 0} max={icon.stats.maxMana ?? 3} />
                     </div>
                   );
                 })}
@@ -201,6 +227,7 @@ const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
           </CardHeader>
           <CardContent className="space-y-3">
             <BaseHPBar pid={1} />
+            <GlobalManaBar pid={1} />
 
             <div className="flex gap-3 justify-center pt-2">
               {gameState.players[1].icons
@@ -238,7 +265,6 @@ const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
                         {icon.stats.hp}/{icon.stats.maxHp}
                       </div>
                       <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
-                      <ManaPips current={icon.stats.mana ?? 0} max={icon.stats.maxMana ?? 3} />
                     </div>
                   );
                 })}
@@ -321,11 +347,14 @@ const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
                   {hand && (
                     <CardHand
                       cards={hand.cards}
+                      drawPileCards={deck?.drawPile ?? []}
+                      discardPileCards={deck?.discardPile ?? []}
                       executor={executor}
                       activeIcons={activeIcons}
                       cardLockActive={gameState.cardLockActive}
                       drawPileSize={deck?.drawPile.length ?? 0}
                       discardPileSize={deck?.discardPile.length ?? 0}
+                      globalMana={(gameState as any).globalMana?.[pid] ?? 0}
                       exhaustedUltimates={exhaustedUltimates}
                       onPlayCard={onPlayCard}
                     />

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Card, Icon } from "@/types/game";
 
 // ── Colour coding by exclusive character ──────────────────────────────────────
@@ -54,12 +55,47 @@ function effectLabel(card: Card, executor: Icon | null): string {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function canPlay(card: Card, executor: Icon | null): boolean {
+function canPlay(card: Card, executor: Icon | null, globalMana: number): boolean {
   if (!executor || !executor.isAlive) return false;
   if (card.exclusiveTo && !executor.name.includes(card.exclusiveTo)) return false;
-  const mana = executor.stats.mana ?? 0;
-  return mana >= card.manaCost;
+  return globalMana >= card.manaCost;
 }
+
+// ── Pile Viewer Modal ─────────────────────────────────────────────────────────
+
+const PileModal: React.FC<{ title: string; cards: Card[]; onClose: () => void }> = ({ title, cards, onClose }) => {
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose} />
+      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 border border-gray-600 rounded-xl shadow-2xl p-4 min-w-[320px] max-w-[480px] max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-white">{title} ({cards.length})</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded border border-gray-600">✕</button>
+        </div>
+        {cards.length === 0 ? (
+          <div className="text-gray-500 text-xs text-center py-4">Empty</div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {cards.map((c) => {
+              const colors = charColor(c);
+              return (
+                <div key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border bg-gray-800 ${colors.border}`}>
+                  <span className="text-base">{cardTypeIcon(c.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-white truncate">{c.name}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{c.description}</div>
+                  </div>
+                  <div className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${manaCostColor(c.manaCost)}`}>{c.manaCost}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>,
+    document.body
+  );
+};
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -84,8 +120,8 @@ interface CardTileProps {
   onSelect: () => void;
 }
 
-const CardTile: React.FC<CardTileProps> = ({ card, executor, isSelected, isExhausted, onSelect }) => {
-  const playable = !isExhausted && canPlay(card, executor);
+const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, executor, isSelected, isExhausted, onSelect, globalMana }) => {
+  const playable = !isExhausted && canPlay(card, executor, globalMana);
   const isUltimate = card.type === "ultimate";
   const colors = charColor(card);
   const label = charLabel(card);
@@ -165,31 +201,37 @@ const CardTile: React.FC<CardTileProps> = ({ card, executor, isSelected, isExhau
 
 export interface CardHandProps {
   cards: Card[];
+  drawPileCards?: Card[];
+  discardPileCards?: Card[];
   executor: Icon | null;
   activeIcons: Icon[];
   cardLockActive: boolean;
   drawPileSize: number;
   discardPileSize: number;
+  globalMana: number;
   exhaustedUltimates?: string[];
   onPlayCard: (card: Card, executorId: string) => void;
 }
 
 const CardHand: React.FC<CardHandProps> = ({
   cards,
+  drawPileCards = [],
+  discardPileCards = [],
   executor,
-  activeIcons,
   drawPileSize,
   discardPileSize,
+  globalMana,
   exhaustedUltimates = [],
   onPlayCard,
 }) => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [pileView, setPileView] = useState<'draw' | 'discard' | null>(null);
 
   const selectedCard = cards.find((c) => c.id === selectedCardId) ?? null;
 
   const handleCardClick = (card: Card) => {
     if (selectedCardId === card.id) {
-      if (executor && canPlay(card, executor)) {
+      if (executor && canPlay(card, executor, globalMana)) {
         onPlayCard(card, executor.id);
         setSelectedCardId(null);
       }
@@ -200,46 +242,48 @@ const CardHand: React.FC<CardHandProps> = ({
 
   return (
     <div className="relative w-full flex flex-col items-center pointer-events-none">
-      {/* ── Per-character mana bars ── */}
-      <div className="flex gap-4 mb-2 pointer-events-none">
-        {activeIcons.map((icon) => (
-          <div key={icon.id} className="flex flex-col items-center gap-0.5">
-            <span className="text-[10px] text-gray-400 truncate max-w-[72px]">
-              {icon.name.replace("-chan", "")}
-            </span>
-            <ManaPips current={icon.stats.mana ?? 0} max={icon.stats.maxMana ?? 3} />
-          </div>
-        ))}
-      </div>
-
-      {/* ── Card fan ── */}
-      <div className="relative flex items-end justify-center gap-1 pointer-events-auto">
+      {/* ── Card fan + piles row ── */}
+      <div className="flex items-end justify-center gap-3 pointer-events-auto">
         {/* Discard pile */}
-        <div className="absolute -left-12 bottom-0 flex flex-col items-center text-gray-500">
-          <div className="w-10 h-14 rounded-lg border border-gray-600 bg-gray-900 flex items-center justify-center text-sm font-bold text-gray-400">
-            {discardPileSize}
+        <button
+          onClick={() => setPileView('discard')}
+          className="flex flex-col items-center gap-0.5 group flex-shrink-0"
+          title="View discard pile"
+        >
+          <div className="w-12 h-16 rounded-lg border border-orange-700/60 bg-gray-900 flex flex-col items-center justify-center gap-1 group-hover:border-orange-500 transition-colors">
+            <span className="text-lg">🗑️</span>
+            <span className="text-sm font-bold text-orange-400">{discardPileSize}</span>
           </div>
-          <span className="text-[9px] mt-0.5">discard</span>
-        </div>
+          <span className="text-[9px] text-gray-500">Discard</span>
+        </button>
 
-        {cards.map((card) => (
-          <CardTile
-            key={card.id}
-            card={card}
-            executor={executor}
-            isSelected={card.id === selectedCardId}
-            isExhausted={card.type === "ultimate" && exhaustedUltimates.includes(card.definitionId)}
-            onSelect={() => handleCardClick(card)}
-          />
-        ))}
+        {/* Cards */}
+        <div className="flex items-end gap-1">
+          {cards.map((card) => (
+            <CardTile
+              key={card.id}
+              card={card}
+              executor={executor}
+              isSelected={card.id === selectedCardId}
+              isExhausted={card.type === "ultimate" && exhaustedUltimates.includes(card.definitionId)}
+              onSelect={() => handleCardClick(card)}
+              globalMana={globalMana}
+            />
+          ))}
+        </div>
 
         {/* Draw pile */}
-        <div className="absolute -right-12 bottom-0 flex flex-col items-center text-gray-500">
-          <div className="w-10 h-14 rounded-lg border border-gray-600 bg-gray-900 flex items-center justify-center text-sm font-bold text-gray-400">
-            {drawPileSize}
+        <button
+          onClick={() => setPileView('draw')}
+          className="flex flex-col items-center gap-0.5 group flex-shrink-0"
+          title="View draw pile"
+        >
+          <div className="w-12 h-16 rounded-lg border border-blue-700/60 bg-gray-900 flex flex-col items-center justify-center gap-1 group-hover:border-blue-500 transition-colors">
+            <span className="text-lg">🃏</span>
+            <span className="text-sm font-bold text-blue-400">{drawPileSize}</span>
           </div>
-          <span className="text-[9px] mt-0.5">draw</span>
-        </div>
+          <span className="text-[9px] text-gray-500">Draw</span>
+        </button>
       </div>
 
       {/* ── Confirm / cancel hint ── */}
@@ -247,6 +291,14 @@ const CardHand: React.FC<CardHandProps> = ({
         <div className="mt-2 text-xs text-yellow-300 animate-pulse pointer-events-none">
           Click again to play &ldquo;{selectedCard.name}&rdquo;
         </div>
+      )}
+
+      {/* ── Pile view modals ── */}
+      {pileView === 'discard' && (
+        <PileModal title="Discard Pile" cards={discardPileCards} onClose={() => setPileView(null)} />
+      )}
+      {pileView === 'draw' && (
+        <PileModal title="Draw Pile" cards={drawPileCards} onClose={() => setPileView(null)} />
       )}
     </div>
   );
