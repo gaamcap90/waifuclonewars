@@ -15,7 +15,7 @@ const Index = () => {
   const [gameMode, setGameMode] = useState<'menu' | 'characterSelect' | 'singleplayer' | 'multiplayer'>('menu');
   const [selectedCharacters, setSelectedCharacters] = useState<any[]>([]);
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
-  const { gameState, selectTile, endTurn, basicAttack, useAbility, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, resetGame, cancelTargeting } = useGameState(
+  const { gameState, selectTile, endTurn, basicAttack, useAbility, playCard, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, resetGame, cancelTargeting } = useGameState(
     gameMode === 'menu' || gameMode === 'characterSelect' ? 'singleplayer' : gameMode,
     selectedCharacters
   );
@@ -102,6 +102,7 @@ const Index = () => {
           onEndTurn={endTurn}
           onUndoMovement={undoMovement}
           onRespawn={startRespawnPlacement}
+          onPlayCard={playCard}
           currentTurnTimer={currentTurnTimer}
         />
       </div>

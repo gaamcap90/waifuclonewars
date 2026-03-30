@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { GameState } from "@/types/game";
-import { Button } from "@/components/ui/button";
+import { GameState, Card as GameCard } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import HPBar from "./HPBar";
 import CharacterDetailPopup from "./CharacterDetailPopup";
 import RespawnUI from "./RespawnUI";
-import { Sparkles, Crown, Swords, Zap, Shield, Target, Undo2 } from "lucide-react";
+import CardHand from "./CardHand";
+import { Swords, Undo2 } from "lucide-react";
 import { countAlliesAdjacentToCrystal } from "@/engine/turnEngine";
 import { TurnQueueBar } from "./TurnQueueBar";
 
@@ -49,6 +49,7 @@ interface HorizontalGameUIProps {
   onEndTurn: () => void;
   onUndoMovement: () => void;
   onRespawn: (iconId: string) => void;
+  onPlayCard: (card: GameCard, executorId: string) => void;
   currentTurnTimer: number;
 }
 
@@ -59,6 +60,7 @@ const HorizontalGameUI = ({
   onEndTurn,
   onUndoMovement,
   onRespawn,
+  onPlayCard,
   currentTurnTimer,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
@@ -328,64 +330,50 @@ const HorizontalGameUI = ({
             </div>
           </CardHeader>
 
-          <CardContent className="pt-3">
-            {activeIcon && (
-              <>
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Attack – same style as abilities, toggles when targeting */}
-                  <Pill
-                    selected={gameState.targetingMode?.abilityId === "basic_attack"}
-                    disabled={!!activeIcon.actionTaken}
-                    onClick={onBasicAttack}
-                  >
-                    <Swords className="h-4 w-4" />
-                    Attack
-                  </Pill>
+          <CardContent className="pt-3 pb-4">
+            {(() => {
+              const extState = gameState as any;
+              const pid = gameState.activePlayerId;
+              const hand = extState.hands?.[pid];
+              const deck = extState.decks?.[pid];
+              const activeIcons = gameState.players[pid]?.icons.filter(i => i.isAlive) ?? [];
+              // Executor = selectedIcon if set, else first alive
+              const executor = activeIcons.find(i => i.id === gameState.selectedIcon) ?? activeIcons[0] ?? null;
 
-                  {activeIcon.abilities.slice(0, 3).map(ability => {
-                    const Icon = getAbilityIcon(ability.name);
-                    const selected = gameState.targetingMode?.abilityId === ability.id;
-                    const disabled =
-                      !!activeIcon.actionTaken ||
-                      (ability.currentCooldown ?? 0) > 0 ||
-                      gameState.globalMana[activeIcon.playerId] < (ability.manaCost ?? 0);
-
-                    return (
-                      <TooltipProvider key={ability.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div>
-                              <Pill selected={selected} disabled={disabled} onClick={() => onUseAbility(ability.id)}>
-                                <Icon className="h-4 w-4" />
-                                {ability.name}
-                                <span className="ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-orange-500/90 text-[11px] text-white px-1">
-                                  {ability.manaCost}
-                                </span>
-                              </Pill>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="max-w-xs">
-                              <div className="font-semibold">
-                                {ability.name} {ability.name.toLowerCase().includes("ultimate") ? "(ULTIMATE)" : ""}
-                              </div>
-                              <div className="text-sm">{ability.description}</div>
-                              <div className="text-xs mt-1">Range: {ability.range}</div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    );
-                  })}
-                </div>
-
-                {targetingActive && (
-                  <div className="mt-3 text-xs opacity-70">
-                    Targeting active — click the same action again or press <span className="font-semibold">ESC</span> to cancel.
+              return (
+                <div className="space-y-3">
+                  {/* Basic attack pill — kept as quick-action shortcut */}
+                  <div className="flex items-center gap-2">
+                    <Pill
+                      selected={gameState.targetingMode?.abilityId === "basic_attack"}
+                      disabled={!!executor?.cardUsedThisTurn}
+                      onClick={onBasicAttack}
+                    >
+                      <Swords className="h-4 w-4" />
+                      Basic Attack
+                    </Pill>
+                    {targetingActive && (
+                      <span className="text-xs opacity-60">
+                        Click a target — or press <strong>ESC</strong> to cancel
+                      </span>
+                    )}
                   </div>
-                )}
-              </>
-            )}
+
+                  {/* Card hand */}
+                  {hand && (
+                    <CardHand
+                      cards={hand.cards}
+                      executor={executor}
+                      activeIcons={activeIcons}
+                      cardLockActive={gameState.cardLockActive}
+                      drawPileSize={deck?.drawPile.length ?? 0}
+                      discardPileSize={deck?.discardPile.length ?? 0}
+                      onPlayCard={onPlayCard}
+                    />
+                  )}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
