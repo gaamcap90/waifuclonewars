@@ -103,6 +103,7 @@ const Index = () => {
           onUndoMovement={undoMovement}
           onRespawn={startRespawnPlacement}
           onPlayCard={playCard}
+          onSelectIcon={selectIcon}
           currentTurnTimer={currentTurnTimer}
         />
       </div>

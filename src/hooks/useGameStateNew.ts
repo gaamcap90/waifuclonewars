@@ -382,7 +382,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     } as ExtState;
   });
 
-  const [currentTurnTimer, setCurrentTurnTimer] = useState(20);
+  const [currentTurnTimer, setCurrentTurnTimer] = useState(60);
 
   /* =========================
      ESC overlay (does NOT change phase)
@@ -405,16 +405,16 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       setCurrentTurnTimer((prev) => {
         if (prev <= 1) {
           endTurn();
-          return 20;
+          return 60;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.activeIconId]);
+  }, [gameState.activePlayerId]);
 
-  useEffect(() => setCurrentTurnTimer(20), [gameState.activeIconId]);
+  useEffect(() => setCurrentTurnTimer(60), [gameState.activePlayerId]);
 
   /* =========================
      AI — deterministic & synchronous (no targetingMode for AI)
@@ -440,7 +440,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
         const enemyTeam = 0;
         const enemies = state.players[enemyTeam].icons.filter((i) => i.isAlive);
-        const basicRange = ai.name === "Napoleon-chan" || ai.name === "Da Vinci-chan" ? 2 : 1;
+        const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") ? 2 : 1;
 
         const pickAbility = () => {
           let best: { ab: any; target: Icon; lethal: boolean } | null = null;
@@ -472,7 +472,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               if (ic.id !== target.id) return ic;
               const newHp = Math.max(0, ic.stats.hp - dmg);
               return {
-                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3
               };
             }),
           }));
@@ -481,7 +481,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
           state.players = state.players.map((p) => ({
             ...p,
-            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, actionTaken: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic)),
+            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, cardUsedThisTurn: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic)),
           }));
 
           pushLog(state, `${ai.name} cast ${ab.name} on ${target.name} for ${dmg.toFixed(0)} dmg`, ai.playerId);
@@ -490,7 +490,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
         // 2) Basic if in range
         const basicTarget = enemies.find((e) => hexDistance(ai.position, e.position) <= basicRange);
-        if (basicTarget && !ai.actionTaken) {
+        if (basicTarget && !ai.cardUsedThisTurn) {
           const dmg = resolveBasicAttackDamage(state, ai, basicTarget);
           state.players = state.players.map((p) => ({
             ...p,
@@ -498,13 +498,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               if (ic.id !== basicTarget.id) return ic;
               const newHp = Math.max(0, ic.stats.hp - dmg);
               return {
-                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3
               };
             }),
           }));
           state.players = state.players.map((p) => ({
             ...p,
-            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, actionTaken: true } : ic)),
+            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, cardUsedThisTurn: true } : ic)),
           }));
           pushLog(state, `${ai.name} basic-attacked ${basicTarget.name} for ${dmg.toFixed(0)} dmg`, ai.playerId);
           return state;
@@ -550,7 +550,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               const tgtAfter = state.players[enemyTeam].icons
                 .filter((i) => i.isAlive)
                 .find((e) => hexDistance(aiAfter.position, e.position) <= basicRange);
-              if (tgtAfter && !aiAfter.actionTaken) {
+              if (tgtAfter && !aiAfter.cardUsedThisTurn) {
                 const dmg = resolveBasicAttackDamage(state, aiAfter, tgtAfter);
                 state.players = state.players.map((p) => ({
                   ...p,
@@ -558,13 +558,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                     if (ic.id !== tgtAfter.id) return ic;
                     const newHp = Math.max(0, ic.stats.hp - dmg);
                     return {
-                      ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3)
+                      ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 3
                     };
                   }),
                 }));
                 state.players = state.players.map((p) => ({
                   ...p,
-                  icons: p.icons.map((ic) => (ic.id === aiAfter.id ? { ...ic, actionTaken: true } : ic)),
+                  icons: p.icons.map((ic) => (ic.id === aiAfter.id ? { ...ic, cardUsedThisTurn: true } : ic)),
                 }));
                 pushLog(state, `${aiAfter.name} basic-attacked ${tgtAfter.name} for ${dmg.toFixed(0)} dmg`, aiAfter.playerId);
               }
@@ -580,7 +580,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.activeIconId, gameState.gameMode]);
+  }, [gameState.activePlayerId, gameState.gameMode]);
 
   /* =========================
      Input handlers (PLAYER targeting)
@@ -635,7 +635,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ...ic,
                 stats: { ...ic.stats, hp: newHp },
                 isAlive: newHp > 0,
-                respawnTurns: newHp > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
+                respawnTurns: newHp > 0 ? ic.respawnTurns : 3,
               }),
             }));
             pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${finalDmg.toFixed(0)} dmg`, executor.playerId);
@@ -693,8 +693,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           }),
         }));
 
+        // Set cardUsedThisTurn on executor
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+        }));
         updated = consumeCardFromHand(updated, card, executor.playerId);
-        return { ...updated, baseHealth: updatedBaseHealth, objectives: updatedObjectives, cardLockActive: true, cardTargetingMode: undefined };
+        return { ...updated, baseHealth: updatedBaseHealth, objectives: updatedObjectives, cardTargetingMode: undefined, targetingMode: undefined };
       }
 
       // Use selectedIcon as the active mover/caster; fall back to first alive on active player's team
@@ -783,7 +788,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                     ...ic,
                     stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
                     isAlive: ic.stats.hp - dmg > 0,
-                    respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
+                    respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 3,
                   }
               ),
             }));
@@ -863,7 +868,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                       ...ic,
                       stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
                       isAlive: ic.stats.hp - dmg > 0,
-                      respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : (ic.hasRespawned ? -1 : 3),
+                      respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 3,
                     }
                 ),
               }));
@@ -976,7 +981,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const stack = movementStack[me.id] ?? [];
       stack.push({ from, to: coordinates, cost: moveCost });
       movementStack[me.id] = stack;
-      if (state.cardLockActive) return prev;
+      if (me.cardUsedThisTurn) return prev;
       state.players = state.players.map((p) => ({
         ...p,
         icons: p.icons.map((ic) =>
@@ -1045,40 +1050,51 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
      End Turn — robust boundary + respawn at boundary only
      ========================= */
   const endTurn = useCallback(() => {
-    setCurrentTurnTimer(20);
+    setCurrentTurnTimer(60);
     setGameState((prev) => {
       const nextPlayer: 0 | 1 = prev.activePlayerId === 0 ? 1 : 0;
 
-      // Reset icons for the player who just ended + refill per-char mana for next player
+      // Crystal adjacency helper for per-char maxMana bonus
+      const crystalTile = prev.board.find(t => t.terrain.type === "mana_crystal");
+      const hexDistFn = (a: {q:number;r:number}, b: {q:number;r:number}) => {
+        const ax = a.q, az = a.r, ay = -ax - az;
+        const bx = b.q, bz = b.r, by = -bx - bz;
+        return (Math.abs(ax-bx) + Math.abs(ay-by) + Math.abs(az-bz)) / 2;
+      };
+
+      // Reset icons for the player who just ended + clear buffs / refill mana for next player
       const resetPlayers = prev.players.map((player) => ({
         ...player,
         icons: player.icons.map((ic) => {
+          // Crystal adjacency: +1 maxMana when standing next to the crystal
+          const adjacentToCrystal = crystalTile ? hexDistFn(ic.position, crystalTile.coordinates) === 1 : false;
+          const newMaxMana = adjacentToCrystal ? 4 : 3;
+
           if (ic.playerId === prev.activePlayerId) {
-            // Ending player: clear temp state
+            // Ending player: clear movement/card state; buffs last until START of their NEXT turn
             return {
               ...ic,
               movedThisTurn: false,
               cardUsedThisTurn: false,
-              cardBuffAtk: 0,
-              cardBuffDef: 0,
-              stats: { ...ic.stats, movement: ic.stats.moveRange },
+              stats: { ...ic.stats, movement: ic.stats.moveRange, maxMana: newMaxMana },
             };
           }
           if (ic.playerId === nextPlayer) {
-            // Starting player: refill mana
-            return { ...ic, stats: { ...ic.stats, mana: ic.stats.maxMana ?? 3 } };
+            // Starting player: clear buffs from previous turn, refill mana
+            return {
+              ...ic,
+              cardBuffAtk: 0,
+              cardBuffDef: 0,
+              stats: { ...ic.stats, mana: newMaxMana, maxMana: newMaxMana },
+            };
           }
-          return ic;
+          return { ...ic, stats: { ...ic.stats, maxMana: newMaxMana } };
         }),
       }));
 
-      // Mana refill for the player whose turn is starting
+      // Global mana: +1 per turn (flat)
       const mana = [...prev.globalMana] as [number, number];
-      const adj = countAlliesAdjacentToCrystal(
-        { ...prev, players: resetPlayers } as GameState,
-        nextPlayer
-      );
-      mana[nextPlayer] = Math.min(20, mana[nextPlayer] + Math.min(4, 1 + adj));
+      mana[nextPlayer] = Math.min(20, mana[nextPlayer] + 1);
 
       // Respawn tick (once per full round, when player 0's turn starts)
       let playersAfter = resetPlayers;
@@ -1095,7 +1111,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         playersAfter = playersAfter.map((player) => ({
           ...player,
           icons: player.icons.map((ic) => {
-            if (!ic.isAlive && ic.respawnTurns <= 0 && !ic.hasRespawned) {
+            // Respawn if: dead, countdown at 0, base still alive
+            if (!ic.isAlive && ic.respawnTurns === 0) {
+              const baseAlive = (prev.baseHealth[player.id] ?? 0) > 0;
+              if (!baseAlive) return ic;
               const free = findFreeSpawnTile(
                 prev.board,
                 { ...prev, players: playersAfter } as GameState,
@@ -1109,7 +1128,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   justRespawned: true,
                   position: free,
                   stats: { ...ic.stats, hp: ic.stats.maxHp, movement: 0 },
-                  respawnTurns: 0,
+                  respawnTurns: -1, // sentinel: already handled
                 };
               }
             }
@@ -1118,29 +1137,37 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }));
       }
 
-      // Victory check
+      // Victory check — only trigger if no alive chars AND no pending respawns
       const p0Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
       const p1Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
+      const p0Respawning = playersAfter[0].icons.some((ic) => !ic.isAlive && ic.respawnTurns > 0);
+      const p1Respawning = playersAfter[1].icons.some((ic) => !ic.isAlive && ic.respawnTurns > 0);
       let newPhase = prev.phase;
       let winner = prev.winner;
-      if (!p0Alive) { newPhase = "defeat"; winner = 1; }
-      else if (!p1Alive) { newPhase = "victory"; winner = 0; }
+      if (!p0Alive && !p0Respawning) { newPhase = "defeat"; winner = 1; }
+      else if (!p1Alive && !p1Respawning) { newPhase = "victory"; winner = 0; }
       if (prev.baseHealth[0] <= 0) { newPhase = "defeat"; winner = 1; }
       if (prev.baseHealth[1] <= 0) { newPhase = "victory"; winner = 0; }
 
-      // Draw cards to refill the next player's hand to maxSize
+      // Cards: discard ending player's hand, draw fresh hand for next player
       const prevState = prev as ExtState;
       let hands = prevState.hands ? [...prevState.hands] as [Hand, Hand] : undefined;
       let decks = prevState.decks ? [...prevState.decks] as [Deck, Deck] : undefined;
       if (hands && decks) {
-        const hand = hands[nextPlayer];
-        const deck = decks[nextPlayer];
-        const needed = (hand?.maxSize ?? 10) - (hand?.cards.length ?? 0);
-        if (needed > 0) {
-          const { drawn, newDraw, newDiscard } = drawCards(deck.drawPile, deck.discardPile, needed);
-          hands[nextPlayer] = { ...hand, cards: [...(hand?.cards ?? []), ...drawn] };
-          decks[nextPlayer] = { drawPile: newDraw, discardPile: newDiscard };
-        }
+        const endPid = prev.activePlayerId;
+        // Discard ending player's remaining hand
+        const endHand = hands[endPid];
+        const endDeck = decks[endPid];
+        hands[endPid] = { ...endHand, cards: [] };
+        decks[endPid] = { ...endDeck, discardPile: [...endDeck.discardPile, ...endHand.cards] };
+
+        // Draw fresh hand for next player (discard old, then draw)
+        const startHand = hands[nextPlayer];
+        const startDeck = decks[nextPlayer];
+        const deckWithOld = { ...startDeck, discardPile: [...startDeck.discardPile, ...startHand.cards] };
+        const { drawn, newDraw, newDiscard } = drawCards(deckWithOld.drawPile, deckWithOld.discardPile, startHand.maxSize);
+        hands[nextPlayer] = { ...startHand, cards: drawn };
+        decks[nextPlayer] = { drawPile: newDraw, discardPile: newDiscard };
       }
 
       return {
@@ -1211,9 +1238,17 @@ const playCard = useCallback((card: Card, executorId: string) => {
       return prev;
     }
 
-    // Damage / healing cards → set cardTargetingMode, don't consume yet
+    // Damage / healing cards → set cardTargetingMode + targetingMode so board highlights
     if (card.effect.damage !== undefined || card.effect.healing !== undefined) {
-      return { ...state, cardTargetingMode: { card, executorId } };
+      const isBasicAttack = card.definitionId === "shared_basic_attack";
+      const attackRange = executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") ? 2 : 1;
+      const cardRange = card.effect.range ?? (isBasicAttack ? attackRange : 3);
+      const targetingMode = {
+        abilityId: isBasicAttack ? "basic_attack" : card.definitionId,
+        iconId: executorId,
+        range: cardRange,
+      };
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode };
     }
 
     // Immediate effects
@@ -1255,8 +1290,13 @@ const playCard = useCallback((card: Card, executorId: string) => {
       pushLog(updated, `${executor.name} played ${card.name} (+${card.effect.teamDmgPct}% team dmg)`, executor.playerId);
     }
 
+    // Mark executor as having used a card this turn
+    updated.players = updated.players.map(p => ({
+      ...p,
+      icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+    }));
     updated = consumeCardFromHand(updated, card, executor.playerId);
-    return { ...updated, cardLockActive: true };
+    return { ...updated };
   });
 }, []);
 

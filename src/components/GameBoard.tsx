@@ -4,6 +4,7 @@ import HPBar from "./HPBar";
 import BeastCampHPBar from "./BeastCampHPBar";
 import { GameState, Coordinates } from "@/types/game";
 import { useRangeCalculation } from "./RangeIndicator";
+import { resolveBasicAttackDamage } from "@/combat/resolver";
 
 interface GameBoardProps {
   gameState: GameState;
@@ -23,11 +24,12 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
   const hexWidth = hexSize * 2;                // 100px
   const hexHeight = Math.sqrt(3) * hexSize;     // ~86.6px
 
-  // 2) Pan & zoom state
+  // 2) Pan & zoom + hover state
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [hoveredCoords, setHoveredCoords] = useState<Coordinates | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
   // 3) Container size & centering math
@@ -37,20 +39,49 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
   const offsetY = (containerHeight - hexHeight) / 2;
 
   // 4) Compute ranges for highlighting
+  const extState = gameState as any;
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
     .find(i => i.playerId === gameState.activePlayerId && i.isAlive);
 
+  // Use selectedIcon (from ExtState) if set, otherwise first alive icon for active player
+  const selectedIconId: string | undefined =
+    extState.selectedIcon ??
+    gameState.players[gameState.activePlayerId]?.icons.find(i => i.isAlive)?.id;
+
   const { movementRange, attackRange, abilityRange } = useRangeCalculation(
     gameState,
-    gameState.activeIconId,
-    !gameState.targetingMode && !!activeIcon && !activeIcon.actionTaken,
+    selectedIconId,
+    !gameState.targetingMode && !!activeIcon && !activeIcon.cardUsedThisTurn,
     gameState.targetingMode?.abilityId === 'basic_attack',
     Boolean(gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack'),
     gameState.targetingMode?.range
   );
 
-  // 5) Memoized board rendering
+  // 5) Hover damage preview when a damage card is selected
+  const cardTargetingMode = (gameState as any).cardTargetingMode as { card: any; executorId: string } | undefined;
+  const hoverDamagePreview = useMemo(() => {
+    if (!hoveredCoords || !cardTargetingMode) return null;
+    const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === cardTargetingMode.executorId);
+    const target = gameState.players.flatMap(p => p.icons).find(i =>
+      i.isAlive && i.position.q === hoveredCoords.q && i.position.r === hoveredCoords.r
+    );
+    if (!executor || !target || target.playerId === executor.playerId) return null;
+    const card = cardTargetingMode.card;
+    if (card.effect.damageType === 'atk') {
+      const dmg = resolveBasicAttackDamage(gameState, executor, target);
+      return { q: hoveredCoords.q, r: hoveredCoords.r, text: `-${dmg.toFixed(0)}` };
+    }
+    if (card.effect.damage) {
+      return { q: hoveredCoords.q, r: hoveredCoords.r, text: `-${card.effect.damage}` };
+    }
+    if (card.effect.healing) {
+      return { q: hoveredCoords.q, r: hoveredCoords.r, text: `+${card.effect.healing} HP` };
+    }
+    return null;
+  }, [hoveredCoords, cardTargetingMode, gameState]);
+
+  // 6) Memoized board rendering
   const renderBoard = useMemo(() => {
     const hexToPixel = (q: number, r: number) => ({
       x: hexSize * (3 / 2 * q),
@@ -71,7 +102,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
         );
 
       const playerColor = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
-      const isActiveIcon = icon?.id === gameState.activeIconId;
+      const isActiveIcon = icon?.id === selectedIconId;
 
       // ranges
       const inMove = movementRange.some(c => c.q === q && c.r === r);
@@ -94,6 +125,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
         return validZone && !occupied;
       })());
 
+      const preview = hoverDamagePreview?.q === q && hoverDamagePreview?.r === r ? hoverDamagePreview.text : null;
+
       return (
         <div
           key={`${q}-${r}`}
@@ -105,6 +138,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
             height: hexHeight,
           }}
           onClick={() => onTileClick(tile.coordinates)}
+          onMouseEnter={() => setHoveredCoords({ q, r })}
+          onMouseLeave={() => setHoveredCoords(null)}
         >
           <HexTile
             tile={tile}
@@ -127,6 +162,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
               <HPBar currentHP={icon.stats.hp} maxHP={icon.stats.maxHp} size="small" />
             </div>
           )}
+
+          {/* Damage / healing preview badge */}
+          {preview && (
+            <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+              <span className={[
+                "text-sm font-bold px-2 py-0.5 rounded-full shadow-lg",
+                preview.startsWith("+") ? "bg-green-500/90 text-white" : "bg-red-500/90 text-white",
+              ].join(" ")}>
+                {preview}
+              </span>
+            </div>
+          )}
         </div>
       );
     });
@@ -134,12 +181,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
     [
       gameState.board,
       gameState.players,
-      gameState.activeIconId,
+      selectedIconId,
       gameState.targetingMode,
       gameState.respawnPlacement,
       movementRange,
       attackRange,
       abilityRange,
+      hoverDamagePreview,
       offsetX,
       offsetY
     ]);
