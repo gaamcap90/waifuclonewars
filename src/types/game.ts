@@ -157,6 +157,7 @@ export interface GameState {
   winner?: number; // Player ID who won
   hand?: Hand;   // Active player's current hand
   deck?: Deck;   // Active player's draw/discard piles
+  aiIntents?: AIIntent[]; // What each AI character plans to do this round (visible during player's turn)
 }
 
 export interface Player {
@@ -165,4 +166,18 @@ export interface Player {
   icons: Icon[];
   color: string;
   isAI?: boolean;
+}
+
+// ── AI Intent System (Slay the Spire style) ──────────────────────────────────
+
+export type AIIntentType = 'attack' | 'ability' | 'heal' | 'buff';
+
+export interface AIIntent {
+  iconId: string;       // which AI icon will act
+  type: AIIntentType;
+  abilityName: string;  // "Basic Attack", "Artillery Barrage", etc.
+  label: string;        // displayed value: "48" (dmg) or "+45" (heal)
+  range: number;        // used for range highlight on hover
+  damage?: number;
+  healing?: number;
 }
