@@ -100,65 +100,70 @@ export default function HexTile({
         />
 
         {/* Tile border */}
-        <polygon
-          points={pts}
-          className="fill-transparent stroke-black stroke-[1px]"
-        />
-        
+        <polygon points={pts} className="fill-transparent stroke-black stroke-[1px]" />
+
         {/* Outline & highlight rings */}
         <polygon
-  points={pts}
-  className={cn(
-    "fill-transparent transition-colors",
-    tile.highlighted      && "stroke-gray-300 stroke-[1px]",
-    isTargetable          && "stroke-red-400 stroke-[2px] fill-red-500/20",
-    isValidMovement       && "stroke-green-400 stroke-[2px] fill-green-400/20",
-    isInAttackRange       && "stroke-red-400 stroke-[2px] fill-red-400/20",
-    isInAbilityRange      && "stroke-orange-400 stroke-[2px] fill-orange-400/20",
-    isRespawnTarget       && "stroke-blue-400 stroke-[2px] fill-blue-400/20",
-    isActiveIcon          && "stroke-active-turn stroke-[2px]"
-  )}
-/>
+          points={pts}
+          className={cn(
+            "fill-transparent transition-colors",
+            tile.highlighted   && "stroke-gray-300 stroke-[1px]",
+            isTargetable       && "stroke-red-400 stroke-[2px] fill-red-500/20",
+            isValidMovement    && "stroke-green-400 stroke-[2px] fill-green-400/20",
+            isInAttackRange    && "stroke-red-400 stroke-[2px] fill-red-400/20",
+            isInAbilityRange   && "stroke-orange-400 stroke-[2px] fill-orange-400/20",
+            isRespawnTarget    && "stroke-blue-400 stroke-[2px] fill-blue-400/20",
+            isActiveIcon       && "stroke-active-turn stroke-[2px]"
+          )}
+        />
+
+        {/* Team-coloured ring — thick, glowing, rendered on top of portrait */}
+        {playerColor && (
+          <polygon
+            points={pts}
+            fill="none"
+            stroke={playerColor === "blue" ? "#60a5fa" : "#f87171"}
+            strokeWidth={isActiveIcon ? 5 : 3}
+            opacity={0.95}
+          />
+        )}
       </svg>
 
-      {/* Character portrait / icon overlay - full bleed */}
+      {/* Character portrait — fills hex completely */}
       {icon && (
-        <div 
-          className="absolute inset-0 z-10"
-          style={{ clipPath: `url(#${clipId})` }}
-        >
+        <div className="absolute inset-0 z-10" style={{ clipPath: `url(#${clipId})` }}>
           {iconPortrait ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <img 
-                src={iconPortrait} 
-                alt={icon} 
-                className="w-4/5 h-4/5 object-cover rounded-sm"
+            <>
+              <img
+                src={iconPortrait}
+                alt={icon}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ imageRendering: "auto" }}
               />
-              {/* Team affiliation ring */}
-              <div className={cn(
-                "absolute inset-0 ring-4 ring-opacity-80",
-                playerColor === "blue" ? "ring-blue-400" : "ring-red-400"
-              )} style={{ clipPath: `url(#${clipId})` }} />
-            </div>
+              {/* Subtle dark vignette so portrait edges read cleanly */}
+              <div className="absolute inset-0" style={{
+                background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.45) 100%)",
+              }} />
+              {/* Team colour gradient strip at bottom for quick ID */}
+              <div className="absolute bottom-0 left-0 right-0 h-[28%]" style={{
+                background: playerColor === "blue"
+                  ? "linear-gradient(to top, rgba(37,99,235,0.80), transparent)"
+                  : "linear-gradient(to top, rgba(185,28,28,0.80), transparent)",
+              }} />
+              {/* Active-turn pulse glow */}
+              {isActiveIcon && (
+                <div className="absolute inset-0 animate-pulse" style={{
+                  background: "rgba(250,210,0,0.18)",
+                }} />
+              )}
+            </>
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-4/5 h-4/5 flex items-center justify-center bg-gray-600 text-white font-bold text-lg rounded-sm">
-                {icon}
-              </div>
-              {/* Team affiliation ring for fallback */}
-              <div className={cn(
-                "absolute inset-0 ring-4 ring-opacity-80",
-                playerColor === "blue" ? "ring-blue-400" : "ring-red-400"
-              )} style={{ clipPath: `url(#${clipId})` }} />
+            <div className="absolute inset-0 flex items-center justify-center"
+              style={{ background: playerColor === "blue" ? "rgba(37,99,235,0.7)" : "rgba(185,28,28,0.7)" }}
+            >
+              <span className="text-white font-bold text-lg drop-shadow">{icon}</span>
             </div>
           )}
-          
-          {/* Player color border overlay */}
-          <div className={cn(
-            "absolute inset-0 border-2 rounded-none",
-            playerColor === "blue" ? "border-blue-400" : "border-red-400",
-            isActiveIcon && "shadow-lg shadow-active-turn/50 animate-pulse border-4"
-          )} style={{ clipPath: `url(#${clipId})` }} />
         </div>
       )}
     </div>

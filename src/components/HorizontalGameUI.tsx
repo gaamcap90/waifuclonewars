@@ -357,6 +357,7 @@ const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
                       globalMana={(gameState as any).globalMana?.[pid] ?? 0}
                       exhaustedUltimates={exhaustedUltimates}
                       onPlayCard={onPlayCard}
+                      gameState={gameState}
                     />
                   )}
                 </div>

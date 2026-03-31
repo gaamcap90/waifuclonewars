@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { Card, Icon } from "@/types/game";
+import { Card, Icon, GameState } from "@/types/game";
+import { calcEffectiveStats } from "@/combat/buffs";
 
 // ── Colour coding by exclusive character ──────────────────────────────────────
 function charColor(card: Card): { border: string; ribbon: string; glow: string } {
@@ -37,14 +38,24 @@ function manaCostColor(cost: number): string {
   return "bg-purple-800 text-purple-100";
 }
 
-function effectLabel(card: Card, executor: Icon | null): string {
+function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): string {
   const e = card.effect;
   if (e.damageType === 'atk') {
+    if (executor && gameState) {
+      const eff = calcEffectiveStats(gameState, executor);
+      const buffed = Math.floor(eff.might + (executor.cardBuffAtk ?? 0));
+      return buffed > 0 ? `${buffed} Might dmg` : "Might dmg";
+    }
     const might = executor?.stats.might ?? 0;
-    const buffed = might + (executor?.cardBuffAtk ?? 0);
-    return buffed > 0 ? `${buffed} Might dmg` : "Might dmg";
+    return might > 0 ? `${might} Might dmg` : "Might dmg";
   }
   if (e.powerMult !== undefined) {
+    if (executor && gameState) {
+      const eff = calcEffectiveStats(gameState, executor);
+      const est = Math.floor(eff.power * e.powerMult);
+      const suffix = e.allEnemiesInRange ? " (AoE)" : e.lineTarget ? " (Line)" : e.multiHit ? ` ×${e.multiHit}` : "";
+      return `~${est} dmg${suffix}`;
+    }
     const power = executor?.stats.power ?? 0;
     const est = Math.floor(power * e.powerMult);
     const suffix = e.allEnemiesInRange ? " (AoE)" : e.lineTarget ? " (Line)" : e.multiHit ? ` ×${e.multiHit}` : "";
@@ -124,9 +135,10 @@ interface CardTileProps {
   isSelected: boolean;
   isExhausted?: boolean;
   onSelect: () => void;
+  gameState?: GameState;
 }
 
-const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, executor, isSelected, isExhausted, onSelect, globalMana }) => {
+const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, executor, isSelected, isExhausted, onSelect, globalMana, gameState }) => {
   const playable = !isExhausted && canPlay(card, executor, globalMana);
   const isUltimate = card.type === "ultimate";
   const colors = charColor(card);
@@ -197,7 +209,7 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
 
       {/* Effect summary */}
       <div className="px-1 pb-1.5 text-center text-gray-300 text-[9px] leading-tight w-full">
-        {effectLabel(card, executor)}
+        {effectLabel(card, executor, gameState)}
       </div>
     </button>
   );
@@ -217,6 +229,7 @@ export interface CardHandProps {
   globalMana: number;
   exhaustedUltimates?: string[];
   onPlayCard: (card: Card, executorId: string) => void;
+  gameState?: GameState;
 }
 
 const CardHand: React.FC<CardHandProps> = ({
@@ -229,6 +242,7 @@ const CardHand: React.FC<CardHandProps> = ({
   globalMana,
   exhaustedUltimates = [],
   onPlayCard,
+  gameState,
 }) => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [pileView, setPileView] = useState<'draw' | 'discard' | null>(null);
@@ -236,14 +250,10 @@ const CardHand: React.FC<CardHandProps> = ({
   const selectedCard = cards.find((c) => c.id === selectedCardId) ?? null;
 
   const handleCardClick = (card: Card) => {
-    if (selectedCardId === card.id) {
-      if (executor && canPlay(card, executor, globalMana)) {
-        onPlayCard(card, executor.id);
-        setSelectedCardId(null);
-      }
-    } else {
-      setSelectedCardId(card.id);
-    }
+    if (!executor || !canPlay(card, executor, globalMana)) return;
+    // Single click: execute immediately (instant effects) or enter targeting (attacks/heals)
+    onPlayCard(card, executor.id);
+    setSelectedCardId(null);
   };
 
   return (
@@ -274,6 +284,7 @@ const CardHand: React.FC<CardHandProps> = ({
               isExhausted={card.type === "ultimate" && exhaustedUltimates.includes(card.definitionId)}
               onSelect={() => handleCardClick(card)}
               globalMana={globalMana}
+              gameState={gameState}
             />
           ))}
         </div>

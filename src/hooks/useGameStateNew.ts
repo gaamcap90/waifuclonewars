@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck } from "@/types/game";
+import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck, AIIntent } from "@/types/game";
 import { buildDeckForTeam, drawCards } from "@/data/cards";
 import { toast } from "sonner";
 
@@ -30,6 +30,45 @@ type MoveStep = { from: Coordinates; to: Coordinates; cost: number };
 type LogEntry = { id: string; turn: number; text: string; playerId: 0 | 1 };
 
 const tileKey = (q: number, r: number) => `${q},${r}`;
+
+/**
+ * Given a caster origin and a target hex, determine the axial hex-line direction
+ * and return all hexes on that line up to `range` steps from origin.
+ * Returns null if the target is not aligned to any of the 6 axial directions.
+ */
+function getLineHexes(from: Qr, to: Qr, range: number): Qr[] | null {
+  const dq = to.q - from.q;
+  const dr = to.r - from.r;
+  if (dq === 0 && dr === 0) return null;
+
+  let uq: number, ur: number;
+  if (dr === 0 && dq !== 0)          { uq = dq > 0 ? 1 : -1; ur = 0; }
+  else if (dq === 0 && dr !== 0)     { uq = 0; ur = dr > 0 ? 1 : -1; }
+  else if (dq + dr === 0)            { uq = dq > 0 ? 1 : -1; ur = dr > 0 ? 1 : -1; }
+  else return null; // not on a hex axis
+
+  const hexes: Qr[] = [];
+  for (let i = 1; i <= range; i++) hexes.push({ q: from.q + i * uq, r: from.r + i * ur });
+  return hexes;
+}
+
+/** Snap any hex offset to the nearest axial direction and return the line hexes. */
+function snapToLineHexes(from: Qr, to: Qr, range: number): Qr[] {
+  const exact = getLineHexes(from, to, range);
+  if (exact) return exact;
+  // Snap: find the axial direction that minimizes angle to (dq, dr)
+  const dirs: Qr[] = [
+    { q: 1, r: 0 }, { q: -1, r: 0 },
+    { q: 0, r: 1 }, { q: 0, r: -1 },
+    { q: 1, r: -1 }, { q: -1, r: 1 },
+  ];
+  const dq = to.q - from.q, dr = to.r - from.r;
+  // dot-product proxy: pick direction with highest (dq*uq + dr*ur)
+  const best = dirs.reduce((b, d) => (dq * d.q + dr * d.r) > (dq * b.q + dr * b.r) ? d : b);
+  const hexes: Qr[] = [];
+  for (let i = 1; i <= range; i++) hexes.push({ q: from.q + i * best.q, r: from.r + i * best.r });
+  return hexes;
+}
 
 function makeId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -331,6 +370,301 @@ function getPassiveForCharacter(name: string) {
   return "Renaissance Mind: +1 mana near mana crystals";
 }
 
+/* =========================
+   AI helpers
+   ========================= */
+
+/** Simple buff/utility actions the AI can combine with its main attack (cost 0 mana). */
+const AI_BUFF_ACTIONS = [
+  { id: 'battle_cry', name: 'Battle Cry',  atkBonus: 8,  defBonus: 0,  label: '+8 ATK' },
+  { id: 'might_up',   name: 'MIGHT +10',   atkBonus: 10, defBonus: 0,  label: '+10 ATK' },
+  { id: 'def_up',     name: 'DEF +10',     atkBonus: 0,  defBonus: 10, label: '+10 DEF' },
+] as const;
+
+/** Beast camp coordinates */
+const BEAST_CAMPS: Qr[] = [{ q: -2, r: 2 }, { q: 2, r: -2 }];
+
+/** Compute what each alive AI icon intends to do (shown during player's turn).
+ *  Each character may push 1 buff intent + 1 attack/ability intent (max 2 per icon). */
+function computeAIIntents(state: ExtState): AIIntent[] {
+  const intents: AIIntent[] = [];
+  const enemies = state.players[0].icons.filter(i => i.isAlive);
+  let manaLeft = state.globalMana[1];
+
+  for (const ai of state.players[1].icons.filter(i => i.isAlive)) {
+    const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") ? 2 : 1;
+    let mainIntentSet = false;
+
+    // --- 1. Try a damaging ability ---
+    for (const ab of (ai.abilities as any[])) {
+      if (manaLeft < (ab.manaCost ?? 0)) continue;
+      if (ab.id === "ultimate" && ai.ultimateUsed) continue;
+      const isDmg  = typeof ab.damage  === "number" && ab.damage  > 0;
+      const isHeal = typeof ab.healing === "number" && ab.healing > 0;
+
+      if (isDmg && enemies.some(e => hexDistance(ai.position, e.position) <= ab.range)) {
+        intents.push({ iconId: ai.id, type: 'ability', abilityName: ab.name,
+          label: String(Math.round(ab.damage)), damage: ab.damage, range: ab.range });
+        manaLeft -= ab.manaCost;
+        mainIntentSet = true;
+        break;
+      } else if (isHeal) {
+        const needsHeal = state.players[1].icons.filter(
+          ic => ic.isAlive && hexDistance(ai.position, ic.position) <= ab.range && ic.stats.hp < ic.stats.maxHp * 0.75
+        );
+        if (needsHeal.length > 0) {
+          intents.push({ iconId: ai.id, type: 'heal', abilityName: ab.name,
+            label: `+${ab.healing}`, healing: ab.healing, range: ab.range });
+          manaLeft -= ab.manaCost;
+          mainIntentSet = true;
+          break;
+        }
+      }
+    }
+
+    // --- 2. Basic attack if no ability ---
+    if (!mainIntentSet) {
+      const inRange = enemies.find(e => hexDistance(ai.position, e.position) <= basicRange);
+      if (inRange) {
+        const dmg = Math.max(0, ai.stats.might - inRange.stats.defense);
+        intents.push({ iconId: ai.id, type: 'attack', abilityName: 'Basic Attack',
+          label: String(Math.round(dmg)), damage: dmg, range: basicRange });
+        mainIntentSet = true;
+      }
+    }
+
+    // --- 3. Beast camp or player base attack if no enemies in range ---
+    if (!mainIntentSet) {
+      for (const camp of BEAST_CAMPS) {
+        const campIdx = camp.q === -2 ? 0 : 1;
+        if (state.objectives.beastCamps.defeated[campIdx]) continue;
+        if (hexDistance(ai.position, camp) <= basicRange) {
+          const dmg = Math.max(1, ai.stats.might);
+          intents.push({ iconId: ai.id, type: 'attack', abilityName: 'Attack Beast Camp',
+            label: String(Math.round(dmg)), damage: dmg, range: basicRange });
+          mainIntentSet = true;
+          break;
+        }
+      }
+    }
+    if (!mainIntentSet) {
+      const playerBase: Qr = { q: -6, r: 5 };
+      if (hexDistance(ai.position, playerBase) <= basicRange && state.baseHealth[0] > 0) {
+        const dmg = Math.max(1, ai.stats.might);
+        intents.push({ iconId: ai.id, type: 'attack', abilityName: 'Attack Base',
+          label: String(Math.round(dmg)), damage: dmg, range: basicRange });
+        mainIntentSet = true;
+      }
+    }
+
+    // --- 4. Pair a free buff with any attacking intent ---
+    if (mainIntentSet) {
+      // Pick a contextual buff: ATK buff if attacking, DEF buff if healing/tanking
+      const mainIntent = intents[intents.length - 1];
+      const buffPick = mainIntent.type === 'heal'
+        ? AI_BUFF_ACTIONS[2]  // DEF +10 when healing
+        : AI_BUFF_ACTIONS[Math.floor(Math.random() * 2)]; // Battle Cry or MIGHT+10
+      intents.push({ iconId: ai.id, type: 'buff', abilityName: buffPick.name,
+        label: buffPick.label, range: 0 });
+    }
+  }
+  return intents;
+}
+
+/** Execute AI turn: ALL alive AI icons move + act. Returns updated state (aiIntents cleared). */
+function executeAITurn(state: ExtState): ExtState {
+  let s = { ...state } as ExtState;
+  const intents: AIIntent[] = (s as any).aiIntents ?? [];
+
+  for (const aiOrig of state.players[1].icons.filter(i => i.isAlive)) {
+    let ai = s.players[1].icons.find(i => i.id === aiOrig.id);
+    if (!ai || !ai.isAlive) continue;
+
+    const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") ? 2 : 1;
+    const enemies = () => s.players[0].icons.filter(i => i.isAlive);
+    const iconIntents = intents.filter(i => i.iconId === aiOrig.id);
+
+    // --- Apply buff intent first (enhances subsequent attack) ---
+    const buffIntent = iconIntents.find(i => i.type === 'buff');
+    if (buffIntent) {
+      const buffDef = AI_BUFF_ACTIONS.find(b => b.name === buffIntent.abilityName);
+      if (buffDef) {
+        s.players = s.players.map(p => ({
+          ...p, icons: p.icons.map(ic => ic.id !== ai!.id ? ic : {
+            ...ic,
+            cardBuffAtk: (ic.cardBuffAtk ?? 0) + buffDef.atkBonus,
+            cardBuffDef: (ic.cardBuffDef ?? 0) + buffDef.defBonus,
+          }),
+        }));
+        pushLog(s, `${ai.name} used ${buffIntent.abilityName} (${buffIntent.label})`, 1);
+      }
+    }
+
+    // --- Main action intent ---
+    const mainIntent = iconIntents.find(i => i.type !== 'buff');
+
+    if (mainIntent?.type === 'ability' || mainIntent?.type === 'heal') {
+      ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
+      const ab = (ai.abilities as any[]).find(a => a.name === mainIntent.abilityName);
+      if (ab && s.globalMana[1] >= (ab.manaCost ?? 0) && !(ab.id === "ultimate" && ai.ultimateUsed)) {
+        if (typeof ab.healing === "number" && ab.healing > 0) {
+          const ally = s.players[1].icons
+            .filter(ic => ic.isAlive && hexDistance(ai!.position, ic.position) <= ab.range)
+            .sort((a, b) => (a.stats.hp / a.stats.maxHp) - (b.stats.hp / b.stats.maxHp))[0];
+          if (ally) {
+            s.players = s.players.map(p => ({
+              ...p, icons: p.icons.map(ic => ic.id !== ally.id ? ic : {
+                ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + ab.healing) },
+              }),
+            }));
+            s.globalMana = s.globalMana.map((m, idx) => idx === 1 ? Math.max(0, m - ab.manaCost) : m) as any;
+            s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic) }));
+            pushLog(s, `${ai.name} cast ${ab.name} on ${ally.name}, healing ${ab.healing} HP`, 1);
+          }
+        } else if (typeof ab.damage === "number") {
+          const target = enemies().find(e => hexDistance(ai!.position, e.position) <= ab.range);
+          if (target) {
+            const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(s, ai, target, 1.0);
+            const newHp = Math.max(0, target.stats.hp - dmg);
+            s.players = s.players.map(p => ({
+              ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+              }),
+            }));
+            s.globalMana = s.globalMana.map((m, idx) => idx === 1 ? Math.max(0, m - ab.manaCost) : m) as any;
+            s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic) }));
+            pushLog(s, `${ai.name} cast ${ab.name} on ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
+          }
+        }
+      }
+    } else if (mainIntent?.type === 'attack') {
+      ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
+      if (!ai.cardUsedThisTurn) {
+        if (mainIntent.abilityName === 'Attack Base') {
+          const PLAYER_BASE_INTENT: Qr = { q: -6, r: 5 };
+          if (hexDistance(ai.position, PLAYER_BASE_INTENT) <= basicRange && s.baseHealth[0] > 0) {
+            const dmg = Math.max(0.1, calcEffectiveStats(s, ai).might);
+            const newBases = [...s.baseHealth];
+            newBases[0] = Math.max(0, newBases[0] - dmg);
+            s.baseHealth = newBases as [number, number];
+            s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
+            pushLog(s, `${ai.name} attacked player base for ${dmg.toFixed(0)} dmg`, 1);
+          }
+        } else if (mainIntent.abilityName === 'Attack Beast Camp') {
+          // AI attacks a beast camp
+          for (const camp of BEAST_CAMPS) {
+            const campIdx = camp.q === -2 ? 0 : 1;
+            if (s.objectives.beastCamps.defeated[campIdx]) continue;
+            if (hexDistance(ai.position, camp) <= basicRange) {
+              const dmg = Math.max(0.1, calcEffectiveStats(s, ai).might);
+              const hpArr = [...s.objectives.beastCamps.hp];
+              const defArr = [...s.objectives.beastCamps.defeated];
+              hpArr[campIdx] = Math.max(0, hpArr[campIdx] - dmg);
+              pushLog(s, `${ai.name} attacked beast camp for ${dmg.toFixed(0)} dmg`, 1);
+              if (hpArr[campIdx] <= 0) {
+                defArr[campIdx] = true;
+                s.board = s.board.map(tile =>
+                  tile.coordinates.q === camp.q && tile.coordinates.r === camp.r
+                    ? { ...tile, terrain: { type: "plain", effects: {} } } : tile
+                );
+                const nm = [...s.teamBuffs.mightBonus];
+                const np = [...s.teamBuffs.powerBonus];
+                nm[1] = Math.min((nm[1] ?? 0) + 15, 30);
+                np[1] = Math.min((np[1] ?? 0) + 15, 30);
+                s.teamBuffs = { ...s.teamBuffs, mightBonus: nm, powerBonus: np };
+                pushLog(s, `AI destroyed beast camp! +15% Might & Power`, 1);
+              }
+              s.objectives = { ...s.objectives, beastCamps: { ...s.objectives.beastCamps, hp: hpArr, defeated: defArr } };
+              s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
+              break;
+            }
+          }
+        } else {
+          // Basic attack on enemy
+          const target = enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
+          if (target) {
+            const dmg = resolveBasicAttackDamage(s, ai, target);
+            const newHp = Math.max(0, target.stats.hp - dmg);
+            s.players = s.players.map(p => ({
+              ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+              }),
+            }));
+            s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
+            pushLog(s, `${ai.name} basic-attacked ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
+          }
+        }
+      }
+    }
+
+    // --- Movement for every AI icon ---
+    ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
+    if (!ai || !ai.isAlive || ai.movedThisTurn || ai.stats.movement <= 0) continue;
+
+    // Targets: enemies > beast camps > player base
+    const PLAYER_BASE: Qr = { q: -6, r: 5 };
+    const allTargets: { position: Qr }[] = [
+      ...enemies().map(e => ({ position: e.position })),
+      ...BEAST_CAMPS
+        .filter((_, idx) => !s.objectives.beastCamps.defeated[idx])
+        .map(c => ({ position: c })),
+      { position: PLAYER_BASE },
+    ];
+    if (!allTargets.length) continue;
+
+    const budget = Math.min(ai.stats.movement, ai.stats.moveRange);
+    const occupied = new Set(
+      s.players.flatMap(p => p.icons)
+        .filter(ic => ic.isAlive && ic.id !== ai!.id)
+        .map(ic => tileKey(ic.position.q, ic.position.r))
+    );
+    const costMap = reachableWithCosts(s.board, ai.position, budget, occupied);
+    if (!costMap.size) continue;
+
+    let best: { coord: Coordinates; score: number } | null = null;
+    for (const [key] of costMap.entries()) {
+      const [qStr, rStr] = key.split(",");
+      const cand: Coordinates = { q: parseInt(qStr, 10), r: parseInt(rStr, 10) };
+      let minD = Infinity;
+      for (const t of allTargets) { const d = hexDistance(cand, t.position); if (d < minD) minD = d; }
+      if (!best || minD < best.score) best = { coord: cand, score: minD };
+    }
+    if (best) {
+      s.players = s.players.map(p => ({
+        ...p, icons: p.icons.map(ic => ic.id === ai!.id ? {
+          ...ic, position: best!.coord, movedThisTurn: true, stats: { ...ic.stats, movement: 0 },
+        } : ic),
+      }));
+
+      // Post-move attack: enemies > base
+      ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
+      if (!ai.cardUsedThisTurn) {
+        const target = enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
+        if (target) {
+          const dmg = resolveBasicAttackDamage(s, ai, target);
+          const newHp = Math.max(0, target.stats.hp - dmg);
+          s.players = s.players.map(p => ({
+            ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+              ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+            }),
+          }));
+          s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
+          pushLog(s, `${ai.name} attacked ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
+        } else if (hexDistance(ai.position, PLAYER_BASE) <= basicRange && s.baseHealth[0] > 0) {
+          const dmg = Math.max(0.1, calcEffectiveStats(s, ai).might);
+          const newBases = [...s.baseHealth];
+          newBases[0] = Math.max(0, newBases[0] - dmg);
+          s.baseHealth = newBases as [number, number];
+          s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
+          pushLog(s, `${ai.name} attacked player base for ${dmg.toFixed(0)} dmg`, 1);
+        }
+      }
+    }
+  }
+
+  return { ...s, aiIntents: [] };
+}
+
 const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer", selectedCharacters?: any[]) => {
   const [gameState, setGameState] = useState<ExtState>(() => {
     const initialIcons = selectedCharacters && selectedCharacters.length === 3
@@ -415,164 +749,30 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   useEffect(() => setCurrentTurnTimer(60), [gameState.activePlayerId]);
 
   /* =========================
-     AI — deterministic & synchronous (no targetingMode for AI)
+     AI — Step 1: compute intents at START of player's turn (shown as badges all turn)
      ========================= */
   useEffect(() => {
     if (gameState.gameMode !== "singleplayer") return;
+    if (gameState.activePlayerId !== 0) return;
+    // Compute and store AI intents so the player can see them during their turn
+    setGameState((prev) => {
+      const intents = computeAIIntents(prev as ExtState);
+      return { ...prev, aiIntents: intents };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.activePlayerId, gameState.gameMode]);
 
+  /* =========================
+     AI — Step 2: execute on AI's turn (all characters act)
+     ========================= */
+  useEffect(() => {
+    if (gameState.gameMode !== "singleplayer") return;
     if (gameState.activePlayerId !== 1) return;
     const aiIcons = gameState.players[1].icons.filter(i => i.isAlive);
     if (!aiIcons.length) return;
 
     const t = setTimeout(() => {
-      setGameState((prev) => {
-        const state = { ...prev } as ExtState;
-
-        const allIcons = state.players.flatMap((p) => p.icons);
-        const normalizedQueue = normalizeSpeedQueue(state.speedQueue, allIcons);
-        if (normalizedQueue !== state.speedQueue) (state as any).speedQueue = normalizedQueue;
-
-        const aiIcons = state.players[1].icons.filter(i => i.isAlive);
-        if (!aiIcons.length) return prev;
-        const ai = aiIcons[0]; // act with first available icon for now
-
-        const enemyTeam = 0;
-        const enemies = state.players[enemyTeam].icons.filter((i) => i.isAlive);
-        const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") ? 2 : 1;
-
-        const pickAbility = () => {
-          let best: { ab: any; target: Icon; lethal: boolean } | null = null;
-          for (const ab of ai.abilities as any[]) {
-            if (state.globalMana[ai.playerId] < (ab.manaCost ?? 0)) continue;
-            const isDmg = typeof ab.damage === "number" && ab.damage > 0;
-            if (!isDmg) continue;
-            for (const e of enemies) {
-              if (hexDistance(ai.position, e.position) <= ab.range) {
-                const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(state, ai, e, 1.0);
-                const lethal = e.stats.hp - dmg <= 0;
-                if (lethal) return { ab, target: e, lethal: true };
-                if (!best) best = { ab, target: e, lethal: false };
-              }
-            }
-          }
-          return best;
-        };
-
-        // 1) Lethal ability > best ability
-        const abPick = pickAbility();
-        if (abPick) {
-          const { ab, target } = abPick;
-          const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(state, ai, target, 1.0);
-
-          state.players = state.players.map((p) => ({
-            ...p,
-            icons: p.icons.map((ic) => {
-              if (ic.id !== target.id) return ic;
-              const newHp = Math.max(0, ic.stats.hp - dmg);
-              return {
-                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4
-              };
-            }),
-          }));
-
-          state.globalMana = state.globalMana.map((m, idx) => (idx === ai.playerId ? Math.max(0, m - (ab.manaCost ?? 0)) : m)) as any;
-
-          state.players = state.players.map((p) => ({
-            ...p,
-            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, cardUsedThisTurn: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic)),
-          }));
-
-          pushLog(state, `${ai.name} cast ${ab.name} on ${target.name} for ${dmg.toFixed(0)} dmg`, ai.playerId);
-          return state;
-        }
-
-        // 2) Basic if in range
-        const basicTarget = enemies.find((e) => hexDistance(ai.position, e.position) <= basicRange);
-        if (basicTarget && !ai.cardUsedThisTurn) {
-          const dmg = resolveBasicAttackDamage(state, ai, basicTarget);
-          state.players = state.players.map((p) => ({
-            ...p,
-            icons: p.icons.map((ic) => {
-              if (ic.id !== basicTarget.id) return ic;
-              const newHp = Math.max(0, ic.stats.hp - dmg);
-              return {
-                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4
-              };
-            }),
-          }));
-          state.players = state.players.map((p) => ({
-            ...p,
-            icons: p.icons.map((ic) => (ic.id === ai.id ? { ...ic, cardUsedThisTurn: true } : ic)),
-          }));
-          pushLog(state, `${ai.name} basic-attacked ${basicTarget.name} for ${dmg.toFixed(0)} dmg`, ai.playerId);
-          return state;
-        }
-
-        // 3) Move toward nearest enemy (terrain-aware), then try basic
-        if (!ai.movedThisTurn && ai.stats.movement > 0 && enemies.length) {
-          const budget = Math.min(ai.stats.movement, ai.stats.moveRange);
-          const occupied = new Set(
-            state.players.flatMap((p) => p.icons).filter((ic) => ic.isAlive && ic.id !== ai.id).map((ic) => tileKey(ic.position.q, ic.position.r))
-          );
-          const costMap = reachableWithCosts(state.board, ai.position, budget, occupied);
-          if (costMap.size) {
-            let best: { coord: Coordinates; cost: number; score: number } | null = null;
-            for (const [key, cost] of costMap.entries()) {
-              const [qStr, rStr] = key.split(",");
-              const cand: Coordinates = { q: parseInt(qStr, 10), r: parseInt(rStr, 10) };
-              let minD = Infinity;
-              for (const e of enemies) {
-                const d = hexDistance(cand, e.position);
-                if (d < minD) minD = d;
-              }
-              if (!best || minD < best.score || (minD === best.score && cost < best.cost)) {
-                best = { coord: cand, cost, score: minD };
-              }
-            }
-            if (best) {
-              state.players = state.players.map((p) => ({
-                ...p,
-                icons: p.icons.map((ic) =>
-                  ic.id === ai.id
-                    ? {
-                      ...ic,
-                      position: best!.coord,
-                      movedThisTurn: true,
-                      stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - best!.cost) },
-                    }
-                    : ic
-                ),
-              }));
-
-              const aiAfter = state.players.flatMap((p) => p.icons).find((i) => i.id === ai.id)!;
-              const tgtAfter = state.players[enemyTeam].icons
-                .filter((i) => i.isAlive)
-                .find((e) => hexDistance(aiAfter.position, e.position) <= basicRange);
-              if (tgtAfter && !aiAfter.cardUsedThisTurn) {
-                const dmg = resolveBasicAttackDamage(state, aiAfter, tgtAfter);
-                state.players = state.players.map((p) => ({
-                  ...p,
-                  icons: p.icons.map((ic) => {
-                    if (ic.id !== tgtAfter.id) return ic;
-                    const newHp = Math.max(0, ic.stats.hp - dmg);
-                    return {
-                      ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4
-                    };
-                  }),
-                }));
-                state.players = state.players.map((p) => ({
-                  ...p,
-                  icons: p.icons.map((ic) => (ic.id === aiAfter.id ? { ...ic, cardUsedThisTurn: true } : ic)),
-                }));
-                pushLog(state, `${aiAfter.name} basic-attacked ${tgtAfter.name} for ${dmg.toFixed(0)} dmg`, aiAfter.playerId);
-              }
-              return state;
-            }
-          }
-        }
-        return state;
-      });
-
+      setGameState((prev) => executeAITurn(prev as ExtState));
       setTimeout(() => endTurn(), AI_END_TURN_MS);
     }, AI_THINK_MS);
 
@@ -635,7 +835,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             movedThisTurn: false,
             hasUltimate: false,
             ultimateUsed: true,
-            droneExpiresTurn: state.currentTurn + 3,
+            droneExpiresTurn: state.currentTurn + 2,
           };
           updated.players = updated.players.map(p =>
             p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, drone] }
@@ -710,14 +910,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             return { ...updated, baseHealth: updatedBaseHealth, objectives: updatedObjectives, cardTargetingMode: undefined, targetingMode: undefined };
           }
 
-          // Line target: lineTarget (horizontal + all directions for now, use range)
+          // Line target: player clicked a direction hex — hit all enemies on that line
           if (card.effect.lineTarget) {
             const range = card.effect.range ?? 4;
-            // Find all enemies within range (approximate line as all in range for now)
+            const lineHexes = snapToLineHexes(executor.position, coordinates, range);
+            const lineKeys = new Set(lineHexes.map(h => tileKey(h.q, h.r)));
             const enemies = updated.players
               .flatMap(p => p.icons)
-              .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range);
-            if (enemies.length === 0) { toast.error("No enemies in range!"); return prev; }
+              .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && lineKeys.has(tileKey(ic.position.q, ic.position.r)));
+            if (enemies.length === 0) { toast.error("No enemies on that line!"); return prev; }
             for (const enemy of enemies) {
               const dmg = computeCardDamage(enemy);
               updated.players = updated.players.map(p => ({
@@ -1280,16 +1481,14 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         icons: p.icons.filter(ic => !ic.droneExpiresTurn || ic.droneExpiresTurn > newCurrentTurn),
       }));
 
-      // Victory check — only trigger if no alive chars AND no pending respawns
+      // Victory check — all characters of a team simultaneously defeated = instant game over
       const p0Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
       const p1Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
-      const p0Respawning = playersAfter[0].icons.some((ic) => !ic.isAlive && ic.respawnTurns > 0);
-      const p1Respawning = playersAfter[1].icons.some((ic) => !ic.isAlive && ic.respawnTurns > 0);
       let newPhase = prev.phase;
       let winner = prev.winner;
-      if (!p0Alive && !p0Respawning) { newPhase = "defeat"; winner = 1; }
-      else if (!p1Alive && !p1Respawning) { newPhase = "victory"; winner = 0; }
-      if (prev.baseHealth[0] <= 0) { newPhase = "defeat"; winner = 1; }
+      if (!p0Alive) { newPhase = "defeat";  winner = 1; }
+      else if (!p1Alive) { newPhase = "victory"; winner = 0; }
+      if (prev.baseHealth[0] <= 0) { newPhase = "defeat";  winner = 1; }
       if (prev.baseHealth[1] <= 0) { newPhase = "victory"; winner = 0; }
 
       // Cards: discard ending player's hand, draw fresh hand for next player
@@ -1443,8 +1642,8 @@ const playCard = useCallback((card: Card, executorId: string) => {
       np[pid] = Math.min((np[pid] ?? 0) + card.effect.teamDmgPct, 60);
       updated.teamBuffs = { ...updated.teamBuffs, mightBonus: nm, powerBonus: np };
       pushLog(updated, `${executor.name} played ${card.name} (+${card.effect.teamDmgPct}% team dmg)`, executor.playerId);
-    } else if (card.effect.powerMult && (card.effect.allEnemiesInRange || card.effect.lineTarget)) {
-      // AoE cards fire immediately without requiring a target click
+    } else if (card.effect.powerMult && card.effect.allEnemiesInRange) {
+      // AoE: fires immediately (no directional target needed)
       const range = card.effect.range ?? 2;
       const executorTile = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r);
       const terrainMult = 1 + (executorTile ? (card.terrainBonus?.[executorTile.terrain.type] ?? 0) : 0);
@@ -1468,6 +1667,14 @@ const playCard = useCallback((card: Card, executorId: string) => {
         pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
       }
       // falls through to mana deduction + consumeCard below
+    } else if (card.effect.powerMult && card.effect.lineTarget) {
+      // Line target: requires player to click a direction hex — enter targeting mode
+      const cardRange = card.effect.range ?? 4;
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: card.definitionId, iconId: executorId, range: cardRange },
+      };
     }
     else if (card.effect.swapCount) {
       const pid = executor.playerId as 0 | 1;

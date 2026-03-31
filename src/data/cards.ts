@@ -115,9 +115,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×0.7 damage at range 4. +20% from mountain.",
+    description: "Power×1.4 damage at range 4. +20% from mountain.",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { powerMult: 0.7, range: 4 },
+    effect: { powerMult: 1.4, range: 4 },
     terrainBonus: { mountain: 0.2 },
   },
   {
@@ -136,9 +136,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — 3 hits of Power×0.35 on one target at range 3.",
+    description: "ULTIMATE (Exhaust) — 3 hits of Power×0.7 on one target at range 3.",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { powerMult: 0.35, multiHit: 3, range: 3 },
+    effect: { powerMult: 0.7, multiHit: 3, range: 3 },
   },
 
   // ── Genghis ───────────────────────────────────────────────────────────────────
@@ -148,9 +148,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×0.6 damage at range 3.",
+    description: "Power×1.2 damage at range 3.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { powerMult: 0.6, range: 3 },
+    effect: { powerMult: 1.2, range: 3 },
   },
   {
     definitionId: "genghis_horde_tactics",
@@ -158,9 +158,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "attack",
     rarity: "rare",
-    description: "Power×0.4 damage to ALL enemies within range 2.",
+    description: "Power×0.8 damage to ALL enemies within range 2.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { powerMult: 0.4, allEnemiesInRange: true, range: 2 },
+    effect: { powerMult: 0.8, allEnemiesInRange: true, range: 2 },
   },
   {
     definitionId: "genghis_riders_fury",
@@ -168,9 +168,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×0.35 to ALL enemies on a horizontal line, range 4.",
+    description: "ULTIMATE (Exhaust) — Power×0.7 to ALL enemies on a horizontal line, range 4.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { powerMult: 0.35, lineTarget: true, range: 4 },
+    effect: { powerMult: 0.7, lineTarget: true, range: 4 },
   },
 
   // ── Da Vinci ─────────────────────────────────────────────────────────────────

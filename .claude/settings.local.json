@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C c:/Users/gaamc/Documents/GitHub/waifuclonewars log --oneline -10)",
+      "Bash(npm run:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -n \"disabled\\\\|Coming Soon\\\\|not.*implement\\\\|incomplete\" /c/Users/gaamc/Documents/GitHub/waifuclonewars/src/components/*.tsx -i)",
+      "Bash(git -C /c/Users/gaamc/Documents/GitHub/waifuclonewars log --oneline -20)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
