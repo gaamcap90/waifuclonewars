@@ -8,7 +8,8 @@ function charColor(card: Card): { border: string; ribbon: string; glow: string }
   if (!card.exclusiveTo) return { border: "border-gray-500", ribbon: "bg-gray-700", glow: "shadow-gray-400/30" };
   if (card.exclusiveTo.includes("Napoleon")) return { border: "border-purple-500", ribbon: "bg-purple-700", glow: "shadow-purple-500/60" };
   if (card.exclusiveTo.includes("Genghis"))  return { border: "border-red-500",    ribbon: "bg-red-700",    glow: "shadow-red-500/60" };
-  if (card.exclusiveTo.includes("Da Vinci")) return { border: "border-green-500",  ribbon: "bg-green-700",  glow: "shadow-green-500/60" };
+  if (card.exclusiveTo.includes("Da Vinci"))  return { border: "border-green-500",  ribbon: "bg-green-700",  glow: "shadow-green-500/60" };
+  if (card.exclusiveTo.includes("Leonidas")) return { border: "border-amber-500",  ribbon: "bg-amber-700",  glow: "shadow-amber-500/60" };
   return { border: "border-gray-500", ribbon: "bg-gray-700", glow: "shadow-gray-400/30" };
 }
 
@@ -17,6 +18,7 @@ function charLabel(card: Card): string | null {
   if (card.exclusiveTo.includes("Napoleon")) return "Napoleon";
   if (card.exclusiveTo.includes("Genghis"))  return "Genghis";
   if (card.exclusiveTo.includes("Da Vinci")) return "Da Vinci";
+  if (card.exclusiveTo.includes("Leonidas")) return "Leonidas";
   return null;
 }
 
@@ -27,6 +29,7 @@ function cardTypeIcon(type: Card["type"]): string {
     case "buff":     return "⬆️";
     case "movement": return "💨";
     case "ultimate": return "✨";
+    case "debuff":   return "☠️";
     default:         return "🃏";
   }
 }
@@ -40,6 +43,20 @@ function manaCostColor(cost: number): string {
 
 function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): string {
   const e = card.effect;
+  // Teleport card (Flying Machine)
+  if (e.teleport) return `Teleport r${e.range ?? 5}`;
+  // Self-cast heal (Mend)
+  if (e.selfCast && e.healing) return `+${e.healing} HP (self)`;
+  // Debuff cards
+  if (e.debuffType) {
+    switch (e.debuffType) {
+      case 'mud_throw':   return `-${e.debuffMagnitude} MOV (${e.debuffDuration}t)`;
+      case 'demoralize':  return `50% skip turn (${e.debuffDuration}t)`;
+      case 'armor_break': return `-${e.debuffMagnitude} DEF (${e.debuffDuration}t)`;
+      case 'silence':     return `Silence (${e.debuffDuration}t)`;
+      case 'poison':      return `Poison (−${e.debuffMagnitude}/t)`;
+    }
+  }
   if (e.damageType === 'atk') {
     if (executor && gameState) {
       const eff = calcEffectiveStats(gameState, executor);
@@ -53,12 +70,12 @@ function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): 
     if (executor && gameState) {
       const eff = calcEffectiveStats(gameState, executor);
       const est = Math.floor(eff.power * e.powerMult);
-      const suffix = e.allEnemiesInRange ? " (AoE)" : e.lineTarget ? " (Line)" : e.multiHit ? ` ×${e.multiHit}` : "";
+      const suffix = e.randomTargets ? ` ×${e.multiHit ?? 3} rnd` : e.allEnemiesInRange ? " (AoE)" : e.lineTarget ? " (Line)" : "";
       return `~${est} dmg${suffix}`;
     }
     const power = executor?.stats.power ?? 0;
     const est = Math.floor(power * e.powerMult);
-    const suffix = e.allEnemiesInRange ? " (AoE)" : e.lineTarget ? " (Line)" : e.multiHit ? ` ×${e.multiHit}` : "";
+    const suffix = e.randomTargets ? ` ×${e.multiHit ?? 3} rnd` : e.allEnemiesInRange ? " (AoE)" : e.lineTarget ? " (Line)" : "";
     return `~${est} dmg${suffix}`;
   }
   if (e.damage)    return `${e.damage} dmg`;

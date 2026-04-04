@@ -14,23 +14,25 @@ const EscapeMenu = ({ onMainMenu, onContinue }: EscapeMenuProps) => {
         <CardHeader>
           <CardTitle className="text-center text-xl">Game Menu</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Button 
-            onClick={onMainMenu}
-            variant="destructive"
-            className="w-full"
-            size="lg"
-          >
-            Main Menu
-          </Button>
-          <Button 
+        <CardContent className="space-y-3">
+          <Button
             onClick={onContinue}
             variant="default"
-            className="w-full"
+            className="w-full bg-emerald-700 hover:bg-emerald-600"
             size="lg"
           >
-            Continue
+            ▶ Continue
           </Button>
+          <div className="border-t border-border/50 pt-3">
+            <Button
+              onClick={onMainMenu}
+              variant="destructive"
+              className="w-full"
+              size="lg"
+            >
+              ⚑ Resign — Exit to Main Menu
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

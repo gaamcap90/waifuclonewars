@@ -35,16 +35,16 @@ export default function HexTile({
 }: HexTileProps) {
   // 1) Terrain → public URL
   const terrainMap: Record<string,string> = {
-    forest:       "/uploads/Forest_180.png",
-    mountain:     "/uploads/Mountains_2_180.png",
-    river:        "/uploads/River_180.png",
-    plain:        "/uploads/Plains_180.png",
-    mana_crystal: "/uploads/Mana_Crystal_180.png",
-    beast_camp:   "/uploads/Beast_Camp_180.png",
-    base_blue:    "/uploads/Blue_Base_180.png",
-    base_red:     "/uploads/Red_Base_180.png",
-    spawn_blue:   "/uploads/Spawn_Blue_180.png",
-    spawn_red:    "/uploads/Spawn_Red_180.png",
+    forest:       "/art/tiles/Forest_180.png",
+    mountain:     "/art/tiles/Mountains_2_180.png",
+    river:        "/art/tiles/River_180.png",
+    plain:        "/art/tiles/Plains_180.png",
+    mana_crystal: "/art/tiles/Mana_Crystal_180.png",
+    beast_camp:   "/art/tiles/Beast_Camp_180.png",
+    base_blue:    "/art/tiles/Blue_Base_180.png",
+    base_red:     "/art/tiles/Red_Base_180.png",
+    spawn_blue:   "/art/tiles/Spawn_Blue_180.png",
+    spawn_red:    "/art/tiles/Spawn_Red_180.png",
   };
   let key: string = tile.terrain.type;
   if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
@@ -71,7 +71,7 @@ export default function HexTile({
 
   return (
     <div
-      className="relative cursor-pointer hover:scale-105 transition-transform"
+      className="relative cursor-pointer"
       onClick={onClick}
       onContextMenu={e => { e.preventDefault(); onTerrainClick?.(e); }}
       style={{ width: hexWidth, height: hexHeight }}

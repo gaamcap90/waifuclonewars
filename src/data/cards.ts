@@ -16,13 +16,14 @@ export const CHARACTER_IDS = {
   napoleon: "Napoleon",
   genghis:  "Genghis",
   daVinci:  "Da Vinci",
+  leonidas: "Leonidas",
 } as const;
 
 // How many copies of each shared card go into a deck (default 2)
 const SHARED_COPIES: Record<string, number> = {
-  shared_basic_attack: 4,
-  shared_quick_move:   3,
-  shared_gamble:       1,
+  shared_basic_attack:  4,
+  shared_quick_move:    3,
+  shared_gamble:        1,
 };
 
 const CARD_DEFS: CardDef[] = [
@@ -39,31 +40,11 @@ const CARD_DEFS: CardDef[] = [
   },
   {
     definitionId: "shared_shield",
-    name: "Shield",
+    name: "Shields Up",
     manaCost: 1,
     type: "defense",
     rarity: "common",
     description: "Gain +10 DEF until the start of your next turn.",
-    exclusiveTo: null,
-    effect: { defBonus: 10 },
-  },
-  {
-    definitionId: "shared_might_up",
-    name: "MIGHT +10",
-    manaCost: 0,
-    type: "buff",
-    rarity: "common",
-    description: "+10 Might this turn. Amplifies Basic Attack.",
-    exclusiveTo: null,
-    effect: { atkBonus: 10 },
-  },
-  {
-    definitionId: "shared_def_up",
-    name: "DEF +10",
-    manaCost: 0,
-    type: "buff",
-    rarity: "common",
-    description: "+10 Defense this turn.",
     exclusiveTo: null,
     effect: { defBonus: 10 },
   },
@@ -83,29 +64,81 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 1,
     type: "defense",
     rarity: "common",
-    description: "Heal an ally within range 3 for 20 HP.",
+    description: "Heal yourself for 20 HP.",
     exclusiveTo: null,
-    effect: { healing: 20, range: 3 },
+    effect: { healing: 20, selfCast: true },
   },
   {
     definitionId: "shared_battle_cry",
     name: "Battle Cry",
-    manaCost: 0,
+    manaCost: 1,
     type: "buff",
     rarity: "common",
-    description: "+8 Might this turn. Combos with Basic Attack.",
+    description: "+10 Might this turn.",
     exclusiveTo: null,
-    effect: { atkBonus: 8 },
+    effect: { atkBonus: 10 },
   },
   {
     definitionId: "shared_gamble",
     name: "Gamble",
-    manaCost: 0,
+    manaCost: 1,
     type: "buff",
     rarity: "common",
     description: "Discard 2 random cards from your hand. Draw 2 new ones.",
     exclusiveTo: null,
     effect: { swapCount: 2 },
+  },
+
+  // ── Shared Debuffs ────────────────────────────────────────────────────────────
+  {
+    definitionId: "shared_mud_throw",
+    name: "Mud Throw",
+    manaCost: 1,
+    type: "debuff",
+    rarity: "common",
+    description: "Enemy loses 1 movement for 2 turns. Range 3.",
+    exclusiveTo: null,
+    effect: { range: 3, debuffType: 'mud_throw', debuffMagnitude: 1, debuffDuration: 2 },
+  },
+  {
+    definitionId: "shared_demoralize",
+    name: "Demoralize",
+    manaCost: 3,
+    type: "debuff",
+    rarity: "common",
+    description: "Target enemy: 50% chance each turn to skip movement & cards. Lasts 2 turns. Range 2.",
+    exclusiveTo: null,
+    effect: { range: 2, debuffType: 'demoralize', debuffMagnitude: 0, debuffDuration: 2 },
+  },
+  {
+    definitionId: "shared_armor_break",
+    name: "Armor Break",
+    manaCost: 2,
+    type: "debuff",
+    rarity: "common",
+    description: "Enemy loses 15 DEF for 2 turns. Range 2.",
+    exclusiveTo: null,
+    effect: { range: 2, debuffType: 'armor_break', debuffMagnitude: 15, debuffDuration: 2 },
+  },
+  {
+    definitionId: "shared_silence",
+    name: "Silence",
+    manaCost: 3,
+    type: "debuff",
+    rarity: "common",
+    description: "Enemy Power drops to 0 for 1 turn. Range 1.",
+    exclusiveTo: null,
+    effect: { range: 1, debuffType: 'silence', debuffMagnitude: 0, debuffDuration: 2 },
+  },
+  {
+    definitionId: "shared_poison_dart",
+    name: "Poison Dart",
+    manaCost: 3,
+    type: "debuff",
+    rarity: "common",
+    description: "Enemy loses 5 Might & 5 DEF each turn. Removed on heal. Range 2.",
+    exclusiveTo: null,
+    effect: { range: 2, debuffType: 'poison', debuffMagnitude: 5, debuffDuration: 99 },
   },
 
   // ── Napoleon ──────────────────────────────────────────────────────────────────
@@ -115,10 +148,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.4 damage at range 4. +20% from mountain.",
+    description: "Power×1.4 damage at range 4.",
     exclusiveTo: CHARACTER_IDS.napoleon,
     effect: { powerMult: 1.4, range: 4 },
-    terrainBonus: { mountain: 0.2 },
   },
   {
     definitionId: "napoleon_grande_armee",
@@ -126,7 +158,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "buff",
     rarity: "rare",
-    description: "+20% Might AND Power to all allies for 2 turns.",
+    description: "+20% Might AND Power to all allies for 2 turns. (No range limit.)",
     exclusiveTo: CHARACTER_IDS.napoleon,
     effect: { teamDmgPct: 20, turns: 2 },
   },
@@ -136,9 +168,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — 3 hits of Power×0.7 on one target at range 3.",
+    description: "ULTIMATE (Exhaust) — 3 random hits of Power×0.7 on enemies within range 4.",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { powerMult: 0.7, multiHit: 3, range: 3 },
+    effect: { powerMult: 0.7, multiHit: 3, range: 4, randomTargets: true },
   },
 
   // ── Genghis ───────────────────────────────────────────────────────────────────
@@ -168,9 +200,41 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×0.7 to ALL enemies on a horizontal line, range 4.",
+    description: "ULTIMATE (Exhaust) — Power×0.7 to ALL enemies on a horizontal line, range 5.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { powerMult: 0.7, lineTarget: true, range: 4 },
+    effect: { powerMult: 0.7, lineTarget: true, range: 5 },
+  },
+
+  // ── Leonidas ─────────────────────────────────────────────────────────────────
+  {
+    definitionId: "leonidas_shield_bash",
+    name: "Shield Bash",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Power×1.5 damage at range 1 + Armor Break (−20% DEF, 2t).",
+    exclusiveTo: CHARACTER_IDS.leonidas,
+    effect: { powerMult: 1.5, range: 1, debuffType: 'armor_break', debuffMagnitude: 20, debuffDuration: 2 },
+  },
+  {
+    definitionId: "leonidas_spartan_wall",
+    name: "Spartan Wall",
+    manaCost: 3,
+    type: "defense",
+    rarity: "rare",
+    description: "+20 Defense to Leonidas and all allies within range 2.",
+    exclusiveTo: CHARACTER_IDS.leonidas,
+    effect: { teamDefBuff: 20, range: 2 },
+  },
+  {
+    definitionId: "leonidas_this_is_sparta",
+    name: "THIS IS SPARTA!",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Power×3 damage to target + Demoralize all adjacent enemies (1t).",
+    exclusiveTo: CHARACTER_IDS.leonidas,
+    effect: { powerMult: 3.0, range: 3, aoeDemoralize: true },
   },
 
   // ── Da Vinci ─────────────────────────────────────────────────────────────────
@@ -182,7 +246,7 @@ const CARD_DEFS: CardDef[] = [
     rarity: "rare",
     description: "Teleport to any hex within range 5.",
     exclusiveTo: CHARACTER_IDS.daVinci,
-    effect: { moveBonus: 0, range: 5 },
+    effect: { teleport: true, range: 5 },
   },
   {
     definitionId: "davinci_masterpiece",
@@ -190,9 +254,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "defense",
     rarity: "rare",
-    description: "Heal an ally within range 3 for 45 HP.",
+    description: "Heal an ally within range 3 for Power×1.5 HP.",
     exclusiveTo: CHARACTER_IDS.daVinci,
-    effect: { healing: 45, range: 3 },
+    effect: { healingMult: 1.5, range: 3 },
   },
   {
     definitionId: "davinci_vitruvian_guardian",
@@ -248,6 +312,16 @@ export function drawCards(
     drawn.push(draw.shift()!);
   }
   return { drawn, newDraw: draw, newDiscard: discard };
+}
+
+/** Build a deck from a list of definition IDs (duplicates allowed). Used by roguelike. */
+export function buildDeckFromIds(cardIds: string[]): Card[] {
+  const deck: Card[] = [];
+  for (const id of cardIds) {
+    const def = CARD_DEFS.find(d => d.definitionId === id);
+    if (def) deck.push(instantiateCard(def));
+  }
+  return shuffle(deck);
 }
 
 function shuffle<T>(arr: T[]): T[] {

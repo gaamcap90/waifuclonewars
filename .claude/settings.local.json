@@ -6,7 +6,21 @@
       "Bash(xargs grep:*)",
       "Bash(grep -n \"disabled\\\\|Coming Soon\\\\|not.*implement\\\\|incomplete\" /c/Users/gaamc/Documents/GitHub/waifuclonewars/src/components/*.tsx -i)",
       "Bash(git -C /c/Users/gaamc/Documents/GitHub/waifuclonewars log --oneline -20)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -i \"\\\\.png$\")",
+      "WebSearch",
+      "Bash(cp click1.ogg ui_click.ogg)",
+      "Bash(cp rollover1.ogg ui_hover.ogg)",
+      "Bash(cp phaseJump1.ogg card_play.ogg)",
+      "Bash(cp bookFlip1.ogg card_draw.ogg)",
+      "Bash(cp phaserDown2.ogg end_turn.ogg)",
+      "Bash(powershell -Command ':*)",
+      "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\gaamc\\\\Documents\\\\GitHub\\\\waifuclonewars\\\\public\\\\audio\\\\sfx' | Select-Object Name\")",
+      "Bash(git -C /c/Users/gaamc/Documents/GitHub/waifuclonewars status public/audio/)",
+      "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\gaamc\\\\Documents\\\\GitHub\\\\waifuclonewars\\\\public\\\\audio\\\\sfx' -Recurse | Select-Object FullName | Sort-Object FullName\")",
+      "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\gaamc\\\\Downloads' -Filter 'kenney_*.zip' -ErrorAction SilentlyContinue | Select-Object FullName\")",
+      "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\gaamc' -Recurse -Filter 'kenney_*.zip' -ErrorAction SilentlyContinue | Select-Object FullName\")",
+      "Bash(powershell -Command \"Get-ChildItem 'C:\\\\Users\\\\gaamc\\\\Downloads\\\\WaifuSounds\\\\Audio' -Recurse | Select-Object Name | Sort-Object Name\")"
     ]
   }
 }

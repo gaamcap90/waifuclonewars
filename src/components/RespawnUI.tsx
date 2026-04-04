@@ -9,9 +9,9 @@ interface RespawnUIProps {
 }
 
 const getCharacterPortrait = (name: string) => {
-  if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
-  if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
-  if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
+  if (name.includes("Napoleon")) return "/art/napoleon_portrait.png";
+  if (name.includes("Genghis")) return "/art/genghis_portrait.png";
+  if (name.includes("Da Vinci")) return "/art/davinci_portrait.png";
   return null;
 };
 

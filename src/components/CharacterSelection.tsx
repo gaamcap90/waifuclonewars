@@ -4,32 +4,42 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import ArenaBackground from "@/ui/ArenaBackground";
 
-type Role = "dps_ranged" | "dps_melee" | "support";
+interface AbilityBadge {
+  icon: string;
+  name: string;
+  desc: string;
+  kind: "passive" | "ability" | "ultimate";
+}
+
+type Role = "dps_ranged" | "dps_melee" | "support" | "tank";
 
 interface Character {
   id: string;
   name: string;
+  tagline: string;
   role: Role;
   stats: { hp: number; might: number; power: number };
-  keyAbilityName: string;
-  keyAbilityDesc: string;
+  badges: AbilityBadge[];
 }
 
 interface Props {
   onStartGame: (selected: Character[]) => void;
+  onBack?: () => void;
   gameMode: "singleplayer" | "multiplayer";
 }
 
-const portraits: Record<"Napoleon" | "Genghis" | "DaVinci", string> = {
-  Napoleon: "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png",
-  Genghis: "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png",
-  DaVinci: "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png",
+const portraits: Record<"Napoleon" | "Genghis" | "DaVinci" | "Leonidas", string> = {
+  Napoleon: "/art/napoleon_portrait.png",
+  Genghis: "/art/genghis_portrait.png",
+  DaVinci: "/art/davinci_portrait.png",
+  Leonidas: "/art/leonidas_portrait.png",
 };
 
 function getPortrait(name: string) {
   if (name.includes("Napoleon")) return portraits.Napoleon;
   if (name.includes("Genghis")) return portraits.Genghis;
   if (name.includes("Da Vinci")) return portraits.DaVinci;
+  if (name.includes("Leonidas")) return portraits.Leonidas;
   return undefined;
 }
 
@@ -41,6 +51,8 @@ function rolePill(role: Role) {
       return { label: "DPS MELEE", ring: "ring-rose-400", text: "text-rose-400", border: "border-rose-400" };
     case "support":
       return { label: "SUPPORT", ring: "ring-emerald-400", text: "text-emerald-400", border: "border-emerald-400" };
+    case "tank":
+      return { label: "TANK", ring: "ring-amber-400", text: "text-amber-400", border: "border-amber-400" };
   }
 }
 
@@ -48,30 +60,58 @@ const AVAILABLE: Character[] = [
   {
     id: "napoleon",
     name: "Napoleon-chan",
+    tagline: "Commander of the Clone Armies",
     role: "dps_ranged",
     stats: { hp: 100, might: 70, power: 60 },
-    keyAbilityName: "Artillery Barrage",
-    keyAbilityDesc: "Long-range bombardment. Deals 48 damage.",
+    badges: [
+      { kind: "passive",  icon: "🎯", name: "Vantage Point",    desc: "On a forest tile, basic attack range becomes 3 — but no DEF bonus from forest (trade-off)." },
+      { kind: "ability",  icon: "💥", name: "Artillery Barrage", desc: "Power×1.4 damage at range 4. (Cost: 2 mana)" },
+      { kind: "ability",  icon: "⚔️", name: "Grande Armée",      desc: "+20% Might & Power to your whole team for 2 turns. (Cost: 3 mana)" },
+      { kind: "ultimate", icon: "⭐", name: "Final Salvo",       desc: "ULTIMATE — 3 random hits of Power×0.7 on enemies within range 4. (Cost: 3 mana, exhaust)" },
+    ],
   },
   {
     id: "genghis",
     name: "Genghis-chan",
+    tagline: "Khan of a Thousand Battlefields",
     role: "dps_melee",
     stats: { hp: 120, might: 50, power: 40 },
-    keyAbilityName: "Mongol Charge",
-    keyAbilityDesc: "Rush attack through enemies. Deals 48 damage.",
+    badges: [
+      { kind: "passive",  icon: "🩸", name: "Bloodlust",      desc: "Each kill: +15 Might and restore 1 Mana. Stacks up to 3×." },
+      { kind: "ability",  icon: "⚡", name: "Mongol Charge",  desc: "Power×1.2 damage at range 3. (Cost: 2 mana)" },
+      { kind: "ability",  icon: "🌀", name: "Horde Tactics",  desc: "Power×0.8 damage to ALL enemies within range 2. (Cost: 3 mana)" },
+      { kind: "ultimate", icon: "⭐", name: "Rider's Fury",   desc: "ULTIMATE — Power×0.7 to all enemies on a line, range 5. (Cost: 3 mana, exhaust)" },
+    ],
   },
   {
     id: "davinci",
     name: "Da Vinci-chan",
+    tagline: "Visionary of the Stars",
     role: "support",
     stats: { hp: 80, might: 35, power: 50 },
-    keyAbilityName: "Flying Machine",
-    keyAbilityDesc: "Teleport to any hex + gain aerial view for 2 turns.",
+    badges: [
+      { kind: "passive",  icon: "🔧", name: "Tinkerer",             desc: "At turn start, if Da Vinci hasn't used an exclusive ability card last turn, draw +1 card." },
+      { kind: "ability",  icon: "✈️", name: "Flying Machine",       desc: "Teleport to any hex within range 5. (Cost: 2 mana)" },
+      { kind: "ability",  icon: "💚", name: "Masterpiece",          desc: "Heal an ally within range 3 for 45 HP. (Cost: 3 mana)" },
+      { kind: "ultimate", icon: "⭐", name: "Vitruvian Guardian",   desc: "ULTIMATE — Summon a combat drone: 50 HP, 15 Might, 30 DEF, lasts 2 turns. (Cost: 3 mana, exhaust)" },
+    ],
+  },
+  {
+    id: "leonidas",
+    name: "Leonidas-chan",
+    tagline: "Defender of the Thermopylae Gate",
+    role: "tank",
+    stats: { hp: 130, might: 45, power: 20 },
+    badges: [
+      { kind: "passive",  icon: "🛡️", name: "Phalanx",         desc: "Each turn adjacent to an ally: +8 Defense (stacks up to 3 turns, max +24). Build the wall by staying close." },
+      { kind: "ability",  icon: "⚡", name: "Shield Bash",      desc: "1.5× Power (30 dmg) at range 1 + Armor Break (−20% DEF for 2 turns). (Cost: 2 mana)" },
+      { kind: "ability",  icon: "🏛️", name: "Spartan Wall",     desc: "+30% Defense to Leonidas and all allies within range 2 for 2 turns. (Cost: 3 mana)" },
+      { kind: "ultimate", icon: "⭐", name: "THIS IS SPARTA!",  desc: "ULTIMATE — Charge 3 hexes: 3× Power (60 dmg) to target + Demoralize all adjacent enemies 1t (50% skip turn). (Cost: 3 mana, exhaust)" },
+    ],
   },
 ];
 
-export default function CharacterSelection({ onStartGame }: Props) {
+export default function CharacterSelection({ onStartGame, onBack }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const selected = useMemo(
@@ -93,7 +133,15 @@ export default function CharacterSelection({ onStartGame }: Props) {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <ArenaBackground />
-      <div className="w-[1100px] max-w-[92vw] mx-auto">
+      <div className="w-[1400px] max-w-[95vw] mx-auto">
+        {/* Back button */}
+        {onBack && (
+          <button onClick={onBack}
+            className="absolute top-4 left-4 flex items-center gap-1.5 font-orbitron text-[11px] text-slate-400 hover:text-white transition-colors tracking-wider">
+            ← MAIN MENU
+          </button>
+        )}
+
         {/* Title */}
         <div className="text-center mb-8">
           <h1 className="font-orbitron text-3xl text-white drop-shadow-sm">Select Your Team</h1>
@@ -108,7 +156,7 @@ export default function CharacterSelection({ onStartGame }: Props) {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           {AVAILABLE.map((c) => {
             const picked = selectedIds.includes(c.id);
             const role = rolePill(c.role);
@@ -151,6 +199,8 @@ export default function CharacterSelection({ onStartGame }: Props) {
 
                     <CardTitle className="mt-3 text-xl text-white">{c.name}</CardTitle>
 
+                    <p className="text-[11px] italic text-slate-400 -mt-1 mb-1">{c.tagline}</p>
+
                     <div
                       className={[
                         "text-xs font-bold px-3 py-1 rounded-full border",
@@ -169,10 +219,14 @@ export default function CharacterSelection({ onStartGame }: Props) {
                       <Stat label="Power" value={c.stats.power} />
                     </div>
 
+                    {/* Passive + Ability badges */}
                     <div className="mt-4 pt-4 border-t border-slate-700/70">
-                      <div className="text-slate-300 text-xs mb-1">KEY ABILITY</div>
-                      <div className="text-slate-100 font-semibold">{c.keyAbilityName}</div>
-                      <div className="text-slate-400 text-sm">{c.keyAbilityDesc}</div>
+                      <div className="text-slate-400 text-[11px] mb-2 uppercase tracking-wide">Passive &amp; Unique Abilities</div>
+                      <div className="flex gap-2 flex-wrap">
+                        {c.badges.map((b) => (
+                          <AbilityBadgeButton key={b.name} badge={b} />
+                        ))}
+                      </div>
                     </div>
 
                     {/* Selected ribbon */}
@@ -229,6 +283,46 @@ function Stat({ label, value }: { label: string; value: number }) {
     <div className="rounded-lg bg-slate-800/60 border border-slate-700/70 px-3 py-2">
       <div className="text-[11px] text-slate-400">{label}</div>
       <div className="text-slate-100 font-bold">{value}</div>
+    </div>
+  );
+}
+
+function AbilityBadgeButton({ badge }: { badge: AbilityBadge }) {
+  const [hovered, setHovered] = useState(false);
+
+  const borderColor =
+    badge.kind === "passive"  ? "border-purple-500/60 bg-purple-900/40" :
+    badge.kind === "ultimate" ? "border-amber-500/60 bg-amber-900/40" :
+                                "border-slate-600/60 bg-slate-800/60";
+
+  return (
+    <div className="relative" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <div className={`w-9 h-9 rounded-lg border-2 flex items-center justify-center text-lg cursor-default ${borderColor}`}>
+        {badge.icon}
+      </div>
+
+      {hovered && (
+        <div
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-52 pointer-events-none"
+          style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.8))" }}
+        >
+          <div className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-base">{badge.icon}</span>
+              <span className="text-slate-100 text-xs font-bold">{badge.name}</span>
+              {badge.kind === "passive" && (
+                <span className="text-[9px] text-purple-400 border border-purple-500/40 rounded px-1">PASSIVE</span>
+              )}
+              {badge.kind === "ultimate" && (
+                <span className="text-[9px] text-amber-400 border border-amber-500/40 rounded px-1">ULTIMATE</span>
+              )}
+            </div>
+            <p className="text-slate-400 text-[11px] leading-relaxed">{badge.desc}</p>
+          </div>
+          {/* Arrow */}
+          <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-600 rotate-45 mx-auto -mt-1" />
+        </div>
+      )}
     </div>
   );
 }
