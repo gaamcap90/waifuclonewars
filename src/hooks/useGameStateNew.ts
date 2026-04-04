@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from "react";
-import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck, AIIntent } from "@/types/game";
-import { buildDeckForTeam, drawCards } from "@/data/cards";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck, AIIntent, Debuff } from "@/types/game";
+import type { CharacterRunState } from "@/types/roguelike";
+import { buildDeckForTeam, drawCards, buildDeckFromIds } from "@/data/cards";
 import { toast } from "sonner";
 
 // TURN/COMBAT HELPERS (external)
@@ -172,7 +173,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (Math.abs(q) >= 6 || Math.abs(r) >= 6 || Math.abs(q + r) >= 6)
     return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
   if ((Math.abs(q + r) === 3 && Math.abs(q) <= 2) || (q === 0 && Math.abs(r) === 4))
-    return { type: "river", effects: { movementModifier: -999 } };
+    return { type: "river", effects: { movementModifier: -999 } as any }; // lethal if landed on (e.g. displacement)
 
   const isForest =
     (q >= -4 && q <= -2 && r >= 0 && r <= 2) ||
@@ -208,9 +209,9 @@ const createInitialIcons = (): Icon[] => {
       role: "dps_ranged" as const,
       stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 70, power: 60, defense: 15, movement: 2 },
       abilities: [
-        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 48 },
+        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 0 },
         { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
-        { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 30 },
+        { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 0 },
       ],
       passive: "Tactical Genius: +1 movement range when commanding from high ground",
     },
@@ -219,9 +220,9 @@ const createInitialIcons = (): Icon[] => {
       role: "dps_melee" as const,
       stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 40, defense: 25, movement: 2 },
       abilities: [
-        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack through enemies. Deals 48 damage.", damage: 48 },
-        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Teleport behind target. Deals 60 damage + fear effect.", damage: 60 },
-        { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Charge through up to 3 enemies, dealing 24 damage each", damage: 24 },
+        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack through enemies. Deals 48 damage.", damage: 0 },
+        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Teleport behind target. Deals 60 damage + fear effect.", damage: 0 },
+        { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Charge through up to 3 enemies, dealing 24 damage each", damage: 0 },
       ],
       passive: "Conqueror's Fury: +15% damage for each enemy defeated this match",
     },
@@ -304,39 +305,48 @@ function consumeCardFromHand(state: ExtState, card: Card, playerId: number): Ext
   decks[pid] = deck;
   return { ...state, hands, decks };
 }
-function buildIconsFromSelection(selected: any[]): Icon[] {
+function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]): Icon[] {
   const p1Spawns = [{ q: -4, r: 3 }, { q: -4, r: 2 }, { q: -3, r: 3 }];
   const p2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
 
-  const toIcon = (template: any, pid: number, idx: number): Icon => ({
-    id: `${pid}-${idx}`,
-    name: template.name,
-    role: template.role,
-    stats: {
-      hp: template.stats.hp,
-      maxHp: template.stats.hp,
-      moveRange: 2,
-      speed: template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : 4,
-      might: template.stats.might,
-      power: template.stats.power ?? 50,
-      defense: template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : 15,
-      movement: 2,
-      mana: 3,
-      maxMana: 3,
-    },
-    abilities: getAbilitiesForCharacter(template.name),
-    passive: getPassiveForCharacter(template.name),
-    position: (pid === 0 ? p1Spawns : p2Spawns)[idx],
-    playerId: pid,
-    isAlive: true,
-    respawnTurns: 0,
-    cardUsedThisTurn: false,
-    movedThisTurn: false,
-    hasUltimate: true,
-    ultimateUsed: false,
-    hasRespawned: false,
-    justRespawned: false,
-  });
+  const toIcon = (template: any, pid: number, idx: number): Icon => {
+    // Apply roguelike run state overrides for player 0 only (AI always starts fresh)
+    const runChar = pid === 0 ? runChars?.find((c) => c.id === template.id) : undefined;
+    const statBonus = runChar?.statBonuses ?? { hp: 0, might: 0, power: 0, defense: 0 };
+    const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 42 : 15;
+    const baseHp  = runChar ? runChar.currentHp : template.stats.hp;
+    const maxHp   = runChar ? runChar.maxHp : template.stats.hp;
+
+    return {
+      id: `${pid}-${idx}`,
+      name: template.name,
+      role: template.role,
+      stats: {
+        hp:        baseHp,
+        maxHp:     maxHp,
+        moveRange: template.role === "tank" ? 2 : 3,
+        speed:     template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : template.role === "tank" ? 3 : 4,
+        might:     template.stats.might + (statBonus.might ?? 0),
+        power:     (template.stats.power ?? 50) + (statBonus.power ?? 0),
+        defense:   baseDefense + (statBonus.defense ?? 0),
+        movement:  template.role === "tank" ? 2 : 3,
+        mana: 3,
+        maxMana: 3,
+      },
+      abilities: getAbilitiesForCharacter(template.name),
+      passive:   getPassiveForCharacter(template.name),
+      position:  (pid === 0 ? p1Spawns : p2Spawns)[idx],
+      playerId:  pid,
+      isAlive:   true,
+      respawnTurns: 0,
+      cardUsedThisTurn: false,
+      movedThisTurn:    false,
+      hasUltimate:      true,
+      ultimateUsed:     false,
+      hasRespawned:     false,
+      justRespawned:    false,
+    };
+  };
 
   const icons: Icon[] = [];
   selected.forEach((char, i) => {
@@ -348,37 +358,49 @@ function buildIconsFromSelection(selected: any[]): Icon[] {
 
 function getAbilitiesForCharacter(name: string) {
   if (name.includes("Napoleon")) return [
-    { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 48 },
-    { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "+20% damage to all allies for 3 turns.", damage: 0 },
-    { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 30 },
+    { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Power×1.4 damage.", damage: 0, powerMult: 1.4 },
+    { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "+20% Might & Power to all allies for 2 turns.", damage: 0 },
+    { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 4, description: "ULTIMATE: 3 hits of Power×0.7 on random enemies", damage: 0, powerMult: 0.7 },
   ];
   if (name.includes("Genghis")) return [
-    { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack. Deals 48 damage.", damage: 48 },
-    { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Deals 60 damage + fear effect.", damage: 60 },
-    { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: 24 damage to up to 3 enemies", damage: 24 },
+    { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack. Power×1.2 damage.", damage: 0, powerMult: 1.2 },
+    { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 2, description: "Power×0.8 damage to ALL enemies in range 2.", damage: 0, powerMult: 0.8 },
+    { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Power×0.7 to all enemies on a line", damage: 0, powerMult: 0.7 },
   ];
+  if (name.includes("Da Vinci")) return [
+    { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 5, description: "Teleport to any hex.", damage: 0, targetMode: "hex" as any },
+    { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 3, description: "Heals 45 HP to an ally.", healing: 45 },
+    { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons attack drone", damage: 0 },
+  ];
+  if (name.includes("Leonidas")) return [
+    { id: "1", name: "Shield Bash", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Power×1.5 damage + Armor Break.", damage: 0, powerMult: 1.5 },
+    { id: "2", name: "Spartan Wall", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 2, description: "+20 Defense to all nearby allies.", damage: 0, teamDefBuff: 20 },
+    { id: "ultimate", name: "THIS IS SPARTA!", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×3 damage + Demoralize nearby.", damage: 0, powerMult: 3.0 },
+  ];
+  // fallback (shouldn't be reached)
   return [
-    { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Teleport to any hex.", damage: 0, targetMode: "hex" as any },
-    { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals 45 HP.", healing: 45 },
+    { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 5, description: "Teleport to any hex.", damage: 0, targetMode: "hex" as any },
+    { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 3, description: "Heals 45 HP to an ally.", healing: 45 },
     { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons attack drone", damage: 0 },
   ];
 }
 
 function getPassiveForCharacter(name: string) {
-  if (name.includes("Napoleon")) return "Tactical Genius: +1 movement range from high ground";
-  if (name.includes("Genghis")) return "Conqueror's Fury: +15% damage per enemy defeated";
-  return "Renaissance Mind: +1 mana near mana crystals";
+  if (name.includes("Napoleon")) return "Vantage Point: On a forest tile, basic attack range becomes 3";
+  if (name.includes("Genghis")) return "Bloodlust: Each kill grants +15 Might and restores 1 Mana (up to 3×)";
+  if (name.includes("Da Vinci")) return "Tinkerer: Draw +1 card at turn start if no exclusive ability was used last turn";
+  if (name.includes("Leonidas")) return "Phalanx: Each turn adjacent to an ally, gain +8 Defense (stacks up to 3 turns)";
+  return "";
 }
 
 /* =========================
    AI helpers
    ========================= */
 
-/** Simple buff/utility actions the AI can combine with its main attack (cost 0 mana). */
+/** Simple buff/utility actions the AI can combine with its main attack. */
 const AI_BUFF_ACTIONS = [
-  { id: 'battle_cry', name: 'Battle Cry',  atkBonus: 8,  defBonus: 0,  label: '+8 ATK' },
-  { id: 'might_up',   name: 'MIGHT +10',   atkBonus: 10, defBonus: 0,  label: '+10 ATK' },
-  { id: 'def_up',     name: 'DEF +10',     atkBonus: 0,  defBonus: 10, label: '+10 DEF' },
+  { id: 'battle_cry',  name: 'Battle Cry',  atkBonus: 10, defBonus: 0,  label: '+10 ATK' },
+  { id: 'shields_up',  name: 'Shields Up',  atkBonus: 0,  defBonus: 10, label: '+10 DEF' },
 ] as const;
 
 /** Beast camp coordinates */
@@ -389,7 +411,6 @@ const BEAST_CAMPS: Qr[] = [{ q: -2, r: 2 }, { q: 2, r: -2 }];
 function computeAIIntents(state: ExtState): AIIntent[] {
   const intents: AIIntent[] = [];
   const enemies = state.players[0].icons.filter(i => i.isAlive);
-  let manaLeft = state.globalMana[1];
 
   for (const ai of state.players[1].icons.filter(i => i.isAlive)) {
     const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") ? 2 : 1;
@@ -397,15 +418,18 @@ function computeAIIntents(state: ExtState): AIIntent[] {
 
     // --- 1. Try a damaging ability ---
     for (const ab of (ai.abilities as any[])) {
-      if (manaLeft < (ab.manaCost ?? 0)) continue;
       if (ab.id === "ultimate" && ai.ultimateUsed) continue;
-      const isDmg  = typeof ab.damage  === "number" && ab.damage  > 0;
+      const isPowerMult = ab.powerMult !== undefined;
+      const isDmg  = (typeof ab.damage === "number" && ab.damage > 0) || isPowerMult;
       const isHeal = typeof ab.healing === "number" && ab.healing > 0;
 
       if (isDmg && enemies.some(e => hexDistance(ai.position, e.position) <= ab.range)) {
+        const nearestEnemy = enemies.find(e => hexDistance(ai.position, e.position) <= ab.range)!;
+        const estDmg = isPowerMult
+          ? resolveAbilityDamage(state, ai, nearestEnemy, ab.powerMult)
+          : ab.damage;
         intents.push({ iconId: ai.id, type: 'ability', abilityName: ab.name,
-          label: String(Math.round(ab.damage)), damage: ab.damage, range: ab.range });
-        manaLeft -= ab.manaCost;
+          label: String(Math.round(estDmg)), damage: estDmg, range: ab.range });
         mainIntentSet = true;
         break;
       } else if (isHeal) {
@@ -415,7 +439,6 @@ function computeAIIntents(state: ExtState): AIIntent[] {
         if (needsHeal.length > 0) {
           intents.push({ iconId: ai.id, type: 'heal', abilityName: ab.name,
             label: `+${ab.healing}`, healing: ab.healing, range: ab.range });
-          manaLeft -= ab.manaCost;
           mainIntentSet = true;
           break;
         }
@@ -462,8 +485,8 @@ function computeAIIntents(state: ExtState): AIIntent[] {
       // Pick a contextual buff: ATK buff if attacking, DEF buff if healing/tanking
       const mainIntent = intents[intents.length - 1];
       const buffPick = mainIntent.type === 'heal'
-        ? AI_BUFF_ACTIONS[2]  // DEF +10 when healing
-        : AI_BUFF_ACTIONS[Math.floor(Math.random() * 2)]; // Battle Cry or MIGHT+10
+        ? AI_BUFF_ACTIONS[1]  // Shields Up when healing
+        : AI_BUFF_ACTIONS[Math.floor(Math.random() * 2)]; // Battle Cry or Shields Up
       intents.push({ iconId: ai.id, type: 'buff', abilityName: buffPick.name,
         label: buffPick.label, range: 0 });
     }
@@ -506,7 +529,7 @@ function executeAITurn(state: ExtState): ExtState {
     if (mainIntent?.type === 'ability' || mainIntent?.type === 'heal') {
       ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
       const ab = (ai.abilities as any[]).find(a => a.name === mainIntent.abilityName);
-      if (ab && s.globalMana[1] >= (ab.manaCost ?? 0) && !(ab.id === "ultimate" && ai.ultimateUsed)) {
+      if (ab && !(ab.id === "ultimate" && ai.ultimateUsed)) {
         if (typeof ab.healing === "number" && ab.healing > 0) {
           const ally = s.players[1].icons
             .filter(ic => ic.isAlive && hexDistance(ai!.position, ic.position) <= ab.range)
@@ -514,24 +537,22 @@ function executeAITurn(state: ExtState): ExtState {
           if (ally) {
             s.players = s.players.map(p => ({
               ...p, icons: p.icons.map(ic => ic.id !== ally.id ? ic : {
-                ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + ab.healing) },
+                ...ic, stats: { ...ic.stats, hp: Math.round(Math.min(ic.stats.maxHp, ic.stats.hp + ab.healing)) },
               }),
             }));
-            s.globalMana = s.globalMana.map((m, idx) => idx === 1 ? Math.max(0, m - ab.manaCost) : m) as any;
             s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic) }));
             pushLog(s, `${ai.name} cast ${ab.name} on ${ally.name}, healing ${ab.healing} HP`, 1);
           }
         } else if (typeof ab.damage === "number") {
           const target = enemies().find(e => hexDistance(ai!.position, e.position) <= ab.range);
           if (target) {
-            const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(s, ai, target, 1.0);
-            const newHp = Math.max(0, target.stats.hp - dmg);
+            const dmg = ab.damage > 0 ? ab.damage : resolveAbilityDamage(s, ai, target, (ab as any).powerMult ?? 1.0);
+            const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
             s.players = s.players.map(p => ({
               ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
                 ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
               }),
             }));
-            s.globalMana = s.globalMana.map((m, idx) => idx === 1 ? Math.max(0, m - ab.manaCost) : m) as any;
             s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true, ultimateUsed: ic.ultimateUsed || ab.id === "ultimate" } : ic) }));
             pushLog(s, `${ai.name} cast ${ab.name} on ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
           }
@@ -584,7 +605,7 @@ function executeAITurn(state: ExtState): ExtState {
           const target = enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
           if (target) {
             const dmg = resolveBasicAttackDamage(s, ai, target);
-            const newHp = Math.max(0, target.stats.hp - dmg);
+            const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
             s.players = s.players.map(p => ({
               ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
                 ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
@@ -642,7 +663,7 @@ function executeAITurn(state: ExtState): ExtState {
         const target = enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
         if (target) {
           const dmg = resolveBasicAttackDamage(s, ai, target);
-          const newHp = Math.max(0, target.stats.hp - dmg);
+          const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
           s.players = s.players.map(p => ({
             ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
               ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
@@ -665,6 +686,25 @@ function executeAITurn(state: ExtState): ExtState {
   return { ...s, aiIntents: [] };
 }
 
+/** Apply Genghis Bloodlust passive after a kill: +15 Might stack, +1 mana (up to 3 stacks). */
+function applyGenghisKill(s: ExtState, killerId: string, victimWasAlive: boolean, victimIsNowDead: boolean): ExtState {
+  if (!victimWasAlive || !victimIsNowDead) return s;
+  const killer = s.players.flatMap(p => p.icons).find(i => i.id === killerId);
+  if (!killer || !killer.name.includes("Genghis")) return s;
+  const stacks = killer.passiveStacks ?? 0;
+  if (stacks >= 3) return s;
+  const newStacks = stacks + 1;
+  s.players = s.players.map(p => ({
+    ...p,
+    icons: p.icons.map(ic => ic.id !== killerId ? ic : { ...ic, passiveStacks: newStacks }),
+  }));
+  const newMana = [...s.globalMana] as [number, number];
+  newMana[killer.playerId] = Math.min(5, newMana[killer.playerId] + 1);
+  s.globalMana = newMana;
+  pushLog(s, `${killer.name} Bloodlust! ${newStacks}/3 stacks (+15 Might, +1 Mana)`, killer.playerId);
+  return s;
+}
+
 const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer", selectedCharacters?: any[]) => {
   const [gameState, setGameState] = useState<ExtState>(() => {
     const initialIcons = selectedCharacters && selectedCharacters.length === 3
@@ -677,9 +717,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     const p1Names = initialIcons.filter(i => i.playerId === 1).map(i => i.name);
     const buildHand = (names: string[]): [Hand, Deck] => {
       const allCards = buildDeckForTeam(names);
-      const drawn = allCards.slice(0, 10);
-      const remaining = allCards.slice(10);
-      return [{ cards: drawn, maxSize: 10 }, { drawPile: remaining, discardPile: [] }];
+      const drawn = allCards.slice(0, 7);
+      const remaining = allCards.slice(7);
+      return [{ cards: drawn, maxSize: 7 }, { drawPile: remaining, discardPile: [] }];
     };
     const [hand0, deck0] = buildHand(p0Names);
     const [hand1, deck1] = buildHand(p1Names);
@@ -695,6 +735,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       ],
       board: createInitialBoard(),
       globalMana: [5, 5],
+      globalMaxMana: [5, 5],
       turnTimer: 20,
       speedQueue,
       queueIndex: 0,
@@ -714,7 +755,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     } as ExtState;
   });
 
-  const [currentTurnTimer, setCurrentTurnTimer] = useState(60);
+  // Keep a ref to always have current selectedCharacters in callbacks without stale closures
+  const selectedCharactersRef = useRef<any[] | undefined>(selectedCharacters);
+  useEffect(() => { selectedCharactersRef.current = selectedCharacters; }, [selectedCharacters]);
+
+  const currentTurnTimer = 0; // timer disabled — player ends turn manually
 
   /* =========================
      ESC overlay (does NOT change phase)
@@ -730,23 +775,71 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   }, []);
 
   /* =========================
-     Turn timer
+     Sync gameMode into state when parent arg changes (e.g. switching singleplayer ↔ multiplayer)
      ========================= */
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTurnTimer((prev) => {
-        if (prev <= 1) {
-          endTurn();
-          return 60;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.activePlayerId]);
+    setGameState((prev) => {
+      if (prev.gameMode === gameMode) return prev;
+      return {
+        ...prev,
+        gameMode,
+        players: prev.players.map((p, i) =>
+          i === 1
+            ? { ...p, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", isAI: gameMode === "singleplayer" }
+            : p
+        ),
+      };
+    });
+  }, [gameMode]);
 
-  useEffect(() => setCurrentTurnTimer(60), [gameState.activePlayerId]);
+  /* =========================
+     Sync selectedCharacters into state when a new game starts
+     ========================= */
+  useEffect(() => {
+    if (!selectedCharacters || selectedCharacters.length !== 3) return;
+    setGameState((prev) => {
+      const initialIcons = buildIconsFromSelection(selectedCharacters);
+      const speedQueueRaw = initSpeedQueue(initialIcons);
+      const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
+      const p0Names = initialIcons.filter((i) => i.playerId === 0).map((i) => i.name);
+      const p1Names = initialIcons.filter((i) => i.playerId === 1).map((i) => i.name);
+      const buildHand = (names: string[]): [Hand, Deck] => {
+        const allCards = buildDeckForTeam(names);
+        return [{ cards: allCards.slice(0, 7), maxSize: 7 }, { drawPile: allCards.slice(7), discardPile: [] }];
+      };
+      const [hand0, deck0] = buildHand(p0Names);
+      const [hand1, deck1] = buildHand(p1Names);
+      return {
+        ...prev,
+        currentTurn: 1,
+        activePlayerId: 0 as const,
+        cardLockActive: false,
+        phase: "combat",
+        players: [
+          { id: 0, name: "Player 1", icons: initialIcons.filter((i) => i.playerId === 0), color: "blue", isAI: false },
+          { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter((i) => i.playerId === 1), color: "red", isAI: gameMode === "singleplayer" },
+        ],
+        board: createInitialBoard(),
+        globalMana: [5, 5],
+        globalMaxMana: [5, 5],
+        turnTimer: 20,
+        speedQueue,
+        queueIndex: 0,
+        objectives: { manaCrystal: { controlled: false }, beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] } },
+        teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
+        baseHealth: [150, 150],
+        matchTimer: 600,
+        gameMode,
+        movementStack: {},
+        menuOpen: false,
+        combatLog: [],
+        hands: [hand0, hand1],
+        decks: [deck0, deck1],
+        aiIntents: [],
+      } as ExtState;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCharacters]);
 
   /* =========================
      AI — Step 1: compute intents at START of player's turn (shown as badges all turn)
@@ -754,10 +847,17 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   useEffect(() => {
     if (gameState.gameMode !== "singleplayer") return;
     if (gameState.activePlayerId !== 0) return;
-    // Compute and store AI intents so the player can see them during their turn
+    // Compute and store AI intents + beast camp intents
     setGameState((prev) => {
       const intents = computeAIIntents(prev as ExtState);
-      return { ...prev, aiIntents: intents };
+      // Beast camp intents — each active camp shows attack intention
+      const campDefs = [{ q: -2, r: 2 }, { q: 2, r: -2 }];
+      const beastCampIntents: { campQ: number; campR: number; range1Dmg: number; range2Dmg: number }[] = [];
+      for (let campIdx = 0; campIdx < campDefs.length; campIdx++) {
+        if ((prev.objectives as any)?.beastCamps?.defeated?.[campIdx]) continue;
+        beastCampIntents.push({ campQ: campDefs[campIdx].q, campR: campDefs[campIdx].r, range1Dmg: 50, range2Dmg: 30 });
+      }
+      return { ...prev, aiIntents: intents, beastCampIntents };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.activePlayerId, gameState.gameMode]);
@@ -794,7 +894,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         const executor = state.players.flatMap(p => p.icons).find(i => i.id === executorId);
         if (!executor || !executor.isAlive) return { ...state, cardTargetingMode: undefined };
 
-        const range = card.effect.range ?? 3;
+        // Use targetingMode.range — it was set correctly in playCard (respects char-specific basic attack range)
+        const range = state.targetingMode?.range ?? card.effect.range ?? 3;
         if (hexDistance(executor.position, coordinates) > range) {
           toast.error("Out of range!");
           return prev;
@@ -855,6 +956,76 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
 
+        // ── Flying Machine card teleport ──────────────────────────────────────
+        if (card.effect.teleport) {
+          const tile = state.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          const blocked =
+            !tile ||
+            tile.terrain.effects.movementModifier === -999 ||
+            state.players.flatMap(p => p.icons).some(ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r);
+          if (blocked) { toast.error("Can't teleport there!"); return prev; }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+              ...ic, position: coordinates, movedThisTurn: true,
+              abilityUsedThisTurn: true,
+            }),
+          }));
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid] = Math.max(0, newMana[pid] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+          }));
+          pushLog(updated, `${executor.name} used ${card.name} to teleport!`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Debuff cards ──────────────────────────────────────────────────────
+        if (card.effect.debuffType) {
+          const targetIcon = state.players.flatMap(p => p.icons).find(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (!targetIcon || targetIcon.playerId === executor.playerId) {
+            toast.error("Must target an enemy!");
+            return prev;
+          }
+          const range = card.effect.range ?? 2;
+          if (hexDistance(executor.position, coordinates) > range) {
+            toast.error("Out of range!");
+            return prev;
+          }
+          const debuff: Debuff = {
+            type: card.effect.debuffType,
+            magnitude: card.effect.debuffMagnitude ?? 0,
+            turnsRemaining: card.effect.debuffDuration ?? 2,
+          };
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+              ...ic, debuffs: [...(ic.debuffs ?? []), debuff],
+            }),
+          }));
+          pushLog(updated, `${executor.name} applied ${card.name} to ${targetIcon.name}`, executor.playerId);
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid] = Math.max(0, newMana[pid] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+          }));
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
         // Helper: compute damage for a card hit on a target
         const computeCardDamage = (tgt: typeof targetIcon) => {
           const executorTile = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r);
@@ -889,7 +1060,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ...p,
                 icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
                   ...ic,
-                  stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+                  stats: { ...ic.stats, hp: Math.round(Math.max(0, ic.stats.hp - dmg)) },
                   isAlive: ic.stats.hp - dmg > 0,
                   respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
                 }),
@@ -925,7 +1096,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ...p,
                 icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
                   ...ic,
-                  stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+                  stats: { ...ic.stats, hp: Math.round(Math.max(0, ic.stats.hp - dmg)) },
                   isAlive: ic.stats.hp - dmg > 0,
                   respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
                 }),
@@ -963,6 +1134,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               currentHp = Math.max(0, currentHp - hitDmg);
             }
             const newHp = currentHp;
+            const wasAlive = targetIcon.isAlive;
             updated.players = updated.players.map(p => ({
               ...p,
               icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
@@ -972,6 +1144,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
               }),
             }));
+            updated = applyGenghisKill(updated, executorId, wasAlive, newHp <= 0);
             const hitLabel = multiHit > 1 ? `${multiHit}×${(totalDmg/multiHit).toFixed(0)}` : totalDmg.toFixed(0);
             pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${hitLabel} dmg`, executor.playerId);
           } else {
@@ -1007,17 +1180,24 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           }
         }
 
-        if (card.effect.healing !== undefined) {
+        if ((card.effect.healing !== undefined || card.effect.healingMult !== undefined) && !card.effect.selfCast) {
           if (!targetIcon || targetIcon.playerId !== executor.playerId) {
             toast.error("Healing targets allies only!");
             return prev;
           }
-          const newHp = Math.min(targetIcon.stats.maxHp, targetIcon.stats.hp + card.effect.healing);
+          const healAmount = card.effect.healingMult !== undefined
+            ? Math.round(calcEffectiveStats(updated, executor).power * card.effect.healingMult)
+            : (card.effect.healing ?? 0);
+          const newHp = Math.min(targetIcon.stats.maxHp, targetIcon.stats.hp + healAmount);
+          // Poison is removed on heal
+          const newDebuffs = (targetIcon.debuffs ?? []).filter(d => d.type !== 'poison');
           updated.players = updated.players.map(p => ({
             ...p,
-            icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp } }),
+            icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+              ...ic, stats: { ...ic.stats, hp: newHp }, debuffs: newDebuffs,
+            }),
           }));
-          pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name}, healing ${card.effect.healing} HP`, executor.playerId);
+          pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name}, healing ${healAmount} HP`, executor.playerId);
         }
 
         // Deduct mana from global pool
@@ -1114,6 +1294,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const dmg = resolveBasicAttackDamage(updated, caster, targetIcon);
             pushLog(updated, `${caster.name} basic-attacked ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, caster.playerId);
 
+            const wasAlive = targetIcon.isAlive;
+            const newBasicHp = Math.round(Math.max(0, targetIcon.stats.hp - dmg));
             updated.players = updated.players.map((player) => ({
               ...player,
               icons: player.icons.map((ic) =>
@@ -1121,12 +1303,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   ? ic
                   : {
                     ...ic,
-                    stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
-                    isAlive: ic.stats.hp - dmg > 0,
-                    respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
+                    stats: { ...ic.stats, hp: newBasicHp },
+                    isAlive: newBasicHp > 0,
+                    respawnTurns: newBasicHp > 0 ? ic.respawnTurns : 4,
                   }
               ),
             }));
+            updated = applyGenghisKill(updated, caster.id, wasAlive, newBasicHp <= 0);
           } else {
             if (isOwnBase) {
               toast.error("Cannot attack your own base!");
@@ -1176,7 +1359,22 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           // ABILITY path (unit/env or heal)
           if (!ability) return prev;
 
-          if (typeof (ability as any).healing === "number" && (ability as any).healing > 0) {
+          if ((ability as any).teamDefBuff && typeof (ability as any).teamDefBuff === 'number') {
+            // Team defense buff (e.g. Spartan Wall)
+            const buffVal = (ability as any).teamDefBuff as number;
+            updated.players = updated.players.map((p, pid) => {
+              if (pid !== caster.playerId) return p;
+              return {
+                ...p,
+                icons: p.icons.map(ic => {
+                  if (!ic.isAlive) return ic;
+                  if (hexDistance(caster.position, ic.position) > (ability.range ?? 2) && ic.id !== caster.id) return ic;
+                  return { ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + buffVal };
+                }),
+              };
+            });
+            pushLog(updated, `${caster.name} used ${ability.name} — +${buffVal} DEF to nearby allies!`, caster.playerId);
+          } else if (typeof (ability as any).healing === "number" && (ability as any).healing > 0) {
             if (!targetIcon || targetIcon.playerId !== caster.playerId) {
               toast.error("Healing can only target allies!");
               return prev;
@@ -1187,13 +1385,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               icons: player.icons.map((ic) =>
                 ic.id !== targetIcon.id
                   ? ic
-                  : { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + heal) } }
+                  : { ...ic, stats: { ...ic.stats, hp: Math.round(Math.min(ic.stats.maxHp, ic.stats.hp + heal)) } }
               ),
             }));
             pushLog(updated, `${caster.name} cast ${ability.name} on ${targetIcon.name}, healing ${heal} HP`, caster.playerId);
           } else if (typeof (ability as any).damage === "number") {
             if (targetIcon) {
-              const dmg = (ability as any).damage > 0 ? (ability as any).damage : resolveAbilityDamage(updated, caster, targetIcon, 1.0);
+              const dmg = (ability as any).damage > 0 ? (ability as any).damage : resolveAbilityDamage(updated, caster, targetIcon, (ability as any).powerMult ?? 1.0);
               updated.players = updated.players.map((player) => ({
                 ...player,
                 icons: player.icons.map((ic) =>
@@ -1201,7 +1399,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                     ? ic
                     : {
                       ...ic,
-                      stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+                      stats: { ...ic.stats, hp: Math.round(Math.max(0, ic.stats.hp - dmg)) },
                       isAlive: ic.stats.hp - dmg > 0,
                       respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
                     }
@@ -1297,8 +1495,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       if (!dest) return prev;
       if (dest.terrain.effects.movementModifier === -999) return prev;
 
+      // Block movement onto any tile that has an icon — alive OR dead (prevents sliding onto a just-killed enemy's tile)
       const occupied = state.players.flatMap((p) => p.icons).some(
-        (ic) => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+        (ic) => ic.position.q === coordinates.q && ic.position.r === coordinates.r
       );
       if (occupied) return prev;
 
@@ -1376,7 +1575,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         return { ...prev, targetingMode: undefined };
       }
 
-      const range = me.name.includes("Napoleon") || me.name.includes("Da Vinci") ? 2 : 1;
+      // Napoleon Vantage Point passive: basic attack range 3 on forest (no DEF bonus trade-off)
+      const onForest = prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type === "forest";
+      const isRanged = me.name.includes("Napoleon") || me.name.includes("Da Vinci");
+      const range = me.name.includes("Napoleon") && onForest ? 3 : isRanged ? 2 : 1;
       return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
     });
   }, []);
@@ -1385,7 +1587,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
      End Turn — robust boundary + respawn at boundary only
      ========================= */
   const endTurn = useCallback(() => {
-    setCurrentTurnTimer(60);
     setGameState((prev) => {
       const nextPlayer: 0 | 1 = prev.activePlayerId === 0 ? 1 : 0;
 
@@ -1402,22 +1603,28 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         ...player,
         icons: player.icons.map((ic) => {
           if (ic.playerId === prev.activePlayerId) {
-            // Ending player: clear movement/card state; buffs last until START of their NEXT turn
-            // Also clear justRespawned after their turn (they had one turn frozen)
             return {
               ...ic,
               movedThisTurn: false,
               cardUsedThisTurn: false,
+              cardsUsedThisTurn: 0,
               justRespawned: false,
             };
           }
           if (ic.playerId === nextPlayer) {
-            // Starting player: clear buffs from previous turn, reset movement
+            // Starting player: clear buffs, reset movement (account for mud_throw debuff)
+            const mudThrow = ic.debuffs?.find(d => d.type === 'mud_throw');
+            const moveReduction = mudThrow ? mudThrow.magnitude : 0;
+            // Demoralize: 50% chance to freeze unit (no movement, no card plays)
+            const isDemoralized = ic.isAlive && ic.debuffs?.some(d => d.type === 'demoralize');
+            const demoSkip = isDemoralized && Math.random() < 0.5;
+            if (demoSkip) pushLog(prev as any, `${ic.name} is Demoralized — frozen this turn! (cannot move or play cards)`, nextPlayer);
             return {
               ...ic,
               cardBuffAtk: 0,
               cardBuffDef: 0,
-              stats: { ...ic.stats, movement: ic.stats.moveRange },
+              cardsUsedThisTurn: demoSkip ? 3 : 0,
+              stats: { ...ic.stats, movement: demoSkip ? 0 : Math.max(0, ic.stats.moveRange - moveReduction) },
             };
           }
           return ic;
@@ -1430,8 +1637,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         ? nextPlayerIcons.filter(ic => hexDistFn(ic.position, crystalTile.coordinates) === 1).length
         : 0;
       const crystalBonus = crystalAdjCount === nextPlayerIcons.length && nextPlayerIcons.length > 0 ? 2 : crystalAdjCount > 0 ? 1 : 0;
+      const nextMana = 5 + crystalBonus;
       const mana = [...prev.globalMana] as [number, number];
-      mana[nextPlayer] = 5 + crystalBonus;
+      mana[nextPlayer] = nextMana;
+      const maxMana = [...(prev.globalMaxMana ?? [5, 5])] as [number, number];
+      maxMana[nextPlayer] = nextMana;
 
       // Respawn tick (once per full round, when player 0's turn starts)
       let playersAfter = resetPlayers;
@@ -1474,6 +1684,59 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }));
       }
 
+      // Beast camp attacks: each non-defeated camp attacks a random player character in range
+      // Range 1 → 50 dmg, Range 2 → 30 dmg (one attack per camp per turn, on turn end)
+      const campDefs = [{ q: -2, r: 2 }, { q: 2, r: -2 }];
+      for (let campIdx = 0; campIdx < campDefs.length; campIdx++) {
+        const camp = campDefs[campIdx];
+        if ((prev.objectives as any)?.beastCamps?.defeated?.[campIdx]) continue;
+        const allAlive = playersAfter.flatMap(p => p.icons).filter(ic => ic.isAlive);
+        // Find targets within range 2
+        const range1Targets = allAlive.filter(ic => hexDistance(ic.position, camp) === 1);
+        const range2Targets = allAlive.filter(ic => hexDistance(ic.position, camp) === 2);
+        let target: Icon | undefined;
+        let campDmg = 0;
+        if (range1Targets.length > 0) {
+          target = range1Targets[Math.floor(Math.random() * range1Targets.length)];
+          campDmg = 50;
+        } else if (range2Targets.length > 0) {
+          target = range2Targets[Math.floor(Math.random() * range2Targets.length)];
+          campDmg = 30;
+        }
+        if (target && campDmg > 0) {
+          pushLog({ ...prev, players: playersAfter } as any,
+            `Beast Camp attacked ${target.name} for ${campDmg} dmg!`, 1);
+          const targetId = target.id;
+          playersAfter = playersAfter.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => {
+              if (ic.id !== targetId) return ic;
+              const newHp = Math.max(0, ic.stats.hp - campDmg);
+              if (newHp <= 0) {
+                pushLog({ ...prev, players: playersAfter } as any,
+                  `${ic.name} was slain by the Beast Camp!`, 1);
+                return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
+              }
+              return { ...ic, stats: { ...ic.stats, hp: newHp } };
+            }),
+          }));
+        }
+      }
+
+      // River kill: any character standing on a river tile at end of turn drowns
+      playersAfter = playersAfter.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive) return ic;
+          const tile = prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r);
+          if (tile?.terrain.type === 'river') {
+            pushLog({ ...prev, players: playersAfter } as any, `${ic.name} drowned in the river!`, ic.playerId);
+            return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
+          }
+          return ic;
+        }),
+      }));
+
       // Remove expired drones (Vitruvian Guardian lasts 3 rounds)
       const newCurrentTurn = nextPlayer === 0 ? prev.currentTurn + 1 : prev.currentTurn;
       playersAfter = playersAfter.map(p => ({
@@ -1491,6 +1754,34 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       if (prev.baseHealth[0] <= 0) { newPhase = "defeat";  winner = 1; }
       if (prev.baseHealth[1] <= 0) { newPhase = "victory"; winner = 0; }
 
+      // Tick down debuffs on all icons (every turn end; expire at 0)
+      playersAfter = playersAfter.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.debuffs?.length) return ic;
+          const newDebuffs = ic.debuffs
+            .map(d => ({ ...d, turnsRemaining: d.turnsRemaining - 1 }))
+            .filter(d => d.turnsRemaining > 0);
+          return { ...ic, debuffs: newDebuffs };
+        }),
+      }));
+
+      // Leonidas Phalanx passive: update stacks at the start of nextPlayer's turn
+      playersAfter = playersAfter.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.name.includes("Leonidas") || !ic.isAlive || ic.playerId !== nextPlayer) return ic;
+          const allies = p.icons.filter(a => a.id !== ic.id && a.isAlive);
+          const isAdjacentToAlly = allies.some(a => hexDistance(ic.position, a.position) === 1);
+          const currentStacks = ic.passiveStacks ?? 0;
+          const newStacks = isAdjacentToAlly ? Math.min(3, currentStacks + 1) : 0;
+          if (newStacks !== currentStacks) {
+            pushLog(prev as any, `${ic.name} Phalanx: ${newStacks} stack(s) (+${newStacks * 8} DEF)`, nextPlayer);
+          }
+          return { ...ic, passiveStacks: newStacks };
+        }),
+      }));
+
       // Cards: discard ending player's hand, draw fresh hand for next player
       const prevState = prev as ExtState;
       let hands = prevState.hands ? [...prevState.hands] as [Hand, Hand] : undefined;
@@ -1503,11 +1794,26 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         hands[endPid] = { ...endHand, cards: [] };
         decks[endPid] = { ...endDeck, discardPile: [...endDeck.discardPile, ...endHand.cards] };
 
+        // Da Vinci Tinkerer passive: draw +1 card if Da Vinci is alive and didn't use an exclusive ability
+        const daVinciNextPlayer = playersAfter[nextPlayer]?.icons.find(
+          ic => ic.isAlive && ic.name.includes("Da Vinci") && !ic.abilityUsedThisTurn
+        );
+        const extraDraw = daVinciNextPlayer ? 1 : 0;
+
+        // Reset abilityUsedThisTurn for the next player AFTER Da Vinci check
+        playersAfter = playersAfter.map((p, pid) =>
+          pid !== nextPlayer ? p : {
+            ...p,
+            icons: p.icons.map(ic => ({ ...ic, abilityUsedThisTurn: false })),
+          }
+        );
+
         // Draw fresh hand for next player (discard old, then draw)
         const startHand = hands[nextPlayer];
         const startDeck = decks[nextPlayer];
         const deckWithOld = { ...startDeck, discardPile: [...startDeck.discardPile, ...startHand.cards] };
-        const { drawn, newDraw, newDiscard } = drawCards(deckWithOld.drawPile, deckWithOld.discardPile, startHand.maxSize);
+        const drawCount = startHand.maxSize + extraDraw;
+        const { drawn, newDraw, newDiscard } = drawCards(deckWithOld.drawPile, deckWithOld.discardPile, drawCount);
         hands[nextPlayer] = { ...startHand, cards: drawn };
         decks[nextPlayer] = { drawPile: newDraw, discardPile: newDiscard };
       }
@@ -1519,6 +1825,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         cardLockActive: false,
         cardTargetingMode: undefined,
         globalMana: mana,
+        globalMaxMana: maxMana,
         currentTurn: newCurrentTurn,
         selectedIcon: undefined,
         targetingMode: undefined,
@@ -1575,6 +1882,10 @@ const playCard = useCallback((card: Card, executorId: string) => {
       toast.error("This character just respawned and cannot act yet!");
       return prev;
     }
+    if ((executor.cardsUsedThisTurn ?? 0) >= 3) {
+      toast.error("This character has already used 3 cards this turn!");
+      return prev;
+    }
     if (card.exclusiveTo && !executor.name.includes(card.exclusiveTo)) {
       toast.error(`Only ${card.exclusiveTo} can play that!`);
       return prev;
@@ -1594,11 +1905,45 @@ const playCard = useCallback((card: Card, executorId: string) => {
       };
     }
 
+    // Flying Machine card → teleport targeting
+    if (card.effect.teleport) {
+      const range = card.effect.range ?? 5;
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: "card_teleport", iconId: executorId, range },
+      };
+    }
+
+    // Mend self-cast → immediately heal executor
+    if (card.effect.selfCast && card.effect.healing) {
+      let updated = { ...state } as ExtState;
+      const newHp = Math.min(executor.stats.maxHp, executor.stats.hp + card.effect.healing);
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, stats: { ...ic.stats, hp: newHp } }),
+      }));
+      pushLog(updated, `${executor.name} played ${card.name}, healing ${card.effect.healing} HP`, executor.playerId);
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const newMana = [...updated.globalMana] as [number, number];
+        newMana[pid] = Math.max(0, newMana[pid] - card.manaCost);
+        updated.globalMana = newMana;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
     // Damage / healing / single-target powerMult → enter targeting mode
     const needsTarget =
       card.effect.damage !== undefined ||
-      card.effect.healing !== undefined ||
-      (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget);
+      ((card.effect.healing !== undefined || card.effect.healingMult !== undefined) && !card.effect.selfCast) ||
+      (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget && !card.effect.randomTargets) ||
+      card.effect.debuffType !== undefined;
 
     if (needsTarget) {
       const isBasicAttack = card.definitionId === "shared_basic_attack";
@@ -1659,7 +2004,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
           ...p,
           icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
             ...ic,
-            stats: { ...ic.stats, hp: Math.max(0, ic.stats.hp - dmg) },
+            stats: { ...ic.stats, hp: Math.round(Math.max(0, ic.stats.hp - dmg)) },
             isAlive: ic.stats.hp - dmg > 0,
             respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
           }),
@@ -1669,12 +2014,45 @@ const playCard = useCallback((card: Card, executorId: string) => {
       // falls through to mana deduction + consumeCard below
     } else if (card.effect.powerMult && card.effect.lineTarget) {
       // Line target: requires player to click a direction hex — enter targeting mode
-      const cardRange = card.effect.range ?? 4;
+      const cardRange = card.effect.range ?? 5;
       return {
         ...state,
         cardTargetingMode: { card, executorId },
         targetingMode: { abilityId: card.definitionId, iconId: executorId, range: cardRange },
       };
+    } else if (card.effect.randomTargets && card.effect.powerMult) {
+      // Final Salvo: fire multiHit random hits at enemies within range (no targeting click needed)
+      const range = card.effect.range ?? 4;
+      const hits = card.effect.multiHit ?? 3;
+      const enemiesInRange = updated.players
+        .flatMap(p => p.icons)
+        .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range);
+      if (enemiesInRange.length === 0) { toast.error("No enemies in range!"); return prev; }
+      for (let h = 0; h < hits; h++) {
+        // Refresh enemy list each hit (targets may have died)
+        const aliveEnemies = updated.players
+          .flatMap(p => p.icons)
+          .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range);
+        if (!aliveEnemies.length) break;
+        const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+        const atkStats = calcEffectiveStats(updated, executor);
+        const defStats = calcEffectiveStats(updated, target);
+        const dmg = Math.max(0.1, atkStats.power * card.effect.powerMult - defStats.defense);
+        const wasAlive = target.isAlive;
+        const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+            ...ic,
+            stats: { ...ic.stats, hp: newHp },
+            isAlive: newHp > 0,
+            respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+          }),
+        }));
+        updated = applyGenghisKill(updated, executorId, wasAlive, newHp <= 0);
+        pushLog(updated, `${executor.name} ${card.name} hit ${target.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
+      }
+      // falls through to mana deduction + consumeCard below
     }
     else if (card.effect.swapCount) {
       const pid = executor.playerId as 0 | 1;
@@ -1695,6 +2073,12 @@ const playCard = useCallback((card: Card, executorId: string) => {
       updated.decks = newDecks;
       pushLog(updated, `${executor.name} played ${card.name} (swapped ${toDiscard.length} cards)`, executor.playerId);
       // Don't call consumeCardFromHand since we handled it above
+      if (card.manaCost > 0) {
+        const pid2 = executor.playerId as 0 | 1;
+        const newMana2 = [...updated.globalMana] as [number, number];
+        newMana2[pid2] = Math.max(0, newMana2[pid2] - card.manaCost);
+        updated.globalMana = newMana2;
+      }
       updated.players = updated.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
@@ -1710,11 +2094,17 @@ const playCard = useCallback((card: Card, executorId: string) => {
       updated.globalMana = newMana;
     }
 
-    // Mark executor as having used a card this turn (not movement cards)
+    // Mark executor as having used a card this turn; track count for 3-card limit
+    const isExclusiveAbility = card.exclusiveTo !== null && card.type !== "buff" && card.type !== "movement";
     if (card.type !== "movement") {
       updated.players = updated.players.map(p => ({
         ...p,
-        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+          ...ic,
+          cardUsedThisTurn: true,
+          cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1,
+          abilityUsedThisTurn: isExclusiveAbility ? true : ic.abilityUsedThisTurn,
+        }),
       }));
     }
     updated = consumeCardFromHand(updated, card, executor.playerId);
@@ -1777,49 +2167,66 @@ const goToMainMenu = useCallback(() => {
   setGameState((prev) => ({ ...prev, menuOpen: false, phase: "menu" as any }));
 }, []);
 
-const resetGame = useCallback(() => {
+const startBattle = useCallback((runChars?: CharacterRunState[], deckCardIds?: string[]) => {
+  const sel = selectedCharactersRef.current;
+  if (!sel || sel.length === 0) return;
   setGameState(() => {
-    const initialIcons = createInitialIcons();
+    const initialIcons = buildIconsFromSelection(sel, runChars);
     const speedQueueRaw = initSpeedQueue(initialIcons);
-    const speedQueue = normalizeSpeedQueue(speedQueueRaw, initialIcons);
+    const speedQueue    = normalizeSpeedQueue(speedQueueRaw, initialIcons);
     const p0Names = initialIcons.filter(i => i.playerId === 0).map(i => i.name);
     const p1Names = initialIcons.filter(i => i.playerId === 1).map(i => i.name);
-    const buildHand = (names: string[]): [Hand, Deck] => {
-      const allCards = buildDeckForTeam(names);
-      return [{ cards: allCards.slice(0, 10), maxSize: 10 }, { drawPile: allCards.slice(10), discardPile: [] }];
+    const buildHand = (names: string[], ids?: string[]): [Hand, Deck] => {
+      const allCards = ids ? buildDeckFromIds(ids) : buildDeckForTeam(names);
+      // Compute hand size bonus from run items
+      const handSizeBonus = (runChars ?? []).reduce((sum, c) => {
+        return sum + c.items.filter(Boolean).reduce((s, item) => {
+          if (item?.passiveTag === 'hand_size_plus_1') return s + 1;
+          if (item?.passiveTag === 'hand_size_plus_2') return s + 2;
+          return s;
+        }, 0);
+      }, 0);
+      const maxSize = 7 + handSizeBonus;
+      return [{ cards: allCards.slice(0, maxSize), maxSize }, { drawPile: allCards.slice(maxSize), discardPile: [] }];
     };
-    const [hand0, deck0] = buildHand(p0Names);
-    const [hand1, deck1] = buildHand(p1Names);
+    const [hand0, deck0] = buildHand(p0Names, deckCardIds);
+    const [hand1, deck1] = buildHand(p1Names); // AI has no roguelike deck
     return {
       currentTurn: 1,
       activePlayerId: 0 as const,
       cardLockActive: false,
       phase: "combat",
       players: [
-        { id: 0, name: "Player 1", icons: initialIcons.filter((i) => i.playerId === 0), color: "blue", isAI: false },
-        { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter((i) => i.playerId === 1), color: "red", isAI: gameMode === "singleplayer" },
+        { id: 0, name: "Player 1",                                              icons: initialIcons.filter(i => i.playerId === 0), color: "blue", isAI: false },
+        { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter(i => i.playerId === 1), color: "red",  isAI: gameMode === "singleplayer" },
       ],
-      board: createInitialBoard(),
-      globalMana: [5, 5],
-      turnTimer: 20,
+      board:        createInitialBoard(),
+      globalMana:   [5, 5],
+      globalMaxMana:[5, 5],
+      turnTimer:    20,
       speedQueue,
-      queueIndex: 0,
+      queueIndex:   0,
       objectives: {
         manaCrystal: { controlled: false },
-        beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
+        beastCamps:  { hp: [75, 75], maxHp: 75, defeated: [false, false] },
       },
-      teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
-      baseHealth: [150, 150],
-      matchTimer: 600,
+      teamBuffs:   { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
+      baseHealth:  [150, 150],
+      matchTimer:  600,
       gameMode,
       movementStack: {},
-      menuOpen: false,
-      combatLog: [],
-      hands: [hand0, hand1],
-      decks: [deck0, deck1],
+      menuOpen:    false,
+      combatLog:   [],
+      hands:       [hand0, hand1],
+      decks:       [deck0, deck1],
+      aiIntents:   [],
     } as ExtState;
   });
 }, [gameMode]);
+
+const resetGame = useCallback(() => {
+  startBattle(); // Full reset at base HP, no run overrides
+}, [startBattle]);
 
 // Cancel targeting helper
 const cancelTargeting = useCallback(() => {
@@ -1844,6 +2251,7 @@ return {
   startRespawnPlacement,
   toggleMenu,
   goToMainMenu,
+  startBattle,
   resetGame,
   cancelTargeting,
 };

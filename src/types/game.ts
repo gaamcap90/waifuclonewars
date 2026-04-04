@@ -46,8 +46,11 @@ export interface Icon {
   movementHistory?: { position: Coordinates; cost: number }[]; // Move history for undo
   hasRespawned?: boolean;
   justRespawned?: boolean;
-  droneExpiresTurn?: number; // Round number when this drone is removed (Vitruvian Guardian)
-
+  droneExpiresTurn?: number;    // Round number when this drone is removed (Vitruvian Guardian)
+  debuffs?: Debuff[];           // Active debuffs on this icon
+  passiveStacks?: number;       // Genghis Bloodlust kill stacks (0–3)
+  abilityUsedThisTurn?: boolean; // Da Vinci Tinkerer: tracks if an exclusive ability card was played
+  cardsUsedThisTurn?: number;   // Cards played this turn (max 3)
 }
 
 export interface Ability {
@@ -66,14 +69,23 @@ export interface Ability {
 
 // ── Card System ──────────────────────────────────────────────────────────────
 
-export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate';
+export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate' | 'debuff';
 export type CardRarity = 'common' | 'rare' | 'ultimate';
+
+export type DebuffType = 'mud_throw' | 'demoralize' | 'armor_break' | 'silence' | 'poison';
+
+export interface Debuff {
+  type: DebuffType;
+  magnitude: number;   // amount of the debuff (stat reduction, move reduction, etc.)
+  turnsRemaining: number;
+}
 
 export interface EffectValues {
   damage?: number;
   damageType?: 'atk' | 'flat'; // 'atk' = scales with executor might, 'flat' = literal value
   powerMult?: number;           // damage = executor.power * powerMult (after defense reduction)
   healing?: number;
+  healingMult?: number;  // healing = caster.power * healingMult (scales with Power stat)
   atkBonus?: number;
   defBonus?: number;
   moveBonus?: number;
@@ -83,8 +95,14 @@ export interface EffectValues {
   targets?: number;
   allEnemiesInRange?: boolean;  // hits every enemy within range (Horde Tactics)
   lineTarget?: boolean;         // hits all enemies on a straight line (Rider's Fury)
-  multiHit?: number;            // hit same target N times (Final Salvo)
+  multiHit?: number;            // number of hits (used with randomTargets)
   swapCount?: number;           // discard N cards, draw N new ones (Gamble)
+  selfCast?: boolean;           // immediately applies effect on executor (Mend)
+  randomTargets?: boolean;      // each hit targets a random enemy in range (Final Salvo)
+  teleport?: boolean;           // enter hex-targeting mode to teleport executor (Flying Machine card)
+  debuffType?: DebuffType;      // debuff card — applies a Debuff to the target
+  debuffMagnitude?: number;     // magnitude of the applied debuff
+  debuffDuration?: number;      // turns the debuff lasts
 }
 
 export interface Card {
@@ -130,6 +148,7 @@ export interface GameState {
   selectedIcon?: string;
   respawnPlacement?: string; // Icon ID being placed for respawn
   globalMana: number[];
+  globalMaxMana: number[];      // Max mana this turn (5 base + crystal bonus)
   turnTimer: number;
   speedQueue: string[]; // Icon IDs in speed order
   queueIndex: number;

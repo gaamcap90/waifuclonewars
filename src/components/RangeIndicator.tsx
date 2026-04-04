@@ -73,28 +73,19 @@ export const useRangeCalculation = (
   // Calculate movement range based on remaining movement points
   const movementRange: Coordinates[] = [];
   if (showMovement && activeIcon) {
-    const remainingMovement = activeIcon.stats.movement; // Use remaining movement points
+    const remainingMovement = activeIcon.stats.movement;
     
-    // If no movement left, show no movement highlights
-    if (remainingMovement <= 0) {
-      return { movementRange: [], attackRange: [], abilityRange: [] };
-    }
-    
-    for (let q = -7; q <= 7; q++) {
-      for (let r = -7; r <= 7; r++) {
-        const coords = { q, r };
-        if (isValidHex(coords) && isPassable(coords)) {
-          const distance = calculateDistance(activeIcon.position, coords);
-          if (distance > 0 && distance <= remainingMovement) {
-            // Calculate movement cost considering terrain - forest hexes cost 2 movement each
-            let movementCost = distance;
-            const terrain = getTerrainAt(coords);
-            if (terrain?.type === 'forest') {
-              movementCost = distance + 1; // Forest adds +1 cost per hex (so 2 total for forest hex)
-            }
-            
-            if (movementCost <= remainingMovement) {
-              movementRange.push(coords);
+    if (remainingMovement > 0) {
+      for (let q = -7; q <= 7; q++) {
+        for (let r = -7; r <= 7; r++) {
+          const coords = { q, r };
+          if (isValidHex(coords) && isPassable(coords)) {
+            const distance = calculateDistance(activeIcon.position, coords);
+            if (distance > 0 && distance <= remainingMovement) {
+              let movementCost = distance;
+              const terrain = getTerrainAt(coords);
+              if (terrain?.type === 'forest') movementCost = distance + 1;
+              if (movementCost <= remainingMovement) movementRange.push(coords);
             }
           }
         }
@@ -102,42 +93,24 @@ export const useRangeCalculation = (
     }
   }
 
-  // Calculate attack range based on character type
+  // Calculate attack range — highlights ALL tiles in range (not just tiles with enemies)
   const attackRange: Coordinates[] = [];
   if (showAttack && activeIcon) {
-    // Get character-specific attack range
-    let baseAttackRange = 1; // Default melee
-    if (activeIcon.name.includes("Napoleon") || activeIcon.name.includes("Da Vinci")) {
-      baseAttackRange = 2; // Ranged characters
-    }
+    let baseAttackRange = 1;
+    if (activeIcon.name.includes("Napoleon") || activeIcon.name.includes("Da Vinci")) baseAttackRange = 2;
+    const napoleonOnForest =
+      activeIcon.name.includes("Napoleon") &&
+      gameState.board.find(t => t.coordinates.q === activeIcon.position.q && t.coordinates.r === activeIcon.position.r)?.terrain.type === "forest";
+    if (napoleonOnForest) baseAttackRange = 3;
 
-    // Use raw hex distance for indicators, ignore terrain costs
     for (let q = -7; q <= 7; q++) {
       for (let r = -7; r <= 7; r++) {
         const coords = { q, r };
-        if (isValidHex(coords)) {
-          const distance = calculateDistance(activeIcon.position, coords);
-          if (distance <= baseAttackRange && distance > 0) {
-            // Show if there's an enemy target or attackable structure
-            const targetIcon = gameState.players
-              .flatMap(p => p.icons)
-              .find(icon => 
-                icon.position.q === coords.q && 
-                icon.position.r === coords.r &&
-                icon.playerId !== activeIcon.playerId &&
-                icon.isAlive
-              );
-            
-            const attackableTile = gameState.board.find(tile =>
-              tile.coordinates.q === coords.q &&
-              tile.coordinates.r === coords.r &&
-              (tile.terrain.type === 'base' || tile.terrain.type === 'beast_camp')
-            );
-            
-            if (targetIcon || attackableTile) {
-              attackRange.push(coords);
-            }
-          }
+        if (!isValidHex(coords)) continue;
+        const distance = calculateDistance(activeIcon.position, coords);
+        if (distance <= baseAttackRange && distance > 0) {
+          // Show all reachable tiles; execution filter (must have enemy) is in game logic
+          attackRange.push(coords);
         }
       }
     }

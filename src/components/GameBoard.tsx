@@ -26,16 +26,18 @@ function snapToLineHexes(from: Coordinates, to: Coordinates, range: number): Coo
 interface GameBoardProps {
   gameState: GameState;
   onTileClick: (coordinates: Coordinates) => void;
+  onTileHover?: (tile: GameState['board'][number] | null) => void;
 }
 
 const getCharacterPortrait = (name: string) => {
-  if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
-  if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
-  if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
+  if (name.includes("Napoleon")) return "/art/napoleon_portrait.png";
+  if (name.includes("Genghis")) return "/art/genghis_portrait.png";
+  if (name.includes("Da Vinci")) return "/art/davinci_portrait.png";
+  if (name.includes("Leonidas")) return "/art/leonidas_portrait.png";
   return null; // Combat Drone uses null → renders initial "C" with gear tint
 };
 
-const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover }) => {
   // 1) Hex dimensions
   const hexSize = 50;
   const hexWidth = hexSize * 2;                // 100px
@@ -86,13 +88,25 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
 
   const showTerrainTooltip = Boolean(hoveredTile && !cardTargetingMode && !gameState.targetingMode);
 
+  const TERRAIN_META: Record<string, { emoji: string; label: string; color: string }> = {
+    forest:       { emoji: "🌲", label: "Forest",       color: "border-green-600/60 bg-green-950/90" },
+    mountain:     { emoji: "⛰️", label: "Mountain",     color: "border-gray-500/60 bg-gray-900/95" },
+    river:        { emoji: "🌊", label: "River",        color: "border-blue-500/60 bg-blue-950/90" },
+    plain:        { emoji: "🌾", label: "Plain",        color: "border-slate-600/40 bg-slate-900/90" },
+    mana_crystal: { emoji: "💎", label: "Mana Crystal", color: "border-purple-500/60 bg-purple-950/90" },
+    beast_camp:   { emoji: "🐗", label: "Beast Camp",   color: "border-orange-600/60 bg-orange-950/90" },
+    base:         { emoji: "🏰", label: "Base",         color: "border-amber-500/60 bg-amber-950/90" },
+    spawn:        { emoji: "🚩", label: "Spawn Zone",   color: "border-slate-500/40 bg-slate-900/90" },
+  };
+
   function terrainTooltipLines(tile: (typeof gameState.board)[0]): string[] {
     const lines: string[] = [];
     const t = tile.terrain.type;
-    if (t === 'forest') lines.push('+50% Defense');
-    if (t === 'mountain') lines.push('Artillery range bonus (+20%)');
-    if (t === 'river') lines.push('Movement penalty (-1 MOV)');
-    if (t === 'mana_crystal') lines.push('+1 or +2 Mana at end of turn');
+    if (t === 'forest') { lines.push('+25% Defense'); lines.push('Movement costs doubled (2 per hex)'); }
+    if (t === 'mountain') lines.push('Impassable');
+    if (t === 'river') { lines.push('Impassable'); lines.push('Lethal if displaced onto it'); }
+    if (t === 'mana_crystal') { lines.push('Impassable'); lines.push('+1 or +2 Mana at end of turn'); }
+    if (t === 'base') lines.push('+20% Might, Power & Defense');
     if (t === 'beast_camp') {
       const camps = (gameState as any).objectives?.beastCamps;
       if (camps) {
@@ -102,11 +116,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
         const hp = camps.hp?.[idx] ?? 0;
         const maxHp = camps.maxHp ?? 100;
         const defeated = camps.defeated?.[idx];
-        lines.push(`HP: ${hp}/${maxHp}`);
-        if (defeated) lines.push('Defeated — +15% Might & Power to team');
-        else lines.push('Defeat for +15% Might & Power bonus');
-      } else {
-        lines.push('Defeat for team buff');
+        if (defeated) lines.push('Defeated — team has +15% Might & Power');
+        else { lines.push(`HP: ${hp}/${maxHp}`); lines.push('Defeat for +15% Might & Power'); }
       }
     }
     if (t === 'base') lines.push('+20% all stats for home team');
@@ -189,7 +200,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
           return { iconId: hoveredIcon.id, previewHP: Math.min(hoveredIcon.stats.maxHp, hoveredIcon.stats.hp + healing), isDamage: false };
         }
         if (damage !== undefined && hoveredIcon.playerId !== caster.playerId) {
-          const dmg = damage > 0 ? damage : resolveAbilityDamage(gameState, caster, hoveredIcon, 1.0);
+          // Use resolveAbilityDamage (includes calcEffectiveStats) for accurate preview
+          const defStats = calcEffectiveStats(gameState, hoveredIcon);
+          const dmg = damage > 0
+            ? Math.max(0.1, damage - defStats.defense)
+            : resolveAbilityDamage(gameState, caster, hoveredIcon, 1.0);
           return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
         }
       }
@@ -234,7 +249,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
       y: hexSize * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
     });
 
-    return gameState.board.map(tile => {
+    // Sort back-to-front so DOM order gives correct isometric depth (no z-index needed)
+    const sorted = [...gameState.board].sort(
+      (a, b) => (a.coordinates.r - b.coordinates.r) || (a.coordinates.q - b.coordinates.q)
+    );
+    return sorted.map(tile => {
       const { q, r } = tile.coordinates;
       const { x, y } = hexToPixel(q, r);
 
@@ -280,6 +299,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
       const aiIntents: AIIntent[] = (gameState as any).aiIntents ?? [];
       const tileIntents = icon && icon.playerId === 1 ? aiIntents.filter(i => i.iconId === icon.id) : [];
 
+      // Beast camp intents — shown on beast_camp tiles
+      const beastCampIntents: { campQ: number; campR: number; range1Dmg: number; range2Dmg: number }[] =
+        (gameState as any).beastCampIntents ?? [];
+      const campIntent = tile.terrain.type === 'beast_camp'
+        ? beastCampIntents.find(ci => ci.campQ === q && ci.campR === r)
+        : undefined;
+
       return (
         <div
           key={`${q}-${r}`}
@@ -291,8 +317,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
             height: hexHeight,
           }}
           onClick={() => onTileClick(tile.coordinates)}
-          onMouseEnter={() => setHoveredCoords({ q, r })}
-          onMouseLeave={() => setHoveredCoords(null)}
+          onMouseEnter={() => { setHoveredCoords({ q, r }); onTileHover?.(tile); }}
+          onMouseLeave={() => { setHoveredCoords(null); onTileHover?.(null); }}
         >
           <HexTile
             tile={tile}
@@ -362,6 +388,19 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
             </div>
           )}
 
+          {/* Beast Camp attack intent badge */}
+          {campIntent && (
+            <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none">
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-white text-xs font-bold shadow-lg bg-orange-800/95 border-orange-500 whitespace-nowrap">
+                  <span>🐗</span>
+                  <span>⚔ {campIntent.range1Dmg}</span>
+                </div>
+                <div className="text-[9px] text-orange-300 font-orbitron text-center">R1·{campIntent.range1Dmg} / R2·{campIntent.range2Dmg}</div>
+              </div>
+            </div>
+          )}
+
           {/* Damage / healing preview badge */}
           {preview && (
             <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
@@ -414,7 +453,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
   return (
     <div
       ref={boardRef}
-      className="absolute inset-0 bg-gradient-to-b from-space-dark via-space-medium to-space-dark cursor-grab"
+      className="absolute inset-0 cursor-grab"
+      style={{ background: '#070414' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -426,27 +466,37 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick }) => {
         }
       }}
     >
-      {/* Terrain info panel — fixed bottom-left, never overlaps character intent badges */}
-      {showTerrainTooltip && hoveredTile && (() => {
-        const lines = terrainTooltipLines(hoveredTile);
-        if (!lines.length) return null;
-        return (
-          <div className="absolute bottom-36 left-4 z-50 pointer-events-none">
-            <div className="bg-gray-900/95 border border-gray-500 rounded-lg px-3 py-2 shadow-xl min-w-[160px]">
-              <div className="text-[10px] font-bold text-gray-300 mb-1 uppercase tracking-widest">
-                {hoveredTile.terrain.type.replace(/_/g, ' ')}
-              </div>
-              {lines.map((l, i) => (
-                <div key={i} className="text-[11px] text-gray-400">
-                  {l.includes('—') ? l.split('—')[1].trim() : l}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
+      {/* ── ARENA BACKDROP ── */}
+      {/* 1. Warm arena-floor spotlight — the lit sand/pit in the center */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        background: "radial-gradient(circle 480px at 50% 52%, rgba(210,155,55,0.22) 0%, rgba(170,110,30,0.12) 45%, transparent 72%)",
+      }} />
+      {/* 2. Arena wall ring — visible gold/amber halo at the edge of the pit */}
+      <div className="absolute pointer-events-none z-0" style={{
+        width: 960, height: 960,
+        top: "50%", left: "50%",
+        transform: "translate(-50%, -48%)",
+        borderRadius: "50%",
+        boxShadow: "0 0 0 10px rgba(190,130,40,0.30), 0 0 50px rgba(160,100,25,0.20)",
+      }} />
+      {/* 3. Dark stands / crowd area outside the arena floor */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        background: "radial-gradient(circle 540px at 50% 52%, transparent 58%, rgba(28,10,65,0.55) 72%, rgba(14,4,38,0.82) 84%, rgba(3,1,12,0.97) 96%)",
+      }} />
+      {/* 4. Purple stadium rim — sci-fi crowd tier suggestion */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        background: "radial-gradient(ellipse 98% 85% at 50% 108%, rgba(80,30,160,0.55) 0%, rgba(45,12,110,0.30) 30%, transparent 55%)",
+      }} />
+      {/* 5. Top spotlight bars — stadium lights from above */}
+      <div className="absolute inset-x-0 top-0 h-36 pointer-events-none z-0" style={{
+        background: "linear-gradient(to bottom, rgba(120,70,200,0.18) 0%, transparent 100%)",
+      }} />
+      {/* 6. Subtle scan-line texture on the floor */}
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]" style={{
+        backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0px, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 8px)",
+      }} />
 
-      <div className="relative w-full h-full flex items-center justify-center">
+<div className="relative w-full h-full flex items-center justify-center z-10">
         <div
           className="relative"
           style={{

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
 import { useBuffCalculation } from "@/hooks/useBuffCalculation";
+import { calcEffectiveStats } from "@/combat/buffs";
 
 interface CharacterDetailPopupProps {
   character: Icon;
@@ -28,6 +29,8 @@ const CharacterDetailPopup = ({
 
   const { calculateBuffedStats } = useBuffCalculation();
   const buffedStats = calculateBuffedStats(character, gameState);
+  // Use canonical calcEffectiveStats for accuracy (includes debuffs + passives)
+  const eff = calcEffectiveStats(gameState, character);
 
   const baseMight = character.stats.might;
   const basePower = character.stats.power;
@@ -38,29 +41,54 @@ const CharacterDetailPopup = ({
   const homeBaseMightBonus = buffedStats.isOnHomeBase ? (baseMight * 20) / 100 : 0;
   const homeBasePowerBonus = buffedStats.isOnHomeBase ? (basePower * 20) / 100 : 0;
   const homeBaseDefenseBonus = buffedStats.isOnHomeBase ? (baseDefense * 20) / 100 : 0;
-  const forestDefenseBonus = buffedStats.isOnForest ? (baseDefense * 50) / 100 : 0;
+  // Napoleon doesn't get forest DEF bonus; forest is now +25%
+  const forestDefenseBonus = buffedStats.isOnForest && !character.name.includes("Napoleon")
+    ? (baseDefense * 25) / 100 : 0;
+  const napoleonForestRange = character.name.includes("Napoleon") && buffedStats.isOnForest;
 
   const formatBonus = (value: number) => (value % 1 === 0 ? value.toString() : value.toFixed(1));
 
+  const DEBUFF_LABELS: Record<string, string> = {
+    mud_throw:   "🐾 Mud Throw",
+    demoralize:  "💔 Demoralize",
+    armor_break: "🔩 Armor Break",
+    silence:     "🤫 Silence",
+    poison:      "☠️ Poison",
+  };
+
+  const passiveText = (() => {
+    if (character.name.includes("Napoleon"))
+      return `Vantage Point: On forest tile, basic attack range becomes 3, but no DEF bonus.${napoleonForestRange ? " (ACTIVE — Range 3 now)" : ""}`;
+    if (character.name.includes("Genghis"))
+      return `Bloodlust: Each kill grants +15 Might and restores 1 Mana. Stacks up to 3×.${(character.passiveStacks ?? 0) > 0 ? ` (${character.passiveStacks}/3 stacks active)` : ""}`;
+    if (character.name.includes("Da Vinci"))
+      return "Tinkerer: At turn start, if no exclusive ability card was played last turn, draw +1 card.";
+    return character.passive ?? "No passive";
+  })();
+
   const getCharacterPortrait = (name: string) => {
-    if (name.includes("Napoleon")) return "/lovable-uploads/7304dbe8-4caf-4418-ba67-d46f5d6e3a19.png";
-    if (name.includes("Genghis")) return "/lovable-uploads/9c994306-633b-4289-a5d8-adb5f9a2c4ae.png";
-    if (name.includes("Da Vinci")) return "/lovable-uploads/be631aac-8a45-4b6a-abae-75bacdbf2937.png";
+    if (name.includes("Napoleon")) return "/art/napoleon_portrait.png";
+    if (name.includes("Genghis")) return "/art/genghis_portrait.png";
+    if (name.includes("Da Vinci")) return "/art/davinci_portrait.png";
+    if (name.includes("Leonidas")) return "/art/leonidas_portrait.png";
     return null;
   };
 
+  // Clamp so popup never escapes viewport (popup is ~220px wide)
+  const POPUP_W = 230;
+  const clampedX = typeof window !== "undefined"
+    ? Math.max(POPUP_W / 2 + 8, Math.min(position.x, window.innerWidth - POPUP_W / 2 - 8))
+    : position.x;
+
   return createPortal(
     <>
-      {/* Backdrop to close popup */}
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-
-      {/* Popup (anchored below portrait) */}
+      {/* Popup (anchored below portrait, clamped to viewport) */}
       <div
         className="fixed z-50 pointer-events-auto"
         style={{
-          left: position.x,
-          top: position.y + 8,           // place BELOW the portrait
-          transform: "translate(-50%, 0)" // only center horizontally
+          left: clampedX,
+          top: position.y + 8,
+          transform: "translate(-50%, 0)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -110,21 +138,22 @@ const CharacterDetailPopup = ({
               </div>
             </div>
 
-            <div className="space-y-3 text-sm">
+            <div className="space-y-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Might:</span>
-                <span className="ml-2 text-red-400 font-semibold">{buffedStats.might}</span>
-                {(beastCampMightBonus > 0 || homeBaseMightBonus > 0) && (
+                <span className="ml-2 text-red-400 font-semibold">{Math.floor(eff.might)}</span>
+                {(beastCampMightBonus > 0 || homeBaseMightBonus > 0 || buffedStats.cardBuffAtk > 0) && (
                   <div className="text-xs text-muted-foreground ml-4">
                     {beastCampMightBonus > 0 && `+${formatBonus(beastCampMightBonus)} (Beast Camp) `}
-                    {homeBaseMightBonus > 0 && `+${formatBonus(homeBaseMightBonus)} (Base)`}
+                    {homeBaseMightBonus > 0 && `+${formatBonus(homeBaseMightBonus)} (Base) `}
+                    {buffedStats.cardBuffAtk > 0 && <span className="text-yellow-300">+{buffedStats.cardBuffAtk} (card)</span>}
                   </div>
                 )}
               </div>
 
               <div>
                 <span className="text-muted-foreground">Power:</span>
-                <span className="ml-2 text-blue-400 font-semibold">{buffedStats.power}</span>
+                <span className="ml-2 text-blue-400 font-semibold">{Math.floor(eff.power)}</span>
                 {(beastCampPowerBonus > 0 || homeBasePowerBonus > 0) && (
                   <div className="text-xs text-muted-foreground ml-4">
                     {beastCampPowerBonus > 0 && `+${formatBonus(beastCampPowerBonus)} (Beast Camp) `}
@@ -135,11 +164,12 @@ const CharacterDetailPopup = ({
 
               <div>
                 <span className="text-muted-foreground">Defense:</span>
-                <span className="ml-2 text-green-400 font-semibold">{buffedStats.defense}</span>
-                {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0) && (
+                <span className="ml-2 text-green-400 font-semibold">{Math.floor(eff.defense)}</span>
+                {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0 || buffedStats.cardBuffDef > 0) && (
                   <div className="text-xs text-muted-foreground ml-4">
                     {homeBaseDefenseBonus > 0 && `+${formatBonus(homeBaseDefenseBonus)} (Base) `}
-                    {forestDefenseBonus > 0 && `+${formatBonus(forestDefenseBonus)} (Forest)`}
+                    {forestDefenseBonus > 0 && `+${formatBonus(forestDefenseBonus)} (Forest) `}
+                    {buffedStats.cardBuffDef > 0 && <span className="text-yellow-300">+{buffedStats.cardBuffDef} (card)</span>}
                   </div>
                 )}
               </div>
@@ -147,26 +177,39 @@ const CharacterDetailPopup = ({
               <div>
                 <span className="text-muted-foreground">Range:</span>
                 <span className="ml-2 text-yellow-400 font-semibold">
-                  {character.name.includes("Napoleon") || character.name.includes("Da Vinci") ? 2 : 1}
+                  {napoleonForestRange ? 3 : (character.name.includes("Napoleon") || character.name.includes("Da Vinci")) ? 2 : 1}
                 </span>
+                {napoleonForestRange && <span className="ml-2 text-[10px] text-green-400">(forest passive)</span>}
               </div>
-              {(buffedStats.cardBuffAtk > 0 || buffedStats.cardBuffDef > 0) && (
-                <div className="text-xs text-yellow-300 border border-yellow-500/40 rounded px-2 py-1 bg-yellow-500/10">
-                  Card buffs this turn:
-                  {buffedStats.cardBuffAtk > 0 && <span className="ml-1">+{buffedStats.cardBuffAtk} MIGHT</span>}
-                  {buffedStats.cardBuffDef > 0 && <span className="ml-1">+{buffedStats.cardBuffDef} DEF</span>}
+
+              {/* Genghis Bloodlust stacks */}
+              {(character.passiveStacks ?? 0) > 0 && (
+                <div className="text-xs text-red-300 border border-red-500/40 rounded px-2 py-1 bg-red-500/10">
+                  🩸 Bloodlust: {character.passiveStacks}/3 stacks (+{(character.passiveStacks ?? 0) * 15} Might)
                 </div>
               )}
             </div>
 
-            {character.abilities.length > 0 && (
+            {/* Active Debuffs */}
+            {(character.debuffs ?? []).length > 0 && (
               <div>
-                <div className="text-sm font-semibold mb-1">Passive:</div>
-                <div className="text-xs text-muted-foreground">
-                  {character.abilities[0]?.description || "No passive ability"}
+                <div className="text-sm font-semibold mb-1 text-red-400">Active Debuffs:</div>
+                <div className="flex flex-col gap-1">
+                  {character.debuffs!.map((d, i) => (
+                    <div key={i} className="text-xs flex items-center justify-between bg-red-950/40 border border-red-800/40 rounded px-2 py-0.5">
+                      <span>{DEBUFF_LABELS[d.type] ?? d.type}</span>
+                      <span className="text-muted-foreground">−{d.magnitude} · {d.turnsRemaining}t left</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
+
+            {/* Passive */}
+            <div>
+              <div className="text-sm font-semibold mb-1">Passive:</div>
+              <div className="text-xs text-muted-foreground leading-relaxed">{passiveText}</div>
+            </div>
           </CardContent>
         </Card>
       </div>

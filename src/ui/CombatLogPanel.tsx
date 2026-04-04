@@ -59,7 +59,7 @@ export default function CombatLogPanel({
   return (
     <div
       className={[
-        "absolute bottom-4 w-[330px] max-h-[190px] overflow-hidden bg-white/95",
+        "absolute bottom-4 z-50 w-[330px] max-h-[190px] overflow-hidden bg-white/95",
         "border border-black rounded-lg shadow-[2px_3px_0_rgba(0,0,0,0.2)]",
         "flex flex-col",
         side === "left" ? "left-4" : "right-4",
