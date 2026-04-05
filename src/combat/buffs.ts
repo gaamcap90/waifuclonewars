@@ -3,6 +3,9 @@ import { GameState, Icon } from "@/types/game";
 const isForestAt = (state: GameState, q: number, r: number) =>
   state.board.find(t => t.coordinates.q === q && t.coordinates.r === r)?.terrain.type === "forest";
 
+const isRiverAt = (state: GameState, q: number, r: number) =>
+  state.board.find(t => t.coordinates.q === q && t.coordinates.r === r)?.terrain.type === "river";
+
 const isOwnBaseAt = (icon: Icon, q: number, r: number) =>
   (icon.playerId === 0 && q === -6 && r === 5) ||
   (icon.playerId === 1 && q === 6 && r === -5);
@@ -45,11 +48,21 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
     defense *= 1.25;
   }
 
+  // 🐢 Yi Sun-sin — Turtle Ship passive: on river, boost Might/Defense, reduce Power
+  if (icon.name.includes("Sun-sin")) {
+    const onRiver = isRiverAt(state, icon.position.q, icon.position.r);
+    if (onRiver) {
+      might   *= 1.40;
+      defense *= 1.30;
+      power   *= 0.60;
+    }
+  }
+
   // 🧪 Apply active debuffs
   for (const d of icon.debuffs ?? []) {
     switch (d.type) {
       case 'demoralize':  break; // Handled at turn start: 50% skip movement + cards
-      case 'armor_break': defense = Math.max(0, defense - d.magnitude); break;
+      case 'armor_break': defense = Math.max(0, defense * (1 - d.magnitude / 100)); break;
       case 'silence':     power   = 0; break;
       case 'poison':
         might   = Math.max(0, might   - d.magnitude);

@@ -104,6 +104,7 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
   const [chosenCard, setChosenCard] = useState<string | null>(null);
   const [selectedCharForItem, setSelectedCharForItem] = useState<CharacterId | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
 
   const canEquip = itemDrop && selectedCharForItem !== null && selectedSlot !== null;
 
@@ -188,7 +189,7 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
                       ) : (
                         <span className="font-orbitron text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-600/40 text-slate-500"
                           style={{ background: 'rgba(100,100,120,0.15)' }}>
-                          ALL
+                          Shared
                         </span>
                       )}
                     </div>
@@ -214,7 +215,9 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
               style={{ color: TIER_COLOR[itemDrop.tier] }}>
               ITEM DROP — {itemDrop.tier.toUpperCase()}
             </h2>
-            <div className="rounded-xl border p-5 mb-4"
+            <div className="rounded-xl border p-5 mb-4 cursor-grab active:cursor-grabbing"
+              draggable
+              onDragStart={e => e.dataTransfer.setData('text', 'item')}
               style={{ borderColor: TIER_COLOR[itemDrop.tier] + '50', background: TIER_BG[itemDrop.tier] }}>
               <div className="flex items-start gap-4">
                 <span className="text-3xl">{itemDrop.icon}</span>
@@ -242,21 +245,28 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
                       <img src={c.portrait} alt={c.displayName} className="w-8 h-8 rounded-full object-cover" />
                       <span className="font-orbitron text-[11px] text-white">{c.displayName}</span>
                     </button>
-                    {selectedCharForItem === c.id && (
-                      <div className="flex gap-1.5 mt-1">
-                        {c.items.map((slot, i) => (
+                    <div className="flex gap-1.5 mt-1">
+                      {c.items.map((slot, i) => {
+                        const dKey = `${c.id}-${i}`;
+                        const isDragOver = dragOver === dKey;
+                        const isSelected = selectedCharForItem === c.id && selectedSlot === i;
+                        return (
                           <button key={i}
-                            onClick={() => setSelectedSlot(i)}
+                            onClick={() => { setSelectedCharForItem(c.id); setSelectedSlot(i); }}
+                            onDragOver={e => { e.preventDefault(); setDragOver(dKey); }}
+                            onDragLeave={() => setDragOver(null)}
+                            onDrop={e => { e.preventDefault(); setDragOver(null); setSelectedCharForItem(c.id); setSelectedSlot(i); }}
                             className="w-9 h-9 rounded-lg border text-sm flex items-center justify-center transition-all"
                             style={{
-                              background: selectedSlot === i ? 'rgba(34,211,238,0.22)' : 'rgba(20,15,40,0.8)',
-                              borderColor: selectedSlot === i ? '#22d3ee' : 'rgba(100,80,150,0.4)',
+                              background: isSelected || isDragOver ? 'rgba(34,211,238,0.22)' : 'rgba(20,15,40,0.8)',
+                              borderColor: isDragOver ? '#22d3ee' : isSelected ? '#22d3ee' : 'rgba(100,80,150,0.4)',
+                              boxShadow: isDragOver ? '0 0 12px rgba(34,211,238,0.5)' : 'none',
                             }}>
                             {slot ? slot.icon : '·'}
                           </button>
-                        ))}
-                      </div>
-                    )}
+                        );
+                      })}
+                    </div>
                   </div>
                 ))}
             </div>

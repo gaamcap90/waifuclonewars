@@ -11,6 +11,7 @@ import CharacterSelection from "@/components/CharacterSelection";
 import UltimateIndicator from "@/components/UltimateIndicator";
 import RoguelikeMap from "@/components/RoguelikeMap";
 import RewardsScreen from "@/components/RewardsScreen";
+import { CampfireScreen, MerchantScreen, TreasureScreen, UnknownScreen, RunDefeatScreen } from "@/components/roguelike/RoomScreens";
 import useGameState from "@/hooks/useGameStateNew";
 import { useRunState } from "@/hooks/useRunState";
 import { useAudio } from "@/hooks/useAudio";
@@ -18,16 +19,17 @@ import { Toaster } from "@/components/ui/sonner";
 import CombatLogPanel from "@/ui/CombatLogPanel";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { CharacterId } from "@/types/roguelike";
+import { pickCardRewards } from "@/data/roguelikeData";
 
 const Index = () => {
-  const [gameMode, setGameMode] = useState<'loading' | 'menu' | 'archives' | 'settings' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards'>('loading');
+  const [gameMode, setGameMode] = useState<'loading' | 'menu' | 'archives' | 'settings' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated'>('loading');
   const handleLoadingComplete = useCallback(() => setGameMode('menu'), []);
   const [pendingMode, setPendingMode] = useState<'singleplayer' | 'multiplayer'>('singleplayer');
   const [selectedCharacters, setSelectedCharacters] = useState<any[]>([]);
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
   const [hoveredTile, setHoveredTile] = useState<any>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const { runState, startRun, abandonRun, enterNode, completeCombat, collectRewards } = useRunState();
+  const { runState, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, spendGold, addGold, addCardToDeck, hurtAllCharacters, allocateStatPoint } = useRunState();
   const { gameState, selectTile, endTurn, basicAttack, useAbility, playCard, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, startBattle, resetGame, cancelTargeting } = useGameState(
     (gameMode === 'singleplayer' || gameMode === 'multiplayer') ? gameMode : 'singleplayer',
     selectedCharacters
@@ -37,7 +39,7 @@ const Index = () => {
 
   // ── Music: menu vs battle ─────────────────────────────────────────────────
   useEffect(() => {
-    if (gameMode === 'menu' || gameMode === 'archives' || gameMode === 'settings' || gameMode === 'characterSelect' || gameMode === 'loading' || gameMode === 'roguelikeMap' || gameMode === 'rewards') {
+    if (gameMode === 'menu' || gameMode === 'archives' || gameMode === 'settings' || gameMode === 'characterSelect' || gameMode === 'loading' || gameMode === 'roguelikeMap' || gameMode === 'rewards' || gameMode === 'campfire' || gameMode === 'merchant' || gameMode === 'treasure' || gameMode === 'unknown' || gameMode === 'runDefeated') {
       playMusic('menu');
     } else if (gameMode === 'singleplayer' || gameMode === 'multiplayer') {
       playMusic('battle');
@@ -129,10 +131,22 @@ const Index = () => {
     enterNode(nodeId);
     setActiveNodeId(nodeId);
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
-      startBattle(runState.characters, runState.deckCardIds);
+      const mapSeed = runState.seed ^ (runState.battleCount * 31337);
+      startBattle(runState.characters, runState.deckCardIds, node.encounter ?? null, mapSeed, true);
       setGameMode('singleplayer');
     }
-    // campfire / merchant / treasure: future screens — stay on map for now
+    if (node.type === 'campfire') {
+      setGameMode('campfire');
+    }
+    if (node.type === 'merchant') {
+      setGameMode('merchant');
+    }
+    if (node.type === 'treasure') {
+      setGameMode('treasure');
+    }
+    if (node.type === 'unknown') {
+      setGameMode('unknown');
+    }
   };
 
   const handleBackToMenu = () => {
@@ -217,6 +231,7 @@ const Index = () => {
         runState={runState}
         onSelectNode={handleNodeSelect}
         onAbandonRun={() => { abandonRun(); setGameMode('menu'); }}
+        onAllocateStat={allocateStatPoint}
       />
     );
   }
@@ -229,6 +244,90 @@ const Index = () => {
           collectRewards(cardId, equipItem);
           setGameMode('roguelikeMap');
         }}
+      />
+    );
+  }
+
+  if (gameMode === 'campfire' && runState) {
+    return (
+      <CampfireScreen
+        runState={runState}
+        onHeal={(charId) => { healAtCampfire(charId); }}
+        onLeave={() => {
+          completeNonCombatNode(activeNodeId!);
+          setActiveNodeId(null);
+          setGameMode('roguelikeMap');
+        }}
+      />
+    );
+  }
+
+  if (gameMode === 'merchant' && runState) {
+    return (
+      <MerchantScreen
+        runState={runState}
+        onBuyCard={(cardId, cost) => { if (spendGold(cost)) collectRewards(cardId, null); }}
+        onBuyHeal={(charId, cost) => { if (spendGold(cost)) healAtCampfire(charId); }}
+        onLeave={() => {
+          completeNonCombatNode(activeNodeId!);
+          setActiveNodeId(null);
+          setGameMode('roguelikeMap');
+        }}
+      />
+    );
+  }
+
+  if (gameMode === 'treasure' && runState) {
+    return (
+      <TreasureScreen
+        runState={runState}
+        onTakeCard={(cardId) => { collectRewards(cardId, null); completeNonCombatNode(activeNodeId!); setActiveNodeId(null); setGameMode('roguelikeMap'); }}
+        onTakeItem={(item, characterId, slotIndex) => {
+          collectRewards(null, { characterId, slotIndex, item });
+          completeNonCombatNode(activeNodeId!);
+          setActiveNodeId(null);
+          setGameMode('roguelikeMap');
+        }}
+        onSkip={() => { completeNonCombatNode(activeNodeId!); setActiveNodeId(null); setGameMode('roguelikeMap'); }}
+      />
+    );
+  }
+
+  if (gameMode === 'unknown' && runState) {
+    return (
+      <UnknownScreen
+        runState={runState}
+        onChoice={(result) => {
+          const rng = () => Math.random();
+          if (result === 'gold') {
+            hurtAllCharacters(20);
+            addGold(60);
+          } else if (result === 'card') {
+            // Altar: pay 30 HP for a card. Rift: 50/50 card or heavy damage.
+            const eventRoll = rng();
+            if (eventRoll < 0.5) {
+              hurtAllCharacters(30);
+              const [card] = pickCardRewards(runState.deckCardIds, rng);
+              if (card) addCardToDeck(card.definitionId);
+            } else {
+              hurtAllCharacters(40); // rift backfired
+            }
+          } else if (result === 'damage') {
+            hurtAllCharacters(40);
+          }
+          completeNonCombatNode(activeNodeId!);
+          setActiveNodeId(null);
+          setGameMode('roguelikeMap');
+        }}
+      />
+    );
+  }
+
+  if (gameMode === 'runDefeated' && runState) {
+    return (
+      <RunDefeatScreen
+        runState={runState}
+        onBackToMenu={() => { abandonRun(); setGameMode('menu'); }}
       />
     );
   }
@@ -291,28 +390,30 @@ const Index = () => {
         />
       )}
 
-      {(gameState.phase === 'victory' || gameState.phase === 'defeat') && (
+      {(gameMode === 'singleplayer' || gameMode === 'multiplayer') && (gameState.phase === 'victory' || gameState.phase === 'defeat') && (
         <VictoryScreen
           isVictory={gameState.phase === 'victory'}
           playAgainLabel={pendingMode === 'singleplayer' ? 'NEXT ROUND' : 'PLAY AGAIN'}
           onBackToMenu={handleBackToMenu}
           onPlayAgain={() => {
             if (pendingMode === 'singleplayer' && runState && activeNodeId) {
-              // Roguelike: compute combat result and go to rewards
+              const won = gameState.phase === 'victory';
               const allIcons = gameState.players[0].icons;
               const finalHps: Record<string, number> = {};
-              (['napoleon', 'genghis', 'davinci', 'leonidas'] as CharacterId[]).forEach(id => {
-                const icon = allIcons.find(i => i.name.toLowerCase().includes(id === 'davinci' ? 'vinci' : id));
+              (['napoleon', 'genghis', 'davinci', 'leonidas', 'sunsin'] as CharacterId[]).forEach(id => {
+                const icon = allIcons.find(i => i.name.toLowerCase().includes(
+                  id === 'davinci' ? 'vinci' : id === 'sunsin' ? 'sun-sin' : id
+                ));
                 finalHps[id] = icon?.stats.hp ?? 0;
               });
               completeCombat({
                 nodeId: activeNodeId,
-                won: gameState.phase === 'victory',
+                won,
                 turnsElapsed: gameState.currentTurn ?? 1,
                 finalHps: finalHps as any,
               });
               setActiveNodeId(null);
-              setGameMode('rewards');
+              setGameMode(won ? 'rewards' : 'runDefeated');
             } else {
               setGameMode('characterSelect');
             }

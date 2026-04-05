@@ -3,7 +3,7 @@
 export type NodeType = 'enemy' | 'elite' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'boss';
 export type FightObjective = 'defeat_all' | 'destroy_base' | 'survive' | 'onslaught';
 export type ItemTier = 'common' | 'uncommon' | 'rare' | 'legendary';
-export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas';
+export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas' | 'sunsin';
 
 export interface RunNode {
   id: string;
@@ -30,6 +30,39 @@ export interface EncounterDef {
   guaranteedItem: boolean;
 }
 
+export interface EnemyAbilityEffect {
+  type:
+    | 'buff_self'          // stat buff on self
+    | 'heal_self'          // restore own HP
+    | 'aoe_damage'         // hits all player icons in range
+    | 'debuff_enemies'     // applies debuff to all player icons in range
+    | 'damage_all_enemies' // hits ALL player icons anywhere (boss nuke)
+    | 'dash_attack';       // teleport adjacent to closest enemy and hit
+  mightBonus?: number;
+  powerBonus?: number;     // permanent Power increase (buff_self)
+  defenseBonus?: number;
+  duration?: number;
+  amount?: number;
+  range?: number;
+  multiplier?: number;
+  debuffType?: string;
+  magnitude?: number;
+  damage?: number;
+  dashRange?: number;
+}
+
+export interface EnemyAbilityDef {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  cooldown: number;           // turns between uses; 0 = usable every turn
+  oncePerFight?: boolean;     // if true, set cooldown to 999 after first use
+  triggerCondition?: 'low_hp';
+  hpThreshold?: number;       // 0.0–1.0; used with low_hp trigger
+  effect: EnemyAbilityEffect;
+}
+
 export interface EnemyTemplate {
   id: string;
   name: string;
@@ -46,6 +79,7 @@ export interface EnemyTemplate {
   };
   ai: 'aggressive' | 'defensive' | 'ranged' | 'berserker';
   count: number; // how many copies of this enemy appear
+  abilities?: EnemyAbilityDef[];
 }
 
 export interface RunItem {
@@ -93,7 +127,8 @@ export interface PendingRewards {
   gold: number;
   xp: number;
   cardChoices: CardReward[];   // 3 options, player picks 1 or skips
-  itemDrop?: RunItem;           // optional item reward
+  itemDrop?: RunItem;           // optional item reward (normal fights)
+  bossItems?: RunItem[];        // boss fights: one item per living character, auto-equipped
 }
 
 export interface RunState {
@@ -107,4 +142,6 @@ export interface RunState {
   characters: CharacterRunState[];
   deckCardIds: string[];
   pendingRewards: PendingRewards | null;
+  permanentlyDeadIds: CharacterId[];  // chars who died in combat and are gone for the run
+  battleCount: number;                // how many combat nodes completed so far
 }

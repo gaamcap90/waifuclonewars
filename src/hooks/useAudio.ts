@@ -14,6 +14,8 @@ export function useAudio() {
   const toggleMute  = useCallback(() => audioEngine.toggleMute(), []);
   const setMusicVolume = useCallback((v: number) => audioEngine.setMusicVolume(v), []);
   const setSfxVolume   = useCallback((v: number) => audioEngine.setSfxVolume(v), []);
+  const playTheme   = useCallback((characterId: string) => audioEngine.playTheme(characterId), []);
+  const stopTheme   = useCallback(() => audioEngine.stopTheme(), []);
 
-  return { settings, playSound, playMusic, stopMusic, toggleMute, setMusicVolume, setSfxVolume };
+  return { settings, playSound, playMusic, stopMusic, toggleMute, setMusicVolume, setSfxVolume, playTheme, stopTheme };
 }

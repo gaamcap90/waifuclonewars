@@ -1,7 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { Icon, GameState } from "@/types/game";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
 import { useBuffCalculation } from "@/hooks/useBuffCalculation";
@@ -11,42 +10,34 @@ interface CharacterDetailPopupProps {
   character: Icon;
   gameState: GameState;
   onClose: () => void;
-  /** Expect X centered on the portrait, and Y = portrait's bottom (viewport coords) */
   position: { x: number; y: number };
 }
 
-const CharacterDetailPopup = ({
-  character,
-  gameState,
-  onClose,
-  position
-}: CharacterDetailPopupProps) => {
+const CharacterDetailPopup = ({ character, gameState, onClose, position }: CharacterDetailPopupProps) => {
   React.useEffect(() => {
-    const handleClickOutside = () => onClose();
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    const handle = () => onClose();
+    document.addEventListener("click", handle);
+    return () => document.removeEventListener("click", handle);
   }, [onClose]);
 
   const { calculateBuffedStats } = useBuffCalculation();
   const buffedStats = calculateBuffedStats(character, gameState);
-  // Use canonical calcEffectiveStats for accuracy (includes debuffs + passives)
   const eff = calcEffectiveStats(gameState, character);
 
-  const baseMight = character.stats.might;
-  const basePower = character.stats.power;
+  const baseMight   = character.stats.might;
+  const basePower   = character.stats.power;
   const baseDefense = character.stats.defense;
 
-  const beastCampMightBonus = (baseMight * buffedStats.beastCampMightBonus) / 100;
-  const beastCampPowerBonus = (basePower * buffedStats.beastCampPowerBonus) / 100;
-  const homeBaseMightBonus = buffedStats.isOnHomeBase ? (baseMight * 20) / 100 : 0;
-  const homeBasePowerBonus = buffedStats.isOnHomeBase ? (basePower * 20) / 100 : 0;
-  const homeBaseDefenseBonus = buffedStats.isOnHomeBase ? (baseDefense * 20) / 100 : 0;
-  // Napoleon doesn't get forest DEF bonus; forest is now +25%
-  const forestDefenseBonus = buffedStats.isOnForest && !character.name.includes("Napoleon")
+  const beastCampMightBonus   = (baseMight   * buffedStats.beastCampMightBonus)  / 100;
+  const beastCampPowerBonus   = (basePower   * buffedStats.beastCampPowerBonus)  / 100;
+  const homeBaseMightBonus    = buffedStats.isOnHomeBase ? (baseMight   * 20) / 100 : 0;
+  const homeBasePowerBonus    = buffedStats.isOnHomeBase ? (basePower   * 20) / 100 : 0;
+  const homeBaseDefenseBonus  = buffedStats.isOnHomeBase ? (baseDefense * 20) / 100 : 0;
+  const forestDefenseBonus    = buffedStats.isOnForest && !character.name.includes("Napoleon")
     ? (baseDefense * 25) / 100 : 0;
-  const napoleonForestRange = character.name.includes("Napoleon") && buffedStats.isOnForest;
+  const napoleonForestRange   = character.name.includes("Napoleon") && buffedStats.isOnForest;
 
-  const formatBonus = (value: number) => (value % 1 === 0 ? value.toString() : value.toFixed(1));
+  const fmt = (v: number) => (v % 1 === 0 ? v.toString() : v.toFixed(1));
 
   const DEBUFF_LABELS: Record<string, string> = {
     mud_throw:   "🐾 Mud Throw",
@@ -58,165 +49,174 @@ const CharacterDetailPopup = ({
 
   const passiveText = (() => {
     if (character.name.includes("Napoleon"))
-      return `Vantage Point: On forest tile, basic attack range becomes 3, but no DEF bonus.${napoleonForestRange ? " (ACTIVE — Range 3 now)" : ""}`;
+      return `Vantage Point: Forest tile → Range 3, no DEF bonus.${napoleonForestRange ? " (ACTIVE)" : ""}`;
     if (character.name.includes("Genghis"))
-      return `Bloodlust: Each kill grants +15 Might and restores 1 Mana. Stacks up to 3×.${(character.passiveStacks ?? 0) > 0 ? ` (${character.passiveStacks}/3 stacks active)` : ""}`;
+      return `Bloodlust: Each kill → +15 Might +1 Mana (×3 max).${(character.passiveStacks ?? 0) > 0 ? ` ${character.passiveStacks}/3 stacks.` : ""}`;
     if (character.name.includes("Da Vinci"))
-      return "Tinkerer: At turn start, if no exclusive ability card was played last turn, draw +1 card.";
+      return "Tinkerer: No ability used last turn → draw +1 card.";
+    if (character.name.includes("Leonidas"))
+      return `Phalanx: Adjacent to ally → +8 DEF/turn (max +24).${(character.passiveStacks ?? 0) > 0 ? ` ${character.passiveStacks}/3 stacks.` : ""}`;
     return character.passive ?? "No passive";
   })();
 
-  const getCharacterPortrait = (name: string) => {
-    if (name.includes("Napoleon")) return "/art/napoleon_portrait.png";
-    if (name.includes("Genghis")) return "/art/genghis_portrait.png";
-    if (name.includes("Da Vinci")) return "/art/davinci_portrait.png";
-    if (name.includes("Leonidas")) return "/art/leonidas_portrait.png";
+  const portrait = (() => {
+    if (character.name.includes("Napoleon")) return "/art/napoleon_portrait.png";
+    if (character.name.includes("Genghis"))  return "/art/genghis_portrait.png";
+    if (character.name.includes("Da Vinci")) return "/art/davinci_portrait.png";
+    if (character.name.includes("Leonidas")) return "/art/leonidas_portrait.png";
     return null;
-  };
+  })();
 
-  // Clamp so popup never escapes viewport (popup is ~220px wide)
-  const POPUP_W = 230;
+  const isBlue       = character.playerId === 0;
+  const teamBorder   = isBlue ? "rgba(60,100,220,0.60)" : "rgba(220,60,60,0.60)";
+  const teamAccent   = isBlue ? "#60a5fa" : "#f87171";
+  const teamGradient = isBlue
+    ? "linear-gradient(90deg, rgba(37,60,180,0.35) 0%, transparent 80%)"
+    : "linear-gradient(90deg, rgba(180,37,37,0.35) 0%, transparent 80%)";
+
+  const POPUP_W = 256;
   const clampedX = typeof window !== "undefined"
     ? Math.max(POPUP_W / 2 + 8, Math.min(position.x, window.innerWidth - POPUP_W / 2 - 8))
     : position.x;
 
   return createPortal(
-    <>
-      {/* Popup (anchored below portrait, clamped to viewport) */}
+    <div
+      className="fixed z-50 pointer-events-auto"
+      style={{ left: clampedX, top: position.y + 8, transform: "translate(-50%, 0)" }}
+      onClick={e => e.stopPropagation()}
+    >
       <div
-        className="fixed z-50 pointer-events-auto"
+        className="rounded-xl overflow-hidden shadow-2xl"
         style={{
-          left: clampedX,
-          top: position.y + 8,
-          transform: "translate(-50%, 0)",
+          width: POPUP_W,
+          background: "linear-gradient(180deg, rgba(8,4,28,0.98) 0%, rgba(4,2,16,0.98) 100%)",
+          border: `1px solid ${teamBorder}`,
+          boxShadow: `0 8px 32px rgba(0,0,0,0.60), 0 0 20px ${isBlue ? "rgba(37,60,180,0.15)" : "rgba(160,20,20,0.15)"}`,
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        <Card className="bg-background/95 backdrop-blur-sm border-border shadow-xl min-w-[200px] max-w-[220px]">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-12 h-12 rounded-full border-2 overflow-hidden ${
-                  character.playerId === 0 ? "border-blue-400" : "border-red-400"
-                }`}
-              >
-                {getCharacterPortrait(character.name) ? (
-                  <img
-                    src={getCharacterPortrait(character.name)!}
-                    alt={character.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className={`w-full h-full flex items-center justify-center text-lg font-bold ${
-                      character.playerId === 0 ? "bg-blue-500/90 text-white" : "bg-red-500/90 text-white"
-                    }`}
-                  >
-                    {character.name.charAt(0)}
-                  </div>
-                )}
+        {/* Header */}
+        <div className="px-3 py-2.5 flex items-center gap-3" style={{ background: teamGradient, borderBottom: `1px solid ${teamBorder}` }}>
+          <div
+            className="w-12 h-12 rounded-full overflow-hidden shrink-0"
+            style={{ border: `2px solid ${teamAccent}88`, boxShadow: `0 0 8px ${teamAccent}40` }}
+          >
+            {portrait ? (
+              <img src={portrait} alt={character.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-lg font-bold text-white"
+                style={{ background: isBlue ? "rgba(37,99,235,0.9)" : "rgba(185,28,28,0.9)" }}>
+                {character.name.charAt(0)}
               </div>
-              <div>
-                <CardTitle className="text-lg">{character.name}</CardTitle>
-                <div className="text-sm text-muted-foreground flex items-center gap-1">
-                  {character.role === "dps_ranged" && (<><Crosshair className="w-3 h-3" /> Ranged DPS</>)}
-                  {character.role === "dps_melee" && (<><Sword className="w-3 h-3" /> Melee DPS</>)}
-                  {character.role === "support" && (<><Heart className="w-3 h-3" /> Support</>)}
-                </div>
-              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-orbitron font-bold text-sm text-white truncate">{character.name}</div>
+            <div className="flex items-center gap-1 mt-0.5" style={{ color: teamAccent }}>
+              {character.role === "dps_ranged" && <><Crosshair className="w-3 h-3" /><span className="text-[10px]">Ranged DPS</span></>}
+              {character.role === "dps_melee"  && <><Sword className="w-3 h-3" /><span className="text-[10px]">Melee DPS</span></>}
+              {character.role === "support"    && <><Heart className="w-3 h-3" /><span className="text-[10px]">Support</span></>}
+              {character.role === "tank"       && <><span className="text-[10px]">🛡 Tank</span></>}
             </div>
-          </CardHeader>
+          </div>
+        </div>
 
-          <CardContent className="space-y-3">
-            <div>
-              <div className="text-sm font-semibold mb-1">HP:</div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">
-                  {character.stats.hp}/{character.stats.maxHp}
-                </span>
-                <HPBar currentHP={character.stats.hp} maxHP={character.stats.maxHp} size="medium" />
-              </div>
+        {/* Body */}
+        <div className="px-3 py-2.5 space-y-2.5">
+          {/* HP */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-orbitron text-[10px] text-slate-500 tracking-wider">HP</span>
+              <span className="font-mono text-[11px] text-slate-300">{Math.floor(character.stats.hp)}/{character.stats.maxHp}</span>
             </div>
+            <HPBar currentHP={character.stats.hp} maxHP={character.stats.maxHp} size="medium" />
+          </div>
 
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">Might:</span>
-                <span className="ml-2 text-red-400 font-semibold">{Math.floor(eff.might)}</span>
-                {(beastCampMightBonus > 0 || homeBaseMightBonus > 0 || buffedStats.cardBuffAtk > 0) && (
-                  <div className="text-xs text-muted-foreground ml-4">
-                    {beastCampMightBonus > 0 && `+${formatBonus(beastCampMightBonus)} (Beast Camp) `}
-                    {homeBaseMightBonus > 0 && `+${formatBonus(homeBaseMightBonus)} (Base) `}
-                    {buffedStats.cardBuffAtk > 0 && <span className="text-yellow-300">+{buffedStats.cardBuffAtk} (card)</span>}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <span className="text-muted-foreground">Power:</span>
-                <span className="ml-2 text-blue-400 font-semibold">{Math.floor(eff.power)}</span>
-                {(beastCampPowerBonus > 0 || homeBasePowerBonus > 0) && (
-                  <div className="text-xs text-muted-foreground ml-4">
-                    {beastCampPowerBonus > 0 && `+${formatBonus(beastCampPowerBonus)} (Beast Camp) `}
-                    {homeBasePowerBonus > 0 && `+${formatBonus(homeBasePowerBonus)} (Base)`}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <span className="text-muted-foreground">Defense:</span>
-                <span className="ml-2 text-green-400 font-semibold">{Math.floor(eff.defense)}</span>
-                {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0 || buffedStats.cardBuffDef > 0) && (
-                  <div className="text-xs text-muted-foreground ml-4">
-                    {homeBaseDefenseBonus > 0 && `+${formatBonus(homeBaseDefenseBonus)} (Base) `}
-                    {forestDefenseBonus > 0 && `+${formatBonus(forestDefenseBonus)} (Forest) `}
-                    {buffedStats.cardBuffDef > 0 && <span className="text-yellow-300">+{buffedStats.cardBuffDef} (card)</span>}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <span className="text-muted-foreground">Range:</span>
-                <span className="ml-2 text-yellow-400 font-semibold">
-                  {napoleonForestRange ? 3 : (character.name.includes("Napoleon") || character.name.includes("Da Vinci")) ? 2 : 1}
-                </span>
-                {napoleonForestRange && <span className="ml-2 text-[10px] text-green-400">(forest passive)</span>}
-              </div>
-
-              {/* Genghis Bloodlust stacks */}
-              {(character.passiveStacks ?? 0) > 0 && (
-                <div className="text-xs text-red-300 border border-red-500/40 rounded px-2 py-1 bg-red-500/10">
-                  🩸 Bloodlust: {character.passiveStacks}/3 stacks (+{(character.passiveStacks ?? 0) * 15} Might)
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+            {/* Might */}
+            <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)" }}>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">MIGHT</div>
+              <div className="font-bold text-red-400">{Math.floor(eff.might)}</div>
+              {(beastCampMightBonus > 0 || homeBaseMightBonus > 0 || buffedStats.cardBuffAtk > 0) && (
+                <div className="text-[9px] text-slate-500 mt-0.5">
+                  {beastCampMightBonus > 0 && `+${fmt(beastCampMightBonus)} camp `}
+                  {homeBaseMightBonus   > 0 && `+${fmt(homeBaseMightBonus)} base `}
+                  {buffedStats.cardBuffAtk > 0 && <span className="text-yellow-400">+{buffedStats.cardBuffAtk} card</span>}
                 </div>
               )}
             </div>
-
-            {/* Active Debuffs */}
-            {(character.debuffs ?? []).length > 0 && (
-              <div>
-                <div className="text-sm font-semibold mb-1 text-red-400">Active Debuffs:</div>
-                <div className="flex flex-col gap-1">
-                  {character.debuffs!.map((d, i) => (
-                    <div key={i} className="text-xs flex items-center justify-between bg-red-950/40 border border-red-800/40 rounded px-2 py-0.5">
-                      <span>{DEBUFF_LABELS[d.type] ?? d.type}</span>
-                      <span className="text-muted-foreground">−{d.magnitude} · {d.turnsRemaining}t left</span>
-                    </div>
-                  ))}
+            {/* Power */}
+            <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.20)" }}>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">POWER</div>
+              <div className="font-bold text-blue-400">{Math.floor(eff.power)}</div>
+              {(beastCampPowerBonus > 0 || homeBasePowerBonus > 0) && (
+                <div className="text-[9px] text-slate-500 mt-0.5">
+                  {beastCampPowerBonus > 0 && `+${fmt(beastCampPowerBonus)} camp `}
+                  {homeBasePowerBonus  > 0 && `+${fmt(homeBasePowerBonus)} base`}
                 </div>
-              </div>
-            )}
-
-            {/* Passive */}
-            <div>
-              <div className="text-sm font-semibold mb-1">Passive:</div>
-              <div className="text-xs text-muted-foreground leading-relaxed">{passiveText}</div>
+              )}
             </div>
-          </CardContent>
-        </Card>
+            {/* Defense */}
+            <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.20)" }}>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">DEFENSE</div>
+              <div className="font-bold text-emerald-400">{Math.floor(eff.defense)}</div>
+              {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0 || buffedStats.cardBuffDef > 0) && (
+                <div className="text-[9px] text-slate-500 mt-0.5">
+                  {homeBaseDefenseBonus > 0 && `+${fmt(homeBaseDefenseBonus)} base `}
+                  {forestDefenseBonus   > 0 && `+${fmt(forestDefenseBonus)} forest `}
+                  {buffedStats.cardBuffDef > 0 && <span className="text-yellow-400">+{buffedStats.cardBuffDef} card</span>}
+                </div>
+              )}
+            </div>
+            {/* Range */}
+            <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.20)" }}>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">RANGE</div>
+              <div className="font-bold text-yellow-400">
+                {napoleonForestRange ? 3 : (character.name.includes("Napoleon") || character.name.includes("Da Vinci")) ? 2 : 1}
+              </div>
+              {napoleonForestRange && <div className="text-[9px] text-green-400 mt-0.5">forest ✓</div>}
+            </div>
+          </div>
+
+          {/* Bloodlust / Phalanx stacks */}
+          {(character.passiveStacks ?? 0) > 0 && (
+            <div className="rounded-lg px-2 py-1.5 text-[11px]"
+              style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)" }}>
+              {character.name.includes("Genghis") && (
+                <span className="text-red-300">🩸 Bloodlust ×{character.passiveStacks} (+{(character.passiveStacks ?? 0) * 15} Might)</span>
+              )}
+              {character.name.includes("Leonidas") && (
+                <span className="text-amber-300">🛡 Phalanx ×{character.passiveStacks} (+{(character.passiveStacks ?? 0) * 8} DEF)</span>
+              )}
+            </div>
+          )}
+
+          {/* Active debuffs */}
+          {(character.debuffs ?? []).length > 0 && (
+            <div>
+              <div className="font-orbitron text-[9px] text-red-400 tracking-wider mb-1">DEBUFFS</div>
+              <div className="flex flex-col gap-1">
+                {character.debuffs!.map((d, i) => (
+                  <div key={i} className="flex items-center justify-between rounded px-2 py-0.5 text-[10px]"
+                    style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                    <span className="text-slate-300">{DEBUFF_LABELS[d.type] ?? d.type}</span>
+                    <span className="text-slate-500 font-mono">{d.turnsRemaining}t</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Passive */}
+          <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
+            <div className="font-orbitron text-[9px] text-purple-400 tracking-wider mb-0.5">PASSIVE</div>
+            <div className="text-[10px] text-slate-400 leading-relaxed">{passiveText}</div>
+          </div>
+        </div>
       </div>
-    </>,
+    </div>,
     document.body
   );
 };
 
 export default CharacterDetailPopup;
-

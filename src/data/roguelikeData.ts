@@ -1,7 +1,7 @@
 // src/data/roguelikeData.ts
 import {
   RunNode, NodeType, EncounterDef, EnemyTemplate,
-  RunItem, CardReward, CharacterRunState,
+  RunItem, CardReward, CharacterRunState, EnemyAbilityDef,
 } from "@/types/roguelike";
 
 // ── Seeded RNG ────────────────────────────────────────────────────────────────
@@ -21,38 +21,72 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'glorp_shambler', name: 'Glorp Shambler', icon: '🍄', count: 1,
     stats: { hp: 60, maxHp: 60, might: 35, power: 25, defense: 8, moveRange: 2, attackRange: 1 },
     ai: 'aggressive',
+    abilities: [
+      { id: 'spore_release', name: 'Spore Release', icon: '☁️', description: 'Releases toxic spores — applies Poison to all enemies within range 1.', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'poison', magnitude: 5, duration: 99 } },
+    ] as EnemyAbilityDef[],
   },
   zyx_skitter: {
     id: 'zyx_skitter', name: 'Zyx Skitter', icon: '🦟', count: 2,
     stats: { hp: 30, maxHp: 30, might: 22, power: 15, defense: 4, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
+    abilities: [
+      { id: 'swarm_bite', name: 'Swarm Bite', icon: '🦟', description: 'Leaps onto the closest enemy and deals 20 damage to all enemies within range 1.', cooldown: 4, effect: { type: 'aoe_damage', range: 1, damage: 20 } },
+    ] as EnemyAbilityDef[],
   },
   naxion_scout: {
     id: 'naxion_scout', name: 'Naxion Scout', icon: '👾', count: 1,
     stats: { hp: 70, maxHp: 70, might: 30, power: 35, defense: 12, moveRange: 3, attackRange: 2 },
     ai: 'ranged',
+    abilities: [
+      { id: 'plasma_shot', name: 'Plasma Shot', icon: '⚡', description: 'Fires a concentrated plasma bolt dealing Power×1.2 damage to a single enemy within range 3.', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 1.2 } },
+    ] as EnemyAbilityDef[],
   },
   vron_crawler: {
     id: 'vron_crawler', name: 'Vron Crawler', icon: '🦀', count: 1,
     stats: { hp: 85, maxHp: 85, might: 28, power: 20, defense: 22, moveRange: 2, attackRange: 1 },
     ai: 'defensive',
+    abilities: [
+      { id: 'shell_harden', name: 'Shell Harden', icon: '🐚', description: 'Retracts into armored shell — gains +18 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 18, duration: 2 } },
+    ] as EnemyAbilityDef[],
   },
   // Act 1 elites
   krath_champion: {
     id: 'krath_champion', name: 'Krath Champion', icon: '⚔️', count: 1,
     stats: { hp: 120, maxHp: 120, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 },
     ai: 'berserker',
+    abilities: [
+      { id: 'battle_rage', name: 'Battle Rage', icon: '🔥', description: 'Gains +25 Might and +10 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: 10, duration: 2 } },
+      { id: 'champion_strike', name: "Champion's Strike", icon: '⚔️', description: 'Deals 1.8× Might damage to the nearest enemy within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.8 } },
+    ] as EnemyAbilityDef[],
   },
   spore_cluster: {
     id: 'spore_cluster', name: 'Spore Node', icon: '🔴', count: 3,
     stats: { hp: 40, maxHp: 40, might: 20, power: 30, defense: 5, moveRange: 1, attackRange: 2 },
     ai: 'ranged',
+    abilities: [
+      { id: 'toxic_cloud', name: 'Toxic Cloud', icon: '☣️', description: 'Applies Poison to all enemies within range 2.', cooldown: 2, effect: { type: 'debuff_enemies', range: 2, debuffType: 'poison', magnitude: 5, duration: 99 } },
+      { id: 'spore_burst', name: 'Spore Burst', icon: '💥', description: 'Deals 25 damage to all enemies in range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, damage: 25 } },
+    ] as EnemyAbilityDef[],
+  },
+  // Act 1 starter — alien beast (first encounter only)
+  vexlar: {
+    id: 'vexlar', name: 'Vexlar', icon: '🐆', count: 2,
+    stats: { hp: 80, maxHp: 80, might: 25, power: 30, defense: 30, moveRange: 3, attackRange: 1 },
+    ai: 'aggressive',
+    abilities: [
+      { id: 'predator_leap', name: 'Predator Leap', icon: '🐆', description: 'Launches at the enemy with the lowest Defense — leaps up to range 4 and delivers a savage basic attack on arrival.', cooldown: 3, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.0 } },
+    ] as EnemyAbilityDef[],
   },
   // Act 1 boss
   iron_wall: {
     id: 'iron_wall', name: 'Iron Wall', icon: '🤖', count: 1,
     stats: { hp: 200, maxHp: 200, might: 60, power: 50, defense: 35, moveRange: 2, attackRange: 1 },
     ai: 'defensive',
+    abilities: [
+      { id: 'shield_array', name: 'Shield Array', icon: '🛡️', description: 'Heals self for 70 HP. Triggers once when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'heal_self', amount: 70 } },
+      { id: 'emp_blast', name: 'EMP Blast', icon: '⚡', description: 'Deals 40 damage to all enemies within range 2, and silences them for 1 turn.', cooldown: 3, effect: { type: 'aoe_damage', range: 2, damage: 40 } },
+      { id: 'turret_mode', name: 'Turret Mode', icon: '🤖', description: 'Gains +40 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 40, duration: 2 } },
+    ] as EnemyAbilityDef[],
   },
   // Act 2 enemies
   mog_toxin: {
@@ -74,28 +108,50 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'krath_berserker', name: 'Krath Berserker', icon: '💢', count: 1,
     stats: { hp: 140, maxHp: 140, might: 75, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
+    abilities: [
+      { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +35 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 35, defenseBonus: -20, duration: 2 } },
+      { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals 2.0× Might damage on arrival.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 2.0 } },
+    ] as EnemyAbilityDef[],
   },
   phasewarden: {
     id: 'phasewarden', name: 'Phasewarden', icon: '🔮', count: 1,
     stats: { hp: 110, maxHp: 110, might: 55, power: 65, defense: 20, moveRange: 5, attackRange: 2 },
     ai: 'ranged',
+    abilities: [
+      { id: 'dimensional_drain', name: 'Dimensional Drain', icon: '🔮', description: 'Applies Armor Break (−20% Defense) to all enemies within range 3 for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 3, debuffType: 'armor_break', magnitude: 20, duration: 2 } },
+      { id: 'phase_blink', name: 'Phase Blink', icon: '✨', description: 'Teleports to a position far from all enemies, then attacks the closest from range.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 6, multiplier: 1.2 } },
+    ] as EnemyAbilityDef[],
   },
   // Act 2 boss
   twin_terror_a: {
     id: 'twin_terror_a', name: 'Terror Alpha', icon: '🗡️', count: 1,
     stats: { hp: 160, maxHp: 160, might: 70, power: 55, defense: 20, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
+    abilities: [
+      { id: 'alpha_rush', name: 'Alpha Rush', icon: '🗡️', description: 'Charges 4 hexes and deals 2.2× Might damage on impact.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 4, multiplier: 2.2 } },
+      { id: 'twin_fury', name: 'Twin Fury', icon: '🔥', description: 'Gains +30 Might for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 30, duration: 2 } },
+    ] as EnemyAbilityDef[],
   },
   twin_terror_b: {
     id: 'twin_terror_b', name: 'Terror Beta', icon: '🛡️', count: 1,
     stats: { hp: 160, maxHp: 160, might: 50, power: 65, defense: 30, moveRange: 3, attackRange: 2 },
     ai: 'defensive',
+    abilities: [
+      { id: 'aegis_heal', name: 'Aegis Heal', icon: '💚', description: 'Heals self for 90 HP. Triggers once when below 40% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.4, effect: { type: 'heal_self', amount: 90 } },
+      { id: 'mirror_aegis', name: 'Mirror Aegis', icon: '🛡️', description: 'Gains +50 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', defenseBonus: 50, duration: 2 } },
+    ] as EnemyAbilityDef[],
   },
   // Act 3 boss
   znyxorga_champion: {
     id: 'znyxorga_champion', name: "Znyxorga's Champion", icon: '👑', count: 1,
-    stats: { hp: 280, maxHp: 280, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 },
+    stats: { hp: 500, maxHp: 500, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 },
     ai: 'berserker',
+    abilities: [
+      { id: 'arena_collapse', name: 'Arena Collapse', icon: '👑', description: 'The arena itself becomes a weapon — deals 55 damage to ALL player characters simultaneously.', cooldown: 3, effect: { type: 'damage_all_enemies', damage: 55 } },
+      { id: 'phase_shift', name: 'Phase Shift', icon: '🛡️', description: 'Becomes invincible for 2 turns and gains +25 Might, +25 Power, and +25 Defense permanently. Triggers ONCE when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: 500, duration: 2 } },
+      { id: 'champions_will', name: "Champion's Will", icon: '⭐', description: 'Driven by Znyxorga\'s will — gains +35 Might, +35 Power, and +35 Defense permanently. Triggers ONCE when below 30% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.30, effect: { type: 'buff_self', mightBonus: 35, defenseBonus: 35, duration: 999 } },
+      { id: 'tyrant_strike', name: 'Tyrant Strike', icon: '💥', description: 'Channels Power into a devastating strike — deals Power×1.6 damage to all enemies within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.6 } },
+    ] as EnemyAbilityDef[],
   },
 };
 
@@ -156,8 +212,8 @@ export const ITEMS: RunItem[] = [
   // RARE — Genghis
   { id: 'eternal_hunger', name: 'Eternal Hunger', icon: '🩸', tier: 'rare',
     targetCharacter: 'genghis',
-    description: 'Bloodlust can stack up to 5× instead of 3×.',
-    passiveTag: 'genghis_bloodlust_5x' },
+    description: 'Bloodlust kill stacks carry over between fights for the entire run.',
+    passiveTag: 'genghis_bloodlust_persist' },
   { id: 'khans_seal', name: "Khan's Seal", icon: '🏹', tier: 'rare',
     targetCharacter: 'genghis',
     description: "Rider's Fury also stuns each hit enemy for 1 turn.",
@@ -173,8 +229,8 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'davinci_masterpiece_plus25' },
   // LEGENDARY
   { id: 'znyxorgas_eye', name: "Znyxorga's Eye", icon: '👁️', tier: 'legendary',
-    description: 'After defeating an enemy, all ability cooldowns reduce by 1.',
-    passiveTag: 'cooldown_on_kill' },
+    description: 'After defeating an enemy, your next card costs 0 Mana.',
+    passiveTag: 'next_card_free_on_kill' },
   { id: 'void_armor', name: 'Void Armor', icon: '🛡️', tier: 'legendary',
     description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.',
     passiveTag: 'once_survive_lethal' },
@@ -186,6 +242,7 @@ export const ITEMS: RunItem[] = [
 // ── Card Reward Pool ──────────────────────────────────────────────────────────
 
 export const CARD_REWARD_POOL: CardReward[] = [
+  { definitionId: 'shared_basic_attack', name: 'Basic Attack',     icon: '⚔️', manaCost: 1, description: 'Do a basic attack.' },
   { definitionId: 'shared_shield',       name: 'Shields Up',       icon: '🛡️', manaCost: 1, description: 'Gain +10 DEF until your next turn.' },
   { definitionId: 'shared_mend',         name: 'Mend',             icon: '💚', manaCost: 1, description: 'Restore 20 HP to a nearby ally.' },
   { definitionId: 'shared_battle_cry',   name: 'Battle Cry',       icon: '📣', manaCost: 2, description: '+10 Might to all allies this turn.' },
@@ -206,6 +263,10 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'leonidas_shield_bash',    name: 'Shield Bash',      icon: '⚡', manaCost: 2, description: 'Power×1.5 dmg at range 1 + Armor Break (−20% DEF, 2t).', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_spartan_wall',   name: 'Spartan Wall',     icon: '🏛️', manaCost: 3, description: '+20 Defense to Leonidas and all allies within range 2.', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_this_is_sparta', name: 'THIS IS SPARTA!',  icon: '⭐', manaCost: 3, description: 'Power×3 dmg to target + Demoralize adjacent enemies (1t).', exclusiveTo: 'Leonidas' },
+  { definitionId: 'sunsin_hwajeon',        name: 'Hwajeon / Ramming',       icon: '🔥', manaCost: 2, description: 'Power×1.2 dmg at range 3, applies Poison.', exclusiveTo: 'Sun-sin' },
+  { definitionId: 'sunsin_naval_command',  name: 'Naval Command',           icon: '🚢', manaCost: 3, description: '+15% Might & Power to all allies for 2 turns.', exclusiveTo: 'Sun-sin' },
+  { definitionId: 'sunsin_broadside',      name: 'Broadside',               icon: '💥', manaCost: 3, description: 'Power×0.7 to all enemies in range 3.', exclusiveTo: 'Sun-sin' },
+  { definitionId: 'sunsin_chongtong',      name: 'Chongtong Barrage',       icon: '⭐', manaCost: 3, description: 'ULTIMATE — Power×2.0 to all enemies in range 5.', exclusiveTo: 'Sun-sin' },
   { definitionId: 'shared_quick_move',   name: 'Quick Move',  icon: '🏃', manaCost: 1, description: '+2 movement this turn.' },
   { definitionId: 'shared_gamble',       name: 'Gamble',      icon: '🎲', manaCost: 0, description: 'Draw 3 cards, discard 1 at random.' },
 ];
@@ -219,11 +280,20 @@ function pick<T>(arr: T[], rng: () => number): T {
 function buildEncounter(
   type: 'enemy' | 'elite' | 'boss',
   act: 1 | 2 | 3,
-  rng: () => number
+  rng: () => number,
+  row: number = 1,
 ): EncounterDef {
-  const e1Pool = [ENEMIES.glorp_shambler, ENEMIES.zyx_skitter, ENEMIES.naxion_scout, ENEMIES.vron_crawler];
-  const e2Pool = [ENEMIES.mog_toxin, ENEMIES.qrix_hunter, ENEMIES.void_wraith];
-  const pool = act === 1 ? e1Pool : e2Pool;
+  // Act 1 enemy pools — scale by row within the act
+  // Rows 1-3: early (fragile skirmishers)
+  // Rows 4-6: mid (tougher bruisers)
+  // Rows 7-9: late (dangerous fighters)
+  const earlyPool = [ENEMIES.zyx_skitter, ENEMIES.glorp_shambler];
+  const midPool   = [ENEMIES.naxion_scout, ENEMIES.vron_crawler];
+  const latePool  = [ENEMIES.mog_toxin, ENEMIES.qrix_hunter, ENEMIES.void_wraith];
+
+  const enemyPool = act === 1
+    ? (row <= 3 ? earlyPool : row <= 6 ? midPool : latePool)
+    : latePool;
 
   let enemies: EnemyTemplate[];
   let name: string;
@@ -236,19 +306,22 @@ function buildEncounter(
     else if (act === 2) enemies = [ENEMIES.twin_terror_a, ENEMIES.twin_terror_b];
     else                enemies = [ENEMIES.znyxorga_champion];
     name = `Act ${act} Boss`;
-    xp = 80; gold = 90 + Math.floor(rng() * 30); dropChance = 1.0;
+    xp = 160; gold = 90 + Math.floor(rng() * 30); dropChance = 1.0;
   } else if (type === 'elite') {
+    // Late-row elites (rows 9-10) get the harder pair
+    const useToughElite = row >= 9;
     enemies = act === 1
-      ? (rng() < 0.5 ? [ENEMIES.krath_champion] : [ENEMIES.spore_cluster, ENEMIES.spore_cluster, ENEMIES.spore_cluster])
+      ? (useToughElite || rng() < 0.5 ? [ENEMIES.krath_champion] : [ENEMIES.spore_cluster, ENEMIES.spore_cluster, ENEMIES.spore_cluster])
       : (rng() < 0.5 ? [ENEMIES.krath_berserker] : [ENEMIES.phasewarden]);
     name = 'Elite Encounter';
-    xp = 30; gold = 30 + Math.floor(rng() * 20); dropChance = 0.70;
+    xp = 60; gold = 30 + Math.floor(rng() * 20); dropChance = 0.70;
   } else {
-    // standard enemy: 1–3 enemies
-    const count = rng() < 0.4 ? 2 : 1;
-    enemies = Array.from({ length: count }, () => pick(pool, rng));
+    // Standard enemy: 1–2 enemies; later rows more likely to send 2
+    const twoPct = row <= 3 ? 0.30 : row <= 6 ? 0.45 : 0.55;
+    const count = rng() < twoPct ? 2 : 1;
+    enemies = Array.from({ length: count }, () => pick(enemyPool, rng));
     name = count > 1 ? `${count} Enemies` : 'Enemy Encounter';
-    xp = 20; gold = 10 + Math.floor(rng() * 15); dropChance = 0.30;
+    xp = 35 + row * 3; gold = 10 + Math.floor(rng() * 15) + row; dropChance = 0.25 + row * 0.02;
   }
 
   // Objective: bosses always destroy_base; elites 30% destroy_base; others 20% destroy_base
@@ -269,7 +342,7 @@ function buildEncounter(
   return {
     name, objective, objectiveLabel: objectiveLabels[objective], enemies,
     survivalTurns: objective === 'survive' ? 6 : undefined,
-    goldReward: gold, xpReward: xp, bonusXpNoHit: 30, bonusXpFast: 20,
+    goldReward: gold, xpReward: xp, bonusXpNoHit: 60, bonusXpFast: 40,
     itemDropChance: dropChance, guaranteedItem: type === 'boss',
   };
 }
@@ -277,18 +350,17 @@ function buildEncounter(
 // ── Node Type Picker ──────────────────────────────────────────────────────────
 
 function pickNodeType(row: number, rng: () => number): NodeType {
-  // 12-row map: rows 0=start (always enemy), 11=boss (fixed), 1-10 vary
+  // 12-row map: row 0=start enemies, row 11=boss, rows 1-10 vary
   const tables: Record<number, [NodeType, number][]> = {
     1:  [['enemy',0.65],['unknown',0.20],['treasure',0.15]],
     2:  [['enemy',0.50],['campfire',0.30],['unknown',0.20]],
     3:  [['enemy',0.40],['elite',0.15],['campfire',0.20],['merchant',0.25]],
-    4:  [['enemy',0.35],['elite',0.15],['campfire',0.25],['merchant',0.25]],
-    5:  [['enemy',0.40],['elite',0.20],['treasure',0.20],['merchant',0.20]],
-    6:  [['enemy',0.35],['elite',0.20],['campfire',0.25],['merchant',0.20]],
-    7:  [['enemy',0.40],['elite',0.25],['campfire',0.20],['treasure',0.15]],
-    8:  [['enemy',0.30],['elite',0.30],['campfire',0.25],['merchant',0.15]],
-    9:  [['enemy',0.35],['elite',0.35],['treasure',0.30]],
-    10: [['elite',0.60],['campfire',0.40]],
+    4:  [['campfire',0.55],['merchant',0.45]],          // convergence row — always rest/shop
+    5:  [['enemy',0.40],['elite',0.25],['treasure',0.20],['merchant',0.15]],
+    6:  [['enemy',0.35],['elite',0.25],['campfire',0.25],['unknown',0.15]],
+    7:  [['campfire',0.50],['merchant',0.50]],          // mid-rest row
+    8:  [['enemy',0.35],['elite',0.30],['treasure',0.20],['unknown',0.15]],
+    9:  [['enemy',0.25],['elite',0.75]],                // heavy combat before final rest
   };
   const table = tables[row] ?? [['enemy',1.0]];
   const roll = rng();
@@ -300,52 +372,104 @@ function pickNodeType(row: number, rng: () => number): NodeType {
   return 'enemy';
 }
 
+// ── First Battle Encounter (Alien Beasts) ─────────────────────────────────────
+export const FIRST_ENCOUNTER: EncounterDef = {
+  name: 'Alien Beast Pack',
+  objective: 'defeat_all',
+  objectiveLabel: 'Defeat all beasts',
+  enemies: [ENEMIES.vexlar],
+  goldReward: 20, xpReward: 40,
+  bonusXpNoHit: 60, bonusXpFast: 40,
+  itemDropChance: 0.20, guaranteedItem: false,
+};
+
 // ── Map Generation ────────────────────────────────────────────────────────────
+//
+// Slay-the-Spire style: 5-column grid, 12 rows. Dense branching paths that
+// converge and expand. Every node is guaranteed at least one incoming connection.
 
 export function generateActMap(seed: number, act: 1 | 2 | 3): RunNode[] {
   const rng = seededRng(seed + act * 997);
-  const nodes: RunNode[] = [];
+  const ROWS = 12; // rows 0–11; row 11 = boss
 
-  // row 0 always 2 enemy nodes (starting choice), row 11 = boss
-  const rowCounts = [2, 3, 3, 2, 3, 3, 2, 3, 3, 2, 3, 1]; // rows 0–11 (~12 nodes per path)
+  // ── 6 sorted paths, monotone-assignment trick ─────────────────────────────────
+  // 6 paths across 5 columns (0–4). At each row, each path picks a random step
+  // (−1/0/+1). Raw destinations are SORTED and re-assigned in order — this
+  // monotone assignment means no two connections can ever cross. Every node
+  // belongs to at least one path → zero orphan nodes.
+  const pathCols: number[][] = [0, 1, 2, 2, 3, 4].map(c => [c]);
 
-  const rowNodes: RunNode[][] = rowCounts.map((count, row) => {
-    return Array.from({ length: count }, (_, col) => {
-      let type: NodeType;
-      if (row === 0) type = 'enemy';
-      else if (row === 11) type = 'boss';
-      else type = pickNodeType(row, rng);
+  for (let row = 1; row < ROWS; row++) {
+    if (row === ROWS - 1) {
+      // Boss: all paths converge to col 2 (center)
+      pathCols.forEach(p => p.push(2));
+      continue;
+    }
 
-      const isCombat = type === 'enemy' || type === 'elite' || type === 'boss';
-      return {
-        id: `r${row}c${col}`,
-        row, col, rowCount: count, type,
-        connections: [],
-        encounter: isCombat ? buildEncounter(
-          type === 'boss' ? 'boss' : type === 'elite' ? 'elite' : 'enemy',
-          act, rng
-        ) : undefined,
-      } satisfies RunNode;
+    const prevCols = pathCols.map(p => p[p.length - 1]);
+
+    // Each path independently picks a raw next column (equal chance ±1/stay)
+    const rawNext = prevCols.map(col => {
+      const r = rng();
+      if (r < 0.33 && col > 0) return col - 1;
+      if (r < 0.67 && col < 4) return col + 1;
+      return col;
     });
-  });
 
-  // Connect each node to 1–2 nodes in the next row
-  for (let row = 0; row < rowNodes.length - 1; row++) {
-    const curr = rowNodes[row];
-    const next = rowNodes[row + 1];
-    for (const node of curr) {
-      const closestCol = Math.min(node.col, next.length - 1);
-      const conns: string[] = [next[closestCol].id];
-      // 40% chance to also connect to an adjacent node
-      if (next.length > 1 && rng() < 0.40) {
-        const alt = closestCol === 0 ? 1 : closestCol - 1;
-        if (alt < next.length && alt !== closestCol) conns.push(next[alt].id);
-      }
-      node.connections = conns;
+    // Sort destinations and assign in order → monotone, no crossings
+    const sorted = [...rawNext].sort((a, b) => a - b);
+    pathCols.forEach((p, i) => p.push(sorted[i]));
+  }
+
+  // ── Build connection map from paths ──────────────────────────────────────────
+  const nodeConns = new Map<string, Set<string>>();
+  for (const path of pathCols) {
+    for (let row = 0; row < ROWS - 1; row++) {
+      const fromId = `r${row}c${path[row]}`;
+      const toId   = `r${row + 1}c${path[row + 1]}`;
+      if (!nodeConns.has(fromId)) nodeConns.set(fromId, new Set());
+      nodeConns.get(fromId)!.add(toId);
     }
   }
 
-  return rowNodes.flat().map(n => ({ ...n, connections: [...new Set(n.connections)] }));
+  // ── Collect all node IDs ──────────────────────────────────────────────────────
+  const allNodeIds = new Set<string>(nodeConns.keys());
+  for (const conns of nodeConns.values()) conns.forEach(id => allNodeIds.add(id));
+
+  // ── Build node objects ────────────────────────────────────────────────────────
+  const nodeMap = new Map<string, RunNode>();
+  for (const key of allNodeIds) {
+    const m = key.match(/r(\d+)c(\d+)/);
+    if (!m) continue;
+    const row = parseInt(m[1]);
+    const col = parseInt(m[2]);
+
+    let type: NodeType;
+    if (row === 0)             type = 'enemy';
+    else if (row === ROWS - 1) type = 'boss';
+    else if (row === ROWS - 2) type = 'campfire';
+    else                       type = pickNodeType(row, rng);
+
+    const isCombat = type === 'enemy' || type === 'elite' || type === 'boss';
+    const encounter = row === 0 && act === 1
+      ? FIRST_ENCOUNTER
+      : isCombat ? buildEncounter(
+          type === 'boss' ? 'boss' : type === 'elite' ? 'elite' : 'enemy',
+          act, rng, row
+        ) : undefined;
+
+    nodeMap.set(key, {
+      id: key, row, col, rowCount: 5, type, connections: [], encounter,
+    } satisfies RunNode);
+  }
+
+  // ── Wire connections ──────────────────────────────────────────────────────────
+  for (const [fromId, toIds] of nodeConns) {
+    const node = nodeMap.get(fromId);
+    if (node) node.connections = [...toIds];
+  }
+
+  return [...nodeMap.values()];
 }
 
 // ── Starting Deck ─────────────────────────────────────────────────────────────
@@ -365,6 +489,7 @@ export const CHARACTER_STARTING_CARDS: Record<string, string> = {
   genghis:  'genghis_mongol_charge',
   davinci:  'davinci_masterpiece',
   leonidas: 'leonidas_shield_bash',
+  sunsin:   'sunsin_hwajeon',
 };
 
 // ── Starting Characters ───────────────────────────────────────────────────────
@@ -392,6 +517,12 @@ export function buildStartingCharacters(): CharacterRunState[] {
     {
       id: 'leonidas', displayName: 'Leonidas-chan', portrait: '/art/leonidas_portrait.png',
       currentHp: 130, maxHp: 130, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      items: [null, null, null, null, null],
+    },
+    {
+      id: 'sunsin', displayName: 'Sun-sin-chan', portrait: '/art/sunsin_portrait.jpg',
+      currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       items: [null, null, null, null, null],
     },

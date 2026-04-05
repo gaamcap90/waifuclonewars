@@ -51,6 +51,27 @@ export default function HexTile({
   if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
   const imgSrc = terrainMap[key] || terrainMap.plain;
 
+  // 2.5D elevation height per terrain
+  const elevMap: Record<string, number> = {
+    mountain: 18, forest: 10, base_blue: 8, base_red: 8,
+    mana_crystal: 8, beast_camp: 6, plain: 4,
+    spawn_blue: 3, spawn_red: 3, river: 0,
+  };
+  const elev = elevMap[key] ?? 4;
+  const elevColorMap: Record<string, string> = {
+    mountain:     "rgba(40,32,28,0.92)",
+    forest:       "rgba(12,38,12,0.92)",
+    base_blue:    "rgba(15,25,80,0.92)",
+    base_red:     "rgba(80,12,12,0.92)",
+    mana_crystal: "rgba(42,12,72,0.92)",
+    beast_camp:   "rgba(58,32,8,0.92)",
+    plain:        "rgba(42,35,22,0.88)",
+    spawn_blue:   "rgba(12,18,58,0.88)",
+    spawn_red:    "rgba(58,12,12,0.88)",
+    river:        "rgba(4,12,42,0.88)",
+  };
+  const elevColor = elevColorMap[key] ?? "rgba(38,32,28,0.88)";
+
   // 2) Compute bounding‐box from radius
   const hexWidth  = size * 2;                         // e.g. 100px
   const hexHeight = Math.sqrt(3) * size;              // e.g. ~86.6px
@@ -78,6 +99,7 @@ export default function HexTile({
     >
       <svg
         className="absolute inset-0 select-none pointer-events-none"
+        style={{ overflow: 'visible' }}
         width={hexWidth}
         height={hexHeight}
         viewBox={`0 0 ${hexWidth} ${hexHeight}`}
@@ -98,6 +120,41 @@ export default function HexTile({
           preserveAspectRatio="xMidYMid slice"
           clipPath={`url(#${clipId})`}
         />
+
+        {/* 2.5D front face — wall below hex face */}
+        {elev > 0 && (
+          <>
+            {/* Base wall (terrain-tinted) */}
+            <polygon
+              points={[
+                `0,${hexHeight * 3 / 4}`,
+                `${hexWidth / 2},${hexHeight}`,
+                `${hexWidth},${hexHeight * 3 / 4}`,
+                `${hexWidth},${hexHeight * 3 / 4 + elev}`,
+                `${hexWidth / 2},${hexHeight + elev}`,
+                `0,${hexHeight * 3 / 4 + elev}`,
+              ].join(" ")}
+              fill={elevColor}
+            />
+            {/* Left half ambient light */}
+            <polygon
+              points={[
+                `0,${hexHeight * 3 / 4}`,
+                `${hexWidth / 2},${hexHeight}`,
+                `${hexWidth / 2},${hexHeight + elev}`,
+                `0,${hexHeight * 3 / 4 + elev}`,
+              ].join(" ")}
+              fill="rgba(255,255,255,0.05)"
+            />
+            {/* Top-edge catchlight */}
+            <polyline
+              points={`0,${hexHeight * 3 / 4} ${hexWidth / 2},${hexHeight} ${hexWidth},${hexHeight * 3 / 4}`}
+              stroke="rgba(255,255,255,0.20)"
+              strokeWidth={0.75}
+              fill="none"
+            />
+          </>
+        )}
 
         {/* Tile border */}
         <polygon points={pts} className="fill-transparent stroke-black stroke-[1px]" />
