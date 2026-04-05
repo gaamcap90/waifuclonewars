@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck, AIIntent, Debuff } from "@/types/game";
-import type { CharacterRunState } from "@/types/roguelike";
+import type { CharacterRunState, EncounterDef, FightObjective, EnemyAbilityDef } from "@/types/roguelike";
 import { buildDeckForTeam, drawCards, buildDeckFromIds } from "@/data/cards";
 import { toast } from "sonner";
 
@@ -71,6 +71,28 @@ function snapToLineHexes(from: Qr, to: Qr, range: number): Qr[] {
   return hexes;
 }
 
+/**
+ * Returns true if there is a mountain tile strictly between `from` and `to`
+ * on the same axial hex line (dq=0, dr=0, or dq+dr=0).
+ * Returns false if they are not on the same axial line.
+ */
+function hasLineMountain(board: HexTile[], from: Qr, to: Qr): boolean {
+  const dq = to.q - from.q, dr = to.r - from.r;
+  if (dq === 0 && dr === 0) return false;
+  let uq: number, ur: number;
+  if (dr === 0 && dq !== 0)      { uq = dq > 0 ? 1 : -1; ur = 0; }
+  else if (dq === 0 && dr !== 0) { uq = 0; ur = dr > 0 ? 1 : -1; }
+  else if (dq + dr === 0)        { uq = dq > 0 ? 1 : -1; ur = dr > 0 ? 1 : -1; }
+  else return false; // not on a hex axial line — no blocking
+  const steps = Math.max(Math.abs(dq), Math.abs(dr));
+  for (let i = 1; i < steps; i++) {
+    const hq = from.q + i * uq, hr = from.r + i * ur;
+    const tile = board.find(t => t.coordinates.q === hq && t.coordinates.r === hr);
+    if (tile?.terrain.type === 'mountain') return true;
+  }
+  return false;
+}
+
 function makeId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -84,8 +106,11 @@ function pushLog(state: any, text: string, playerId: number) {
   state.combatLog = next.slice(-max);
 }
 
-function movementCostForTile(tile: HexTile): number {
-  if (tile.terrain.effects.movementModifier === -999) return Infinity; // impassable
+function movementCostForTile(tile: HexTile, allowRiver?: boolean): number {
+  if (tile.terrain.effects.movementModifier === -999) {
+    if (allowRiver && tile.terrain.type === 'river') return 1; // Turtle Ship
+    return Infinity;
+  }
   if (tile.terrain.type === "forest") return 2; // ALWAYS 2
   return 1;
 }
@@ -104,7 +129,8 @@ function reachableWithCosts(
   board: HexTile[],
   start: Qr,
   maxBudget: number,
-  occupiedKeys: Set<string>
+  occupiedKeys: Set<string>,
+  allowRiver?: boolean,
 ): Map<string, number> {
   const byKey = new Map(board.map((t) => [tileKey(t.coordinates.q, t.coordinates.r), t]));
   const dist = new Map<string, number>();
@@ -129,7 +155,7 @@ function reachableWithCosts(
       if (!nbTile) continue;
 
       if (nbKey !== startKey && occupiedKeys.has(nbKey)) continue;
-      const step = movementCostForTile(nbTile);
+      const step = movementCostForTile(nbTile, allowRiver);
       if (!isFinite(step)) continue;
 
       const newCost = cost + step;
@@ -169,7 +195,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
     (q >= 4 && q <= 6 && r >= -5 && r <= -3)
   )
     return { type: "spawn", effects: {} };
-  if ((q === -2 && r === 2) || (q === 2 && r === -2)) return { type: "beast_camp", effects: { movementModifier: -999 } };
+  // beast camps removed — these hexes are now plain
   if (Math.abs(q) >= 6 || Math.abs(r) >= 6 || Math.abs(q + r) >= 6)
     return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
   if ((Math.abs(q + r) === 3 && Math.abs(q) <= 2) || (q === 0 && Math.abs(r) === 4))
@@ -201,6 +227,140 @@ const createInitialBoard = (): HexTile[] => {
   }
   return board;
 };
+
+// ── Random map generator ──────────────────────────────────────────────────────
+
+function rngFromSeed(seed: number) {
+  let s = seed | 0;
+  return () => { s = Math.imul(1664525, s) + 1013904223 | 0; return (s >>> 0) / 0xffffffff; };
+}
+
+function getRandomTerrainForPosition(q: number, r: number, forestSet: Set<string>, riverSet: Set<string>, mountainSet: Set<string>): TerrainType {
+  const key = `${q},${r}`;
+  if (q === 0 && r === 0)              return { type: "mana_crystal", effects: { movementModifier: -999 } };
+  if ((q === -6 && r === 5) || (q === 6 && r === -5)) return { type: "base", effects: { movementModifier: -999 } };
+  if ((q >= -6 && q <= -4 && r >= 3 && r <= 5) || (q >= 4 && q <= 6 && r >= -5 && r <= -3))
+    return { type: "spawn", effects: {} };
+  if (Math.abs(q) >= 6 || Math.abs(r) >= 6 || Math.abs(q + r) >= 6)
+    return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
+  if (mountainSet.has(key)) return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
+  if (riverSet.has(key)) return { type: "river", effects: { movementModifier: -999 } as any };
+  if (forestSet.has(key)) return { type: "forest", effects: { dodgeBonus: true, stealthBonus: true } };
+  return { type: "plain", effects: {} };
+}
+
+function generateRandomBattleBoard(seed: number): HexTile[] {
+  const rng = rngFromSeed(seed);
+  const FOREST_PATTERNS: [number,number][][] = [
+    [[0,0],[1,0],[0,1],[1,-1]], [[0,0],[0,1],[1,-1],[-1,1]],
+    [[0,0],[1,0],[1,-1],[0,-1]], [[0,0],[-1,1],[0,1],[1,0]],
+    [[0,0],[1,0],[0,1]], [[0,0],[-1,1],[0,-1]],
+  ];
+  const FOREST_ANCHORS: {q:number,r:number}[] = [
+    {q:-3,r:1},{q:-2,r:1},{q:-3,r:2},{q:3,r:-1},{q:2,r:-1},{q:3,r:-2},
+    {q:-1,r:-2},{q:0,r:-2},{q:1,r:-2},{q:-1,r:2},{q:0,r:2},{q:1,r:2},
+    {q:-4,r:1},{q:4,r:-1},{q:-1,r:3},{q:1,r:-3},{q:-2,r:-1},{q:2,r:1},
+    {q:-3,r:0},{q:3,r:0},{q:0,r:3},{q:0,r:-3},
+  ];
+  const RIVER_OPTIONS: {q:number,r:number}[][] = [
+    [{q:-2,r:1},{q:-1,r:1}],[{q:-1,r:-1},{q:0,r:-1},{q:1,r:-1}],
+    [{q:2,r:-3},{q:1,r:-3}],[{q:-2,r:3},{q:-1,r:3}],
+    [{q:-2,r:-1},{q:-1,r:-1}],[{q:1,r:2},{q:0,r:2}],
+    [{q:3,r:-2},{q:2,r:-2}],[{q:-3,r:2},{q:-2,r:2}],
+  ];
+
+  const numClusters = 3 + Math.floor(rng() * 3); // 3–5 forest clusters
+  const shuffledAnchors = [...FOREST_ANCHORS].sort(() => rng() - 0.5);
+  const forestSet = new Set<string>();
+  for (let c = 0; c < numClusters && c < shuffledAnchors.length; c++) {
+    const a = shuffledAnchors[c];
+    const pat = FOREST_PATTERNS[Math.floor(rng() * FOREST_PATTERNS.length)];
+    for (const [dq, dr] of pat) forestSet.add(`${a.q+dq},${a.r+dr}`);
+  }
+
+  const numRivers = 1 + Math.floor(rng() * 2); // 1–2 river segments
+  const shuffledRivers = [...RIVER_OPTIONS].sort(() => rng() - 0.5);
+  const riverSet = new Set<string>();
+  for (let rv = 0; rv < numRivers; rv++) {
+    for (const pos of shuffledRivers[rv]) riverSet.add(`${pos.q},${pos.r}`);
+  }
+
+  // Internal mountain clusters (2–3 small rock formations mid-field)
+  const MOUNTAIN_ANCHORS: {q:number,r:number}[] = [
+    {q:3,r:-1},{q:-3,r:1},{q:2,r:2},{q:-2,r:-2},
+    {q:3,r:-3},{q:-3,r:3},{q:1,r:-4},{q:-1,r:4},
+    {q:-1,r:-2},{q:1,r:2},{q:3,r:0},{q:-3,r:0},
+    {q:2,r:-3},{q:-2,r:3},{q:0,r:3},{q:0,r:-3},
+  ];
+  const MOUNTAIN_PATTERNS: [number,number][][] = [
+    [[0,0]],                     // single boulder
+    [[0,0],[1,0]],               // 2-hex row
+    [[0,0],[0,1]],               // 2-hex col
+    [[0,0],[1,-1]],              // 2-hex diagonal
+    [[0,0],[1,0],[0,1]],         // 3-hex L
+  ];
+  const numMountains = 2 + Math.floor(rng() * 2); // 2–3 clusters
+  const shuffledMtnAnchors = [...MOUNTAIN_ANCHORS].sort(() => rng() - 0.5);
+  const mountainSet = new Set<string>();
+  for (let m = 0; m < numMountains && m < shuffledMtnAnchors.length; m++) {
+    const a = shuffledMtnAnchors[m];
+    const pat = MOUNTAIN_PATTERNS[Math.floor(rng() * MOUNTAIN_PATTERNS.length)];
+    for (const [dq, dr] of pat) {
+      const hq = a.q + dq, hr = a.r + dr;
+      // Don't place on crystal, bases, or spawn zones
+      const onCrystal = hq === 0 && hr === 0;
+      const onBase = (hq === -6 && hr === 5) || (hq === 6 && hr === -5);
+      const onSpawn = (hq >= -6 && hq <= -4 && hr >= 3 && hr <= 5) || (hq >= 4 && hq <= 6 && hr >= -5 && hr <= -3);
+      if (!onCrystal && !onBase && !onSpawn) mountainSet.add(`${hq},${hr}`);
+    }
+  }
+
+  const board: HexTile[] = [];
+  for (let q = -7; q <= 7; q++) {
+    const r1 = Math.max(-7, -q - 7);
+    const r2 = Math.min(7, -q + 7);
+    for (let r = r1; r <= r2; r++) {
+      board.push({ coordinates: { q, r }, terrain: getRandomTerrainForPosition(q, r, forestSet, riverSet, mountainSet), highlighted: false, selectable: false });
+    }
+  }
+  return board;
+}
+
+// ── Enemy icon builder from encounter ────────────────────────────────────────
+
+function buildEnemyIconsFromEncounter(encounter: EncounterDef): Icon[] {
+  const p2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
+  const icons: Icon[] = [];
+  let spawnIdx = 0;
+  for (const template of encounter.enemies) {
+    for (let c = 0; c < template.count && spawnIdx < p2Spawns.length; c++, spawnIdx++) {
+      const label = template.count > 1 ? ` ${String.fromCharCode(65 + c)}` : '';
+      icons.push({
+        id: `1-${template.id}-${c}`,
+        name: `${template.name}${label}`,
+        role: template.ai === 'ranged' ? 'dps_ranged' : template.ai === 'defensive' ? 'tank' : 'dps_melee',
+        stats: {
+          hp: template.stats.hp, maxHp: template.stats.maxHp,
+          moveRange: template.stats.moveRange, speed: 6,
+          might: template.stats.might, power: template.stats.power,
+          defense: template.stats.defense,
+          movement: template.stats.moveRange,
+          mana: 0, maxMana: 0,
+        },
+        abilities: [],
+        passive: '',
+        position: p2Spawns[spawnIdx],
+        playerId: 1, isAlive: true, respawnTurns: 0,
+        cardUsedThisTurn: false, movedThisTurn: false,
+        hasUltimate: false, ultimateUsed: false,
+        hasRespawned: false, justRespawned: false,
+        enemyAbilities: (template.abilities ?? []) as EnemyAbilityDef[],
+        enemyAbilityCooldowns: {},
+      });
+    }
+  }
+  return icons;
+}
 
 const createInitialIcons = (): Icon[] => {
   const iconTemplates = [
@@ -287,6 +447,11 @@ type ExtState = GameState & {
   hands: [Hand, Hand];
   decks: [Deck, Deck];
   cardTargetingMode?: { card: Card; executorId: string };
+  encounterObjective: FightObjective;
+  survivalTurnsTarget: number;  // 0 if not survive
+  spawnInterval: number;        // 0 if not onslaught
+  isRoguelikeRun: boolean;
+  arenaEvent?: import('@/types/game').ArenaEventDef | null;
 };
 
 /** Remove `card` from `playerId`'s hand and put it in discard (no mid-turn replacement draw). */
@@ -313,9 +478,23 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
     // Apply roguelike run state overrides for player 0 only (AI always starts fresh)
     const runChar = pid === 0 ? runChars?.find((c) => c.id === template.id) : undefined;
     const statBonus = runChar?.statBonuses ?? { hp: 0, might: 0, power: 0, defense: 0 };
-    const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 42 : 15;
-    const baseHp  = runChar ? runChar.currentHp : template.stats.hp;
-    const maxHp   = runChar ? runChar.maxHp : template.stats.hp;
+    // Sum item stat bonuses (Iron Gauntlets +8 Might, Vitality Shard +25 HP, etc.)
+    const itemBonus = runChar?.items?.reduce((acc, item) => {
+      if (!item?.statBonus) return acc;
+      return {
+        hp:      acc.hp      + (item.statBonus.hp      ?? 0),
+        might:   acc.might   + (item.statBonus.might   ?? 0),
+        power:   acc.power   + (item.statBonus.power   ?? 0),
+        defense: acc.defense + (item.statBonus.defense ?? 0),
+      };
+    }, { hp: 0, might: 0, power: 0, defense: 0 }) ?? { hp: 0, might: 0, power: 0, defense: 0 };
+    const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 35 : 15;
+    const maxHpWithItems = (runChar ? runChar.maxHp : template.stats.hp) + itemBonus.hp;
+    // If character was at full HP before the item, scale up currentHp too (item heals to new max)
+    const baseHp = runChar
+      ? (runChar.currentHp >= runChar.maxHp ? maxHpWithItems : runChar.currentHp)
+      : template.stats.hp;
+    const maxHp = maxHpWithItems;
 
     return {
       id: `${pid}-${idx}`,
@@ -326,9 +505,9 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
         maxHp:     maxHp,
         moveRange: template.role === "tank" ? 2 : 3,
         speed:     template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : template.role === "tank" ? 3 : 4,
-        might:     template.stats.might + (statBonus.might ?? 0),
-        power:     (template.stats.power ?? 50) + (statBonus.power ?? 0),
-        defense:   baseDefense + (statBonus.defense ?? 0),
+        might:     template.stats.might + (statBonus.might ?? 0) + itemBonus.might,
+        power:     (template.stats.power ?? 50) + (statBonus.power ?? 0) + itemBonus.power,
+        defense:   baseDefense + (statBonus.defense ?? 0) + itemBonus.defense,
         movement:  template.role === "tank" ? 2 : 3,
         mana: 3,
         maxMana: 3,
@@ -377,6 +556,11 @@ function getAbilitiesForCharacter(name: string) {
     { id: "2", name: "Spartan Wall", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 2, description: "+20 Defense to all nearby allies.", damage: 0, teamDefBuff: 20 },
     { id: "ultimate", name: "THIS IS SPARTA!", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×3 damage + Demoralize nearby.", damage: 0, powerMult: 3.0 },
   ];
+  if (name.includes("Sun-sin")) return [
+    { id: "1", name: "Hwajeon / Ramming Speed", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Land: Power×1.2 at range 3, Poison. Water: Might×2.0 range 1.", damage: 0, powerMult: 1.2 },
+    { id: "2", name: "Naval Command / Broadside", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Land: +15% Might/Power to all allies. Water: Power×0.7 AoE range 3.", damage: 0 },
+    { id: "ultimate", name: "Chongtong Barrage", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Land: charge 3 hexes. Water: Power×2.5 target + Power×1.2 adjacents.", damage: 0, powerMult: 2.5 },
+  ];
   // fallback (shouldn't be reached)
   return [
     { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 5, description: "Teleport to any hex.", damage: 0, targetMode: "hex" as any },
@@ -390,6 +574,7 @@ function getPassiveForCharacter(name: string) {
   if (name.includes("Genghis")) return "Bloodlust: Each kill grants +15 Might and restores 1 Mana (up to 3×)";
   if (name.includes("Da Vinci")) return "Tinkerer: Draw +1 card at turn start if no exclusive ability was used last turn";
   if (name.includes("Leonidas")) return "Phalanx: Each turn adjacent to an ally, gain +8 Defense (stacks up to 3 turns)";
+  if (name.includes("Sun-sin")) return "Turtle Ship: Can enter water tiles. On water: +40% Might, +30% DEF, −40% Power, −1 Move, Range 3";
   return "";
 }
 
@@ -447,7 +632,10 @@ function computeAIIntents(state: ExtState): AIIntent[] {
 
     // --- 2. Basic attack if no ability ---
     if (!mainIntentSet) {
-      const inRange = enemies.find(e => hexDistance(ai.position, e.position) <= basicRange);
+      const inRange = enemies.find(e =>
+        hexDistance(ai.position, e.position) <= basicRange &&
+        !hasLineMountain(state.board, ai.position, e.position)
+      );
       if (inRange) {
         const dmg = Math.max(0, ai.stats.might - inRange.stats.defense);
         intents.push({ iconId: ai.id, type: 'attack', abilityName: 'Basic Attack',
@@ -494,12 +682,217 @@ function computeAIIntents(state: ExtState): AIIntent[] {
   return intents;
 }
 
+/** Execute enemy boss/elite abilities for one AI icon at the start of its turn. */
+function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
+  const ai = s.players[1].icons.find(i => i.id === aiId);
+  if (!ai || !ai.isAlive) return s;
+
+  const abilities = (ai.enemyAbilities ?? []) as EnemyAbilityDef[];
+  if (!abilities.length) return s;
+
+  const playerIcons = () => s.players[0].icons.filter(i => i.isAlive);
+  const cooldowns = ai.enemyAbilityCooldowns ?? {};
+  let abilitiesUsed = 0;
+  const MAX_ABILITIES_PER_TURN = 2;
+
+  for (const ab of abilities) {
+    if (abilitiesUsed >= MAX_ABILITIES_PER_TURN) break;
+
+    // Check cooldown
+    if ((cooldowns[ab.id] ?? 0) > 0) continue;
+
+    // Check trigger condition
+    if (ab.triggerCondition === 'low_hp') {
+      const hpPct = ai.stats.hp / ai.stats.maxHp;
+      if (hpPct > (ab.hpThreshold ?? 0.5)) continue;
+    }
+
+    // Check if there are valid targets
+    const hasTargets = playerIcons().length > 0;
+    if (!hasTargets) continue;
+
+    const effect = ab.effect;
+
+    if (effect.type === 'buff_self') {
+      s = {
+        ...s,
+        players: s.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => {
+            if (ic.id !== aiId) return ic;
+            return {
+              ...ic,
+              cardBuffAtk: (ic.cardBuffAtk ?? 0) + (effect.mightBonus ?? 0),
+              cardBuffDef: (ic.cardBuffDef ?? 0) + (effect.defenseBonus ?? 0),
+            };
+          }),
+        })),
+      };
+      pushLog(s, `${ai.name} used ${ab.name}!`, 1);
+      abilitiesUsed++;
+    } else if (effect.type === 'heal_self') {
+      const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
+      const newHp = Math.min(currentAi.stats.maxHp, currentAi.stats.hp + (effect.amount ?? 0));
+      s = {
+        ...s,
+        players: s.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== aiId ? ic : { ...ic, stats: { ...ic.stats, hp: newHp } }),
+        })),
+      };
+      pushLog(s, `${ai.name} used ${ab.name}, healing ${effect.amount} HP!`, 1);
+      abilitiesUsed++;
+    } else if (effect.type === 'aoe_damage') {
+      const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
+      const targets = playerIcons().filter(e => hexDistance(currentAi.position, e.position) <= (effect.range ?? 2));
+      if (!targets.length) continue;
+      const dmg = effect.damage ?? Math.round(calcEffectiveStats(s, currentAi).might * (effect.multiplier ?? 1.0));
+      for (const t of targets) {
+        const newHp = Math.round(Math.max(0, t.stats.hp - dmg));
+        s = {
+          ...s,
+          players: s.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== t.id ? ic : {
+              ...ic,
+              stats: { ...ic.stats, hp: newHp },
+              isAlive: newHp > 0,
+              respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+            }),
+          })),
+        };
+      }
+      pushLog(s, `${ai.name} used ${ab.name} for ${dmg} dmg to ${targets.length} target(s)!`, 1);
+      abilitiesUsed++;
+    } else if (effect.type === 'debuff_enemies') {
+      const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
+      const targets = playerIcons().filter(e => hexDistance(currentAi.position, e.position) <= (effect.range ?? 2));
+      if (!targets.length) continue;
+      for (const t of targets) {
+        s = {
+          ...s,
+          players: s.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => {
+              if (ic.id !== t.id) return ic;
+              const newDebuffs = [...(ic.debuffs ?? []), {
+                type: effect.debuffType as any,
+                magnitude: effect.magnitude ?? 0,
+                turnsRemaining: effect.duration ?? 2,
+              }];
+              return { ...ic, debuffs: newDebuffs };
+            }),
+          })),
+        };
+      }
+      pushLog(s, `${ai.name} used ${ab.name} on ${targets.length} target(s)!`, 1);
+      abilitiesUsed++;
+    } else if (effect.type === 'damage_all_enemies') {
+      const dmg = effect.damage ?? 0;
+      const targets = playerIcons();
+      if (!targets.length) continue;
+      for (const t of targets) {
+        const newHp = Math.round(Math.max(0, t.stats.hp - dmg));
+        s = {
+          ...s,
+          players: s.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== t.id ? ic : {
+              ...ic,
+              stats: { ...ic.stats, hp: newHp },
+              isAlive: newHp > 0,
+              respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+            }),
+          })),
+        };
+      }
+      pushLog(s, `${ai.name} used ${ab.name} — ${dmg} damage to ALL enemies!`, 1);
+      abilitiesUsed++;
+    } else if (effect.type === 'dash_attack') {
+      const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
+      const sorted = playerIcons().sort((a, b) =>
+        hexDistance(currentAi.position, a.position) - hexDistance(currentAi.position, b.position)
+      );
+      const target = sorted[0];
+      if (!target) continue;
+      // Find a free adjacent hex to teleport next to the target
+      const occupied = new Set(
+        s.players.flatMap(p => p.icons)
+          .filter(ic => ic.isAlive && ic.id !== aiId)
+          .map(ic => `${ic.position.q},${ic.position.r}`)
+      );
+      const neighbors = [
+        { q: target.position.q + 1, r: target.position.r - 1 },
+        { q: target.position.q + 1, r: target.position.r },
+        { q: target.position.q, r: target.position.r + 1 },
+        { q: target.position.q - 1, r: target.position.r + 1 },
+        { q: target.position.q - 1, r: target.position.r },
+        { q: target.position.q, r: target.position.r - 1 },
+      ].filter(p => {
+        if (occupied.has(`${p.q},${p.r}`)) return false;
+        const tile = s.board.find(t => t.coordinates.q === p.q && t.coordinates.r === p.r);
+        return tile && tile.terrain.effects.movementModifier !== -999;
+      });
+      const dest = neighbors.sort(
+        (a, b) => hexDistance(a, currentAi.position) - hexDistance(b, currentAi.position)
+      )[0];
+      if (dest && hexDistance(currentAi.position, dest) <= (effect.dashRange ?? 5)) {
+        // Teleport the AI icon
+        s = {
+          ...s,
+          players: s.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== aiId ? ic : {
+              ...ic, position: dest, movedThisTurn: true,
+            }),
+          })),
+        };
+        // Hit the target
+        const updatedAi = s.players[1].icons.find(i => i.id === aiId)!;
+        const dmg = Math.round(calcEffectiveStats(s, updatedAi).might * (effect.multiplier ?? 1.5));
+        const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
+        s = {
+          ...s,
+          players: s.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+              ...ic,
+              stats: { ...ic.stats, hp: newHp },
+              isAlive: newHp > 0,
+              respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+            }),
+          })),
+        };
+        pushLog(s, `${ai.name} used ${ab.name} on ${target.name} for ${dmg} dmg!`, 1);
+        abilitiesUsed++;
+      } else continue;
+    }
+
+    // Set cooldown after use
+    const newCooldown = ab.oncePerFight ? 999 : ab.cooldown;
+    s = {
+      ...s,
+      players: s.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== aiId ? ic : {
+          ...ic,
+          enemyAbilityCooldowns: { ...(ic.enemyAbilityCooldowns ?? {}), [ab.id]: newCooldown },
+        }),
+      })),
+    };
+  }
+
+  return s;
+}
+
 /** Execute AI turn: ALL alive AI icons move + act. Returns updated state (aiIntents cleared). */
 function executeAITurn(state: ExtState): ExtState {
   let s = { ...state } as ExtState;
   const intents: AIIntent[] = (s as any).aiIntents ?? [];
 
   for (const aiOrig of state.players[1].icons.filter(i => i.isAlive)) {
+    // Execute boss/elite abilities at the start of each enemy's turn
+    s = executeEnemyAbilities(s, aiOrig.id);
     let ai = s.players[1].icons.find(i => i.id === aiOrig.id);
     if (!ai || !ai.isAlive) continue;
 
@@ -602,7 +995,10 @@ function executeAITurn(state: ExtState): ExtState {
           }
         } else {
           // Basic attack on enemy
-          const target = enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
+          const target = enemies().find(e =>
+            hexDistance(ai!.position, e.position) <= basicRange &&
+            !hasLineMountain(s.board, ai!.position, e.position)
+          );
           if (target) {
             const dmg = resolveBasicAttackDamage(s, ai, target);
             const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
@@ -639,7 +1035,8 @@ function executeAITurn(state: ExtState): ExtState {
         .filter(ic => ic.isAlive && ic.id !== ai!.id)
         .map(ic => tileKey(ic.position.q, ic.position.r))
     );
-    const costMap = reachableWithCosts(s.board, ai.position, budget, occupied);
+    const allowRiver = ai.name.includes("Sun-sin");
+    const costMap = reachableWithCosts(s.board, ai.position, budget, occupied, allowRiver);
     if (!costMap.size) continue;
 
     let best: { coord: Coordinates; score: number } | null = null;
@@ -741,7 +1138,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       queueIndex: 0,
       objectives: {
         manaCrystal: { controlled: false },
-        beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
+        beastCamps: { hp: [0, 0], maxHp: 75, defeated: [true, true] },
       },
       teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
       baseHealth: [150, 150],
@@ -752,6 +1149,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       combatLog: [],
       hands: [hand0, hand1],
       decks: [deck0, deck1],
+      encounterObjective: 'defeat_all',
+      survivalTurnsTarget: 0,
+      spawnInterval: 0,
+      isRoguelikeRun: false,
     } as ExtState;
   });
 
@@ -825,7 +1226,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         turnTimer: 20,
         speedQueue,
         queueIndex: 0,
-        objectives: { manaCrystal: { controlled: false }, beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] } },
+        objectives: { manaCrystal: { controlled: false }, beastCamps: { hp: [0, 0], maxHp: 75, defeated: [true, true] } },
         teamBuffs: { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
         baseHealth: [150, 150],
         matchTimer: 600,
@@ -836,6 +1237,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         hands: [hand0, hand1],
         decks: [deck0, deck1],
         aiIntents: [],
+        encounterObjective: 'defeat_all',
+        survivalTurnsTarget: 0,
+        spawnInterval: 0,
+        isRoguelikeRun: false,
       } as ExtState;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -916,14 +1321,18 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           );
           if (occupied) { toast.error("Tile is occupied!"); return prev; }
 
+          const dronePower = executor.stats.power;
+          const droneHp   = Math.round(dronePower * 1.0);
+          const droneMight = Math.round(dronePower * 0.6);
+          const droneDef   = Math.round(dronePower * 0.6);
           const drone: Icon = {
             id: `drone_${makeId()}`,
             name: "Combat Drone",
             role: "dps_melee",
             stats: {
-              hp: 50, maxHp: 50,
+              hp: droneHp, maxHp: droneHp,
               moveRange: 2, speed: 5,
-              might: 15, power: 15, defense: 30,
+              might: droneMight, power: dronePower, defense: droneDef,
               movement: 2, mana: 3, maxMana: 3,
             },
             abilities: [],
@@ -1147,6 +1556,42 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             updated = applyGenghisKill(updated, executorId, wasAlive, newHp <= 0);
             const hitLabel = multiHit > 1 ? `${multiHit}×${(totalDmg/multiHit).toFixed(0)}` : totalDmg.toFixed(0);
             pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${hitLabel} dmg`, executor.playerId);
+
+            // Pushback: knock target away from executor
+            if (card.effect.pushback && newHp > 0) {
+              const DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+              const dq = targetIcon.position.q - executor.position.q;
+              const dr = targetIcon.position.r - executor.position.r;
+              const dir = DIRS.reduce((best, d) =>
+                (dq * d.q + dr * d.r) > (dq * best.q + dr * best.r) ? d : best
+              );
+              for (let step = 0; step < card.effect.pushback; step++) {
+                const pushed = updated.players.flatMap(p => p.icons).find(ic => ic.id === targetIcon.id);
+                if (!pushed || !pushed.isAlive) break;
+                const dest = { q: pushed.position.q + dir.q, r: pushed.position.r + dir.r };
+                const destTile = updated.board.find(t => t.coordinates.q === dest.q && t.coordinates.r === dest.r);
+                const isOccupied = updated.players.flatMap(p => p.icons).some(
+                  ic => ic.id !== pushed.id && ic.isAlive && ic.position.q === dest.q && ic.position.r === dest.r
+                );
+                if (!destTile || isOccupied) break;
+                if (destTile.terrain.type === 'river') {
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== pushed.id ? ic : {
+                      ...ic, position: dest, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4,
+                    }),
+                  }));
+                  pushLog(updated, `${pushed.name} was knocked into the river!`, executor.playerId);
+                  break;
+                }
+                if (destTile.terrain.effects.movementModifier === -999) break; // impassable (mountain, base)
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== pushed.id ? ic : { ...ic, position: dest }),
+                }));
+                pushLog(updated, `${pushed.name} was pushed back!`, executor.playerId);
+              }
+            }
           } else {
             if (isOwnBase) { toast.error("Can't attack your own base!"); return prev; }
             const isBase = (coordinates.q === -6 && coordinates.r === 5) || (coordinates.q === 6 && coordinates.r === -5);
@@ -1208,10 +1653,14 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           updated.globalMana = newMana;
         }
 
-        // Set cardUsedThisTurn on executor
+        // Set cardUsedThisTurn on executor + increment 3-card counter
         updated.players = updated.players.map(p => ({
           ...p,
-          icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+          icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+            ...ic,
+            cardUsedThisTurn: true,
+            cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1,
+          }),
         }));
         updated = consumeCardFromHand(updated, card, executor.playerId);
         return { ...updated, baseHealth: updatedBaseHealth, objectives: updatedObjectives, cardTargetingMode: undefined, targetingMode: undefined };
@@ -1231,6 +1680,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         const caster = state.players.flatMap(p => p.icons).find(i => i.id === state.targetingMode!.iconId) ?? me;
         const { range, abilityId } = state.targetingMode;
         if (hexDistance(caster.position, coordinates) > range) return prev;
+        if (hasLineMountain(state.board, caster.position, coordinates)) {
+          toast.error("A mountain blocks line of sight!");
+          return prev;
+        }
 
         const targetIcon = state.players
           .flatMap((p) => p.icons)
@@ -1493,7 +1946,14 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
       const dest = state.board.find((t) => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
       if (!dest) return prev;
-      if (dest.terrain.effects.movementModifier === -999) return prev;
+      if (dest.terrain.effects.movementModifier === -999) {
+        // Sun-sin (Turtle Ship passive) can enter river tiles
+        if (me.name.includes("Sun-sin") && dest.terrain.type === 'river') {
+          // allow — don't return
+        } else {
+          return prev;
+        }
+      }
 
       // Block movement onto any tile that has an icon — alive OR dead (prevents sliding onto a just-killed enemy's tile)
       const occupied = state.players.flatMap((p) => p.icons).some(
@@ -1505,7 +1965,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const occupiedKeys = new Set(
         state.players.flatMap((p) => p.icons).filter((ic) => ic.isAlive && ic.id !== me.id).map((ic) => tileKey(ic.position.q, ic.position.r))
       );
-      const costMap = reachableWithCosts(state.board, me.position, budget, occupiedKeys);
+      const allowRiver = me.name.includes("Sun-sin");
+      const costMap = reachableWithCosts(state.board, me.position, budget, occupiedKeys, allowRiver);
       const destKey = tileKey(coordinates.q, coordinates.r);
       const moveCost = costMap.get(destKey);
       if (moveCost === undefined) return prev;
@@ -1577,8 +2038,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
       // Napoleon Vantage Point passive: basic attack range 3 on forest (no DEF bonus trade-off)
       const onForest = prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type === "forest";
+      const onRiver = prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type === "river";
       const isRanged = me.name.includes("Napoleon") || me.name.includes("Da Vinci");
-      const range = me.name.includes("Napoleon") && onForest ? 3 : isRanged ? 2 : 1;
+      const range = me.name.includes("Napoleon") && onForest ? 3
+        : me.name.includes("Sun-sin") && onRiver ? 3
+        : isRanged ? 2 : 1;
       return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
     });
   }, []);
@@ -1619,12 +2083,16 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const isDemoralized = ic.isAlive && ic.debuffs?.some(d => d.type === 'demoralize');
             const demoSkip = isDemoralized && Math.random() < 0.5;
             if (demoSkip) pushLog(prev as any, `${ic.name} is Demoralized — frozen this turn! (cannot move or play cards)`, nextPlayer);
+            // Sun-sin Turtle Ship: on river tile, movement capped at 1
+            const sunsinOnRiver = ic.name.includes("Sun-sin") && ic.isAlive &&
+              prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r)?.terrain.type === 'river';
+            const baseMove = demoSkip ? 0 : Math.max(0, ic.stats.moveRange - moveReduction);
             return {
               ...ic,
               cardBuffAtk: 0,
               cardBuffDef: 0,
               cardsUsedThisTurn: demoSkip ? 3 : 0,
-              stats: { ...ic.stats, movement: demoSkip ? 0 : Math.max(0, ic.stats.moveRange - moveReduction) },
+              stats: { ...ic.stats, movement: sunsinOnRiver ? Math.min(1, baseMove) : baseMove },
             };
           }
           return ic;
@@ -1660,6 +2128,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           icons: player.icons.map((ic) => {
             // Respawn if: dead, countdown at 0, base still alive
             if (!ic.isAlive && ic.respawnTurns === 0) {
+              // In roguelike runs: player 0 characters never respawn (permadeath)
+              if ((prev as ExtState).isRoguelikeRun && player.id === 0) return ic;
+              // Enemies only respawn in destroy_base objective
+              if (player.id === 1 && (prev as ExtState).encounterObjective !== 'destroy_base') return ic;
               const baseAlive = (prev.baseHealth[player.id] ?? 0) > 0;
               if (!baseAlive) return ic;
               const free = findFreeSpawnTile(
@@ -1723,13 +2195,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }
       }
 
-      // River kill: any character standing on a river tile at end of turn drowns
+      // River kill: any character standing on a river tile at end of turn drowns (Sun-sin is immune)
       playersAfter = playersAfter.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
           if (!ic.isAlive) return ic;
           const tile = prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r);
-          if (tile?.terrain.type === 'river') {
+          if (tile?.terrain.type === 'river' && !ic.name.includes("Sun-sin")) {
             pushLog({ ...prev, players: playersAfter } as any, `${ic.name} drowned in the river!`, ic.playerId);
             return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
           }
@@ -1744,6 +2216,160 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         icons: p.icons.filter(ic => !ic.droneExpiresTurn || ic.droneExpiresTurn > newCurrentTurn),
       }));
 
+      // ── Arena Events (single-player runs only, starting turn 3, ~35% chance per round) ──
+      const extPrevArena = prev as ExtState;
+      let arenaEvent: import('@/types/game').ArenaEventDef | null = null;
+      if (extPrevArena.isRoguelikeRun && nextPlayer === 0 && newCurrentTurn >= 3) {
+        if (Math.random() < 0.35) {
+          const ALL_EVENTS: import('@/types/game').ArenaEventDef[] = [
+            { id: 'gravity_surge', name: 'Gravity Surge', icon: '🌀', description: 'Gravitational anomaly! All units gain +2 Movement this round.' },
+            { id: 'mana_surge',    name: 'Mana Surge',    icon: '💎', description: 'Mana wells overflow! Both teams gain +2 bonus mana.' },
+            { id: 'forest_fire',   name: 'Forest Fire',   icon: '🔥', description: 'The arena ignites! Units standing on forest tiles take 15 damage.' },
+            { id: 'laser_grid',    name: 'Laser Grid',    icon: '⚡', description: 'Znyxorga activates the defense grid! Up to 3 units are struck for 25 damage.' },
+            { id: 'alien_tide',    name: 'Alien Tide',    icon: '🌊', description: 'Reinforcements pour in! A new enemy unit enters the arena.' },
+            { id: 'gravity_well',  name: 'Gravity Well',  icon: '⬇️', description: 'A gravity well forms at the center! All units are pulled 2 hexes toward the arena\'s heart.' },
+          ];
+          arenaEvent = ALL_EVENTS[Math.floor(Math.random() * ALL_EVENTS.length)];
+          pushLog(prev as any, `🌌 ARENA EVENT: ${arenaEvent.name} — ${arenaEvent.description}`, 0);
+
+          if (arenaEvent.id === 'gravity_surge') {
+            playersAfter = playersAfter.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => !ic.isAlive ? ic : {
+                ...ic, stats: { ...ic.stats, movement: ic.stats.movement + 2 },
+              }),
+            }));
+          } else if (arenaEvent.id === 'mana_surge') {
+            mana[0] = Math.min(10, mana[0] + 2);
+            mana[1] = Math.min(10, mana[1] + 2);
+            maxMana[0] = Math.max(maxMana[0], mana[0]);
+            maxMana[1] = Math.max(maxMana[1], mana[1]);
+          } else if (arenaEvent.id === 'forest_fire') {
+            playersAfter = playersAfter.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => {
+                if (!ic.isAlive) return ic;
+                const tile = prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r);
+                if (tile?.terrain.type !== 'forest') return ic;
+                const newHp = Math.max(0, ic.stats.hp - 15);
+                pushLog(prev as any, `🔥 ${ic.name} takes 15 fire damage (Forest Fire)`, ic.playerId);
+                if (newHp <= 0) return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
+                return { ...ic, stats: { ...ic.stats, hp: newHp } };
+              }),
+            }));
+          } else if (arenaEvent.id === 'laser_grid') {
+            const allAlive = playersAfter.flatMap(p => p.icons).filter(ic => ic.isAlive);
+            const shuffled = [...allAlive].sort(() => Math.random() - 0.5);
+            const targets = shuffled.slice(0, Math.min(3, allAlive.length));
+            const struckIds = new Set(targets.map(ic => ic.id));
+            playersAfter = playersAfter.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => {
+                if (!struckIds.has(ic.id)) return ic;
+                const newHp = Math.max(0, ic.stats.hp - 25);
+                pushLog(prev as any, `⚡ ${ic.name} is struck by the Laser Grid! (−25 HP)`, ic.playerId);
+                if (newHp <= 0) return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
+                return { ...ic, stats: { ...ic.stats, hp: newHp } };
+              }),
+            }));
+          } else if (arenaEvent.id === 'alien_tide') {
+            // Spawn a clone of a random alive enemy at a free spawn point
+            const p2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
+            const allIcons = playersAfter.flatMap(p => p.icons);
+            const freeSpawn = p2Spawns.find(pos =>
+              !allIcons.some(ic => ic.isAlive && ic.position.q === pos.q && ic.position.r === pos.r)
+            );
+            const aliveEnemies = playersAfter[1]?.icons.filter(i => i.isAlive) ?? [];
+            const template = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+            if (freeSpawn && template) {
+              const newEnemy: Icon = {
+                ...template,
+                id: `1-tide-${newCurrentTurn}-${Math.random().toString(36).slice(2)}`,
+                position: freeSpawn,
+                stats: { ...template.stats, hp: Math.ceil(template.stats.maxHp * 0.7), movement: template.stats.moveRange },
+                isAlive: true, respawnTurns: 0, movedThisTurn: false, cardUsedThisTurn: false,
+                enemyAbilityCooldowns: {},
+              };
+              playersAfter = playersAfter.map(p => p.id !== 1 ? p : { ...p, icons: [...p.icons, newEnemy] });
+            }
+          } else if (arenaEvent.id === 'gravity_well') {
+            // Pull all alive icons 2 hexes toward center (0,0)
+            const allAliveIds = new Set(playersAfter.flatMap(p => p.icons).filter(ic => ic.isAlive).map(ic => ic.id));
+            // Helper: hex distance from origin
+            const hdist = (q: number, r: number) => (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2;
+            // Helper: find neighbor 1 step closer to (0,0)
+            const pullStep = (q: number, r: number): { q: number; r: number } => {
+              if (q === 0 && r === 0) return { q, r };
+              const dirs = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+              const cur = hdist(q, r);
+              const best = dirs.reduce<{q:number;r:number}|null>((b, d) => {
+                const nq = q + d.q, nr = r + d.r;
+                const nd = hdist(nq, nr);
+                if (nd >= cur) return b;
+                return !b || nd < hdist(q + b.q, r + b.r) ? d : b;
+              }, null);
+              return best ? { q: q + best.q, r: r + best.r } : { q, r };
+            };
+            // Move each icon 2 steps (two separate pulls, re-check occupancy each step)
+            for (let step = 0; step < 2; step++) {
+              const occupiedPos = new Map<string, string>(); // key → iconId
+              playersAfter.flatMap(p => p.icons).filter(ic => ic.isAlive).forEach(ic => {
+                occupiedPos.set(tileKey(ic.position.q, ic.position.r), ic.id);
+              });
+              playersAfter = playersAfter.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => {
+                  if (!ic.isAlive || !allAliveIds.has(ic.id)) return ic;
+                  const dest = pullStep(ic.position.q, ic.position.r);
+                  const destKey = tileKey(dest.q, dest.r);
+                  const destTile = prev.board.find(t => t.coordinates.q === dest.q && t.coordinates.r === dest.r);
+                  // Don't pull into impassable terrain (mountains, bases, crystals) or occupied hexes
+                  if (!destTile) return ic;
+                  const impassable = destTile.terrain.effects.movementModifier === -999 ||
+                    destTile.terrain.type === 'mountain';
+                  if (impassable) return ic;
+                  const blockedBy = occupiedPos.get(destKey);
+                  if (blockedBy && blockedBy !== ic.id) return ic;
+                  // River → drown
+                  if (destTile.terrain.type === 'river') {
+                    pushLog(prev as any, `${ic.name} is pulled into the river by the Gravity Well!`, ic.playerId);
+                    return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
+                  }
+                  occupiedPos.set(destKey, ic.id);
+                  return { ...ic, position: dest };
+                }),
+              }));
+            }
+          }
+        }
+      }
+
+      // Onslaught: spawn a new enemy every spawnInterval turns
+      const extPrev = prev as ExtState;
+      if (extPrev.encounterObjective === 'onslaught' && extPrev.spawnInterval > 0 && nextPlayer === 0) {
+        if (newCurrentTurn % extPrev.spawnInterval === 0) {
+          const p2Spawns = [{ q: 4, r: -3 }, { q: 4, r: -2 }, { q: 3, r: -3 }];
+          const freeSpawn = p2Spawns.find(pos =>
+            !playersAfter.flatMap(p => p.icons).some(ic => ic.isAlive && ic.position.q === pos.q && ic.position.r === pos.r)
+          );
+          if (freeSpawn) {
+            const aliveEnemies = playersAfter[1].icons.filter(i => i.isAlive);
+            const template = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+            if (template) {
+              const newEnemy: Icon = {
+                ...template,
+                id: `1-wave-${newCurrentTurn}-${Math.random().toString(36).slice(2)}`,
+                position: freeSpawn,
+                stats: { ...template.stats, hp: template.stats.maxHp, movement: template.stats.moveRange },
+                isAlive: true, respawnTurns: 0, movedThisTurn: false, cardUsedThisTurn: false,
+              };
+              playersAfter = playersAfter.map(p => p.id !== 1 ? p : { ...p, icons: [...p.icons, newEnemy] });
+              pushLog(prev as any, `Onslaught! A new enemy has arrived!`, 1);
+            }
+          }
+        }
+      }
+
       // Victory check — all characters of a team simultaneously defeated = instant game over
       const p0Alive = playersAfter[0].icons.some((ic) => ic.isAlive);
       const p1Alive = playersAfter[1].icons.some((ic) => ic.isAlive);
@@ -1753,6 +2379,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       else if (!p1Alive) { newPhase = "victory"; winner = 0; }
       if (prev.baseHealth[0] <= 0) { newPhase = "defeat";  winner = 1; }
       if (prev.baseHealth[1] <= 0) { newPhase = "victory"; winner = 0; }
+      // Survive objective: win once enough turns have passed
+      if (extPrev.encounterObjective === 'survive' && extPrev.survivalTurnsTarget > 0) {
+        if (newCurrentTurn > extPrev.survivalTurnsTarget && p0Alive) { newPhase = "victory"; winner = 0; }
+      }
 
       // Tick down debuffs on all icons (every turn end; expire at 0)
       playersAfter = playersAfter.map(p => ({
@@ -1763,6 +2393,19 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             .map(d => ({ ...d, turnsRemaining: d.turnsRemaining - 1 }))
             .filter(d => d.turnsRemaining > 0);
           return { ...ic, debuffs: newDebuffs };
+        }),
+      }));
+
+      // Tick enemy ability cooldowns (decrement by 1, min 0)
+      playersAfter = playersAfter.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (ic.playerId !== 1 || !ic.enemyAbilityCooldowns) return ic;
+          const ticked: Record<string, number> = {};
+          for (const [k, v] of Object.entries(ic.enemyAbilityCooldowns)) {
+            ticked[k] = Math.max(0, v - 1);
+          }
+          return { ...ic, enemyAbilityCooldowns: ticked };
         }),
       }));
 
@@ -1832,6 +2475,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         movementStack: {},
         phase: newPhase,
         winner,
+        arenaEvent,
         ...(hands && { hands }),
         ...(decks && { decks }),
       } as ExtState;
@@ -1905,9 +2549,9 @@ const playCard = useCallback((card: Card, executorId: string) => {
       };
     }
 
-    // Flying Machine card → teleport targeting
+    // Flying Machine card → teleport targeting (range scales with Power)
     if (card.effect.teleport) {
-      const range = card.effect.range ?? 5;
+      const range = Math.floor(executor.stats.power / 10);
       return {
         ...state,
         cardTargetingMode: { card, executorId },
@@ -2167,18 +2811,33 @@ const goToMainMenu = useCallback(() => {
   setGameState((prev) => ({ ...prev, menuOpen: false, phase: "menu" as any }));
 }, []);
 
-const startBattle = useCallback((runChars?: CharacterRunState[], deckCardIds?: string[]) => {
+const startBattle = useCallback((
+  runChars?: CharacterRunState[],
+  deckCardIds?: string[],
+  encounter?: EncounterDef | null,
+  mapSeed?: number,
+  isRoguelikeRun?: boolean,
+) => {
   const sel = selectedCharactersRef.current;
   if (!sel || sel.length === 0) return;
   setGameState(() => {
-    const initialIcons = buildIconsFromSelection(sel, runChars);
-    const speedQueueRaw = initSpeedQueue(initialIcons);
-    const speedQueue    = normalizeSpeedQueue(speedQueueRaw, initialIcons);
-    const p0Names = initialIcons.filter(i => i.playerId === 0).map(i => i.name);
-    const p1Names = initialIcons.filter(i => i.playerId === 1).map(i => i.name);
+    // Player 0 icons — exclude permanently dead chars
+    const aliveSelected = runChars
+      ? sel.filter(s => (runChars.find(c => c.id === s.id)?.currentHp ?? 1) > 0)
+      : sel;
+    const p0Icons = buildIconsFromSelection(aliveSelected, runChars).filter(i => i.playerId === 0);
+    // Player 1 icons — from encounter (roguelike) or mirror player (standard)
+    const p1Icons = encounter
+      ? buildEnemyIconsFromEncounter(encounter)
+      : buildIconsFromSelection(sel, runChars).filter(i => i.playerId === 1);
+    const allIcons = [...p0Icons, ...p1Icons];
+
+    const speedQueueRaw = initSpeedQueue(allIcons);
+    const speedQueue    = normalizeSpeedQueue(speedQueueRaw, allIcons);
+    const p0Names = p0Icons.map(i => i.name);
+    const p1Names = p1Icons.map(i => i.name);
     const buildHand = (names: string[], ids?: string[]): [Hand, Deck] => {
       const allCards = ids ? buildDeckFromIds(ids) : buildDeckForTeam(names);
-      // Compute hand size bonus from run items
       const handSizeBonus = (runChars ?? []).reduce((sum, c) => {
         return sum + c.items.filter(Boolean).reduce((s, item) => {
           if (item?.passiveTag === 'hand_size_plus_1') return s + 1;
@@ -2190,17 +2849,28 @@ const startBattle = useCallback((runChars?: CharacterRunState[], deckCardIds?: s
       return [{ cards: allCards.slice(0, maxSize), maxSize }, { drawPile: allCards.slice(maxSize), discardPile: [] }];
     };
     const [hand0, deck0] = buildHand(p0Names, deckCardIds);
-    const [hand1, deck1] = buildHand(p1Names); // AI has no roguelike deck
+    const [hand1, deck1] = buildHand(p1Names);
+    // Use random map for first battle (when mapSeed provided), else standard map
+    const rawBoard = mapSeed != null ? generateRandomBattleBoard(mapSeed) : createInitialBoard();
+    const rogueObjective = (encounter?.objective ?? 'defeat_all') as FightObjective;
+    // Remove base + spawn tiles when objective isn't destroy_base (roguelike — no respawning)
+    const board = (isRoguelikeRun && rogueObjective !== 'destroy_base')
+      ? rawBoard.map(tile =>
+          (tile.terrain.type === 'base' || tile.terrain.type === 'spawn')
+            ? { ...tile, terrain: { type: 'plain' as const, effects: {} } }
+            : tile
+        )
+      : rawBoard;
     return {
       currentTurn: 1,
       activePlayerId: 0 as const,
       cardLockActive: false,
       phase: "combat",
       players: [
-        { id: 0, name: "Player 1",                                              icons: initialIcons.filter(i => i.playerId === 0), color: "blue", isAI: false },
-        { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: initialIcons.filter(i => i.playerId === 1), color: "red",  isAI: gameMode === "singleplayer" },
+        { id: 0, name: "Player 1",                                                icons: p0Icons, color: "blue", isAI: false },
+        { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: p1Icons, color: "red",  isAI: gameMode === "singleplayer" },
       ],
-      board:        createInitialBoard(),
+      board,
       globalMana:   [5, 5],
       globalMaxMana:[5, 5],
       turnTimer:    20,
@@ -2208,7 +2878,10 @@ const startBattle = useCallback((runChars?: CharacterRunState[], deckCardIds?: s
       queueIndex:   0,
       objectives: {
         manaCrystal: { controlled: false },
-        beastCamps:  { hp: [75, 75], maxHp: 75, defeated: [false, false] },
+        // No beast camps when using encounter enemies (random map / first battle)
+        beastCamps: encounter
+          ? { hp: [0, 0], maxHp: 75, defeated: [true, true] }
+          : { hp: [75, 75], maxHp: 75, defeated: [false, false] },
       },
       teamBuffs:   { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
       baseHealth:  [150, 150],
@@ -2220,6 +2893,10 @@ const startBattle = useCallback((runChars?: CharacterRunState[], deckCardIds?: s
       hands:       [hand0, hand1],
       decks:       [deck0, deck1],
       aiIntents:   [],
+      encounterObjective: (encounter?.objective ?? 'defeat_all') as FightObjective,
+      survivalTurnsTarget: encounter?.survivalTurns ?? 0,
+      spawnInterval: encounter?.spawnInterval ?? 0,
+      isRoguelikeRun: isRoguelikeRun ?? false,
     } as ExtState;
   });
 }, [gameMode]);

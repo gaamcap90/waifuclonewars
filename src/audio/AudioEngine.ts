@@ -1,4 +1,4 @@
-import { SFX, MUSIC } from './sounds';
+import { SFX, MUSIC, CHARACTER_THEMES } from './sounds';
 
 export interface AudioSettings {
   musicVolume: number; // 0–1
@@ -42,6 +42,8 @@ class AudioEngine {
   private settings: AudioSettings = loadSettings();
   private currentMusic: HTMLAudioElement | null = null;
   private currentMusicKey: string | null = null;
+  private themeAudio: HTMLAudioElement | null = null;
+  private themeStopTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners: Set<() => void> = new Set();
 
   getSettings(): AudioSettings {
@@ -104,6 +106,48 @@ class AudioEngine {
       this.currentMusic.src = '';
       this.currentMusic = null;
       this.currentMusicKey = null;
+    }
+  }
+
+  /** Play a character's theme clip (startSec → endSec). Stops any background music first. */
+  playTheme(characterId: string) {
+    const def = CHARACTER_THEMES[characterId];
+    if (!def) return;
+    // Don't restart if already playing this theme
+    if (this.themeAudio && !this.themeAudio.paused && this.themeAudio.dataset.charId === characterId) return;
+    this.stopTheme();
+    this.stopMusic(); // stop background music while theme plays
+    try {
+      const audio = new Audio(def.src);
+      audio.dataset.charId = characterId;
+      audio.volume = this.settings.muted ? 0 : this.settings.musicVolume;
+      audio.currentTime = def.startSec;
+      audio.play().catch(() => {});
+      this.themeAudio = audio;
+      // Loop: when clip reaches endSec, stop it and restart cleanly from startSec
+      const durationMs = (def.endSec - def.startSec) * 1000;
+      this.themeStopTimer = setTimeout(() => {
+        // Pause and discard the current audio element before restarting
+        if (this.themeAudio) {
+          this.themeAudio.pause();
+          this.themeAudio.src = '';
+          this.themeAudio = null;
+        }
+        this.themeStopTimer = null;
+        this.playTheme(characterId);
+      }, durationMs);
+    } catch { /* ignore */ }
+  }
+
+  stopTheme() {
+    if (this.themeStopTimer !== null) {
+      clearTimeout(this.themeStopTimer);
+      this.themeStopTimer = null;
+    }
+    if (this.themeAudio) {
+      this.themeAudio.pause();
+      this.themeAudio.src = '';
+      this.themeAudio = null;
     }
   }
 }

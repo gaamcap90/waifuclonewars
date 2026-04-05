@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { audioEngine } from "@/audio/AudioEngine";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
@@ -28,11 +29,12 @@ interface Props {
   gameMode: "singleplayer" | "multiplayer";
 }
 
-const portraits: Record<"Napoleon" | "Genghis" | "DaVinci" | "Leonidas", string> = {
+const portraits: Record<"Napoleon" | "Genghis" | "DaVinci" | "Leonidas" | "Sunsin", string> = {
   Napoleon: "/art/napoleon_portrait.png",
   Genghis: "/art/genghis_portrait.png",
   DaVinci: "/art/davinci_portrait.png",
   Leonidas: "/art/leonidas_portrait.png",
+  Sunsin: "/art/sunsin_portrait.jpg",
 };
 
 function getPortrait(name: string) {
@@ -40,6 +42,7 @@ function getPortrait(name: string) {
   if (name.includes("Genghis")) return portraits.Genghis;
   if (name.includes("Da Vinci")) return portraits.DaVinci;
   if (name.includes("Leonidas")) return portraits.Leonidas;
+  if (name.includes("Sun-sin")) return portraits.Sunsin;
   return undefined;
 }
 
@@ -101,7 +104,7 @@ const AVAILABLE: Character[] = [
     name: "Leonidas-chan",
     tagline: "Defender of the Thermopylae Gate",
     role: "tank",
-    stats: { hp: 130, might: 45, power: 20 },
+    stats: { hp: 130, might: 40, power: 20 },
     badges: [
       { kind: "passive",  icon: "🛡️", name: "Phalanx",         desc: "Each turn adjacent to an ally: +8 Defense (stacks up to 3 turns, max +24). Build the wall by staying close." },
       { kind: "ability",  icon: "⚡", name: "Shield Bash",      desc: "1.5× Power (30 dmg) at range 1 + Armor Break (−20% DEF for 2 turns). (Cost: 2 mana)" },
@@ -109,16 +112,38 @@ const AVAILABLE: Character[] = [
       { kind: "ultimate", icon: "⭐", name: "THIS IS SPARTA!",  desc: "ULTIMATE — Charge 3 hexes: 3× Power (60 dmg) to target + Demoralize all adjacent enemies 1t (50% skip turn). (Cost: 3 mana, exhaust)" },
     ],
   },
+  {
+    id: "sunsin",
+    name: "Sun-sin-chan",
+    tagline: "Admiral of the Turtle Fleet",
+    role: "dps_melee",
+    stats: { hp: 100, might: 65, power: 60 },
+    badges: [
+      { kind: "passive",  icon: "🐢", name: "Turtle Ship",        desc: "Can move onto water tiles. On water: +40% Might, +30% Defense, −40% Power, −1 Movement, Range 3 basic attacks. On land: balanced stats, Range 1." },
+      { kind: "ability",  icon: "🔥", name: "Hwajeon / Ramming",  desc: "Land — Power×1.2 at range 3, pushes target back 1 hex. Water — Might×2.0 at range 1, pushes target back 1 hex. (Cost: 2 mana)" },
+      { kind: "ability",  icon: "🚢", name: "Naval Command / Broadside", desc: "Land — +15% Might & Power to allies for 2 turns. Water — Power×0.7 to all enemies in range 3. (Cost: 3 mana)" },
+      { kind: "ultimate", icon: "⭐", name: "Chongtong Barrage",  desc: "ULTIMATE — Land: charge 3 hexes, Power×1.0 to enemies in path. Water: target area at range 5 — main target Power×2.5, all adjacents Power×1.2. (Cost: 3 mana, exhaust)" },
+    ],
+  },
 ];
 
 export default function CharacterSelection({ onStartGame, onBack }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const selected = useMemo(
     () => AVAILABLE.filter((c) => selectedIds.includes(c.id)),
     [selectedIds]
   );
   const maxed = selectedIds.length >= 3;
+
+  // Play character theme when hovering a card (switches immediately on new char)
+  useEffect(() => {
+    if (hoveredId) audioEngine.playTheme(hoveredId);
+  }, [hoveredId]);
+
+  // Stop theme when unmounting (navigating away)
+  useEffect(() => () => { audioEngine.stopTheme(); }, []);
 
   const toggle = (id: string) => {
     setSelectedIds((prev) =>
@@ -165,7 +190,8 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
             return (
               <button
                 key={c.id}
-                onClick={() => toggle(c.id)}
+                onClick={() => { toggle(c.id); audioEngine.playTheme(c.id); }}
+                onMouseEnter={() => setHoveredId(c.id)}
                 aria-pressed={picked}
                 disabled={disabled}
                 className={[

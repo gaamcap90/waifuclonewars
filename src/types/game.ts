@@ -51,6 +51,8 @@ export interface Icon {
   passiveStacks?: number;       // Genghis Bloodlust kill stacks (0–3)
   abilityUsedThisTurn?: boolean; // Da Vinci Tinkerer: tracks if an exclusive ability card was played
   cardsUsedThisTurn?: number;   // Cards played this turn (max 3)
+  enemyAbilityCooldowns?: Record<string, number>; // cooldown tracker for enemy boss abilities
+  enemyAbilities?: import('@/types/roguelike').EnemyAbilityDef[]; // boss/elite ability definitions
 }
 
 export interface Ability {
@@ -103,6 +105,7 @@ export interface EffectValues {
   debuffType?: DebuffType;      // debuff card — applies a Debuff to the target
   debuffMagnitude?: number;     // magnitude of the applied debuff
   debuffDuration?: number;      // turns the debuff lasts
+  pushback?: number;            // push target N hexes away from attacker (1 = 1 hex)
 }
 
 export interface Card {
@@ -177,6 +180,14 @@ export interface GameState {
   hand?: Hand;   // Active player's current hand
   deck?: Deck;   // Active player's draw/discard piles
   aiIntents?: AIIntent[]; // What each AI character plans to do this round (visible during player's turn)
+  arenaEvent?: ArenaEventDef | null; // Event that triggered at the start of this round
+}
+
+export interface ArenaEventDef {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
 }
 
 export interface Player {
