@@ -182,7 +182,7 @@ export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMe
 
           {/* Footer */}
           <div className="mt-10 text-slate-700 text-[11px] font-orbitron tracking-widest">
-            v0.05 · WAIFU CLONE WARS
+            v0.12 · WAIFU CLONE WARS
           </div>
         </div>
       </div>
