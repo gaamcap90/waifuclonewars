@@ -21,15 +21,34 @@ export const SFX: Record<string, string> = {
   defeat: '/audio/sfx/defeat.ogg',
 };
 
+// Legacy key map (used by Index.tsx playMusic calls)
 export const MUSIC: Record<string, string> = {
   menu: '/audio/music/main_theme.mp3',
   battle: '/audio/music/battle_theme.mp3',
 };
 
-// Character theme clips: { src, startSec, endSec }
+// Full playlist — order determines auto-advance sequence
+export interface TrackDef {
+  id: string;
+  name: string;
+  src: string;
+}
+
+export const PLAYLIST: TrackDef[] = [
+  { id: 'main_theme', name: 'Main Theme', src: '/audio/music/main_theme.mp3' },
+  { id: 'battle', name: 'Welcome to the Arena', src: '/audio/music/battle_theme.mp3' },
+  { id: 'napoleon', name: 'Marseillaise Cosmique', src: '/audio/napoleon_theme.webm' },
+  { id: 'sunsin', name: '별빛 아리랑', src: '/audio/sunsin_theme.mp3' },
+  { id: 'genghis', name: 'Daughter of the Endless Steppe', src: '/audio/genghis_theme.mp3' },
+  { id: 'davinci', name: 'Aria della Mente Infinita', src: '/audio/leonardo_theme.mp3' },
+  { id: 'leonidas', name: 'Ἢ τᾶν', src: '/audio/leonidas_theme.mp3' },
+];
+
+// Character theme clips: { src, startSec, endSec } — used only in Historical Archives preview
 export const CHARACTER_THEMES: Record<string, { src: string; startSec: number; endSec: number }> = {
   napoleon: { src: '/audio/napoleon_theme.webm', startSec: 22, endSec: 80 },
-  genghis: { src: '/audio/genghis_theme.mp3', startSec: 56, endSec: 82 },
-  leonidas: { src: '/audio/leonidas_theme.mp3', startSec: 181, endSec: 208 },
-  davinci: { src: '/audio/leonardo_theme.mp3', startSec: 121.5, endSec: 168 }
+  genghis: { src: '/audio/genghis_theme.mp3', startSec: 56, endSec: 103 },
+  leonidas: { src: '/audio/leonidas_theme.mp3', startSec: 78, endSec: 138 },
+  davinci: { src: '/audio/leonardo_theme.mp3', startSec: 121.5, endSec: 168 },
+  sunsin: { src: '/audio/sunsin_theme.mp3', startSec: 43, endSec: 107 },
 };

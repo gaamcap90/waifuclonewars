@@ -1,19 +1,13 @@
 import React from "react";
 import { Icon } from "@/types/game";
 import { Button } from "@/components/ui/button";
+import { getCharacterPortrait } from "@/utils/portraits";
 
 interface RespawnUIProps {
   deadCharacters: Icon[];
   onRespawn: (iconId: string) => void;
   isMyTurn: boolean;
 }
-
-const getCharacterPortrait = (name: string) => {
-  if (name.includes("Napoleon")) return "/art/napoleon_portrait.png";
-  if (name.includes("Genghis")) return "/art/genghis_portrait.png";
-  if (name.includes("Da Vinci")) return "/art/davinci_portrait.png";
-  return null;
-};
 
 const RespawnUI = ({ deadCharacters, onRespawn, isMyTurn }: RespawnUIProps) => {
   return (

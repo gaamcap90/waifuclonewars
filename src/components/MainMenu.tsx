@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import ArenaBackground from "@/ui/ArenaBackground";
+import { useT } from "@/i18n";
+import MusicPlayer from "@/components/MusicPlayer";
 
 interface MainMenuProps {
   onStartGame: (mode: "singleplayer" | "multiplayer") => void;
   onArchives?: () => void;
   onSettings?: () => void;
+  onRules?: () => void;
 }
-
 
 interface NavItem {
   id: string;
@@ -18,46 +20,55 @@ interface NavItem {
   action?: () => void;
 }
 
-export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMenuProps) {
+export default function MainMenu({ onStartGame, onArchives, onSettings, onRules }: MainMenuProps) {
   const [hovered, setHovered] = useState<string | null>(null);
+  const { t } = useT();
 
   const navItems: NavItem[] = [
     {
       id: "sp",
-      label: "Single Player",
-      sub: "Roguelike Run",
+      label: t.menu.sp,
+      sub: t.menu.spSub,
       icon: "⚔️",
       enabled: true,
       action: () => onStartGame("singleplayer"),
     },
     {
       id: "mp",
-      label: "Local Arena Battle",
-      sub: "Two-player local match",
+      label: t.menu.mp,
+      sub: t.menu.mpSub,
       icon: "🏟️",
       enabled: true,
       action: () => onStartGame("multiplayer"),
     },
     {
+      id: "rules",
+      label: t.menu.rules,
+      sub: t.menu.rulesSub,
+      icon: "📖",
+      enabled: true,
+      action: onRules,
+    },
+    {
       id: "arch",
-      label: "Historical Archives",
-      sub: onArchives ? "Character Library" : "Character Library — Coming Soon",
+      label: t.menu.archives,
+      sub: onArchives ? t.menu.archivesSub : t.menu.archivesSoon,
       icon: "📚",
       enabled: !!onArchives,
       action: onArchives,
     },
     {
       id: "set",
-      label: "Game Settings",
-      sub: onSettings ? "Controls & Audio" : "Controls & Audio — Coming Soon",
+      label: t.menu.settings,
+      sub: onSettings ? t.menu.settingsSub : t.menu.settingsSoon,
       icon: "⚙️",
       enabled: !!onSettings,
       action: onSettings,
     },
     {
       id: "quit",
-      label: "Quit",
-      sub: "Exit game",
+      label: t.menu.quit,
+      sub: t.menu.quitSub,
       icon: "🚪",
       enabled: true,
       danger: true,
@@ -68,10 +79,10 @@ export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMe
   return (
     <div className="relative min-h-screen overflow-hidden flex">
       <ArenaBackground />
+      <MusicPlayer />
 
       {/* ── LEFT NAV PANEL ── */}
       <div className="relative z-10 flex flex-col justify-center w-[440px] shrink-0 pl-16 pr-12 py-16">
-        {/* Dark gradient behind the nav */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -87,14 +98,14 @@ export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMe
               className="font-orbitron text-[10px] tracking-[0.5em] mb-4 uppercase"
               style={{ color: "#a78bfa" }}
             >
-              The Empire of Znyxorga Presents
+              {t.menu.presenter}
             </p>
 
             <h1
               className="font-orbitron font-black leading-none text-white"
               style={{ fontSize: "3rem", letterSpacing: "-0.02em" }}
             >
-              WAIFU
+              {t.menu.title1}
             </h1>
             <h1
               className="font-orbitron font-black leading-none"
@@ -105,13 +116,11 @@ export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMe
                 textShadow: "0 0 40px rgba(34,211,238,0.65)",
               }}
             >
-              CLONE WARS
+              {t.menu.title2}
             </h1>
 
-            <p className="mt-3 text-slate-500 text-sm leading-relaxed">
-              Historical legends reborn as anime warriors
-              <br />
-              in the galaxy's favourite battle arena.
+            <p className="mt-3 text-slate-500 text-sm leading-relaxed whitespace-pre-line">
+              {t.menu.description}
             </p>
           </div>
 
@@ -182,7 +191,7 @@ export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMe
 
           {/* Footer */}
           <div className="mt-10 text-slate-700 text-[11px] font-orbitron tracking-widest">
-            v0.12 · WAIFU CLONE WARS
+            {t.menu.footer}
           </div>
         </div>
       </div>
@@ -190,13 +199,12 @@ export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMe
       {/* ── ARTWORK PANEL ── */}
       <div className="flex-1 relative overflow-hidden">
         <img
-          src="/art/group_splash.jpg"
+          src="/art/group_splash.png"
           alt="Waifu Clone Wars battle scene"
           className="absolute inset-0 w-full h-full object-cover object-center"
           style={{ filter: "brightness(0.72) contrast(1.05)" }}
           draggable={false}
         />
-        {/* Left-edge fade into the nav panel */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -204,7 +212,6 @@ export default function MainMenu({ onStartGame, onArchives, onSettings }: MainMe
               "linear-gradient(to right, rgba(2,4,14,0.85) 0%, rgba(2,4,14,0.2) 25%, transparent 55%)",
           }}
         />
-        {/* Subtle vignette on other edges */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{

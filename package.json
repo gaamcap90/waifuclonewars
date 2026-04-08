@@ -1,14 +1,39 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "waifu-clone-wars",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:electron": "vite build --base=./ && electron-builder --win portable --x64"
+  },
+  "build": {
+    "appId": "com.waifuclonewars.app",
+    "productName": "Waifu Clone Wars",
+    "asar": false,
+    "directories": {
+      "buildResources": "public",
+      "output": "C:\\Users\\gaamc\\AppData\\Local\\Temp\\wcw-release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/main.cjs"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["x64"]
+        }
+      ],
+      "forceCodeSigning": false,
+      "signtoolOptions": null
+    }
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -70,6 +95,8 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.20",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",

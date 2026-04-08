@@ -53,6 +53,13 @@ export interface Icon {
   cardsUsedThisTurn?: number;   // Cards played this turn (max 3)
   enemyAbilityCooldowns?: Record<string, number>; // cooldown tracker for enemy boss abilities
   enemyAbilities?: import('@/types/roguelike').EnemyAbilityDef[]; // boss/elite ability definitions
+  regens?: { amount: number; turnsRemaining: number }[]; // active regen buffs (Naval Repairs)
+  itemPassiveTags?: string[];  // passive tags from all equipped items (populated at fight start)
+  voidArmorUsed?: boolean;     // once_survive_lethal: used already this fight
+  nextCardFree?: boolean;      // legacy free-card flag
+  freeCardsLeft?: number;      // next_2_cards_free_on_kill: remaining free cards
+  firstAbilityUsed?: boolean;  // first_ability_free: first ability card has been used this fight
+  firstHitNegated?: boolean;   // negate_first_hit (Diamond Shell): first hit this fight already negated
 }
 
 export interface Ability {
@@ -74,7 +81,7 @@ export interface Ability {
 export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate' | 'debuff';
 export type CardRarity = 'common' | 'rare' | 'ultimate';
 
-export type DebuffType = 'mud_throw' | 'demoralize' | 'armor_break' | 'silence' | 'poison';
+export type DebuffType = 'mud_throw' | 'demoralize' | 'armor_break' | 'silence' | 'poison' | 'stun';
 
 export interface Debuff {
   type: DebuffType;
@@ -92,6 +99,7 @@ export interface EffectValues {
   defBonus?: number;
   moveBonus?: number;
   teamDmgPct?: number;
+  teamDefBuff?: number;          // immediate +DEF to caster + allies within range (Spartan Wall)
   range?: number;
   turns?: number;
   targets?: number;
@@ -106,6 +114,12 @@ export interface EffectValues {
   debuffMagnitude?: number;     // magnitude of the applied debuff
   debuffDuration?: number;      // turns the debuff lasts
   pushback?: number;            // push target N hexes away from attacker (1 = 1 hex)
+  healZone?: boolean;           // target a tile; heal allies within range each turn
+  healPerTurn?: number;         // HP healed per tick (Naval Repairs)
+  healDuration?: number;        // how many ticks (turns) the regen lasts
+  lineCharge?: boolean;         // charge in a line, deal damage + push enemies sideways (Chongtong land)
+  chargeDist?: number;          // max hexes to charge
+  pushSide?: boolean;           // push hit enemies perpendicular to charge direction
 }
 
 export interface Card {
@@ -175,12 +189,21 @@ export interface GameState {
     abilityId: string;
     iconId: string;
     range: number;
+    cardRefund?: { card: Card; manaRefund: number };
   };
   winner?: number; // Player ID who won
   hand?: Hand;   // Active player's current hand
   deck?: Deck;   // Active player's draw/discard piles
   aiIntents?: AIIntent[]; // What each AI character plans to do this round (visible during player's turn)
   arenaEvent?: ArenaEventDef | null; // Event that triggered at the start of this round
+  laserGridStruckIds?: string[];    // Unit IDs struck by Laser Grid this round (shown for 1 round)
+  floodActive?: boolean;            // Alien Tide: once triggered, river expands each turn
+  forestFireActive?: boolean;       // Forest Fire: once triggered, fire spreads each turn
+  burningForestTiles?: string[];    // Tile keys "q,r" of burning forest tiles
+  pendingLaserTiles?: string[];     // Tile keys targeted by Laser Grid (1-turn warning before damage)
+  pendingFloodCountdown?: number;   // Turns until Alien Tide activates (2 = 2 turns notice)
+  pendingFireCountdown?: number;    // Turns until Forest Fire activates (2 = 2 turns notice)
+  pendingFireStartTile?: string;    // "q,r" key of tile that will catch fire (shown as warning on board)
 }
 
 export interface ArenaEventDef {
@@ -200,7 +223,7 @@ export interface Player {
 
 // ── AI Intent System (Slay the Spire style) ──────────────────────────────────
 
-export type AIIntentType = 'attack' | 'ability' | 'heal' | 'buff';
+export type AIIntentType = 'attack' | 'ability' | 'heal' | 'buff' | 'upcoming_ability';
 
 export interface AIIntent {
   iconId: string;       // which AI icon will act
@@ -210,4 +233,5 @@ export interface AIIntent {
   range: number;        // used for range highlight on hover
   damage?: number;
   healing?: number;
+  turnsUntilReady?: number; // for upcoming_ability: countdown turns until ability fires
 }

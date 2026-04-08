@@ -24,6 +24,11 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
   let power   = basePower   * (1 + teamPowerPct);
   let defense = baseDefense + (icon.cardBuffDef ?? 0);
 
+  // Alien Core item: ability damage +15%
+  if (icon.itemPassiveTags?.includes('ability_power_15pct')) {
+    power *= 1.15;
+  }
+
   // Genghis Bloodlust passive: +15 Might per kill stack (stacks up to 3)
   if (icon.name.includes("Genghis") && (icon.passiveStacks ?? 0) > 0) {
     might += (icon.passiveStacks ?? 0) * 15;

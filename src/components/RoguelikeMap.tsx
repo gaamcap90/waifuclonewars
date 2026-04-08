@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { RunState, RunNode, CharacterRunState, RunItem, CharacterId } from "@/types/roguelike";
 import { CARD_REWARD_POOL } from "@/data/roguelikeData";
 import ArenaBackground from "@/ui/ArenaBackground";
+import { useT } from "@/i18n";
 
 interface Props {
   runState: RunState;
@@ -51,6 +52,7 @@ function LeftPanelCharCard({
   isDead: boolean;
   onClick: () => void;
 }) {
+  const { t } = useT();
   const hpPct = char.currentHp / char.maxHp;
   const hpColor = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#f87171';
 
@@ -67,7 +69,7 @@ function LeftPanelCharCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-orbitron font-bold text-[11px] text-red-400 truncate">{char.displayName}</div>
-            <div className="text-[9px] text-red-700 font-orbitron tracking-wider mt-0.5">FALLEN — ITEMS LOST</div>
+            <div className="text-[9px] text-red-700 font-orbitron tracking-wider mt-0.5">{t.roguelike.fallen}</div>
           </div>
         </div>
       </div>
@@ -105,7 +107,7 @@ function LeftPanelCharCard({
             {char.displayName.replace('-chan', '')}
             <span className="text-slate-500 font-normal">-chan</span>
           </div>
-          <div className="text-[9px] text-purple-400 font-orbitron">Lv {char.level}</div>
+          <div className="text-[9px] text-purple-400 font-orbitron">{t.roguelike.lvShort.replace('{n}', String(char.level))}</div>
         </div>
         {char.pendingStatPoints > 0 && (
           <span className="text-[9px] font-bold text-yellow-400 animate-pulse shrink-0">▲{char.pendingStatPoints}</span>
@@ -147,6 +149,7 @@ function LeftPanelCharCard({
 }
 
 function DeckOverlay({ deckIds, onClose }: { deckIds: string[]; onClose: () => void }) {
+  const { t } = useT();
   // Count duplicates
   const counts: Record<string, number> = {};
   for (const id of deckIds) counts[id] = (counts[id] ?? 0) + 1;
@@ -163,8 +166,8 @@ function DeckOverlay({ deckIds, onClose }: { deckIds: string[]; onClose: () => v
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="font-orbitron font-black text-xl text-white">Your Deck</h2>
-            <p className="text-slate-500 text-[11px] mt-0.5">{deckIds.length} cards total</p>
+            <h2 className="font-orbitron font-black text-xl text-white">{t.roguelike.yourDeck}</h2>
+            <p className="text-slate-500 text-[11px] mt-0.5">{t.roguelike.cardsTotal.replace('{n}', String(deckIds.length))}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none">✕</button>
         </div>
@@ -190,7 +193,7 @@ function DeckOverlay({ deckIds, onClose }: { deckIds: string[]; onClose: () => v
                     )}
                   </div>
                   <p className="text-slate-400 text-[11px] mt-0.5 leading-snug">{card.description}</p>
-                  <span className="text-[10px] text-cyan-300 font-orbitron">{card.manaCost} Mana</span>
+                  <span className="text-[10px] text-cyan-300 font-orbitron">{t.roguelike.manaLabel.replace('{n}', String(card.manaCost))}</span>
                 </div>
               </div>
             );
@@ -206,6 +209,7 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
   onClose: () => void;
   onAllocateStat?: (stat: 'hp' | 'might' | 'power' | 'defense') => void;
 }) {
+  const { t } = useT();
   const [hoveredItem, setHoveredItem] = useState<RunItem | null>(null);
   const hpPct = char.currentHp / char.maxHp;
   const hpColor = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#f87171';
@@ -220,10 +224,10 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
           <img src={char.portrait} alt={char.displayName} className="w-16 h-16 rounded-full object-cover border-2 border-slate-600" />
           <div className="flex-1">
             <h2 className="font-orbitron font-black text-xl text-white">{char.displayName}</h2>
-            <p className="text-purple-400 text-[11px]">Level {char.level}</p>
+            <p className="text-purple-400 text-[11px]">{t.roguelike.levelLabel.replace('{n}', String(char.level))}</p>
             <div className="flex gap-3 mt-1 text-[11px]">
               <span className="text-purple-300">{char.xp}/{char.xpToNext} XP</span>
-              {char.pendingStatPoints > 0 && <span className="text-yellow-400 font-bold">▲ {char.pendingStatPoints} stat pts</span>}
+              {char.pendingStatPoints > 0 && <span className="text-yellow-400 font-bold">▲ {char.pendingStatPoints} {char.pendingStatPoints > 1 ? t.roguelike.statPoints : t.roguelike.statPoint}</span>}
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-xl">✕</button>
@@ -243,17 +247,17 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
           <div className="mb-3 rounded-lg border border-yellow-500/40 px-3 py-2 text-center"
             style={{ background: 'rgba(40,25,0,0.70)' }}>
             <p className="text-[11px] text-yellow-400 font-orbitron font-bold">
-              ▲ {char.pendingStatPoints} stat point{char.pendingStatPoints > 1 ? 's' : ''} — click a stat to spend
+              {t.roguelike.statPts.replace('{n}', String(char.pendingStatPoints)).replace('{pts}', char.pendingStatPoints > 1 ? t.roguelike.statPoints : t.roguelike.statPoint)}
             </p>
           </div>
         )}
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2 mb-5">
           {([
-            ['Might',    'might',   char.statBonuses.might,   '+5',  '#f87171'],
-            ['Power',    'power',   char.statBonuses.power,   '+5',  '#60a5fa'],
-            ['Defense',  'defense', char.statBonuses.defense, '+5',  '#fbbf24'],
-            ['HP Bonus', 'hp',      char.statBonuses.hp,      '+8',  '#4ade80'],
+            [t.roguelike.statLabels.might,   'might',   char.statBonuses.might,   '+5',  '#f87171'],
+            [t.roguelike.statLabels.power,   'power',   char.statBonuses.power,   '+5',  '#60a5fa'],
+            [t.roguelike.statLabels.defense, 'defense', char.statBonuses.defense, '+5',  '#fbbf24'],
+            [t.roguelike.statLabels.hpBonus, 'hp',      char.statBonuses.hp,      '+8',  '#4ade80'],
           ] as [string, string, number, string, string][]).map(([label, statKey, bonus, btnLabel, color]) => {
             const canSpend = char.pendingStatPoints > 0 && !!onAllocateStat;
             return (
@@ -274,7 +278,7 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
         </div>
         {/* Items */}
         <div>
-          <p className="font-orbitron text-[10px] text-slate-500 tracking-[0.3em] mb-3">ITEMS (5 slots)</p>
+          <p className="font-orbitron text-[10px] text-slate-500 tracking-[0.3em] mb-3">{t.roguelike.itemSlots}</p>
           <div className="flex gap-2 flex-wrap">
             {char.items.map((item, i) => (
               <div key={i}
@@ -303,7 +307,7 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
                     </span>
                     {item.targetCharacter && (
                       <span className="ml-1 text-[9px] font-orbitron" style={{ color: EXCLUSIVE_COLOR[item.targetCharacter] ?? '#94a3b8' }}>
-                        · {item.targetCharacter} only
+                        · {t.roguelike.characterOnly.replace('{name}', item.targetCharacter)}
                       </span>
                     )}
                     <p className="text-slate-300 text-[11px] mt-1.5 leading-relaxed">{item.description}</p>
@@ -326,7 +330,9 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
 }
 
 function NodeTooltip({ node, side }: { node: RunNode; side: 'left' | 'right' }) {
+  const { t } = useT();
   const meta = NODE_META[node.type];
+  const nodeLabel = (t.roguelike.nodeLabels as Record<string, string>)[node.type] ?? meta.label;
   const enc = node.encounter;
   const left = side === 'left' ? '110%' : 'auto';
   const right = side === 'right' ? '110%' : 'auto';
@@ -335,12 +341,12 @@ function NodeTooltip({ node, side }: { node: RunNode; side: 'left' | 'right' }) 
       style={{ background: 'rgba(4,2,18,0.97)', top: '50%', transform: 'translateY(-50%)', left, right }}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-lg">{meta.icon}</span>
-        <span className="font-orbitron font-bold text-sm" style={{ color: meta.color }}>{meta.label}</span>
+        <span className="font-orbitron font-bold text-sm" style={{ color: meta.color }}>{nodeLabel}</span>
       </div>
       {enc && (
         <>
           <div className="text-[11px] text-slate-400 mb-1">
-            <span className="text-slate-500">Objective · </span>{enc.objectiveLabel}
+            <span className="text-slate-500">{t.roguelike.objectivePrefix} · </span>{enc.objectiveLabel}
           </div>
           <div className="text-[11px] text-slate-400 mb-2 leading-relaxed">
             {enc.enemies.map(e => `${e.name} ×${e.count}`).join(' · ')}
@@ -351,15 +357,16 @@ function NodeTooltip({ node, side }: { node: RunNode; side: 'left' | 'right' }) 
           </div>
         </>
       )}
-      {node.type === 'campfire' && <p className="text-[11px] text-amber-300 leading-relaxed">Rest here to heal 30% HP.</p>}
-      {node.type === 'merchant' && <p className="text-[11px] text-green-300 leading-relaxed">Spend gold on cards, items, or healing.</p>}
-      {node.type === 'treasure' && <p className="text-[11px] text-yellow-300 leading-relaxed">Discover a free item or card.</p>}
-      {node.type === 'unknown' && <p className="text-[11px] text-slate-400 leading-relaxed">Unknown — could be anything.</p>}
+      {node.type === 'campfire' && <p className="text-[11px] text-amber-300 leading-relaxed">{t.roguelike.nodeTips.campfire}</p>}
+      {node.type === 'merchant' && <p className="text-[11px] text-green-300 leading-relaxed">{t.roguelike.nodeTips.merchant}</p>}
+      {node.type === 'treasure' && <p className="text-[11px] text-yellow-300 leading-relaxed">{t.roguelike.nodeTips.treasure}</p>}
+      {node.type === 'unknown' && <p className="text-[11px] text-slate-400 leading-relaxed">{t.roguelike.nodeTips.unknown}</p>}
     </div>
   );
 }
 
 export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onAllocateStat }: Props) {
+  const { t } = useT();
   const [hovered, setHovered] = useState<string | null>(null);
   const [showDeck, setShowDeck] = useState(false);
   const [detailChar, setDetailChar] = useState<CharacterRunState | null>(null);
@@ -399,7 +406,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
         <div className="shrink-0">
           <span className="font-orbitron text-[10px] text-slate-500 tracking-widest">ACT {act}</span>
           <span className="font-orbitron text-[10px] text-slate-600 tracking-widest ml-2">
-            · {act === 1 ? 'ZNYXORGA MENAGERIE' : act === 2 ? 'ZNYXORGA ARENA' : "CHAMPION'S GAUNTLET"}
+            · {t.roguelike.actNames[(act as number) - 1] ?? ''}
           </span>
         </div>
 
@@ -416,13 +423,13 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
         {/* Deck count — clickable */}
         <button onClick={() => setShowDeck(true)}
           className="font-orbitron text-[10px] text-slate-400 hover:text-cyan-300 transition-colors shrink-0 border border-slate-700/40 hover:border-cyan-500/40 rounded px-2 py-1">
-          🃏 <span className="text-cyan-400 font-bold">{deckCardIds.length}</span> cards
+          🃏 {t.roguelike.deckCards.replace('{n}', String(deckCardIds.length))}
         </button>
 
         {/* Abandon */}
         <button onClick={onAbandonRun}
           className="font-orbitron text-[9px] text-slate-500 hover:text-red-400 transition-colors tracking-widest border border-slate-700/40 hover:border-red-500/40 rounded px-3 py-1.5 shrink-0">
-          ABANDON RUN
+          {t.roguelike.abandonRun}
         </button>
       </div>
 
@@ -438,7 +445,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
             borderRight: '1px solid rgba(60,40,100,0.4)',
           }}
         >
-          <p className="font-orbitron text-[9px] tracking-[0.45em] text-purple-500 px-1 mb-1">YOUR PARTY</p>
+          <p className="font-orbitron text-[9px] tracking-[0.45em] text-purple-500 px-1 mb-1">{t.roguelike.yourParty}</p>
           {characters.map((c: CharacterRunState) => (
             <LeftPanelCharCard
               key={c.id}
@@ -450,12 +457,12 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
 
           {/* Legend at bottom of left panel */}
           <div className="mt-auto pt-4 border-t border-slate-800/60">
-            <p className="font-orbitron text-[8px] tracking-[0.35em] text-slate-600 mb-2">NODE TYPES</p>
+            <p className="font-orbitron text-[8px] tracking-[0.35em] text-slate-600 mb-2">{t.roguelike.nodeTypes}</p>
             <div className="flex flex-col gap-1">
               {Object.entries(NODE_META).map(([type, meta]) => (
                 <div key={type} className="flex items-center gap-2">
                   <span className="text-[12px] w-5 text-center">{meta.icon}</span>
-                  <span className="text-[9px] font-orbitron" style={{ color: meta.color }}>{meta.label}</span>
+                  <span className="text-[9px] font-orbitron" style={{ color: meta.color }}>{(t.roguelike.nodeLabels as Record<string, string>)[type] ?? meta.label}</span>
                 </div>
               ))}
             </div>
@@ -464,7 +471,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
 
         {/* ── Right Panel — Map tree ── */}
         <div className="flex-1 flex flex-col pt-3 pb-2 px-4 overflow-hidden">
-          <p className="font-orbitron text-[9px] tracking-[0.55em] text-purple-400 mb-2 shrink-0 text-center">CHOOSE YOUR PATH</p>
+          <p className="font-orbitron text-[9px] tracking-[0.55em] text-purple-400 mb-2 shrink-0 text-center">{t.roguelike.choosePath}</p>
 
           {/* Map container — flex-1, no max-width restriction */}
           <div className="relative flex-1 w-full rounded-2xl overflow-hidden border border-slate-700/40"

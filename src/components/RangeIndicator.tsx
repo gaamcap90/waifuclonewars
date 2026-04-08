@@ -50,23 +50,35 @@ export const useRangeCalculation = (
 
   // Make mana crystal impassable for movement
   const isPassable = (coords: Coordinates): boolean => {
-    const tile = gameState.board.find(t => 
+    const tile = gameState.board.find(t =>
       t.coordinates.q === coords.q && t.coordinates.r === coords.r
     );
-    
-    // Mana crystal is now impassable
+
+    // Mana crystal is impassable
     if (tile?.terrain.type === 'mana_crystal') {
       return false;
     }
+
+    // River is impassable unless this is Sun-sin (Turtle Ship passive)
+    if (tile?.terrain.type === 'river' && !activeIcon?.name.includes('Sun-sin')) {
+      return false;
+    }
+
+    // Mountains are always impassable
+    if (tile?.terrain.type === 'mountain') {
+      return false;
+    }
     
+    const activePlayerId = gameState.activePlayerId;
     const isOccupied = gameState.players
       .flatMap(p => p.icons)
-      .some(icon => 
-        icon.position.q === coords.q && 
-        icon.position.r === coords.r && 
-        icon.isAlive
+      .some(icon =>
+        icon.position.q === coords.q &&
+        icon.position.r === coords.r &&
+        // Alive icons always block; dead enemy icons also block (can't walk onto corpse)
+        (icon.isAlive || icon.playerId !== activePlayerId)
       );
-    
+
     return !isOccupied;
   };
 
@@ -96,12 +108,16 @@ export const useRangeCalculation = (
   // Calculate attack range — highlights ALL tiles in range (not just tiles with enemies)
   const attackRange: Coordinates[] = [];
   if (showAttack && activeIcon) {
-    let baseAttackRange = 1;
-    if (activeIcon.name.includes("Napoleon") || activeIcon.name.includes("Da Vinci")) baseAttackRange = 2;
-    const napoleonOnForest =
-      activeIcon.name.includes("Napoleon") &&
-      gameState.board.find(t => t.coordinates.q === activeIcon.position.q && t.coordinates.r === activeIcon.position.r)?.terrain.type === "forest";
-    if (napoleonOnForest) baseAttackRange = 3;
+    // If abilityRange is provided (targeting mode active), use it directly — it already has
+    // character/terrain-specific adjustments (e.g. Sun-sin range 3 on water, Napoleon forest range 3)
+    let baseAttackRange = abilityRange ?? 1;
+    if (abilityRange === undefined) {
+      if (activeIcon.name.includes("Napoleon") || activeIcon.name.includes("Da Vinci")) baseAttackRange = 2;
+      const napoleonOnForest =
+        activeIcon.name.includes("Napoleon") &&
+        gameState.board.find(t => t.coordinates.q === activeIcon.position.q && t.coordinates.r === activeIcon.position.r)?.terrain.type === "forest";
+      if (napoleonOnForest) baseAttackRange = 3;
+    }
 
     for (let q = -7; q <= 7; q++) {
       for (let r = -7; r <= 7; r++) {

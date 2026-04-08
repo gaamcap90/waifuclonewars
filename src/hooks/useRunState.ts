@@ -7,14 +7,7 @@ import {
   generateActMap, buildStartingCharacters, SHARED_STARTING_CARDS, CHARACTER_STARTING_CARDS,
   XP_TO_NEXT, pickCardRewards, pickItemReward,
 } from "@/data/roguelikeData";
-
-function seededRng(seed: number) {
-  let s = seed | 0;
-  return () => {
-    s = Math.imul(1664525, s) + 1013904223 | 0;
-    return (s >>> 0) / 0xffffffff;
-  };
-}
+import { seededRng } from "@/utils/rng";
 
 function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
   const map = generateActMap(seed, 1);
@@ -82,7 +75,8 @@ export function useRunState() {
       if (!node || !node.encounter) return prev;
 
       const enc = node.encounter;
-      const rng = seededRng(prev.seed ^ result.nodeId.charCodeAt(0));
+      const nodeHash = result.nodeId.split('').reduce((h, ch) => (Math.imul(31, h) + ch.charCodeAt(0)) | 0, 0);
+      const rng = seededRng((prev.seed ^ nodeHash) + prev.battleCount * 7919);
 
       let baseXp = enc.xpReward;
       if (!result.won) baseXp = 0;
@@ -95,20 +89,35 @@ export function useRunState() {
       const totalXp = baseXp + noHitBonus + fastBonus;
       const goldEarned = result.won ? enc.goldReward : Math.floor(enc.goldReward * 0.3);
 
+      // Living character IDs used for both item filtering and card choices
+      const livingCharIds = prev.characters
+        .filter(c => (result.finalHps[c.id] ?? 1) > 0)
+        .map(c => c.id);
+
       // Item drop — boss fights give one rare item per living character
       let itemDrop: RunItem | undefined;
       let bossItems: RunItem[] | undefined;
       if (result.won && node.type === 'boss') {
         const livingChars = prev.characters.filter(c => (result.finalHps[c.id] ?? 0) > 0);
-        bossItems = livingChars.map(() => pickItemReward('rare', rng));
+        bossItems = livingChars.map(() => pickItemReward('rare', rng, livingCharIds));
       } else if (result.won && enc.guaranteedItem) {
-        itemDrop = pickItemReward('uncommon', rng);
+        itemDrop = pickItemReward('rare', rng, livingCharIds);
       } else if (result.won && rng() < enc.itemDropChance) {
-        itemDrop = pickItemReward('common', rng);
+        itemDrop = pickItemReward('uncommon', rng, livingCharIds);
       }
 
-      // Card choices
-      const cardChoices = result.won ? pickCardRewards(prev.deckCardIds, rng) : [];
+      // Update character HPs + track permanent deaths
+      const newDeadIds = prev.characters
+        .filter(c => (result.finalHps[c.id] ?? 1) <= 0 && !prev.permanentlyDeadIds.includes(c.id))
+        .map(c => c.id);
+
+      // Remove dead characters' ability cards from deck
+      const deckAfterDeaths = prev.deckCardIds.filter(cardId =>
+        !newDeadIds.some(deadId => cardId.startsWith(deadId + '_'))
+      );
+
+      // Card choices — only include cards for living characters after this battle
+      const cardChoices = result.won ? pickCardRewards(deckAfterDeaths, rng, livingCharIds) : [];
 
       const pending: PendingRewards = {
         gold: goldEarned,
@@ -116,12 +125,8 @@ export function useRunState() {
         cardChoices,
         itemDrop,
         bossItems,
+        completedNodeId: result.nodeId,
       };
-
-      // Update character HPs + track permanent deaths
-      const newDeadIds = prev.characters
-        .filter(c => (result.finalHps[c.id] ?? 1) <= 0 && !prev.permanentlyDeadIds.includes(c.id))
-        .map(c => c.id);
 
       const chars = prev.characters.map(c => {
         const newHp = result.finalHps[c.id] ?? c.currentHp;
@@ -135,6 +140,7 @@ export function useRunState() {
       return {
         ...prev,
         characters: chars,
+        deckCardIds: deckAfterDeaths,
         completedNodeIds: [...prev.completedNodeIds, result.nodeId],
         currentNodeId: null,
         pendingRewards: pending,
@@ -145,24 +151,28 @@ export function useRunState() {
   }, []);
 
   // Called when player finishes the rewards screen
+  // equipItems: array of item assignments (can include boss items + regular itemDrop)
   const collectRewards = useCallback((
     chosenCardId: string | null,
-    equipItem: { characterId: CharacterId; slotIndex: number; item: RunItem } | null,
+    equipItems: Array<{ characterId: CharacterId; slotIndex: number; item: RunItem }> | null,
   ) => {
     setRunState(prev => {
-      if (!prev?.pendingRewards) return prev;
+      if (!prev) return prev;
+      // Allow item equip / card add even without pendingRewards (e.g. treasure rooms)
       const r = prev.pendingRewards;
 
-      // Add gold
-      const newGold = prev.gold + r.gold;
+      // Add gold (only if rewards exist)
+      const newGold = prev.gold + (r?.gold ?? 0);
 
       // Add card to deck
       const newDeck = chosenCardId
         ? [...prev.deckCardIds, chosenCardId]
         : prev.deckCardIds;
 
-      // Apply XP and check level ups
+      // Apply XP and check level ups (only if rewards exist; dead characters don't gain XP)
       const chars = prev.characters.map(c => {
+        if (!r) return c;
+        if (c.currentHp <= 0) return c;
         let { xp, level, xpToNext, pendingStatPoints } = c;
         xp += r.xp;
         while (xp >= xpToNext && level < 6) {
@@ -174,30 +184,14 @@ export function useRunState() {
         return { ...c, xp, level, xpToNext, pendingStatPoints };
       });
 
-      // Equip normal item
-      let charsWithItem = equipItem
-        ? chars.map(c => {
-            if (c.id !== equipItem.characterId) return c;
-            const items = [...c.items];
-            items[equipItem.slotIndex] = equipItem.item;
-            return { ...c, items };
-          })
-        : chars;
-
-      // Auto-equip boss items — one item per living character, first available slot
-      if (r.bossItems && r.bossItems.length > 0) {
-        const livingChars = charsWithItem.filter(c => c.currentHp > 0);
-        r.bossItems.forEach((item, idx) => {
-          const target = livingChars[idx];
-          if (!target) return;
-          charsWithItem = charsWithItem.map(c => {
-            if (c.id !== target.id) return c;
-            const items = [...c.items];
-            const emptySlot = items.findIndex(s => s === null);
-            if (emptySlot !== -1) items[emptySlot] = item;
-            else items[4] = item; // replace last slot if full
-            return { ...c, items };
-          });
+      // Equip all assigned items (regular drop + boss items all go through the same path)
+      let charsWithItem = chars;
+      for (const eq of (equipItems ?? [])) {
+        charsWithItem = charsWithItem.map(c => {
+          if (c.id !== eq.characterId) return c;
+          const items = [...c.items];
+          items[eq.slotIndex] = eq.item;
+          return { ...c, items };
         });
       }
 
@@ -220,16 +214,15 @@ export function useRunState() {
         };
       }
 
-      // Unlock next nodes
+      // Unlock next nodes — only from the just-completed node to prevent re-unlocking locked siblings
       const newUnlocked = [...prev.unlockedNodeIds];
-      prev.completedNodeIds.forEach(completedId => {
-        const done = prev.map.find(n => n.id === completedId);
-        if (done) {
-          done.connections.forEach(cid => {
-            if (!newUnlocked.includes(cid)) newUnlocked.push(cid);
-          });
-        }
-      });
+      const justCompletedId = r?.completedNodeId;
+      const justCompletedNode = justCompletedId ? prev.map.find(n => n.id === justCompletedId) : null;
+      if (justCompletedNode) {
+        justCompletedNode.connections.forEach(cid => {
+          if (!newUnlocked.includes(cid)) newUnlocked.push(cid);
+        });
+      }
 
       return {
         ...prev,
@@ -271,15 +264,14 @@ export function useRunState() {
     setRunState(prev => {
       if (!prev) return prev;
       const completedNodeIds = [...prev.completedNodeIds, nodeId];
+      // Only unlock connections from the just-completed node to avoid re-unlocking locked siblings
       const newUnlocked = [...prev.unlockedNodeIds];
-      completedNodeIds.forEach(completedId => {
-        const done = prev.map.find(n => n.id === completedId);
-        if (done) {
-          done.connections.forEach(cid => {
-            if (!newUnlocked.includes(cid)) newUnlocked.push(cid);
-          });
-        }
-      });
+      const justDone = prev.map.find(n => n.id === nodeId);
+      if (justDone) {
+        justDone.connections.forEach(cid => {
+          if (!newUnlocked.includes(cid)) newUnlocked.push(cid);
+        });
+      }
       return { ...prev, completedNodeIds, currentNodeId: null, unlockedNodeIds: newUnlocked };
     });
   }, []);
@@ -302,6 +294,30 @@ export function useRunState() {
     setRunState(prev => prev ? { ...prev, deckCardIds: [...prev.deckCardIds, cardId] } : prev);
   }, []);
 
+  // Atomic merchant purchase: spend gold + add card in one state update (avoids async timing issues)
+  const buyCardFromMerchant = useCallback((cardId: string, cost: number) => {
+    setRunState(prev => {
+      if (!prev || prev.gold < cost) return prev;
+      return { ...prev, gold: prev.gold - cost, deckCardIds: [...prev.deckCardIds, cardId] };
+    });
+  }, []);
+
+  // Atomic merchant heal: spend gold + heal all living characters in one state update
+  const buyHealAllFromMerchant = useCallback((cost: number) => {
+    setRunState(prev => {
+      if (!prev || prev.gold < cost) return prev;
+      return {
+        ...prev,
+        gold: prev.gold - cost,
+        characters: prev.characters.map(c => {
+          if (c.currentHp <= 0) return c;
+          const heal = Math.floor(c.maxHp * 0.30);
+          return { ...c, currentHp: Math.min(c.maxHp, c.currentHp + heal) };
+        }),
+      };
+    });
+  }, []);
+
   // Hurt all living characters by amount (minimum 1 HP — unknown events can't kill outright)
   const hurtAllCharacters = useCallback((amount: number) => {
     setRunState(prev => prev ? {
@@ -320,6 +336,7 @@ export function useRunState() {
         ...prev,
         characters: prev.characters.map(c => {
           if (c.id !== characterId) return c;
+          if (c.currentHp <= 0) return c; // dead characters cannot be healed at campfire
           const healAmount = Math.floor(c.maxHp * 0.30);
           return { ...c, currentHp: Math.min(c.maxHp, c.currentHp + healAmount) };
         }),
@@ -339,6 +356,8 @@ export function useRunState() {
     spendGold,
     addGold,
     addCardToDeck,
+    buyCardFromMerchant,
+    buyHealAllFromMerchant,
     hurtAllCharacters,
     healAtCampfire,
   };

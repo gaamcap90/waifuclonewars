@@ -17,10 +17,10 @@ const BeastCampHPBar: React.FC<BeastCampHPBarProps> = ({
 }) => {
   const hexHeight = Math.sqrt(3) * hexSize;    // ~86.6px
 
-  // Two fixed camp positions in axial coords
+  // Two fixed camp positions — top-center and bottom-center
   const camps = [
-    { q: -2, r:  2, idx: 0 },
-    { q:  2, r: -2, idx: 1 },
+    { q: 0, r: -4, idx: 0 },
+    { q: 0, r:  4, idx: 1 },
   ];
 
   // axial → pixel (center of tile)

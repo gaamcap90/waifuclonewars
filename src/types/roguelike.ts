@@ -68,6 +68,7 @@ export interface EnemyTemplate {
   name: string;
   icon: string;
   portrait?: string;
+  description?: string;
   stats: {
     hp: number;
     maxHp: number;
@@ -129,6 +130,7 @@ export interface PendingRewards {
   cardChoices: CardReward[];   // 3 options, player picks 1 or skips
   itemDrop?: RunItem;           // optional item reward (normal fights)
   bossItems?: RunItem[];        // boss fights: one item per living character, auto-equipped
+  completedNodeId?: string;     // the node that was just completed (used to unlock correct next nodes)
 }
 
 export interface RunState {

@@ -161,3 +161,91 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Battle Animations ─────────────────────────────────────────────── */
+
+@keyframes figureFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-3px); }
+}
+
+@keyframes anim-float-up-fade {
+  0%   { transform: translateY(0px) scale(1);    opacity: 1; }
+  20%  { transform: translateY(-8px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-58px) scale(0.9); opacity: 0; }
+}
+
+@keyframes anim-impact {
+  0%   { transform: translate(-50%, -50%) scale(0.15); opacity: 1; }
+  55%  { transform: translate(-50%, -50%) scale(1.3);  opacity: 0.75; }
+  100% { transform: translate(-50%, -50%) scale(2.2);  opacity: 0; }
+}
+
+@keyframes anim-aura-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.3);  opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.6);  opacity: 0; }
+}
+
+@keyframes anim-cast-burst {
+  0%   { transform: translate(-50%, -50%) scale(0.1) rotate(0deg);   opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1.4) rotate(30deg);  opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(2.0) rotate(60deg);  opacity: 0; }
+}
+
+@keyframes anim-death-skull {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+  40%  { transform: translate(-50%, -60%) scale(1.4); opacity: 1; }
+  100% { transform: translate(-50%, -90%) scale(1.0); opacity: 0; }
+}
+
+@keyframes anim-projectile {
+  0%   { transform: translate(0, 0) scale(1.3); opacity: 1; }
+  75%  { transform: translate(var(--tx), var(--ty)) scale(0.9); opacity: 0.85; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.3); opacity: 0; }
+}
+
+@keyframes anim-shield-pulse {
+  0%   { transform: translate(-50%, -50%) scale(0.8); opacity: 0.9; }
+  50%  { transform: translate(-50%, -50%) scale(1.2); opacity: 0.4; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}
+
+@keyframes anim-move-trail {
+  0%   { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+}
+
+@keyframes anim-turn-flash-blue {
+  0%   { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+@keyframes anim-turn-flash-red {
+  0%   { opacity: 0.50; }
+  100% { opacity: 0; }
+}
+
+@keyframes anim-enemy-banner {
+  0%   { opacity: 0; transform: scale(0.88) translateY(-8px); }
+  12%  { opacity: 1; transform: scale(1.0)  translateY(0px);  }
+  70%  { opacity: 1; transform: scale(1.0)  translateY(0px);  }
+  100% { opacity: 0; transform: scale(0.96) translateY(4px);  }
+}
+
+@keyframes anim-aoe-ring {
+  0%   { opacity: 0.9; transform: translate(-50%, -50%) scale(0.05); }
+  55%  { opacity: 0.8; transform: translate(-50%, -50%) scale(1.0);  }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.15); }
+}
+
+@keyframes arena-pulse {
+  0%, 100% { opacity: 0.018; }
+  50%       { opacity: 0.042; }
+}
+
+@keyframes arena-energy-drift {
+  0%   { transform: translateX(0px) translateY(0px); }
+  33%  { transform: translateX(4px) translateY(-3px); }
+  66%  { transform: translateX(-3px) translateY(4px); }
+  100% { transform: translateX(0px) translateY(0px); }
+}

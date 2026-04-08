@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { audioEngine } from "@/audio/AudioEngine";
 import { ChevronLeft, Shield, Zap, Heart, Star, BookOpen, Sword, Package, Map, Users, Lock } from "lucide-react";
 import ArenaBackground from "@/ui/ArenaBackground";
+import { useT } from "@/i18n";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -27,18 +28,21 @@ interface Ability {
   name: string;
   cost: string;
   desc: React.ReactNode;
+  waterName?: string;
+  waterDesc?: React.ReactNode;
 }
 interface CharacterEntry {
   id: string;
   name: string;
   title: string;
   tagline: string;
-  role: "DPS RANGED" | "DPS MELEE" | "SUPPORT" | "TANK";
+  role: "DPS RANGED" | "DPS MELEE" | "SUPPORT" | "TANK" | "HYBRID";
   portrait: string;
   accentColor: string;
   ringColor: string;
   lore: string;
   stats: { hp: number; might: number; power: number; defense: number; moveRange: number };
+  waterStats?: { hp: number; might: number; power: number; defense: number; moveRange: number };
   abilities: Ability[];
 }
 
@@ -102,15 +106,26 @@ const CHARACTERS: CharacterEntry[] = [
   {
     id: "sunsin", name: "Sun-sin-chan", title: "The Admiral of the Turtle Fleet",
     tagline: "Admiral of the Turtle Fleet",
-    role: "DPS MELEE", portrait: "/art/sunsin_portrait.jpg",
+    role: "HYBRID", portrait: "/art/sunsin_portrait.png",
     accentColor: "#38bdf8", ringColor: "rgba(56,189,248,0.55)",
     lore: "Yi Sun-sin repelled an entire Japanese armada with a handful of ironclad turtle ships and an unshakeable will. The Empire of Znyxorga found her genetic echo preserved in the sea-salt timber of the Joseon docks and grew her in the deep-blue vats of their naval division. On dry land she fights with disciplined efficiency. But put ocean tiles between her and an enemy — and the turtle ship awakens. Cannons fire. Hulls hold. Admirals do not retreat.",
     stats: { hp: 100, might: 65, power: 60, defense: 25, moveRange: 3 },
+    waterStats: { hp: 100, might: 91, power: 36, defense: 32, moveRange: 1 },
     abilities: [
-      { kind: "passive", icon: "🐢", name: "Turtle Ship", cost: "Passive", desc: <>Can move onto water tiles. On water: <span style={{ color: "#f87171", fontWeight: 700 }}>+40% Might</span>, <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30% Defense</span>, <span style={{ color: "#60a5fa", fontWeight: 700 }}>−40% Power</span>, −1 Movement, Range 3 basic attack. On land: balanced stats, Range 1.</> },
-      { kind: "ability", icon: "🔥", name: "Hwajeon / Ramming Speed", cost: "2 Mana", desc: <><span style={{ color: "#a78bfa", fontWeight: 700 }}>Power×1.2</span> at range 3. Pushes target back 1 hex on hit.</> },
-      { kind: "ability", icon: "🚢", name: "Naval Command / Broadside", cost: "3 Mana", desc: <>+15% <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> &amp; <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power</span> to all allies for 2 turns.</> },
-      { kind: "ultimate", icon: "⭐", name: "Chongtong Barrage", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#a78bfa", fontWeight: 700 }}>Power×2.0</span> to all enemies in range 5.</> },
+      { kind: "passive", icon: "🐢", name: "Turtle Ship", cost: "Passive",
+        desc: <>Can move onto water tiles. On land: balanced stats, Range 1 basic attacks.</>,
+        waterDesc: <>ON WATER: <span style={{ color: "#f87171", fontWeight: 700 }}>+40% Might</span> (65→91), <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30% Defense</span> (25→32), <span style={{ color: "#60a5fa", fontWeight: 700 }}>−40% Power</span> (60→36). Movement capped at 1. Range 3 basic attacks.</> },
+      { kind: "ability", icon: "🔥", name: "Hwajeon", cost: "2 Mana",
+        desc: <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~72 damage</span> at range 3. Pushes target back 1 hex.</>,
+        waterName: "Ramming Speed",
+        waterDesc: <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~72 damage</span> at range 1. Pushes target back 1 hex. (Power reduced on water)</> },
+      { kind: "ability", icon: "🚢", name: "Naval Repairs", cost: "3 Mana",
+        desc: <>Select a target area. All allies within range 2 heal <span style={{ color: "#4ade80", fontWeight: 700 }}>10 HP now</span> and <span style={{ color: "#4ade80", fontWeight: 700 }}>10 HP next turn</span>.</>,
+        waterName: "Broadside",
+        waterDesc: <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~25 damage</span> to all enemies in range 3.</> },
+      { kind: "ultimate", icon: "⭐", name: "Chongtong Barrage", cost: "3 Mana · Exhaust",
+        desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Charge 3 hexes, deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~60 damage</span> to enemies in path. Each hit enemy is <span style={{ color: "#38bdf8", fontWeight: 700 }}>pushed sideways</span>. Sun-sin ends at the last hex.</>,
+        waterDesc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Main target: <span style={{ color: "#a78bfa", fontWeight: 700 }}>~90 damage</span>. Adjacent enemies: <span style={{ color: "#a78bfa", fontWeight: 700 }}>~43 damage</span>. Range 5.</> },
     ],
   },
 ];
@@ -120,8 +135,9 @@ const ROLE_STYLE: Record<string, { text: string; border: string; bg: string }> =
   "DPS MELEE":  { text: "text-rose-300",    border: "border-rose-500/50",    bg: "bg-rose-900/30" },
   "SUPPORT":    { text: "text-emerald-300", border: "border-emerald-500/50", bg: "bg-emerald-900/30" },
   "TANK":       { text: "text-amber-300",   border: "border-amber-500/50",   bg: "bg-amber-900/30" },
+  "HYBRID":     { text: "text-teal-300",    border: "border-teal-500/50",    bg: "bg-teal-900/30" },
 };
-const STAT_MAX = { hp: 180, might: 100, power: 100, defense: 50, moveRange: 5 };
+const STAT_MAX = { hp: 180, might: 100, power: 100, defense: 50, moveRange: 4 };
 
 // ── Tile Data ─────────────────────────────────────────────────────────────────
 
@@ -134,14 +150,14 @@ interface TileEntry {
 
 const TILES: TileEntry[] = [
   {
-    type: 'plain', icon: '🟫', name: 'Plain', color: '#a3a3a3',
-    image: '/art/tiles/Plain.png',
-    effects: [{ label: 'No bonuses', detail: 'Open ground — free to move through, no stat modifiers.' }],
+    type: 'plain', icon: '⬛', name: 'Arena Floor', color: '#64748b',
+    image: '/art/tiles/Plains_180.png',
+    effects: [{ label: 'No modifiers', detail: 'Open tech floor — free to move through, no stat modifiers of any kind.' }],
     tip: 'Most of the board. Use as a staging area.',
   },
   {
-    type: 'forest', icon: '🌲', name: 'Forest', color: '#22c55e',
-    image: '/art/tiles/Forest.png',
+    type: 'forest', icon: '🔮', name: 'Crystal Spires', color: '#a855f7',
+    image: '/art/tiles/Forest_180.png',
     effects: [
       { label: '+Defense', detail: 'Units on a forest tile gain a Defense bonus against incoming attacks.' },
       { label: 'Stealth', detail: 'Reduces enemy targeting priority.' },
@@ -151,7 +167,7 @@ const TILES: TileEntry[] = [
   },
   {
     type: 'mountain', icon: '⛰️', name: 'Mountain', color: '#78716c',
-    image: '/art/tiles/Mountains.png',
+    image: '/art/tiles/Mountains_180.png',
     effects: [
       { label: 'Impassable', detail: 'No unit can enter or cross a mountain hex.' },
       { label: 'Blocks Line of Sight', detail: 'Abilities and attacks cannot target through mountains on the same axial line.' },
@@ -160,7 +176,7 @@ const TILES: TileEntry[] = [
   },
   {
     type: 'river', icon: '🌊', name: 'River', color: '#38bdf8',
-    image: '/art/tiles/River.png',
+    image: '/art/tiles/River_180.png',
     effects: [
       { label: 'Impassable', detail: 'Units cannot enter river tiles voluntarily — movement is blocked.' },
       { label: 'Lethal Displacement', detail: 'If knocked onto a river tile by an ability (e.g. charge, push), the unit is instantly killed.' },
@@ -169,7 +185,7 @@ const TILES: TileEntry[] = [
   },
   {
     type: 'mana_crystal', icon: '💎', name: 'Mana Crystal', color: '#c084fc',
-    image: '/art/tiles/Mana_Crystal.png',
+    image: '/art/tiles/Mana_Crystal_180.png',
     effects: [
       { label: '+1 Mana on Entry', detail: 'Standing on or moving onto a Mana Crystal tile restores 1 Mana to that unit.' },
     ],
@@ -187,28 +203,44 @@ interface ItemEntry {
 }
 
 const ITEMS: ItemEntry[] = [
-  { id: 'iron_gauntlets',   name: 'Iron Gauntlets',   icon: '🥊', tier: 'common',   description: '+8 Might for this run.',                                    statBonus: { might: 8 } },
-  { id: 'bone_plate',       name: 'Bone Plate',        icon: '🦴', tier: 'common',   description: '+6 Defense for this run.',                                  statBonus: { defense: 6 } },
+  // Common
+  { id: 'iron_gauntlets',   name: 'Iron Gauntlets',   icon: '🥊', tier: 'common',   description: '+10 Might for this run.',                                   statBonus: { might: 10 } },
+  { id: 'bone_plate',       name: 'Bone Plate',        icon: '🦴', tier: 'common',   description: '+5 Defense for this run.',                                  statBonus: { defense: 5 } },
   { id: 'vitality_shard',   name: 'Vitality Shard',    icon: '💠', tier: 'common',   description: '+25 max HP for this run.',                                  statBonus: { hp: 25 } },
-  { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+5 Power for this run.',                                    statBonus: { power: 5 } },
-  { id: 'battle_drum',      name: 'Battle Drum',       icon: '🥁', tier: 'uncommon', description: 'After killing an enemy, draw 1 card.' },
+  { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+10 Power for this run.',                                   statBonus: { power: 10 } },
+  // Uncommon
+  { id: 'battle_drum',      name: 'Battle Drum',       icon: '🥁', tier: 'uncommon', description: 'After killing an enemy, draw 2 cards.' },
   { id: 'arena_medkit',     name: 'Arena Medkit',      icon: '💊', tier: 'uncommon', description: 'Heal 20 HP at the start of your turn if below 40% HP.' },
   { id: 'void_shard',       name: 'Void Shard',        icon: '🔥', tier: 'uncommon', description: 'Basic attacks deal +10 bonus damage.',                     statBonus: { might: 10 } },
   { id: 'card_satchel',     name: 'Card Satchel',      icon: '🎒', tier: 'uncommon', description: '+1 starting hand size for this run.' },
-  { id: 'strategists_case', name: "Strategist's Case", icon: '💼', tier: 'uncommon', description: '+2 starting hand size for this run.' },
   { id: 'quick_boots',      name: 'Quick Boots',       icon: '👟', tier: 'uncommon', description: '+1 movement range permanently.' },
   { id: 'soul_ember',       name: 'Soul Ember',        icon: '🕯️', tier: 'uncommon', description: 'On kill, restore 15 HP to this character.' },
-  { id: 'alien_core',       name: 'Alien Core',        icon: '🧬', tier: 'rare',     description: '+12 Power. Ability damage +15%.',                          statBonus: { power: 12 } },
+  { id: 'war_trophy',       name: 'War Trophy',        icon: '💀', tier: 'uncommon', description: 'On kill, permanently gain +3 Might and +3 Power for the rest of the run.' },
+  // Rare — General
+  { id: 'strategists_case', name: "Strategist's Case", icon: '💼', tier: 'rare',     description: '+2 starting hand size for this run.' },
+  { id: 'alien_core',       name: 'Alien Core',        icon: '🧬', tier: 'rare',     description: '+20 Power for this run.',                                   statBonus: { power: 20 } },
   { id: 'gladiator_brand',  name: "Gladiator's Brand", icon: '⚡', tier: 'rare',     description: 'First ability each fight costs 0 Mana.' },
+  { id: 'diamond_shell',    name: 'Diamond Shell',     icon: '💎', tier: 'rare',     description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).' },
+  // Rare — Napoleon
   { id: 'grand_strategy',   name: 'Grand Strategy',    icon: '🗺️', tier: 'rare',     description: 'Artillery Barrage hits an additional adjacent target.',      targetCharacter: 'napoleon' },
-  { id: 'emperors_coat',    name: "Emperor's Coat",    icon: '🪖', tier: 'rare',     description: 'Grande Armée also restores 1 Mana to each buffed ally.',    targetCharacter: 'napoleon' },
+  { id: 'emperors_coat',    name: "Emperor's Coat",    icon: '🪖', tier: 'rare',     description: 'Grande Armée also grants +30% Might & Power and restores 1 Mana to each buffed ally.', targetCharacter: 'napoleon' },
+  // Rare — Genghis
   { id: 'eternal_hunger',   name: 'Eternal Hunger',    icon: '🩸', tier: 'rare',     description: 'Bloodlust kill stacks carry over between fights for the entire run.',               targetCharacter: 'genghis' },
   { id: 'khans_seal',       name: "Khan's Seal",       icon: '🏹', tier: 'rare',     description: "Rider's Fury also stuns each hit enemy for 1 turn.",        targetCharacter: 'genghis' },
+  // Rare — Da Vinci
   { id: 'aerial_lens',      name: 'Aerial Lens',       icon: '🔭', tier: 'rare',     description: 'Flying Machine can swap position with an allied unit.',      targetCharacter: 'davinci' },
   { id: 'life_formula',     name: 'Life Formula',      icon: '💚', tier: 'rare',     description: 'Masterpiece heals an additional 25 HP.',                    targetCharacter: 'davinci' },
-  { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'After defeating an enemy, your next card costs 0 Mana.' },
+  // Rare — Leonidas
+  { id: 'spartan_shield',   name: 'Spartan Shield',    icon: '🛡️', tier: 'rare',     description: 'Shield Bash also pushes the target back 1 hex and STUNS for 1 turn — stunned unit cannot move, attack, or use abilities.', targetCharacter: 'leonidas' },
+  { id: 'phalanx_oath',     name: 'Phalanx Oath',      icon: '🏛️', tier: 'rare',     description: 'Spartan Wall range increased by 1 and DEF bonus increased to +30.',                 targetCharacter: 'leonidas' },
+  // Rare — Sun-sin
+  { id: 'turtle_hull',      name: 'Turtle Hull',       icon: '🐢', tier: 'rare',     description: 'Yi Sun-sin takes 20% less damage from all sources.',                                targetCharacter: 'sunsin' },
+  { id: 'admirals_banner',  name: "Admiral's Banner",  icon: '⛵', tier: 'rare',     description: 'Naval Repairs / Broadside also grants all nearby allies +30 DEF for 1 turn.',       targetCharacter: 'sunsin' },
+  // Legendary
+  { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'After defeating an enemy, your next 2 cards cost 0 Mana.' },
   { id: 'void_armor',       name: 'Void Armor',        icon: '🛡️', tier: 'legendary', description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.' },
   { id: 'arena_champion',   name: 'Arena Champion',    icon: '🏆', tier: 'legendary', description: 'All stats +10 while this character is alive.',              statBonus: { hp: 10, might: 10, power: 10, defense: 10 } },
+  { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary', description: 'Permanently draw 3 additional cards at the start of each turn for the rest of the run.' },
 ];
 
 const CHAR_LABEL: Record<string, { name: string; color: string }> = {
@@ -225,6 +257,7 @@ interface CardEntry {
   definitionId: string; name: string; icon: string;
   manaCost: number; type: string; rarity: string;
   description: string; exclusiveTo?: string;
+  terrain?: 'land' | 'water'; // Sun-sin terrain-specific abilities
 }
 
 const CARDS: CardEntry[] = [
@@ -256,11 +289,14 @@ const CARDS: CardEntry[] = [
   { definitionId: 'davinci_flying_machine',     name: 'Flying Machine',     icon: '✈️', manaCost: 2, type: 'movement', rarity: 'rare',    description: 'Teleport to any unoccupied hex within range Power÷10 (50 Power = range 5).', exclusiveTo: 'Da Vinci' },
   { definitionId: 'davinci_masterpiece',        name: 'Masterpiece',        icon: '💚', manaCost: 3, type: 'defense',  rarity: 'rare',    description: 'Heal an ally within range 3 for Power×1.0 HP.',           exclusiveTo: 'Da Vinci' },
   { definitionId: 'davinci_vitruvian_guardian', name: 'Vitruvian Guardian', icon: '⭐', manaCost: 3, type: 'ultimate',  rarity: 'ultimate', description: 'EXHAUST — Summon drone: HP=Power×1, Might=Power×0.6, Defense=Power×0.6. Lasts 2 turns.', exclusiveTo: 'Da Vinci' },
-  // Sun-sin
-  { definitionId: 'sunsin_hwajeon',             name: 'Hwajeon / Ramming Speed', icon: '🔥', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.2 at range 3. Pushes target back 1 hex on hit.',           exclusiveTo: 'Sun-sin' },
-  { definitionId: 'sunsin_naval_command',       name: 'Naval Command / Broadside', icon: '🚢', manaCost: 3, type: 'buff',   rarity: 'rare',    description: '+15% Might & Power to all allies for 2 turns.',             exclusiveTo: 'Sun-sin' },
-  { definitionId: 'sunsin_broadside',           name: 'Broadside',           icon: '💥', manaCost: 3, type: 'attack',  rarity: 'rare',    description: 'Power×0.7 to all enemies within range 3.',                  exclusiveTo: 'Sun-sin' },
-  { definitionId: 'sunsin_chongtong_barrage',   name: 'Chongtong Barrage',   icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Power×2.0 to all enemies in range 5.',             exclusiveTo: 'Sun-sin' },
+  // Sun-sin — Land forms
+  { definitionId: 'sunsin_hwajeon_land',        name: 'Hwajeon',           icon: '🔥', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~72 dmg at range 3. Pushes target back 1 hex.',                                          exclusiveTo: 'Sun-sin', terrain: 'land' },
+  { definitionId: 'sunsin_naval_repairs_land',  name: 'Naval Repairs',     icon: '🚢', manaCost: 3, type: 'defense',  rarity: 'rare',    description: 'Target an area — allies within range 2 heal 10 HP now and 10 HP next turn.',              exclusiveTo: 'Sun-sin', terrain: 'land' },
+  { definitionId: 'sunsin_chongtong_land',      name: 'Chongtong Barrage', icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Charge 3 hexes. ~60 dmg to enemies in path, pushed sideways. Sun-sin ends at last hex.', exclusiveTo: 'Sun-sin', terrain: 'land' },
+  // Sun-sin — Water forms
+  { definitionId: 'sunsin_ramming_speed_water', name: 'Ramming Speed',     icon: '🚢', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~72 dmg at range 1. Pushes target back 1 hex. (Power reduced on water)',                  exclusiveTo: 'Sun-sin', terrain: 'water' },
+  { definitionId: 'sunsin_broadside_water',     name: 'Broadside',         icon: '💥', manaCost: 3, type: 'attack',   rarity: 'rare',    description: '~25 dmg to ALL enemies in range 3.',                                                     exclusiveTo: 'Sun-sin', terrain: 'water' },
+  { definitionId: 'sunsin_chongtong_water',     name: 'Chongtong Barrage', icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~90 dmg to main target + ~43 to adjacent enemies. Range 5.',                    exclusiveTo: 'Sun-sin', terrain: 'water' },
 ];
 
 const EXCL_COLOR: Record<string, string> = {
@@ -274,68 +310,89 @@ interface EnemyEntry {
   id: string; name: string; icon: string; act: number;
   rank: 'Minion' | 'Elite' | 'Boss';
   ai: string;
+  portrait?: string;
   stats: { hp: number; might: number; power: number; defense: number; moveRange: number; attackRange: number };
   description: string;
   abilities?: EnemyAbilityEntry[];
 }
 
 const ENEMIES: EnemyEntry[] = [
-  { id: 'glorp_shambler',    name: 'Glorp Shambler',       icon: '🍄', act: 1, rank: 'Minion', ai: 'aggressive', stats: { hp: 60,  might: 35, power: 25, defense: 8,  moveRange: 2, attackRange: 1 }, description: 'A fungal creature from the swamps of Gloprax IV. Slow but relentless — it will walk straight into your lines.' },
-  { id: 'zyx_skitter',       name: 'Zyx Skitter',          icon: '🦟', act: 1, rank: 'Minion', ai: 'aggressive', stats: { hp: 30,  might: 22, power: 15, defense: 4,  moveRange: 4, attackRange: 1 }, description: 'Fast-moving insectoid scouts. Fragile alone, but they arrive in pairs and swarm exposed flanks.' },
-  { id: 'naxion_scout',      name: 'Naxion Scout',         icon: '👾', act: 1, rank: 'Minion', ai: 'ranged',     stats: { hp: 70,  might: 30, power: 35, defense: 12, moveRange: 3, attackRange: 2 }, description: 'Arena gladiators hired by Znyxorga for target practice. Keeps its distance and uses ranged energy blasts.' },
-  { id: 'vron_crawler',      name: 'Vron Crawler',         icon: '🦀', act: 1, rank: 'Minion', ai: 'defensive',  stats: { hp: 85,  might: 28, power: 20, defense: 22, moveRange: 2, attackRange: 1 }, description: 'An armored crustacean from the deep voids. Slow but thick-shelled — its defense is its offense.' },
-  { id: 'krath_champion',    name: 'Krath Champion',       icon: '⚔️', act: 1, rank: 'Elite',  ai: 'berserker',  stats: { hp: 120, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 }, description: 'A seasoned gladiator of the Krath species. Fights with reckless fury, dealing heavy damage before falling.',
+  { id: 'glorp_shambler',    name: 'Glorp Shambler',       icon: '🍄', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/glorp_shambler_portrait.png', stats: { hp: 60,  might: 35, power: 25, defense: 8,  moveRange: 2, attackRange: 1 }, description: 'A fungal creature from the swamps of Gloprax IV. Slow but relentless — it will walk straight into your lines.',
+    abilities: [
+      { icon: '☁️', name: 'Spore Release', desc: 'Releases toxic spores — applies Poison to all enemies within range 1. (Every 3 turns)' },
+    ],
+  },
+  { id: 'zyx_skitter',       name: 'Zyx Skitter',          icon: '🦟', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/zyx_skitter_portrait.png', stats: { hp: 30,  might: 22, power: 15, defense: 4,  moveRange: 4, attackRange: 1 }, description: 'Fast-moving insectoid scouts. Fragile alone, but they arrive in pairs and swarm exposed flanks.',
+    abilities: [
+      { icon: '🦟', name: 'Swarm Bite', desc: 'Leaps onto the closest enemy and deals 20 damage to all enemies within range 1. (Every 4 turns)' },
+    ],
+  },
+  { id: 'naxion_scout',      name: 'Naxion Scout',         icon: '👾', act: 1, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/naxion_scout_portrait.png',    stats: { hp: 70,  might: 30, power: 35, defense: 12, moveRange: 3, attackRange: 2 }, description: "A hired gun from the outer arena circuits. One burning eye, one plasma pistol — it never stops smiling because it knows it's faster than you." },
+  { id: 'vron_crawler',      name: 'Vron Crawler',         icon: '🦀', act: 1, rank: 'Minion', ai: 'defensive',  portrait: '/art/enemies/vron_crawler_portrait.png',    stats: { hp: 85,  might: 28, power: 20, defense: 22, moveRange: 2, attackRange: 1 }, description: "A living fortress on six legs. Its layered shell makes frontal assaults nearly pointless — wait for it to expose its soft underbelly, or don't attack at all." },
+  { id: 'krath_champion',    name: 'Krath Champion',       icon: '⚔️', act: 1, rank: 'Elite',  ai: 'berserker',  portrait: '/art/enemies/krath_champion_portrait.png',  stats: { hp: 120, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 }, description: "A seasoned Krath arena veteran decorated with the skulls of past opponents. Fights dirty, hard, and with a grin that says it's already killed better than you.",
     abilities: [
       { icon: '🔥', name: 'Battle Rage', desc: 'Gains +25 Might and +10 Defense for 2 turns. (Every 3 turns)' },
       { icon: '⚔️', name: "Champion's Strike", desc: 'Deals 1.8× Might damage to the nearest enemy in range 2. (Every 2 turns)' },
     ],
   },
-  { id: 'spore_cluster',     name: 'Spore Node',           icon: '🔴', act: 1, rank: 'Elite',  ai: 'ranged',     stats: { hp: 40,  might: 20, power: 30, defense: 5,  moveRange: 1, attackRange: 2 }, description: 'A cluster of three spore emitters. Poisons the air and bursts with AoE damage every 2 turns.',
+  { id: 'spore_cluster',     name: 'Spore Node',           icon: '🔴', act: 1, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/spore_node_portrait.png',     stats: { hp: 40,  might: 20, power: 30, defense: 5,  moveRange: 1, attackRange: 2 }, description: 'Three semi-sentient spore heads on a shared fungal body. Sluggish and barely mobile, but the toxic clouds they pump out will rot your armor off in minutes.',
     abilities: [
       { icon: '☣️', name: 'Toxic Cloud', desc: 'Applies Poison to all enemies within range 2. (Every 2 turns)' },
       { icon: '💥', name: 'Spore Burst', desc: 'Deals 25 damage to all enemies within range 2. (Every 2 turns)' },
     ],
   },
-  { id: 'vexlar',            name: 'Vexlar',               icon: '🐆', act: 1, rank: 'Minion', ai: 'aggressive', stats: { hp: 80,  might: 25, power: 30, defense: 30, moveRange: 3, attackRange: 1 }, description: 'Alien big cats introduced in your first fight. Thick-hided hunters with a terrifying lunge — they will seek out your weakest defender.',
+  { id: 'vexlar',            name: 'Vexlar',               icon: '🐆', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vexlar_portrait.png',          stats: { hp: 80,  might: 25, power: 30, defense: 30, moveRange: 3, attackRange: 1 }, description: 'Alien apex predators brought in for your opening round. Six-legged and iridescent, they hunt the weakest link with surgical instinct and terrifying speed.',
     abilities: [
       { icon: '🐆', name: 'Predator Leap', desc: 'Leaps up to range 4 toward the enemy with the lowest Defense and immediately attacks. (Every 3 turns)' },
     ],
   },
-  { id: 'iron_wall',         name: 'Iron Wall',            icon: '🤖', act: 1, rank: 'Boss',   ai: 'defensive',  stats: { hp: 200, might: 60, power: 50, defense: 35, moveRange: 2, attackRange: 1 }, description: 'Act I boss. A war mech that regenerates when wounded, blasts AoE, and locks down with Turret Mode.',
+  { id: 'iron_wall',         name: 'Iron Wall',            icon: '🤖', act: 1, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/iron_wall_portrait.png',       stats: { hp: 200, might: 60, power: 50, defense: 35, moveRange: 2, attackRange: 1 }, description: 'The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered.',
     abilities: [
       { icon: '💚', name: 'Shield Array', desc: 'Heals self for 70 HP. Triggers ONCE when below 50% HP.' },
       { icon: '⚡', name: 'EMP Blast', desc: 'Deals 40 damage to all enemies within range 2. (Every 3 turns)' },
       { icon: '🤖', name: 'Turret Mode', desc: 'Gains +40 Defense for 2 turns. (Every 4 turns)' },
     ],
   },
-  { id: 'mog_toxin',         name: 'Mog Toxin',            icon: '☣️', act: 2, rank: 'Minion', ai: 'ranged',     stats: { hp: 75,  might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 }, description: 'A long-range biological hazard unit. Deals poison-type damage from across the field.' },
-  { id: 'qrix_hunter',       name: 'Qrix Hunter',          icon: '🏹', act: 2, rank: 'Minion', ai: 'ranged',     stats: { hp: 70,  might: 25, power: 50, defense: 8,  moveRange: 3, attackRange: 3 }, description: 'A precision marksman deployed by arena sponsors. Has the longest attack range of any common enemy.' },
-  { id: 'void_wraith',       name: 'Void Wraith',          icon: '👻', act: 2, rank: 'Minion', ai: 'aggressive', stats: { hp: 65,  might: 45, power: 40, defense: 5,  moveRange: 4, attackRange: 1 }, description: 'Spectral energy creature from the Null Zone. Fast and hits hard, but shatters quickly.' },
-  { id: 'krath_berserker',   name: 'Krath Berserker',      icon: '💢', act: 2, rank: 'Elite',  ai: 'berserker',  stats: { hp: 140, might: 75, power: 55, defense: 14, moveRange: 4, attackRange: 1 }, description: 'The veteran of Act I. Goes berserk for a burst of +35 Might, then leaps across the field.',
+  { id: 'mog_toxin',         name: 'Mog Toxin',            icon: '☣️', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/mog_toxin_portrait.png',     stats: { hp: 75,  might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 }, description: 'A long-range biological hazard unit. Deals poison-type damage from across the field.',
     abilities: [
-      { icon: '💢', name: 'Bloodrage', desc: 'Gains +35 Might and loses 20 Defense for 2 turns. (Every 3 turns)' },
-      { icon: '🦘', name: 'Savage Leap', desc: 'Teleports adjacent to the closest enemy and deals 2.0× Might damage. (Every 2 turns)' },
+      { icon: '🧪', name: 'Acid Spray', desc: 'Launches a corrosive burst — applies Armor Break (−20% DEF) to all enemies within range 2 for 3 turns. (Every 3 turns)' },
     ],
   },
-  { id: 'phasewarden',       name: 'Phasewarden',          icon: '🔮', act: 2, rank: 'Elite',  ai: 'ranged',     stats: { hp: 110, might: 55, power: 65, defense: 20, moveRange: 5, attackRange: 2 }, description: 'A phase-shifted guard that blinks away and drains Power from all nearby enemies.',
+  { id: 'qrix_hunter',       name: 'Qrix Hunter',          icon: '🏹', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/qrix_hunter_portrait.png',     stats: { hp: 70,  might: 25, power: 50, defense: 8,  moveRange: 3, attackRange: 3 }, description: 'A precision marksman deployed by arena sponsors. Has the longest attack range of any common enemy.',
+    abilities: [
+      { icon: '📌', name: 'Pinning Shot', desc: 'Fires a precision bolt — deals Power×1.4 damage to the closest enemy within range 3. (Every 3 turns)' },
+    ],
+  },
+  { id: 'void_wraith',       name: 'Void Wraith',          icon: '👻', act: 2, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/void_wraith_portrait.png', stats: { hp: 65,  might: 45, power: 40, defense: 5,  moveRange: 4, attackRange: 1 }, description: 'Spectral energy creature from the Null Zone. Fast and hits hard, but shatters quickly.',
+    abilities: [
+      { icon: '🌑', name: 'Shadow Step', desc: 'Phases through reality — teleports adjacent to the closest enemy and strikes for 1.4× Might (DEF applies). (Every 3 turns)' },
+    ],
+  },
+  { id: 'krath_berserker',   name: 'Krath Berserker',      icon: '💢', act: 2, rank: 'Elite',  ai: 'berserker',  portrait: '/art/enemies/krath_berserker_portrait.png',  stats: { hp: 140, might: 60, power: 55, defense: 14, moveRange: 4, attackRange: 1 }, description: 'The veteran of Act I. Goes berserk for a burst of +25 Might, then leaps across the field.',
+    abilities: [
+      { icon: '💢', name: 'Bloodrage', desc: 'Gains +25 Might and loses 20 Defense for 2 turns. (Every 3 turns)' },
+      { icon: '🦘', name: 'Savage Leap', desc: 'Teleports adjacent to the closest enemy and deals 1.5× Might damage (DEF applies). (Every 2 turns)' },
+    ],
+  },
+  { id: 'phasewarden',       name: 'Phasewarden',          icon: '🔮', act: 2, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/phasewarden_portrait.png',     stats: { hp: 110, might: 55, power: 65, defense: 20, moveRange: 5, attackRange: 2 }, description: "A guardian from between dimensions. Its crystalline armor flickers between planes of existence — it blinks away, strips your defenses, then closes in when you're most exposed.",
     abilities: [
       { icon: '🔮', name: 'Dimensional Drain', desc: 'Applies Armor Break to all enemies within range 3 for 2 turns. (Every 3 turns)' },
       { icon: '✨', name: 'Phase Blink', desc: 'Teleports adjacent to the closest enemy and deals 1.2× Might. (Every 2 turns)' },
     ],
   },
-  { id: 'twin_terror_a',     name: 'Terror Alpha',         icon: '🗡️', act: 2, rank: 'Boss',   ai: 'berserker',  stats: { hp: 160, might: 70, power: 55, defense: 20, moveRange: 4, attackRange: 1 }, description: 'Act II boss. Charges at full speed and surges with Twin Fury — kill fast before Beta heals.',
+  { id: 'twin_terror_a',     name: 'Terror Alpha',         icon: '🗡️', act: 2, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/terror_alpha_portrait.png',   stats: { hp: 160, might: 70, power: 55, defense: 20, moveRange: 4, attackRange: 1 }, description: 'The aggressive half of the Twin Terror. Built for raw speed and kinetic impact — charges at full sprint and hits like a missile. Kill it first or it will never stop coming.',
     abilities: [
       { icon: '🗡️', name: 'Alpha Rush', desc: 'Charges 4 hexes and deals 2.2× Might damage on impact. (Every 2 turns)' },
       { icon: '🔥', name: 'Twin Fury', desc: 'Gains +30 Might for 2 turns. (Every 3 turns)' },
     ],
   },
-  { id: 'twin_terror_b',     name: 'Terror Beta',          icon: '🛡️', act: 2, rank: 'Boss',   ai: 'defensive',  stats: { hp: 160, might: 50, power: 65, defense: 30, moveRange: 3, attackRange: 2 }, description: 'Act II boss. Tanks damage and self-heals once when near death — always eliminate Alpha first.',
+  { id: 'twin_terror_b',     name: 'Terror Beta',          icon: '🛡️', act: 2, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/terror_beta_portrait.png',    stats: { hp: 160, might: 50, power: 65, defense: 30, moveRange: 3, attackRange: 2 }, description: 'The defensive half of the Twin Terror. Absorbs punishment while Alpha creates chaos, then heals itself when nearly dead. Ignore it and Beta becomes unkillable.',
     abilities: [
       { icon: '💚', name: 'Aegis Heal', desc: 'Heals self for 90 HP. Triggers ONCE when below 40% HP.' },
       { icon: '🛡️', name: 'Mirror Aegis', desc: 'Gains +50 Defense for 2 turns. (Every 3 turns)' },
     ],
   },
-  { id: 'znyxorga_champion', name: "Znyxorga's Champion",  icon: '👑', act: 3, rank: 'Boss',   ai: 'berserker',  stats: { hp: 500, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 }, description: "The final boss. Hits all characters simultaneously with Arena Collapse. Becomes invincible at 50% HP while permanently gaining stats. Grows even more powerful below 30% HP. 500 HP total — the ultimate endurance test.",
+  { id: 'znyxorga_champion', name: "Znyxorga's Champion",  icon: '👑', act: 3, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/znyxorgas_champion_portrait.png', stats: { hp: 500, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 }, description: "Znyxorga's ultimate weapon — four arms, six eyes, 500 HP, and the patience of a god. Annihilates your whole team simultaneously and grows stronger the closer it gets to death.",
     abilities: [
       { icon: '👑', name: 'Arena Collapse', desc: 'The arena becomes a weapon — deals 55 damage to ALL player characters simultaneously. (Every 3 turns)' },
       { icon: '🛡️', name: 'Phase Shift', desc: 'INVINCIBLE for 2 turns and gains +25 Might/Power/Defense permanently. Triggers ONCE when below 50% HP — prepare for a power spike!' },
@@ -487,6 +544,13 @@ function MainView({
   onSelectChar: (id: string) => void;
   onBack: () => void;
 }) {
+  const { t } = useT();
+  const TAB_LABELS: Record<string, string> = {
+    characters: t.archives.tabs.characters,
+    tiles: t.archives.tabs.tiles,
+    cards: t.archives.tabs.cards,
+    items: t.archives.tabs.items,
+  };
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero banner */}
@@ -498,13 +562,13 @@ function MainView({
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <p className="font-orbitron text-[10px] tracking-[0.5em] text-purple-400 mb-2">THE EMPIRE OF ZNYXORGA</p>
           <h1 className="font-orbitron font-black text-4xl text-white" style={{ textShadow: '0 0 30px rgba(34,211,238,0.5)' }}>
-            HISTORICAL ARCHIVES
+            {t.archives.title}
           </h1>
           <p className="text-slate-400 mt-1 text-sm">Game Compendium — All Classified Data</p>
         </div>
         <button onClick={onBack}
           className="absolute top-4 left-6 flex items-center gap-2 text-slate-300 hover:text-white transition-colors font-orbitron text-xs tracking-wider">
-          <ChevronLeft className="w-4 h-4" /> MAIN MENU
+          <ChevronLeft className="w-4 h-4" /> {t.mainMenu}
         </button>
       </div>
 
@@ -519,7 +583,7 @@ function MainView({
                 borderBottomColor: activeTab === tab.id ? '#22d3ee' : 'transparent',
                 background: activeTab === tab.id ? 'rgba(34,211,238,0.06)' : 'transparent',
               }}>
-              {tab.icon} {tab.label.toUpperCase()}
+              {tab.icon} {(TAB_LABELS[tab.id] ?? tab.label).toUpperCase()}
             </button>
           ))}
         </div>
@@ -544,16 +608,22 @@ function MainView({
    CHARACTERS TAB
 ══════════════════════════════════════════════════════════════ */
 function CharactersTab({ onSelectChar }: { onSelectChar: (id: string) => void }) {
+  const { t } = useT();
   return (
     <div className="flex items-center justify-center px-8 py-12">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-[1200px] w-full">
         {CHARACTERS.map(c => {
           const roleStyle = ROLE_STYLE[c.role];
+          const ct = t.characters[c.id as keyof typeof t.characters];
+          const displayName = ct?.name ?? c.name;
+          const displayTitle = ct?.title ?? c.title;
+          const displayTagline = ct?.tagline ?? c.tagline;
+          const displayRole = t.roles[c.role.toLowerCase().replace(/ /g, '_') as keyof typeof t.roles] ?? c.role;
           return (
             <button key={c.id} onClick={() => onSelectChar(c.id)}
               className="group relative rounded-2xl overflow-hidden border border-slate-700/60 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl text-left"
               style={{ aspectRatio: '3/4' }}>
-              <img src={c.portrait} alt={c.name}
+              <img src={c.portrait} alt={displayName}
                 className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                 style={{ filter: 'brightness(0.75)' }} />
               <div className="absolute inset-0"
@@ -562,11 +632,11 @@ function CharactersTab({ onSelectChar }: { onSelectChar: (id: string) => void })
                 style={{ boxShadow: `inset 0 0 0 2px ${c.accentColor}` }} />
               <div className="absolute bottom-0 left-0 right-0 p-5">
                 <div className={`inline-flex text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full border mb-2 ${roleStyle.text} ${roleStyle.border} ${roleStyle.bg}`}>
-                  {c.role}
+                  {displayRole}
                 </div>
-                <h2 className="font-orbitron font-black text-xl text-white leading-tight">{c.name}</h2>
-                <p className="text-sm italic mt-0.5" style={{ color: c.accentColor }}>{c.title}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5 italic">"{c.tagline}"</p>
+                <h2 className="font-orbitron font-black text-xl text-white leading-tight">{displayName}</h2>
+                <p className="text-sm italic mt-0.5" style={{ color: c.accentColor }}>{displayTitle}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5 italic">"{displayTagline}"</p>
                 <div className="mt-3 flex items-center gap-1.5 text-xs font-orbitron tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   style={{ color: c.accentColor }}>
                   VIEW DOSSIER →
@@ -619,6 +689,7 @@ function TilesTab() {
    ITEMS TAB
 ══════════════════════════════════════════════════════════════ */
 function ItemsTab() {
+  const { t } = useT();
   const [filter, setFilter] = useState<string>('all');
   const tiers = ['all', 'common', 'uncommon', 'rare', 'legendary'];
   const filtered = filter === 'all' ? ITEMS : ITEMS.filter(i => i.tier === filter);
@@ -645,6 +716,10 @@ function ItemsTab() {
         {filtered.map(item => {
           const tc = TIER_COLOR[item.tier] ?? '#94a3b8';
           const charInfo = item.targetCharacter ? CHAR_LABEL[item.targetCharacter] : null;
+          const itemT = (t.items as Record<string, { name: string; description: string }>)[item.id];
+          const charNameT = charInfo && item.targetCharacter
+            ? (t.characters[item.targetCharacter as keyof typeof t.characters]?.name ?? charInfo.name)
+            : null;
           return (
             <div key={item.id} className="rounded-xl border p-4 flex flex-col"
               style={{ background: 'rgba(8,5,25,0.9)', borderColor: tc + '45' }}>
@@ -653,18 +728,18 @@ function ItemsTab() {
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-orbitron text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                     style={{ color: tc, background: tc + '18', border: `1px solid ${tc}50` }}>
-                    {item.tier.toUpperCase()}
+                    {(t.archives.itemTier[item.tier as keyof typeof t.archives.itemTier] ?? item.tier).toUpperCase()}
                   </span>
-                  {charInfo && (
+                  {charInfo && charNameT && (
                     <span className="font-orbitron text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                       style={{ color: charInfo.color, background: charInfo.color + '18', border: `1px solid ${charInfo.color}50` }}>
-                      {charInfo.name.toUpperCase()}
+                      {charNameT.toUpperCase()}
                     </span>
                   )}
                 </div>
               </div>
-              <p className="font-orbitron font-bold text-sm text-white mb-1">{item.name}</p>
-              <p className="text-slate-400 text-[11px] leading-relaxed flex-1">{item.description}</p>
+              <p className="font-orbitron font-bold text-sm text-white mb-1">{itemT?.name ?? item.name}</p>
+              <p className="text-slate-400 text-[11px] leading-relaxed flex-1">{itemT?.description ?? item.description}</p>
               {item.statBonus && (
                 <div className="flex gap-2 flex-wrap mt-3">
                   {Object.entries(item.statBonus).map(([k, v]) => v ? (
@@ -684,6 +759,7 @@ function ItemsTab() {
    CARDS TAB
 ══════════════════════════════════════════════════════════════ */
 function CardsTab() {
+  const { t } = useT();
   const [filter, setFilter] = useState<string>('all');
   const filterOpts = ['all', 'shared', 'Napoleon', 'Genghis', 'Da Vinci', 'Leonidas', 'Sun-sin'];
   const filtered = CARDS.filter(c => {
@@ -717,13 +793,14 @@ function CardsTab() {
         {filtered.map(card => {
           const tc = CARD_TYPE_COLOR[card.type] ?? '#94a3b8';
           const ec = card.exclusiveTo ? EXCL_COLOR[card.exclusiveTo] : null;
+          const cardT = (t.cards as Record<string, { name: string; description: string }>)[card.definitionId];
           return (
             <div key={card.definitionId} className="rounded-xl border p-4 flex gap-3 items-start"
               style={{ background: 'rgba(8,5,25,0.9)', borderColor: tc + '35' }}>
               <span className="text-3xl shrink-0 pt-0.5">{card.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="font-orbitron font-bold text-sm text-white">{card.name}</span>
+                  <span className="font-orbitron font-bold text-sm text-white">{cardT?.name ?? card.name}</span>
                   <span className="font-orbitron text-[9px] px-1.5 py-0.5 rounded"
                     style={{ color: tc, background: tc + '18', border: `1px solid ${tc}40` }}>
                     {card.type.toUpperCase()}
@@ -734,9 +811,21 @@ function CardsTab() {
                       {card.exclusiveTo}
                     </span>
                   )}
+                  {card.terrain === 'land' && (
+                    <span className="font-orbitron text-[9px] px-1.5 py-0.5 rounded"
+                      style={{ color: '#86efac', background: 'rgba(134,239,172,0.12)', border: '1px solid rgba(134,239,172,0.35)' }}>
+                      🏔 LAND ONLY
+                    </span>
+                  )}
+                  {card.terrain === 'water' && (
+                    <span className="font-orbitron text-[9px] px-1.5 py-0.5 rounded"
+                      style={{ color: '#38bdf8', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.35)' }}>
+                      🌊 WATER ONLY
+                    </span>
+                  )}
                   <span className="ml-auto font-orbitron text-[11px] text-slate-500 shrink-0">{card.manaCost} Mana</span>
                 </div>
-                <p className="text-slate-400 text-[11px] leading-relaxed">{card.description}</p>
+                <p className="text-slate-400 text-[11px] leading-relaxed">{cardT?.description ?? card.description}</p>
               </div>
             </div>
           );
@@ -750,6 +839,7 @@ function CardsTab() {
    ENEMIES TAB
 ══════════════════════════════════════════════════════════════ */
 function EnemiesTab() {
+  const { t } = useT();
   const [actFilter, setActFilter] = useState<number>(0);
   const acts = [0, 1, 2, 3];
   const filtered = actFilter === 0 ? ENEMIES : ENEMIES.filter(e => e.act === actFilter);
@@ -786,7 +876,14 @@ function EnemiesTab() {
             <div key={enemy.id} className="rounded-xl border border-slate-700/40 p-4"
               style={{ background: 'rgba(8,5,25,0.9)' }}>
               <div className="flex items-start gap-3 mb-3">
-                <span className="text-4xl">{enemy.icon}</span>
+                {enemy.portrait ? (
+                  <img src={enemy.portrait} alt={enemy.name}
+                    className="w-16 h-16 rounded-lg object-cover shrink-0"
+                    style={{ border: '1px solid rgba(100,80,160,0.4)' }}
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextSibling as HTMLElement).style.display = 'inline'; }}
+                  />
+                ) : null}
+                <span className="text-4xl" style={{ display: enemy.portrait ? 'none' : 'inline' }}>{enemy.icon}</span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-orbitron font-bold text-sm text-white">{enemy.name}</h3>
@@ -821,7 +918,7 @@ function EnemiesTab() {
               </div>
               {enemy.abilities && enemy.abilities.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="font-orbitron text-[9px] tracking-[0.3em] text-slate-600 mb-1">ABILITIES</p>
+                  <p className="font-orbitron text-[9px] tracking-[0.3em] text-slate-600 mb-1">{t.archives.abilitiesSection}</p>
                   {enemy.abilities.map(ab => (
                     <div key={ab.name} className="flex gap-2 items-start rounded px-2 py-1.5"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -885,6 +982,14 @@ const STATUS_EFFECTS = [
     mechanics: 'Reduces the target\'s movement range by 1 per stack for the duration. Multiple applications stack — a unit with 3 Move Range hit twice is reduced to 1.',
     tip: 'Use on fast melee enemies (Void Wraith, Krath Berserker) to keep them at arm\'s length while your ranged characters chip away.',
     counterplay: 'Enemies affected by Mud Throw will still use abilities. Watch for dash attacks that bypass movement penalties.',
+  },
+  {
+    id: 'stun', name: 'Stun', icon: '⚡', color: '#facc15',
+    source: 'Spartan Shield (Shield Bash) · Khan\'s Seal (Rider\'s Fury)',
+    duration: '1 turn',
+    mechanics: 'The stunned unit is completely frozen for their next turn — no movement, no card plays, no abilities. Unlike Demoralize, there is no roll: Stun is a guaranteed full skip.',
+    tip: 'Stun is the hardest single-turn control in the game. Use it on the turn before a boss ability fires to waste it entirely.',
+    counterplay: 'Stun only lasts 1 turn. Spread your characters so a single Rider\'s Fury line can\'t chain-stun your whole team.',
   },
 ];
 
@@ -1030,12 +1135,13 @@ function ArenaEventsTab() {
    LORE TAB
 ══════════════════════════════════════════════════════════════ */
 function LoreTab() {
+  const { t } = useT();
   const [selected, setSelected] = useState<string | null>(null);
   const entry = selected ? LORE.find(l => l.id === selected) : null;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
-      <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-8">CLASSIFIED RECORDS</p>
+      <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-8">{t.archives.classifiedRecords}</p>
       {entry ? (
         <div>
           <button onClick={() => setSelected(null)}
@@ -1094,7 +1200,17 @@ function LoreTab() {
    CHARACTER DETAIL VIEW (unchanged)
 ══════════════════════════════════════════════════════════════ */
 function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void }) {
+  const { t } = useT();
+  const [sunsinMode, setSunsinMode] = useState<"land" | "water">("land");
   const roleStyle = ROLE_STYLE[char.role];
+  const hasWaterForm = !!char.waterStats;
+  const displayStats = hasWaterForm && sunsinMode === "water" ? char.waterStats! : char.stats;
+  const ct = t.characters[char.id as keyof typeof t.characters];
+  const displayName = ct?.name ?? char.name;
+  const displayTitle = ct?.title ?? char.title;
+  const displayTagline = ct?.tagline ?? char.tagline;
+  const displayLore = ct?.lore ?? char.lore;
+  const abilityTranslations = ct ? [ct.passive, ct.ability1, ct.ability2, ct.ultimate] : [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -1102,10 +1218,10 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
         style={{ background: 'rgba(2,4,14,0.92)' }}>
         <button onClick={onBack}
           className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-orbitron text-xs tracking-wider">
-          <ChevronLeft className="w-4 h-4" /> ARCHIVES
+          <ChevronLeft className="w-4 h-4" /> {t.archives.title}
         </button>
         <div className="mx-4 h-4 w-px bg-slate-700" />
-        <span className="font-orbitron text-xs text-slate-500 tracking-widest">{char.name.toUpperCase()}</span>
+        <span className="font-orbitron text-xs text-slate-500 tracking-widest">{displayName.toUpperCase()}</span>
       </div>
 
       <div className="flex-1 flex overflow-auto">
@@ -1116,37 +1232,43 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
             style={{ background: `radial-gradient(circle, ${char.ringColor} 0%, transparent 70%)`, filter: 'blur(50px)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
           <div className="relative rounded-full overflow-hidden"
             style={{ width: 260, height: 260, border: `4px solid ${char.accentColor}60`, boxShadow: `0 0 50px ${char.ringColor}, 0 0 100px ${char.accentColor}30` }}>
-            <img src={char.portrait} alt={char.name} className="w-full h-full object-cover"
+            <img src={char.portrait} alt={displayName} className="w-full h-full object-cover"
               style={{ filter: 'brightness(0.92) contrast(1.05)' }} />
           </div>
           <div className="relative text-center mt-6">
             <div className={`inline-flex text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full border mb-3 ${roleStyle.text} ${roleStyle.border} ${roleStyle.bg}`}>
-              {char.role}
+              {t.roles[char.role.toLowerCase().replace(/ /g, '_') as keyof typeof t.roles] ?? char.role}
             </div>
-            <h2 className="font-orbitron font-black text-2xl text-white">{char.name}</h2>
-            <p className="italic text-sm mt-1" style={{ color: char.accentColor }}>{char.title}</p>
+            <h2 className="font-orbitron font-black text-2xl text-white">{displayName}</h2>
+            <p className="italic text-sm mt-1" style={{ color: char.accentColor }}>{displayTitle}</p>
           </div>
           <div className="relative w-full h-px my-6"
             style={{ background: `linear-gradient(to right, transparent, ${char.accentColor}50, transparent)` }} />
           <div className="relative w-full space-y-3">
-            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-4">BASE STATS</p>
+            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-4">{t.archives.baseStats}</p>
             {([
-              { key: 'hp', label: 'HP', icon: <Heart className="w-3 h-3" />, color: '#4ade80' },
-              { key: 'might', label: 'MIGHT', icon: <Zap className="w-3 h-3" />, color: '#f87171' },
-              { key: 'power', label: 'POWER', icon: <Star className="w-3 h-3" />, color: '#60a5fa' },
-              { key: 'defense', label: 'DEFENSE', icon: <Shield className="w-3 h-3" />, color: '#fbbf24' },
+              { key: 'hp',        label: t.archives.statLabels.hp.toUpperCase(),      icon: <Heart className="w-3 h-3" />,              color: '#4ade80' },
+              { key: 'might',     label: t.archives.statLabels.might.toUpperCase(),   icon: <Zap className="w-3 h-3" />,                color: '#f87171' },
+              { key: 'power',     label: t.archives.statLabels.power.toUpperCase(),   icon: <Star className="w-3 h-3" />,               color: '#60a5fa' },
+              { key: 'defense',   label: t.archives.statLabels.defense.toUpperCase(), icon: <Shield className="w-3 h-3" />,             color: '#fbbf24' },
+              { key: 'moveRange', label: t.archives.statLabels.move.toUpperCase(),    icon: <span className="text-[10px]">🏃</span>,    color: '#a78bfa' },
             ] as const).map(({ key, label, icon, color }) => {
-              const val = char.stats[key as keyof typeof char.stats];
+              const val = displayStats[key as keyof typeof displayStats];
+              const base = char.stats[key as keyof typeof char.stats];
               const max = STAT_MAX[key as keyof typeof STAT_MAX];
+              const changed = hasWaterForm && val !== base;
+              const up = changed && val > base;
               return (
                 <div key={key}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5 text-[11px] font-orbitron" style={{ color }}>{icon}{label}</div>
-                    <span className="text-[11px] text-slate-400 font-bold">{val}</span>
+                    <span className="text-[11px] font-bold" style={{ color: changed ? (up ? "#4ade80" : "#f87171") : "#94a3b8" }}>
+                      {val}{changed && <span className="text-[9px] ml-0.5">{up ? "▲" : "▼"}</span>}
+                    </span>
                   </div>
                   <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, (val / max) * 100)}%`, background: color, boxShadow: `0 0 6px ${color}80` }} />
+                      style={{ width: `${Math.min(100, (val / max) * 100)}%`, background: changed ? (up ? "#4ade80" : "#f87171") : color, boxShadow: `0 0 6px ${color}80` }} />
                   </div>
                 </div>
               );
@@ -1156,33 +1278,63 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
 
         {/* Right: Info panel */}
         <div className="flex-1 py-12 px-10 overflow-auto" style={{ background: 'rgba(2,4,14,0.85)' }}>
-          <p className="font-orbitron text-[11px] tracking-[0.4em] text-slate-500 mb-1">CLASSIFIED DOSSIER</p>
-          <h1 className="font-orbitron font-black text-4xl text-white mb-1">{char.name}</h1>
-          <p className="italic text-lg mb-6" style={{ color: `${char.accentColor}cc` }}>"{char.tagline}"</p>
+          <p className="font-orbitron text-[11px] tracking-[0.4em] text-slate-500 mb-1">{t.archives.classifiedDossier}</p>
+          <h1 className="font-orbitron font-black text-4xl text-white mb-1">{displayName}</h1>
+          <p className="italic text-lg mb-6" style={{ color: `${char.accentColor}cc` }}>"{displayTagline}"</p>
           <div className="h-px mb-6" style={{ background: `linear-gradient(to right, ${char.accentColor}40, transparent)` }} />
-          <div className="mb-8">
-            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-3">LORE</p>
-            <p className="text-slate-300 text-sm leading-relaxed max-w-[560px]">{char.lore}</p>
+          <div className="mb-6">
+            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-3">{t.archives.loreSection}</p>
+            <p className="text-slate-300 text-sm leading-relaxed max-w-[560px]">{displayLore}</p>
           </div>
+
+          {/* Land / Water form toggle — Sun-sin only */}
+          {hasWaterForm && (
+            <div className="mb-6 flex items-center gap-3">
+              <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 shrink-0">{t.archives.form}</p>
+              <div className="flex gap-0">
+                <button onClick={() => setSunsinMode("land")}
+                  className="text-[11px] font-orbitron font-bold px-4 py-1.5 rounded-l border transition-all"
+                  style={{
+                    background: sunsinMode === "land" ? "rgba(134,239,172,0.15)" : "transparent",
+                    borderColor: sunsinMode === "land" ? "rgba(134,239,172,0.5)" : "rgba(71,85,105,0.4)",
+                    color: sunsinMode === "land" ? "#86efac" : "#475569",
+                  }}>{t.archives.landForm}</button>
+                <button onClick={() => setSunsinMode("water")}
+                  className="text-[11px] font-orbitron font-bold px-4 py-1.5 rounded-r border-y border-r transition-all"
+                  style={{
+                    background: sunsinMode === "water" ? "rgba(56,189,248,0.15)" : "transparent",
+                    borderColor: sunsinMode === "water" ? "rgba(56,189,248,0.5)" : "rgba(71,85,105,0.4)",
+                    color: sunsinMode === "water" ? "#38bdf8" : "#475569",
+                  }}>{t.archives.waterForm}</button>
+              </div>
+              <p className="text-[10px] text-slate-600 italic">Stats &amp; abilities change based on terrain</p>
+            </div>
+          )}
+
           <div>
-            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-4">ABILITIES</p>
+            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-4">{t.archives.abilitiesSection}</p>
             <div className="grid grid-cols-1 gap-3 max-w-[620px]">
-              {char.abilities.map(ab => {
+              {char.abilities.map((ab, idx) => {
+                const isWater = hasWaterForm && sunsinMode === "water" && (!!ab.waterDesc || !!ab.waterName);
+                const abT = abilityTranslations[idx] as any;
+                const abName = isWater && ab.waterName ? (abT?.waterName ?? ab.waterName) : (abT?.name ?? ab.name);
+                const displayDesc = isWater && ab.waterDesc ? ab.waterDesc : ab.desc;
                 const kindStyle = ab.kind === 'passive'
-                  ? { border: 'border-purple-600/50', bg: 'bg-purple-950/40', badge: 'bg-purple-900/70 text-purple-300 border-purple-600/50', badgeLabel: 'PASSIVE' }
+                  ? { border: 'border-purple-600/50', bg: 'bg-purple-950/40', badge: 'bg-purple-900/70 text-purple-300 border-purple-600/50', badgeLabel: t.archives.abilityKind.passive }
                   : ab.kind === 'ultimate'
-                  ? { border: 'border-amber-500/50', bg: 'bg-amber-950/30', badge: 'bg-amber-900/70 text-amber-300 border-amber-500/50', badgeLabel: 'ULTIMATE' }
-                  : { border: 'border-slate-600/50', bg: 'bg-slate-800/40', badge: 'bg-slate-700/70 text-slate-300 border-slate-600/50', badgeLabel: 'ABILITY' };
+                  ? { border: 'border-amber-500/50', bg: 'bg-amber-950/30', badge: 'bg-amber-900/70 text-amber-300 border-amber-500/50', badgeLabel: t.archives.abilityKind.ultimate }
+                  : { border: 'border-sky-600/50', bg: 'bg-sky-950/30', badge: 'bg-sky-900/70 text-sky-300 border-sky-600/50', badgeLabel: t.archives.abilityKind.ability };
                 return (
                   <div key={ab.name} className={`flex gap-4 rounded-xl border p-4 ${kindStyle.border} ${kindStyle.bg}`}>
                     <div className="text-3xl shrink-0 w-10 text-center leading-none pt-0.5">{ab.icon}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-orbitron font-bold text-sm text-white">{ab.name}</span>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-orbitron font-bold text-sm text-white">{abName}</span>
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${kindStyle.badge}`}>{kindStyle.badgeLabel}</span>
+                        {isWater && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-sky-900/70 text-sky-300 border-sky-600/50">{t.archives.waterForm}</span>}
                         <span className="ml-auto text-[11px] text-slate-500 font-orbitron shrink-0">{ab.cost}</span>
                       </div>
-                      <p className="text-slate-400 text-[12px] leading-relaxed">{ab.desc}</p>
+                      <p className="text-slate-400 text-[12px] leading-relaxed">{displayDesc}</p>
                     </div>
                   </div>
                 );

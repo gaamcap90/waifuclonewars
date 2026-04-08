@@ -8,14 +8,24 @@ export function useAudio() {
     return audioEngine.subscribe(() => setSettings(audioEngine.getSettings()));
   }, []);
 
-  const playSound   = useCallback((key: string) => audioEngine.playSound(key), []);
-  const playMusic   = useCallback((key: string) => audioEngine.playMusic(key), []);
-  const stopMusic   = useCallback(() => audioEngine.stopMusic(), []);
-  const toggleMute  = useCallback(() => audioEngine.toggleMute(), []);
-  const setMusicVolume = useCallback((v: number) => audioEngine.setMusicVolume(v), []);
-  const setSfxVolume   = useCallback((v: number) => audioEngine.setSfxVolume(v), []);
-  const playTheme   = useCallback((characterId: string) => audioEngine.playTheme(characterId), []);
-  const stopTheme   = useCallback(() => audioEngine.stopTheme(), []);
+  const playSound        = useCallback((key: string)  => audioEngine.playSound(key), []);
+  const playMusic        = useCallback((key: string)  => audioEngine.playMusic(key), []);
+  const stopMusic        = useCallback(()             => audioEngine.stopMusic(), []);
+  const toggleMute       = useCallback(()             => audioEngine.toggleMute(), []);
+  const setMusicVolume   = useCallback((v: number)    => audioEngine.setMusicVolume(v), []);
+  const setSfxVolume     = useCallback((v: number)    => audioEngine.setSfxVolume(v), []);
+  const playTheme        = useCallback((id: string)   => audioEngine.playTheme(id), []);
+  const stopTheme        = useCallback(()             => audioEngine.stopTheme(), []);
+  const nextTrack        = useCallback(()             => audioEngine.nextTrack(), []);
+  const prevTrack        = useCallback(()             => audioEngine.prevTrack(), []);
+  const togglePlayPause  = useCallback(()             => audioEngine.togglePlayPause(), []);
+  const playTrackByIndex = useCallback((i: number)    => audioEngine.playTrackByIndex(i), []);
 
-  return { settings, playSound, playMusic, stopMusic, toggleMute, setMusicVolume, setSfxVolume, playTheme, stopTheme };
+  return {
+    settings,
+    playSound, playMusic, stopMusic,
+    toggleMute, setMusicVolume, setSfxVolume,
+    playTheme, stopTheme,
+    nextTrack, prevTrack, togglePlayPause, playTrackByIndex,
+  };
 }

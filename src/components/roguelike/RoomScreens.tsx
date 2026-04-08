@@ -77,9 +77,10 @@ export function CampfireScreen({ runState, onHeal, onLeave }: CampfireScreenProp
         {/* Characters */}
         <div className="flex flex-col gap-4 mb-8">
           {runState.characters.map(char => {
-            const atFull = char.currentHp >= char.maxHp;
+            const isDead = char.currentHp <= 0;
+            const atFull = !isDead && char.currentHp >= char.maxHp;
             const wasHealed = healed.has(char.id);
-            const canHeal = !atFull && !wasHealed;
+            const canHeal = !isDead && !atFull && !wasHealed;
             const healAmt = Math.floor(char.maxHp * 0.30);
 
             return (
@@ -101,7 +102,7 @@ export function CampfireScreen({ runState, onHeal, onLeave }: CampfireScreenProp
                       cursor: canHeal ? 'pointer' : 'not-allowed',
                     }}
                   >
-                    {wasHealed ? `✓ +${healAmt} HP` : atFull ? 'FULL HP' : `HEAL +${healAmt} HP`}
+                    {isDead ? '💀 FALLEN' : wasHealed ? `✓ +${healAmt} HP` : atFull ? 'FULL HP' : `HEAL +${healAmt} HP`}
                   </button>
                 </div>
                 <HpBar current={char.currentHp} max={char.maxHp} />
@@ -134,7 +135,7 @@ export function CampfireScreen({ runState, onHeal, onLeave }: CampfireScreenProp
 export interface MerchantScreenProps {
   runState: RunState;
   onBuyCard: (cardId: string, cost: number) => void;
-  onBuyHeal: (characterId: CharacterId, cost: number) => void;
+  onBuyHeal: (cost: number) => void;
   onLeave: () => void;
 }
 
@@ -147,7 +148,8 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onLeave }: Merc
   // 3 random cards priced 50–80 gold, stable on mount
   const shopCards = useMemo<{ card: CardReward; price: number }[]>(() => {
     const rng = () => Math.random();
-    const picks = pickCardRewards(runState.deckCardIds, rng);
+    const runCharIds = runState.characters.map(c => c.id);
+    const picks = pickCardRewards(runState.deckCardIds, rng, runCharIds);
     return picks.map(card => ({
       card,
       price: 50 + Math.floor(Math.random() * 31), // 50–80
@@ -162,11 +164,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onLeave }: Merc
 
   const handleBuyHeal = () => {
     if (runState.gold < HEAL_ALL_COST || healPurchased) return;
-    // First call spends the gold (only once, on first character with the cost)
-    // Subsequent calls use cost 0 so gold isn't double-spent
-    runState.characters.forEach((c, idx) => {
-      onBuyHeal(c.id as CharacterId, idx === 0 ? HEAL_ALL_COST : 0);
-    });
+    onBuyHeal(HEAL_ALL_COST);
     setHealPurchased(true);
   };
 
@@ -286,7 +284,8 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
   // Picks stable on mount; avoids dropping items exclusive to dead characters
   const { tCard, tItem } = useMemo(() => {
     const rng = () => Math.random();
-    const [card] = pickCardRewards(runState.deckCardIds, rng);
+    const runCharIds = runState.characters.map(c => c.id);
+    const [card] = pickCardRewards(runState.deckCardIds, rng, runCharIds);
     const deadIds = (runState.permanentlyDeadIds ?? []) as string[];
     let item = pickItemReward('uncommon', rng);
     // Re-roll up to 8× if the item is exclusive to a dead character

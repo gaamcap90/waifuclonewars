@@ -5,6 +5,7 @@ import { Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
 import { useBuffCalculation } from "@/hooks/useBuffCalculation";
 import { calcEffectiveStats } from "@/combat/buffs";
+import { useT } from "@/i18n";
 
 interface CharacterDetailPopupProps {
   character: Icon;
@@ -14,6 +15,7 @@ interface CharacterDetailPopupProps {
 }
 
 const CharacterDetailPopup = ({ character, gameState, onClose, position }: CharacterDetailPopupProps) => {
+  const { t } = useT();
   React.useEffect(() => {
     const handle = () => onClose();
     document.addEventListener("click", handle);
@@ -39,24 +41,31 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
 
   const fmt = (v: number) => (v % 1 === 0 ? v.toString() : v.toFixed(1));
 
-  const DEBUFF_LABELS: Record<string, string> = {
-    mud_throw:   "🐾 Mud Throw",
-    demoralize:  "💔 Demoralize",
-    armor_break: "🔩 Armor Break",
-    silence:     "🤫 Silence",
-    poison:      "☠️ Poison",
+  // Debuff display names pulled from translated card names
+  const debuffLabel = (type: string): string => {
+    const map: Record<string, string> = {
+      mud_throw:   `🐾 ${t.cards.shared_mud_throw?.name ?? 'Mud Throw'}`,
+      demoralize:  `💔 ${t.cards.shared_demoralize?.name ?? 'Demoralize'}`,
+      armor_break: `🔩 ${t.cards.shared_armor_break?.name ?? 'Armor Break'}`,
+      silence:     `🤫 ${t.cards.shared_silence?.name ?? 'Silence'}`,
+      poison:      `☠️ ${t.cards.shared_poison_dart?.name ?? 'Poison'}`,
+      stun:        `⚡ Stun`,
+    };
+    return map[type] ?? type;
   };
 
   const passiveText = (() => {
     if (character.name.includes("Napoleon"))
-      return `Vantage Point: Forest tile → Range 3, no DEF bonus.${napoleonForestRange ? " (ACTIVE)" : ""}`;
+      return `${t.characters.napoleon.passive.name}: ${t.characters.napoleon.passive.desc}${napoleonForestRange ? ` (${t.game.popup.active})` : ""}`;
     if (character.name.includes("Genghis"))
-      return `Bloodlust: Each kill → +15 Might +1 Mana (×3 max).${(character.passiveStacks ?? 0) > 0 ? ` ${character.passiveStacks}/3 stacks.` : ""}`;
+      return `${t.characters.genghis.passive.name}: ${t.characters.genghis.passive.desc}${(character.passiveStacks ?? 0) > 0 ? ` ${character.passiveStacks}/3 stacks.` : ""}`;
     if (character.name.includes("Da Vinci"))
-      return "Tinkerer: No ability used last turn → draw +1 card.";
+      return `${t.characters.davinci.passive.name}: ${t.characters.davinci.passive.desc}`;
     if (character.name.includes("Leonidas"))
-      return `Phalanx: Adjacent to ally → +8 DEF/turn (max +24).${(character.passiveStacks ?? 0) > 0 ? ` ${character.passiveStacks}/3 stacks.` : ""}`;
-    return character.passive ?? "No passive";
+      return `${t.characters.leonidas.passive.name}: ${t.characters.leonidas.passive.desc}${(character.passiveStacks ?? 0) > 0 ? ` ${character.passiveStacks}/3 stacks.` : ""}`;
+    if (character.name.includes("Sun-sin"))
+      return `${t.characters.sunsin.passive.name}: ${t.characters.sunsin.passive.desc} — ${t.characters.sunsin.passive.waterDesc}`;
+    return character.passive ?? t.game.popup.noPassive;
   })();
 
   const portrait = (() => {
@@ -64,6 +73,7 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
     if (character.name.includes("Genghis"))  return "/art/genghis_portrait.png";
     if (character.name.includes("Da Vinci")) return "/art/davinci_portrait.png";
     if (character.name.includes("Leonidas")) return "/art/leonidas_portrait.png";
+    if (character.name.includes("Sun-sin"))  return "/art/sunsin_portrait.png";
     return null;
   })();
 
@@ -78,6 +88,15 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
   const clampedX = typeof window !== "undefined"
     ? Math.max(POPUP_W / 2 + 8, Math.min(position.x, window.innerWidth - POPUP_W / 2 - 8))
     : position.x;
+
+  // Role display
+  const roleIcon = character.role === "dps_ranged" ? <Crosshair className="w-3 h-3" />
+                 : character.role === "dps_melee"  ? <Sword className="w-3 h-3" />
+                 : character.role === "support"    ? <Heart className="w-3 h-3" />
+                 : character.role === "tank"       ? <span className="text-[10px]">🛡</span>
+                 : character.role === "hybrid"     ? <span className="text-[10px]">🌊</span>
+                 : null;
+  const roleLabel = character.role ? (t.roles as Record<string, string>)[character.role] ?? character.role : null;
 
   return createPortal(
     <div
@@ -111,12 +130,12 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-orbitron font-bold text-sm text-white truncate">{character.name}</div>
-            <div className="flex items-center gap-1 mt-0.5" style={{ color: teamAccent }}>
-              {character.role === "dps_ranged" && <><Crosshair className="w-3 h-3" /><span className="text-[10px]">Ranged DPS</span></>}
-              {character.role === "dps_melee"  && <><Sword className="w-3 h-3" /><span className="text-[10px]">Melee DPS</span></>}
-              {character.role === "support"    && <><Heart className="w-3 h-3" /><span className="text-[10px]">Support</span></>}
-              {character.role === "tank"       && <><span className="text-[10px]">🛡 Tank</span></>}
-            </div>
+            {roleLabel && (
+              <div className="flex items-center gap-1 mt-0.5" style={{ color: teamAccent }}>
+                {roleIcon}
+                <span className="text-[10px]">{roleLabel}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -135,7 +154,7 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
           <div className="grid grid-cols-2 gap-1.5 text-[11px]">
             {/* Might */}
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)" }}>
-              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">MIGHT</div>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.might.toUpperCase()}</div>
               <div className="font-bold text-red-400">{Math.floor(eff.might)}</div>
               {(beastCampMightBonus > 0 || homeBaseMightBonus > 0 || buffedStats.cardBuffAtk > 0) && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
@@ -147,7 +166,7 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             </div>
             {/* Power */}
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.20)" }}>
-              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">POWER</div>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.power.toUpperCase()}</div>
               <div className="font-bold text-blue-400">{Math.floor(eff.power)}</div>
               {(beastCampPowerBonus > 0 || homeBasePowerBonus > 0) && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
@@ -158,7 +177,7 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             </div>
             {/* Defense */}
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.20)" }}>
-              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">DEFENSE</div>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.defense.toUpperCase()}</div>
               <div className="font-bold text-emerald-400">{Math.floor(eff.defense)}</div>
               {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0 || buffedStats.cardBuffDef > 0) && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
@@ -170,11 +189,11 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             </div>
             {/* Range */}
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.20)" }}>
-              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">RANGE</div>
+              <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.game.popup.range.toUpperCase()}</div>
               <div className="font-bold text-yellow-400">
                 {napoleonForestRange ? 3 : (character.name.includes("Napoleon") || character.name.includes("Da Vinci")) ? 2 : 1}
               </div>
-              {napoleonForestRange && <div className="text-[9px] text-green-400 mt-0.5">forest ✓</div>}
+              {napoleonForestRange && <div className="text-[9px] text-green-400 mt-0.5">{t.game.popup.forestBonus}</div>}
             </div>
           </div>
 
@@ -183,10 +202,14 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             <div className="rounded-lg px-2 py-1.5 text-[11px]"
               style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)" }}>
               {character.name.includes("Genghis") && (
-                <span className="text-red-300">🩸 Bloodlust ×{character.passiveStacks} (+{(character.passiveStacks ?? 0) * 15} Might)</span>
+                <span className="text-red-300">
+                  🩸 {t.characters.genghis.passive.name} ×{character.passiveStacks} ({t.game.popup.mightBonus.replace('{n}', String((character.passiveStacks ?? 0) * 15))})
+                </span>
               )}
               {character.name.includes("Leonidas") && (
-                <span className="text-amber-300">🛡 Phalanx ×{character.passiveStacks} (+{(character.passiveStacks ?? 0) * 8} DEF)</span>
+                <span className="text-amber-300">
+                  🛡 {t.characters.leonidas.passive.name} ×{character.passiveStacks} ({t.game.popup.defBonus.replace('{n}', String((character.passiveStacks ?? 0) * 8))})
+                </span>
               )}
             </div>
           )}
@@ -194,13 +217,13 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
           {/* Active debuffs */}
           {(character.debuffs ?? []).length > 0 && (
             <div>
-              <div className="font-orbitron text-[9px] text-red-400 tracking-wider mb-1">DEBUFFS</div>
+              <div className="font-orbitron text-[9px] text-red-400 tracking-wider mb-1">{t.game.popup.debuffs}</div>
               <div className="flex flex-col gap-1">
                 {character.debuffs!.map((d, i) => (
                   <div key={i} className="flex items-center justify-between rounded px-2 py-0.5 text-[10px]"
                     style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)" }}>
-                    <span className="text-slate-300">{DEBUFF_LABELS[d.type] ?? d.type}</span>
-                    <span className="text-slate-500 font-mono">{d.turnsRemaining}t</span>
+                    <span className="text-slate-300">{debuffLabel(d.type)}</span>
+                    <span className="text-slate-500 font-mono">{t.game.popup.turns.replace('{n}', String(d.turnsRemaining))}</span>
                   </div>
                 ))}
               </div>
@@ -209,7 +232,7 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
 
           {/* Passive */}
           <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
-            <div className="font-orbitron text-[9px] text-purple-400 tracking-wider mb-0.5">PASSIVE</div>
+            <div className="font-orbitron text-[9px] text-purple-400 tracking-wider mb-0.5">{t.game.popup.passive.toUpperCase()}</div>
             <div className="text-[10px] text-slate-400 leading-relaxed">{passiveText}</div>
           </div>
         </div>

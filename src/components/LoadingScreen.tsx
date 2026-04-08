@@ -24,38 +24,45 @@ export default function LoadingScreen({ onComplete }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black flex items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
       style={{
         opacity: phase < 2 ? 1 : 0,
         transition: "opacity 0.8s ease",
         pointerEvents: "none",
+        background: '#000',
       }}
     >
-      {/* Subtle radial glow — blooms when title appears */}
+      {/* Arena background image */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: 'url(/art/loading_screen.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: phase >= 0 ? 0.85 : 0,
+          transition: 'opacity 1.2s ease',
+        }}
+      />
+
+      {/* Dark vignette over image so text pops */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.65) 100%)',
+        }}
+      />
+
+      {/* Radial glow — blooms when title appears */}
       <div
         className="absolute w-[600px] h-[600px] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(124,58,237,0.18) 0%, rgba(34,211,238,0.08) 40%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(124,58,237,0.25) 0%, rgba(34,211,238,0.12) 40%, transparent 70%)",
           filter: "blur(60px)",
           opacity: phase >= 1 ? 1 : 0,
           transition: "opacity 1.2s ease",
           pointerEvents: "none",
         }}
       />
-
-      {/* Hex grid watermark */}
-      <svg
-        className="absolute inset-0 w-full h-full"
-        style={{ opacity: 0.06, pointerEvents: "none" }}
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <pattern id="ls-hexgrid" width="60" height="52" patternUnits="userSpaceOnUse">
-            <path d="M30 0 L60 15 L60 37 L30 52 L0 37 L0 15 Z" fill="none" stroke="#22d3ee" strokeWidth="0.6" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#ls-hexgrid)" />
-      </svg>
 
       <div className="relative text-center space-y-5 select-none px-8">
         {/* "PRESENTS" line */}

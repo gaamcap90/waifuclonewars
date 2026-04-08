@@ -7,16 +7,9 @@ import CardHand from "./CardHand";
 import { Undo2 } from "lucide-react";
 import { TurnQueueBar } from "./TurnQueueBar";
 import { calcEffectiveStats } from "@/combat/buffs";
-
-const getCharacterPortrait = (name: string | undefined | null) => {
-  if (!name) return null;
-  if (name.includes("Napoleon")) return "/art/napoleon_portrait.png";
-  if (name.includes("Genghis"))  return "/art/genghis_portrait.png";
-  if (name.includes("Da Vinci")) return "/art/davinci_portrait.png";
-  if (name.includes("Leonidas")) return "/art/leonidas_portrait.png";
-  if (name.includes("Sun-sin"))  return "/art/sunsin_portrait.jpg";
-  return null;
-};
+import { useT } from "@/i18n";
+import { getCharacterPortrait } from "@/utils/portraits";
+import EnemyAbilityHUD from "./EnemyAbilityHUD";
 
 interface RunItemSlot {
   icon: string;
@@ -26,16 +19,14 @@ interface RunItemSlot {
 
 interface HorizontalGameUIProps {
   gameState: GameState;
-  onBasicAttack: () => void;
-  onUseAbility: (abilityId: string) => void;
   onEndTurn: () => void;
   onUndoMovement: () => void;
-  onRespawn: (iconId: string) => void;
   onPlayCard: (card: GameCard, executorId: string) => void;
   onSelectIcon: (iconId: string) => void;
   hoveredTile?: any;
   currentTurnTimer: number;
   runItemsByCharacter?: Record<string, RunItemSlot[]>;
+  onToggleHideUI?: () => void;
 }
 
 const HorizontalGameUI = ({
@@ -47,9 +38,12 @@ const HorizontalGameUI = ({
   hoveredTile,
   currentTurnTimer,
   runItemsByCharacter,
+  onToggleHideUI,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
+  const [hoveredCardCost, setHoveredCardCost] = useState<number | null>(null);
 
+  const { t } = useT();
   const extGameState = gameState as any;
   const selectedIconId: string | undefined = extGameState.selectedIcon;
   const targetingActive = Boolean(gameState.targetingMode);
@@ -90,7 +84,7 @@ const HorizontalGameUI = ({
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <span className="font-orbitron text-[10px] tracking-wider text-slate-500">BASE</span>
+          <span className="font-orbitron text-[10px] tracking-wider text-slate-500">{t.game.base}</span>
           <span className="font-mono text-[10px] text-slate-500">{hp}/{maxHp}</span>
         </div>
         <div className="h-1.5 w-full rounded-full relative overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
@@ -109,7 +103,7 @@ const HorizontalGameUI = ({
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <span className="font-orbitron text-[10px] tracking-wider text-blue-400/60">MANA</span>
+          <span className="font-orbitron text-[10px] tracking-wider text-blue-400/60">{t.game.mana}</span>
           <span className="font-mono text-[10px] text-blue-300/50">{mana}/{maxMana}</span>
         </div>
         <div className="flex gap-1">
@@ -143,13 +137,13 @@ const HorizontalGameUI = ({
     const bgFill = teamColor === "blue" ? "rgba(37,99,235,0.9)" : "rgba(185,28,28,0.9)";
 
     const passiveDesc = (() => {
-      if (icon.name.includes("Napoleon")) return "Vantage Point: Forest→Range 3, no DEF bonus";
-      if (icon.name.includes("Genghis"))  return "Bloodlust: Kill→+15 Might+1 Mana (×3 max)";
-      if (icon.name.includes("Da Vinci")) return "Tinkerer: No ability used→draw +1 card";
-      if (icon.name === "Combat Drone")   return "Mechanical unit (expires in 2 turns)";
+      if (icon.name.includes("Napoleon")) return t.characters.napoleon.passive.desc;
+      if (icon.name.includes("Genghis"))  return t.characters.genghis.passive.desc;
+      if (icon.name.includes("Da Vinci")) return t.characters.davinci.passive.desc;
+      if (icon.name === "Combat Drone")   return t.game.hud.combatDronePassive;
       if (icon.name.includes("Sun-sin")) {
-        const onRiver = (gameState as any).board?.find((t: any) => t.coordinates.q === icon.position.q && t.coordinates.r === icon.position.r)?.terrain.type === 'river';
-        return onRiver ? "🐢 Turtle Ship — +40% Might, +30% DEF, −40% Power, Range 3" : "Turtle Ship: Enter water for Turtle Ship form";
+        const onRiver = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type === 'river';
+        return onRiver ? t.characters.sunsin.passive.waterDesc : t.characters.sunsin.passive.desc;
       }
       return icon.passive ?? "";
     })();
@@ -168,6 +162,8 @@ const HorizontalGameUI = ({
           onClick={(e) => {
             e.stopPropagation();
             if (canSelect && icon.isAlive) onSelectIcon(icon.id);
+            // Toggle: click same portrait again closes the popup
+            if (selectedCharacter?.id === icon.id) { setSelectedCharacter(null); return; }
             const rect = e.currentTarget.getBoundingClientRect();
             setSelectedCharacter({ id: icon.id, position: { x: rect.left + rect.width / 2, y: rect.bottom } });
           }}
@@ -194,7 +190,7 @@ const HorizontalGameUI = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <span className="text-[11px] font-bold text-slate-200 truncate">{icon.name}</span>
-            {isSelected && <span className="text-[9px] text-amber-400 shrink-0 font-orbitron">◀ ACTIVE</span>}
+            {isSelected && <span className="text-[9px] text-amber-400 shrink-0 font-orbitron">{t.game.hud.activeUnit}</span>}
             {!icon.isAlive && (
               <span className="text-[9px] text-slate-500 shrink-0">
                 {icon.respawnTurns > 0 ? `💀 ${icon.respawnTurns}t` : "💀"}
@@ -213,11 +209,11 @@ const HorizontalGameUI = ({
 
           {icon.isAlive && (
             <div className="flex items-center gap-2 mt-0.5 text-[10px]">
-              <span className="text-red-400 font-semibold">ATK {Math.floor(eff.might)}</span>
-              <span className="text-blue-400 font-semibold">PWR {Math.floor(eff.power)}</span>
-              <span className="text-emerald-400 font-semibold">DEF {Math.floor(eff.defense)}</span>
-              {icon.stats.movement !== undefined && (
-                <span className="text-slate-500">MOV {icon.stats.movement}</span>
+              <span className="text-red-400 font-semibold">{t.game.atk} {Math.floor(eff.might)}</span>
+              <span className="text-blue-400 font-semibold">{t.game.pwr} {Math.floor(eff.power)}</span>
+              <span className="text-emerald-400 font-semibold">{t.game.def} {Math.floor(eff.defense)}</span>
+              {icon.stats.moveRange !== undefined && (
+                <span className="text-slate-500">{t.game.mov} {icon.stats.moveRange}</span>
               )}
             </div>
           )}
@@ -233,8 +229,8 @@ const HorizontalGameUI = ({
             if (icon.name.includes("Leonidas") && (icon.passiveStacks ?? 0) > 0)
               pills.push(<span key="phalanx" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-amber-900/70 border-amber-600/60 text-amber-200">🛡×{icon.passiveStacks}</span>);
             if (icon.name.includes("Sun-sin")) {
-              const onRiver = (gameState as any).board?.find((t: any) => t.coordinates.q === icon.position.q && t.coordinates.r === icon.position.r)?.terrain.type === 'river';
-              if (onRiver) pills.push(<span key="turtle" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-cyan-900/80 border-cyan-600/60 text-cyan-200">🐢 TURTLE</span>);
+              const onRiver = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type === 'river';
+              if (onRiver) pills.push(<span key="turtle" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-cyan-900/80 border-cyan-600/60 text-cyan-200">{t.game.turtle}</span>);
             }
             for (const d of icon.debuffs ?? []) {
               const meta = DEBUFF_META[d.type] ?? { icon: "❓", color: "bg-gray-800 border-gray-600 text-gray-300" };
@@ -283,32 +279,26 @@ const HorizontalGameUI = ({
   const showBases = !extState.isRoguelikeRun || extState.encounterObjective === 'destroy_base';
   const survivalTarget: number = extState.survivalTurnsTarget ?? 0;
   const spawnInterval: number = extState.spawnInterval ?? 0;
-  const OBJECTIVE_LABELS: Record<string, string> = {
-    defeat_all:   '⚔️ Defeat All Enemies',
-    destroy_base: '🏰 Destroy the Enemy Base',
-    survive:      '🛡️ Survive',
-    onslaught:    '🌊 Onslaught — Hold the Line',
-  };
-  const objLabel = objective ? OBJECTIVE_LABELS[objective] ?? objective : null;
+  const objLabel = objective ? (t.game.objectives as Record<string, string>)[objective] ?? objective : null;
 
   /* ── Terrain hover panel data ── */
   const TERRAIN_INFO: Record<string, { emoji: string; label: string; bg: string; border: string; lines: string[] }> = {
-    forest:       { emoji: "🌲", label: "Forest",       bg: "rgba(10,30,10,0.92)",  border: "rgba(34,90,34,0.60)",   lines: ["+25% Defense", "Movement costs 2/hex", "Napoleon: Range 3"] },
-    mountain:     { emoji: "⛰️", label: "Mountain",     bg: "rgba(20,18,18,0.92)",  border: "rgba(80,70,70,0.60)",   lines: ["Impassable"] },
-    river:        { emoji: "🌊", label: "River",        bg: "rgba(5,15,40,0.92)",   border: "rgba(30,60,140,0.60)",  lines: ["Impassable", "Lethal if displaced onto it"] },
-    mana_crystal: { emoji: "💎", label: "Mana Crystal", bg: "rgba(20,5,40,0.92)",   border: "rgba(100,40,180,0.60)", lines: ["Impassable", "+1 or +2 Mana at end of turn"] },
+    forest:       { emoji: "🔮", bg: "rgba(30,10,50,0.92)",  border: "rgba(130,40,200,0.60)", label: t.terrain.forest.label,       lines: [...t.terrain.forest.lines] },
+    mountain:     { emoji: "🌋", bg: "rgba(20,18,18,0.92)",  border: "rgba(80,70,70,0.60)",   label: t.terrain.mountain.label,     lines: [...t.terrain.mountain.lines] },
+    river:        { emoji: "🌊", bg: "rgba(5,15,40,0.92)",   border: "rgba(30,60,140,0.60)",  label: t.terrain.river.label,        lines: [...t.terrain.river.lines] },
+    mana_crystal: { emoji: "💎", bg: "rgba(20,5,40,0.92)",   border: "rgba(100,40,180,0.60)", label: t.terrain.mana_crystal.label, lines: [...t.terrain.mana_crystal.lines] },
     beast_camp:   {
-      emoji: "🐗", label: "Beast Camp", bg: "rgba(30,15,5,0.92)", border: "rgba(140,70,20,0.60)",
+      emoji: "🐗", bg: "rgba(30,15,5,0.92)", border: "rgba(140,70,20,0.60)", label: t.terrain.beast_camp.label,
       lines: (() => {
         const camps = (gameState as any).objectives?.beastCamps;
-        if (!camps) return ["Defeat for +15% Might & Power"];
+        if (!camps) return [t.terrain.beast_camp.defeatFor];
         const idx = hoveredTile?.coordinates?.q === -2 ? 0 : 1;
         return camps.defeated?.[idx]
-          ? ["✅ Defeated — buffs active"]
-          : [`HP: ${camps.hp?.[idx] ?? 0}/${camps.maxHp ?? 100}`, "Defeat for +15% Might & Power"];
+          ? [t.terrain.beast_camp.defeated]
+          : [t.terrain.beast_camp.hpLine.replace('{hp}', String(camps.hp?.[idx] ?? 0)).replace('{max}', String(camps.maxHp ?? 100)), t.terrain.beast_camp.defeatFor];
       })(),
     },
-    base: { emoji: "🏰", label: "Base", bg: "rgba(25,20,5,0.92)", border: "rgba(160,120,20,0.60)", lines: ["+20% Might, Power & Defense"] },
+    base: { emoji: "🏰", bg: "rgba(25,20,5,0.92)", border: "rgba(160,120,20,0.60)", label: t.terrain.base.label, lines: [...t.terrain.base.lines] },
   };
 
   return (
@@ -328,12 +318,12 @@ const HorizontalGameUI = ({
             <span className="font-orbitron text-[11px] text-slate-300 tracking-wide">{objLabel}</span>
             {objective === 'survive' && survivalTarget > 0 && (
               <span className="font-orbitron text-[11px] font-bold text-amber-400 ml-1">
-                {Math.max(0, survivalTarget - gameState.currentTurn + 1)} turns left
+                {t.game.turnsLeft.replace('{n}', String(Math.max(0, survivalTarget - gameState.currentTurn + 1)))}
               </span>
             )}
             {objective === 'onslaught' && spawnInterval > 0 && (
               <span className="font-orbitron text-[11px] font-bold text-red-400 ml-1">
-                next wave in {spawnInterval - ((gameState.currentTurn - 1) % spawnInterval)} turns
+                {t.game.nextWave.replace('{n}', String(spawnInterval - ((gameState.currentTurn - 1) % spawnInterval)))}
               </span>
             )}
           </div>
@@ -349,12 +339,63 @@ const HorizontalGameUI = ({
             <span className="text-lg">{extGameState.arenaEvent.icon}</span>
             <div className="flex flex-col">
               <span className="font-orbitron text-[11px] font-bold tracking-widest" style={{ color: "#fb923c" }}>
-                ARENA EVENT: {extGameState.arenaEvent.name.toUpperCase()}
+                {t.game.arenaEvent} {extGameState.arenaEvent.name.toUpperCase()}
               </span>
               <span className="text-[10px] text-orange-200/80">{extGameState.arenaEvent.description}</span>
             </div>
           </div>
         )}
+
+        {/* Persistent incoming-event warnings (flood / fire countdowns) */}
+        {(() => {
+          const floodCD = (extGameState as any).pendingFloodCountdown as number | undefined;
+          const fireCD  = (extGameState as any).pendingFireCountdown  as number | undefined;
+          const floodActive = !!(extGameState as any).floodActive;
+          const fireActive  = !!(extGameState as any).forestFireActive;
+          const warnings: React.ReactNode[] = [];
+
+          if (floodCD !== undefined && floodCD > 0) {
+            warnings.push(
+              <div key="flood-warn" className="pointer-events-none flex items-center gap-2 rounded-lg px-3 py-1 animate-pulse"
+                style={{ background: "rgba(0,30,70,0.95)", border: "1px solid rgba(30,140,220,0.70)" }}>
+                <span className="text-base">🌊</span>
+                <span className="font-orbitron text-[10px] font-bold text-cyan-300">
+                  {t.game.hud.alienTide.replace('{n}', String(floodCD))}
+                </span>
+              </div>
+            );
+          } else if (floodActive) {
+            warnings.push(
+              <div key="flood-active" className="pointer-events-none flex items-center gap-2 rounded-lg px-3 py-1"
+                style={{ background: "rgba(0,20,50,0.90)", border: "1px solid rgba(30,100,180,0.50)" }}>
+                <span className="text-base">🌊</span>
+                <span className="font-orbitron text-[10px] text-cyan-500">{t.game.hud.floodActive}</span>
+              </div>
+            );
+          }
+
+          if (fireCD !== undefined && fireCD > 0) {
+            warnings.push(
+              <div key="fire-warn" className="pointer-events-none flex items-center gap-2 rounded-lg px-3 py-1 animate-pulse"
+                style={{ background: "rgba(70,20,0,0.95)", border: "1px solid rgba(220,100,20,0.80)" }}>
+                <span className="text-base">🔥</span>
+                <span className="font-orbitron text-[10px] font-bold text-orange-300">
+                  {t.game.hud.forestFire.replace('{n}', String(fireCD))}
+                </span>
+              </div>
+            );
+          } else if (fireActive) {
+            warnings.push(
+              <div key="fire-active" className="pointer-events-none flex items-center gap-2 rounded-lg px-3 py-1"
+                style={{ background: "rgba(50,15,0,0.90)", border: "1px solid rgba(180,70,10,0.50)" }}>
+                <span className="text-base">🔥</span>
+                <span className="font-orbitron text-[10px] text-orange-500">{t.game.hud.fireSpreading}</span>
+              </div>
+            );
+          }
+
+          return warnings.length > 0 ? <div className="flex flex-col gap-1">{warnings}</div> : null;
+        })()}
       </div>
 
       {/* LEFT PLAYER PANEL */}
@@ -378,7 +419,6 @@ const HorizontalGameUI = ({
           </div>
           <div className="space-y-2 px-3 pb-3 pt-2">
             {showBases && <BaseHPBar pid={0} />}
-            <GlobalManaBar pid={0} />
             <div className="space-y-1 pt-1">
               {gameState.players[0].icons.map(icon => (
                 <CharacterRow key={icon.id} icon={icon} teamColor="blue" canSelect={gameState.activePlayerId === 0} />
@@ -406,8 +446,8 @@ const HorizontalGameUI = ({
         })()}
       </div>
 
-      {/* RIGHT PLAYER PANEL */}
-      <div className="absolute top-16 right-3 pointer-events-auto z-10">
+      {/* RIGHT PLAYER PANEL + ENEMY ABILITY HUD */}
+      <div className="absolute top-16 right-3 pointer-events-auto z-10 flex flex-col gap-2">
         <div className="w-[280px] rounded-xl overflow-hidden"
           style={{
             background: "linear-gradient(180deg, rgba(28,4,8,0.96) 0%, rgba(16,2,4,0.96) 100%)",
@@ -435,6 +475,11 @@ const HorizontalGameUI = ({
             </div>
           </div>
         </div>
+
+        {/* Enemy ability cooldown tracker — only shown during player's turn in roguelike */}
+        {gameState.activePlayerId === 0 && (
+          <EnemyAbilityHUD gameState={gameState} />
+        )}
       </div>
 
       {/* BOTTOM ACTION BAR */}
@@ -467,14 +512,16 @@ const HorizontalGameUI = ({
                     )}
                   </div>
                   <div>
-                    <div className="text-[9px] font-orbitron tracking-widest text-slate-500">ACTIVE UNIT</div>
+                    <div className="text-[9px] font-orbitron tracking-widest text-slate-500">{t.game.activeUnit}</div>
                     <div className="font-orbitron text-sm font-bold text-slate-100">{displayIcon?.name ?? "—"}</div>
                   </div>
                   <div className="ml-auto flex items-center gap-2">
                     {/* Movement pips */}
                     {(() => {
-                      const base = displayIcon?.stats.moveRange ?? 2;
-                      const current = displayIcon?.stats.movement ?? 0;
+                      const displayOnRiver = displayIcon?.name.includes("Sun-sin") &&
+                        (gameState as any).board?.find((t: any) => t.coordinates.q === displayIcon.position.q && t.coordinates.r === displayIcon.position.r)?.terrain.type === 'river';
+                      const base = displayOnRiver ? 1 : (displayIcon?.stats.moveRange ?? 2);
+                      const current = Math.min(displayIcon?.stats.movement ?? 0, base);
                       const totalPips = Math.max(base, current);
                       return (
                         <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
@@ -520,10 +567,72 @@ const HorizontalGameUI = ({
                         </div>
                       );
                     })()}
+                    {/* Mana pips with optional card cost preview */}
+                    {(() => {
+                      const pid = gameState.activePlayerId;
+                      const mana: number = (gameState as any).globalMana?.[pid] ?? 0;
+                      const maxMana: number = (gameState as any).globalMaxMana?.[pid] ?? 5;
+                      const cost = hoveredCardCost;
+                      const afterMana = cost !== null ? mana - cost : null;
+                      return (
+                        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
+                          style={{
+                            background: "rgba(10,20,50,0.60)",
+                            border: cost !== null && cost > mana
+                              ? "1px solid rgba(239,68,68,0.55)"
+                              : "1px solid rgba(96,165,250,0.25)",
+                            transition: "border-color 0.15s",
+                          }}>
+                          <span className="text-base">💧</span>
+                          <div>
+                            <div className="flex items-center gap-1 leading-none mb-0.5">
+                              <span className="text-[9px] font-orbitron tracking-wider text-blue-400/70">MANA</span>
+                              {cost !== null && (
+                                <span className="text-[9px] font-bold ml-1"
+                                  style={{ color: cost > mana ? "#f87171" : "#fbbf24" }}>
+                                  -{cost}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {Array.from({ length: maxMana }).map((_, i) => {
+                                const filled = i < mana;
+                                const willSpend = afterMana !== null && i >= afterMana && i < mana;
+                                return (
+                                  <div key={i} className="w-2.5 h-2.5 rounded-full border-2 transition-all"
+                                    style={{
+                                      background: willSpend ? "rgba(251,191,36,0.60)" : filled ? "#60a5fa" : "rgba(255,255,255,0.08)",
+                                      borderColor: willSpend ? "#fde68a" : filled ? "#93c5fd" : "rgba(255,255,255,0.12)",
+                                      boxShadow: willSpend ? "0 0 4px rgba(251,191,36,0.55)" : filled ? "0 0 4px rgba(96,165,250,0.50)" : "none",
+                                    }} />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <Pill disabled={!displayIcon?.movedThisTurn || !!displayIcon?.cardUsedThisTurn} onClick={onUndoMovement}>
                       <Undo2 className="h-4 w-4" />
                       Undo
                     </Pill>
+                    {/* Hide UI toggle */}
+                    {onToggleHideUI && (
+                      <button
+                        onClick={onToggleHideUI}
+                        title="Hide UI (H)"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:opacity-80"
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.10)",
+                          color: "rgba(148,163,184,0.70)",
+                          fontSize: 14,
+                          cursor: "pointer",
+                        }}
+                      >
+                        👁
+                      </button>
+                    )}
                   </div>
                 </>
               );
@@ -562,6 +671,7 @@ const HorizontalGameUI = ({
                       globalMana={(gameState as any).globalMana?.[pid] ?? 0}
                       exhaustedUltimates={exhaustedUltimates}
                       onPlayCard={onPlayCard}
+                      onCardHover={(cost) => setHoveredCardCost(cost)}
                       gameState={gameState}
                     />
                   )}

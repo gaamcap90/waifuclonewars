@@ -3,15 +3,7 @@ import {
   RunNode, NodeType, EncounterDef, EnemyTemplate,
   RunItem, CardReward, CharacterRunState, EnemyAbilityDef,
 } from "@/types/roguelike";
-
-// ── Seeded RNG ────────────────────────────────────────────────────────────────
-function seededRng(seed: number) {
-  let s = seed | 0;
-  return () => {
-    s = Math.imul(1664525, s) + 1013904223 | 0;
-    return (s >>> 0) / 0xffffffff;
-  };
-}
+import { seededRng } from "@/utils/rng";
 
 // ── Enemy Templates ───────────────────────────────────────────────────────────
 
@@ -19,6 +11,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   // Act 1 — alien fauna & low-tier gladiators
   glorp_shambler: {
     id: 'glorp_shambler', name: 'Glorp Shambler', icon: '🍄', count: 1,
+    portrait: '/art/enemies/glorp_shambler_portrait.png',
+    description: 'A lumbering heap of organic rot that leaves trails of toxic spores wherever it drags itself. Slow but relentless — anything caught in its wake starts dissolving.',
     stats: { hp: 60, maxHp: 60, might: 35, power: 25, defense: 8, moveRange: 2, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
@@ -27,6 +21,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   },
   zyx_skitter: {
     id: 'zyx_skitter', name: 'Zyx Skitter', icon: '🦟', count: 2,
+    portrait: '/art/enemies/zyx_skitter_portrait.png',
+    description: 'A hive-mind fragment given a body of jagged chitin and nervous energy. Where one Zyx appears, a dozen more are already behind you.',
     stats: { hp: 30, maxHp: 30, might: 22, power: 15, defense: 4, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
@@ -35,6 +31,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   },
   naxion_scout: {
     id: 'naxion_scout', name: 'Naxion Scout', icon: '👾', count: 1,
+    portrait: '/art/enemies/naxion_scout_portrait.png',
+    description: "A hired gun from the outer arena circuits. One burning eye, one plasma pistol — it never stops smiling because it knows it's faster than you.",
     stats: { hp: 70, maxHp: 70, might: 30, power: 35, defense: 12, moveRange: 3, attackRange: 2 },
     ai: 'ranged',
     abilities: [
@@ -43,6 +41,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   },
   vron_crawler: {
     id: 'vron_crawler', name: 'Vron Crawler', icon: '🦀', count: 1,
+    portrait: '/art/enemies/vron_crawler_portrait.png',
+    description: "A living fortress on six legs. Its layered shell makes frontal assaults nearly pointless — wait for it to expose its soft underbelly, or don't attack at all.",
     stats: { hp: 85, maxHp: 85, might: 28, power: 20, defense: 22, moveRange: 2, attackRange: 1 },
     ai: 'defensive',
     abilities: [
@@ -52,6 +52,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   // Act 1 elites
   krath_champion: {
     id: 'krath_champion', name: 'Krath Champion', icon: '⚔️', count: 1,
+    portrait: '/art/enemies/krath_champion_portrait.png',
+    description: "A seasoned Krath arena veteran decorated with the skulls of past opponents. Fights dirty, hard, and with a grin that says it's already killed better than you.",
     stats: { hp: 120, maxHp: 120, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 },
     ai: 'berserker',
     abilities: [
@@ -61,6 +63,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   },
   spore_cluster: {
     id: 'spore_cluster', name: 'Spore Node', icon: '🔴', count: 3,
+    portrait: '/art/enemies/spore_node_portrait.png',
+    description: "Three semi-sentient spore heads on a shared fungal body. Sluggish and barely mobile, but the toxic clouds they pump out will rot your armor off in minutes.",
     stats: { hp: 40, maxHp: 40, might: 20, power: 30, defense: 5, moveRange: 1, attackRange: 2 },
     ai: 'ranged',
     abilities: [
@@ -71,6 +75,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   // Act 1 starter — alien beast (first encounter only)
   vexlar: {
     id: 'vexlar', name: 'Vexlar', icon: '🐆', count: 2,
+    portrait: '/art/enemies/vexlar_portrait.png',
+    description: "Alien apex predators brought in for your opening round. Six-legged and iridescent, they hunt the weakest link with surgical instinct and terrifying speed.",
     stats: { hp: 80, maxHp: 80, might: 25, power: 30, defense: 30, moveRange: 3, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
@@ -80,6 +86,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   // Act 1 boss
   iron_wall: {
     id: 'iron_wall', name: 'Iron Wall', icon: '🤖', count: 1,
+    portrait: '/art/enemies/iron_wall_portrait.png',
+    description: "The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered. Raw damage alone won't crack it.",
     stats: { hp: 200, maxHp: 200, might: 60, power: 50, defense: 35, moveRange: 2, attackRange: 1 },
     ai: 'defensive',
     abilities: [
@@ -91,30 +99,49 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   // Act 2 enemies
   mog_toxin: {
     id: 'mog_toxin', name: 'Mog Toxin', icon: '☣️', count: 1,
+    portrait: '/art/enemies/mog_toxin_portrait.png',
+    description: 'A bloated sack of corrosive biology that hasn\'t stopped smiling since it learned what fear tastes like. Every tentacle drips acid; every grin means someone\'s armor is already melting.',
     stats: { hp: 75, maxHp: 75, might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 },
     ai: 'ranged',
+    abilities: [
+      { id: 'acid_spray', name: 'Acid Spray', icon: '🧪', description: 'Launches a corrosive burst — applies Armor Break (−20% DEF) to all enemies within range 2 for 3 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'armor_break', magnitude: 20, duration: 3 } },
+    ] as EnemyAbilityDef[],
   },
   qrix_hunter: {
     id: 'qrix_hunter', name: 'Qrix Hunter', icon: '🏹', count: 1,
+    portrait: '/art/enemies/qrix_hunter_portrait.png',
+    description: 'A cold-blooded Qrix assassin born to hunt. Its shifting camouflage makes it nearly invisible until the trigger is pulled — and it never misses twice.',
     stats: { hp: 70, maxHp: 70, might: 25, power: 50, defense: 8, moveRange: 3, attackRange: 3 },
     ai: 'ranged',
+    abilities: [
+      { id: 'pinning_shot', name: 'Pinning Shot', icon: '📌', description: 'Fires a precision bolt at the closest target — deals Power×1.4 damage to enemies within range 3.', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 1.4 } },
+    ] as EnemyAbilityDef[],
   },
   void_wraith: {
     id: 'void_wraith', name: 'Void Wraith', icon: '👻', count: 1,
+    portrait: '/art/enemies/void_wraith_portrait.png',
+    description: 'A remnant of something that should no longer exist. It phases through walls and armor alike, drawn to the warmth of the living like a moth to flame. Only pain can make it corporeal.',
     stats: { hp: 65, maxHp: 65, might: 45, power: 40, defense: 5, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
+    abilities: [
+      { id: 'shadow_step', name: 'Shadow Step', icon: '🌑', description: 'Phases through reality — teleports adjacent to the closest enemy and strikes for 1.4× Might (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.4 } },
+    ] as EnemyAbilityDef[],
   },
   krath_berserker: {
     id: 'krath_berserker', name: 'Krath Berserker', icon: '💢', count: 1,
-    stats: { hp: 140, maxHp: 140, might: 75, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
+    portrait: '/art/enemies/krath_berserker_portrait.png',
+    description: 'A Krath warrior who has abandoned all sense of self-preservation. Four bladed arms moving faster than the eye can follow. It doesn\'t fight to win — it fights until nothing is left standing.',
+    stats: { hp: 140, maxHp: 140, might: 60, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
-      { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +35 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 35, defenseBonus: -20, duration: 2 } },
-      { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals 2.0× Might damage on arrival.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 2.0 } },
+      { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +25 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: -20, duration: 2 } },
+      { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals 1.5× Might damage on arrival (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.5 } },
     ] as EnemyAbilityDef[],
   },
   phasewarden: {
     id: 'phasewarden', name: 'Phasewarden', icon: '🔮', count: 1,
+    portrait: '/art/enemies/phasewarden_portrait.png',
+    description: "A guardian from between dimensions — its crystalline armor flickers between planes of existence. It blinks away, strips your defenses, then closes in when you're most exposed.",
     stats: { hp: 110, maxHp: 110, might: 55, power: 65, defense: 20, moveRange: 5, attackRange: 2 },
     ai: 'ranged',
     abilities: [
@@ -125,6 +152,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   // Act 2 boss
   twin_terror_a: {
     id: 'twin_terror_a', name: 'Terror Alpha', icon: '🗡️', count: 1,
+    portrait: '/art/enemies/terror_alpha_portrait.png',
+    description: "The aggressive half of the Twin Terror duo. Built for raw speed and kinetic impact — charges at full sprint and hits like a missile. Kill it first or it will never stop coming.",
     stats: { hp: 160, maxHp: 160, might: 70, power: 55, defense: 20, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
@@ -134,6 +163,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   },
   twin_terror_b: {
     id: 'twin_terror_b', name: 'Terror Beta', icon: '🛡️', count: 1,
+    portrait: '/art/enemies/terror_beta_portrait.png',
+    description: "The defensive half of the Twin Terror. Absorbs punishment while Alpha creates chaos, then heals itself when nearly dead. Ignore it and Beta becomes unkillable.",
     stats: { hp: 160, maxHp: 160, might: 50, power: 65, defense: 30, moveRange: 3, attackRange: 2 },
     ai: 'defensive',
     abilities: [
@@ -144,6 +175,8 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   // Act 3 boss
   znyxorga_champion: {
     id: 'znyxorga_champion', name: "Znyxorga's Champion", icon: '👑', count: 1,
+    portrait: '/art/enemies/znyxorgas_champion_portrait.png',
+    description: "Znyxorga's ultimate weapon — four arms, six eyes, 500 HP, and the patience of a god. It will annihilate your whole team simultaneously and grow stronger the closer it gets to death.",
     stats: { hp: 500, maxHp: 500, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 },
     ai: 'berserker',
     abilities: [
@@ -160,21 +193,21 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
 export const ITEMS: RunItem[] = [
   // COMMON
   { id: 'iron_gauntlets', name: 'Iron Gauntlets', icon: '🥊', tier: 'common',
-    description: '+8 Might for this run.',
-    statBonus: { might: 8 } },
+    description: '+10 Might for this run.',
+    statBonus: { might: 10 } },
   { id: 'bone_plate', name: 'Bone Plate', icon: '🦴', tier: 'common',
-    description: '+6 Defense for this run.',
-    statBonus: { defense: 6 } },
+    description: '+5 Defense for this run.',
+    statBonus: { defense: 5 } },
   { id: 'vitality_shard', name: 'Vitality Shard', icon: '💠', tier: 'common',
     description: '+25 max HP for this run.',
     statBonus: { hp: 25 } },
   { id: 'mana_conduit', name: 'Mana Conduit', icon: '🔋', tier: 'common',
-    description: '+5 Power for this run.',
-    statBonus: { power: 5 } },
+    description: '+10 Power for this run.',
+    statBonus: { power: 10 } },
   // UNCOMMON
   { id: 'battle_drum', name: 'Battle Drum', icon: '🥁', tier: 'uncommon',
-    description: 'After killing an enemy, draw 1 card.',
-    passiveTag: 'draw_on_kill' },
+    description: 'After killing an enemy, draw 2 cards.',
+    passiveTag: 'draw_2_on_kill' },
   { id: 'arena_medkit', name: 'Arena Medkit', icon: '💊', tier: 'uncommon',
     description: 'Heal 20 HP at the start of your turn if below 40% HP.',
     passiveTag: 'regen_low_hp' },
@@ -184,22 +217,28 @@ export const ITEMS: RunItem[] = [
   { id: 'card_satchel', name: 'Card Satchel', icon: '🎒', tier: 'uncommon',
     description: '+1 starting hand size for this run.',
     passiveTag: 'hand_size_plus_1' },
-  { id: 'strategists_case', name: "Strategist's Case", icon: '💼', tier: 'uncommon',
-    description: '+2 starting hand size for this run.',
-    passiveTag: 'hand_size_plus_2' },
   { id: 'quick_boots', name: 'Quick Boots', icon: '👟', tier: 'uncommon',
     description: '+1 movement range permanently.',
     passiveTag: 'move_plus_1' },
   { id: 'soul_ember', name: 'Soul Ember', icon: '🕯️', tier: 'uncommon',
     description: 'On kill, restore 15 HP to this character.',
     passiveTag: 'on_kill_heal_15' },
+  { id: 'war_trophy', name: 'War Trophy', icon: '💀', tier: 'uncommon',
+    description: 'On kill, permanently gain +3 Might and +3 Power for the rest of the run.',
+    passiveTag: 'on_kill_might_power_plus3' },
   // RARE — general
   { id: 'alien_core', name: 'Alien Core', icon: '🧬', tier: 'rare',
-    description: '+12 Power. Ability damage +15%.',
-    statBonus: { power: 12 }, passiveTag: 'ability_power_15pct' },
+    description: '+20 Power.',
+    statBonus: { power: 20 } },
   { id: 'gladiator_brand', name: "Gladiator's Brand", icon: '⚡', tier: 'rare',
     description: 'First ability each fight costs 0 Mana.',
     passiveTag: 'first_ability_free' },
+  { id: 'strategists_case', name: "Strategist's Case", icon: '💼', tier: 'rare',
+    description: '+2 starting hand size for this run.',
+    passiveTag: 'hand_size_plus_2' },
+  { id: 'diamond_shell', name: 'Diamond Shell', icon: '💎', tier: 'rare',
+    description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).',
+    passiveTag: 'negate_first_hit' },
   // RARE — Napoleon
   { id: 'grand_strategy', name: 'Grand Strategy', icon: '🗺️', tier: 'rare',
     targetCharacter: 'napoleon',
@@ -207,7 +246,7 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'napoleon_barrage_splash' },
   { id: 'emperors_coat', name: "Emperor's Coat", icon: '🪖', tier: 'rare',
     targetCharacter: 'napoleon',
-    description: 'Grande Armée also restores 1 Mana to each buffed ally.',
+    description: 'Grande Armée also grants +30% Might & Power and restores 1 Mana to each buffed ally.',
     passiveTag: 'napoleon_armee_mana' },
   // RARE — Genghis
   { id: 'eternal_hunger', name: 'Eternal Hunger', icon: '🩸', tier: 'rare',
@@ -227,16 +266,37 @@ export const ITEMS: RunItem[] = [
     targetCharacter: 'davinci',
     description: 'Masterpiece heals an additional 25 HP.',
     passiveTag: 'davinci_masterpiece_plus25' },
+  // RARE — Leonidas
+  { id: 'spartan_shield', name: 'Spartan Shield', icon: '🛡️', tier: 'rare',
+    targetCharacter: 'leonidas',
+    description: 'Shield Bash also pushes the target back 1 hex and STUNS for 1 turn (stunned unit cannot move, attack, or use abilities).',
+    passiveTag: 'leonidas_bash_push_stun' },
+  { id: 'phalanx_oath', name: 'Phalanx Oath', icon: '🏛️', tier: 'rare',
+    targetCharacter: 'leonidas',
+    description: 'Spartan Wall range increased by 1 and DEF bonus increased to +30.',
+    passiveTag: 'leonidas_wall_plus' },
+  // RARE — Sun-sin
+  { id: 'turtle_hull', name: 'Turtle Hull', icon: '🐢', tier: 'rare',
+    targetCharacter: 'sunsin',
+    description: 'Yi Sun-sin takes 20% less damage from all sources.',
+    passiveTag: 'sunsin_dmg_reduce_20pct' },
+  { id: 'admirals_banner', name: "Admiral's Banner", icon: '⛵', tier: 'rare',
+    targetCharacter: 'sunsin',
+    description: 'Naval Repairs / Broadside also grants all nearby allies +30 DEF for 1 turn.',
+    passiveTag: 'sunsin_naval_def_aura' },
   // LEGENDARY
   { id: 'znyxorgas_eye', name: "Znyxorga's Eye", icon: '👁️', tier: 'legendary',
-    description: 'After defeating an enemy, your next card costs 0 Mana.',
-    passiveTag: 'next_card_free_on_kill' },
+    description: 'After defeating an enemy, your next 2 cards cost 0 Mana.',
+    passiveTag: 'next_2_cards_free_on_kill' },
   { id: 'void_armor', name: 'Void Armor', icon: '🛡️', tier: 'legendary',
     description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.',
     passiveTag: 'once_survive_lethal' },
   { id: 'arena_champion', name: 'Arena Champion', icon: '🏆', tier: 'legendary',
     description: 'All stats +10 while this character is alive.',
     statBonus: { hp: 10, might: 10, power: 10, defense: 10 } },
+  { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary',
+    description: 'Permanently draw 3 additional cards at the start of each turn for the rest of the run.',
+    passiveTag: 'draw_plus_3' },
 ];
 
 // ── Card Reward Pool ──────────────────────────────────────────────────────────
@@ -263,12 +323,12 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'leonidas_shield_bash',    name: 'Shield Bash',      icon: '⚡', manaCost: 2, description: 'Power×1.5 dmg at range 1 + Armor Break (−20% DEF, 2t).', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_spartan_wall',   name: 'Spartan Wall',     icon: '🏛️', manaCost: 3, description: '+20 Defense to Leonidas and all allies within range 2.', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_this_is_sparta', name: 'THIS IS SPARTA!',  icon: '⭐', manaCost: 3, description: 'Power×3 dmg to target + Demoralize adjacent enemies (1t).', exclusiveTo: 'Leonidas' },
-  { definitionId: 'sunsin_hwajeon',        name: 'Hwajeon / Ramming',       icon: '🔥', manaCost: 2, description: 'Power×1.2 dmg at range 3, applies Poison.', exclusiveTo: 'Sun-sin' },
-  { definitionId: 'sunsin_naval_command',  name: 'Naval Command',           icon: '🚢', manaCost: 3, description: '+15% Might & Power to all allies for 2 turns.', exclusiveTo: 'Sun-sin' },
-  { definitionId: 'sunsin_broadside',      name: 'Broadside',               icon: '💥', manaCost: 3, description: 'Power×0.7 to all enemies in range 3.', exclusiveTo: 'Sun-sin' },
-  { definitionId: 'sunsin_chongtong',      name: 'Chongtong Barrage',       icon: '⭐', manaCost: 3, description: 'ULTIMATE — Power×2.0 to all enemies in range 5.', exclusiveTo: 'Sun-sin' },
+  { definitionId: 'sunsin_hwajeon',        name: 'Hwajeon / Ramming',         icon: '🔥', manaCost: 2, description: 'Land: ~72 dmg range 3, push back. Water: ~72 dmg range 1, push back.', exclusiveTo: 'Sun-sin' },
+  { definitionId: 'sunsin_naval_command',  name: 'Naval Repairs / Broadside', icon: '🚢', manaCost: 3, description: 'Land: Heal allies in area 10 HP now + 10 HP next turn. Water: ~25 dmg all enemies range 3.', exclusiveTo: 'Sun-sin' },
+  { definitionId: 'sunsin_chongtong',      name: 'Chongtong Barrage',         icon: '⭐', manaCost: 3, description: 'ULTIMATE — Land: charge 3 hexes, ~60 dmg + push sideways. Water: ~90 main, ~43 adj, range 5.', exclusiveTo: 'Sun-sin' },
   { definitionId: 'shared_quick_move',   name: 'Quick Move',  icon: '🏃', manaCost: 1, description: '+2 movement this turn.' },
   { definitionId: 'shared_gamble',       name: 'Gamble',      icon: '🎲', manaCost: 0, description: 'Draw 3 cards, discard 1 at random.' },
+  { definitionId: 'shared_basic_attack', name: 'Basic Attack (+1 copy)', icon: '⚔️', manaCost: 1, description: 'Add another Basic Attack card permanently to your deck.' },
 ];
 
 // ── Encounter Builders ────────────────────────────────────────────────────────
@@ -308,40 +368,51 @@ function buildEncounter(
     name = `Act ${act} Boss`;
     xp = 160; gold = 90 + Math.floor(rng() * 30); dropChance = 1.0;
   } else if (type === 'elite') {
-    // Late-row elites (rows 9-10) get the harder pair
+    // Late-row elites (rows 9-10) get the harder pair — doubled enemy count
     const useToughElite = row >= 9;
-    enemies = act === 1
+    const baseElites = act === 1
       ? (useToughElite || rng() < 0.5 ? [ENEMIES.krath_champion] : [ENEMIES.spore_cluster, ENEMIES.spore_cluster, ENEMIES.spore_cluster])
       : (rng() < 0.5 ? [ENEMIES.krath_berserker] : [ENEMIES.phasewarden]);
+    // Double up: add one extra enemy from the late pool alongside the elite
+    const extraEnemy = pick(latePool, rng);
+    enemies = [...baseElites, extraEnemy];
     name = 'Elite Encounter';
-    xp = 60; gold = 30 + Math.floor(rng() * 20); dropChance = 0.70;
+    xp = Math.round((60 + row * 2) * 1.25); gold = 40 + Math.floor(rng() * 25); dropChance = 0.90;
   } else {
-    // Standard enemy: 1–2 enemies; later rows more likely to send 2
+    // Standard enemy: doubled to 2–4 enemies; later rows more likely to send 4
     const twoPct = row <= 3 ? 0.30 : row <= 6 ? 0.45 : 0.55;
-    const count = rng() < twoPct ? 2 : 1;
+    const baseCount = rng() < twoPct ? 2 : 1;
+    const count = baseCount * 2; // always double
     enemies = Array.from({ length: count }, () => pick(enemyPool, rng));
-    name = count > 1 ? `${count} Enemies` : 'Enemy Encounter';
-    xp = 35 + row * 3; gold = 10 + Math.floor(rng() * 15) + row; dropChance = 0.25 + row * 0.02;
+    name = `${count} Enemies`;
+    xp = Math.round((35 + row * 3) * 1.25); gold = 18 + Math.floor(rng() * 20) + row; dropChance = 0.60 + row * 0.02;
   }
 
-  // Objective: bosses always destroy_base; elites 30% destroy_base; others 20% destroy_base
+  // Objective: bosses always destroy_base; elites 50% destroy_base; regular enemies 30% destroy_base, 15% survive
   const objectiveRoll = rng();
   const objective = type === 'boss'
     ? 'destroy_base'
-    : objectiveRoll < 0.2 && type !== 'elite'
-      ? (rng() < 0.5 ? 'survive' : 'defeat_all')
-      : 'defeat_all';
+    : type === 'elite'
+      ? (objectiveRoll < 0.50 ? 'destroy_base' : 'defeat_all')
+      : objectiveRoll < 0.30
+        ? 'destroy_base'
+        : objectiveRoll < 0.45
+          ? 'survive'
+          : 'defeat_all';
+
+  const survivalTurns = objective === 'survive' ? 10 + Math.floor(rng() * 3) : undefined; // 10–12 turns
 
   const objectiveLabels: Record<string, string> = {
     defeat_all: 'Defeat all enemies',
     destroy_base: 'Destroy the enemy base',
-    survive: 'Survive 6 turns',
+    survive: `Survive ${survivalTurns ?? 10} turns`,
     onslaught: 'Hold the line',
   };
 
   return {
     name, objective, objectiveLabel: objectiveLabels[objective], enemies,
-    survivalTurns: objective === 'survive' ? 6 : undefined,
+    survivalTurns,
+    spawnInterval: objective === 'survive' ? 2 : undefined,
     goldReward: gold, xpReward: xp, bonusXpNoHit: 60, bonusXpFast: 40,
     itemDropChance: dropChance, guaranteedItem: type === 'boss',
   };
@@ -351,13 +422,14 @@ function buildEncounter(
 
 function pickNodeType(row: number, rng: () => number): NodeType {
   // 12-row map: row 0=start enemies, row 11=boss, rows 1-10 vary
+  // Campfire rows 2/3/6 have reduced frequency; rows 4/7 are rest rows; row 10 is guaranteed campfire
   const tables: Record<number, [NodeType, number][]> = {
     1:  [['enemy',0.65],['unknown',0.20],['treasure',0.15]],
-    2:  [['enemy',0.50],['campfire',0.30],['unknown',0.20]],
-    3:  [['enemy',0.40],['elite',0.15],['campfire',0.20],['merchant',0.25]],
+    2:  [['enemy',0.60],['campfire',0.15],['unknown',0.25]],
+    3:  [['enemy',0.50],['elite',0.15],['campfire',0.10],['merchant',0.25]],
     4:  [['campfire',0.55],['merchant',0.45]],          // convergence row — always rest/shop
     5:  [['enemy',0.40],['elite',0.25],['treasure',0.20],['merchant',0.15]],
-    6:  [['enemy',0.35],['elite',0.25],['campfire',0.25],['unknown',0.15]],
+    6:  [['enemy',0.45],['elite',0.30],['campfire',0.10],['unknown',0.15]],
     7:  [['campfire',0.50],['merchant',0.50]],          // mid-rest row
     8:  [['enemy',0.35],['elite',0.30],['treasure',0.20],['unknown',0.15]],
     9:  [['enemy',0.25],['elite',0.75]],                // heavy combat before final rest
@@ -521,7 +593,7 @@ export function buildStartingCharacters(): CharacterRunState[] {
       items: [null, null, null, null, null],
     },
     {
-      id: 'sunsin', displayName: 'Sun-sin-chan', portrait: '/art/sunsin_portrait.jpg',
+      id: 'sunsin', displayName: 'Sun-sin-chan', portrait: '/art/sunsin_portrait.png',
       currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       items: [null, null, null, null, null],
@@ -533,22 +605,41 @@ export function buildStartingCharacters(): CharacterRunState[] {
 export const XP_TO_NEXT = [0, 100, 220, 380, 580, 830, 9999];
 
 // Pick 3 random cards for the reward screen (no duplicates from current deck)
-export function pickCardRewards(currentDeck: string[], rng: () => number): CardReward[] {
+// characterIds: the CharacterId values of characters in this run (e.g. ['napoleon','genghis'])
+export function pickCardRewards(currentDeck: string[], rng: () => number, characterIds: string[] = []): CardReward[] {
   const pool = CARD_REWARD_POOL.filter(c => {
+    // Filter out cards exclusive to characters not in the run
+    if (c.exclusiveTo) {
+      const normalized = c.exclusiveTo.toLowerCase().replace(/[\s-]/g, '');
+      if (characterIds.length > 0 && !characterIds.includes(normalized)) return false;
+    }
     // Allow duplicates of shared cards but not character ultimates
-    const isUltimate = c.definitionId.endsWith('_fury') || c.definitionId.endsWith('_salvo') || c.definitionId.endsWith('_guardian');
+    const isUltimate = c.definitionId.endsWith('_fury') || c.definitionId.endsWith('_salvo')
+      || c.definitionId.endsWith('_guardian') || c.definitionId.endsWith('_sparta')
+      || c.definitionId.endsWith('_chongtong');
     return !(isUltimate && currentDeck.includes(c.definitionId));
   });
-  const shuffled = [...pool].sort(() => rng() - 0.5);
+  // Fisher-Yates shuffle with seeded rng (more reliable than sort)
+  const shuffled = [...pool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   return shuffled.slice(0, 3);
 }
 
-export function pickItemReward(tier: 'common' | 'uncommon' | 'rare' | 'legendary', rng: () => number): RunItem {
+export function pickItemReward(tier: 'common' | 'uncommon' | 'rare' | 'legendary', rng: () => number, teamCharIds?: string[]): RunItem {
   const pool = ITEMS.filter(i => {
     if (tier === 'legendary') return i.tier === 'legendary';
     if (tier === 'rare') return i.tier === 'rare' || i.tier === 'uncommon';
     if (tier === 'uncommon') return i.tier === 'uncommon' || i.tier === 'common';
     return i.tier === 'common';
+  }).filter(i => {
+    // Filter out character-specific items when that character isn't on the team
+    if (!i.targetCharacter || !teamCharIds || teamCharIds.length === 0) return true;
+    return teamCharIds.some(id => id.toLowerCase().includes(i.targetCharacter!));
   });
-  return pick(pool, rng);
+  // If filtering left us with nothing, fall back to generic items only
+  const safePool = pool.length > 0 ? pool : ITEMS.filter(i => !i.targetCharacter);
+  return pick(safePool, rng);
 }

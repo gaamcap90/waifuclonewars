@@ -1,12 +1,15 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import HexTile from "./HexTile";
-import HPBar from "./HPBar";
 import BeastCampHPBar from "./BeastCampHPBar";
 import AIIntentBadge from "./AIIntentBadge";
+import AnimationLayer from "./AnimationLayer";
 import { GameState, Coordinates, AIIntent } from "@/types/game";
 import { useRangeCalculation } from "./RangeIndicator";
 import { resolveBasicAttackDamage, resolveAbilityDamage } from "@/combat/resolver";
 import { calcEffectiveStats } from "@/combat/buffs";
+import { useT } from "@/i18n";
+import { getCharacterPortrait } from "@/utils/portraits";
+import { AnimEvent } from "@/hooks/useAnimations";
 
 /** Snap any offset to the nearest axial hex-line and return the line hexes up to `range`. */
 function snapToLineHexes(from: Coordinates, to: Coordinates, range: number): Coordinates[] {
@@ -27,17 +30,12 @@ interface GameBoardProps {
   gameState: GameState;
   onTileClick: (coordinates: Coordinates) => void;
   onTileHover?: (tile: GameState['board'][number] | null) => void;
+  animations?: AnimEvent[];
 }
 
-const getCharacterPortrait = (name: string) => {
-  if (name.includes("Napoleon")) return "/art/napoleon_portrait.png";
-  if (name.includes("Genghis")) return "/art/genghis_portrait.png";
-  if (name.includes("Da Vinci")) return "/art/davinci_portrait.png";
-  if (name.includes("Leonidas")) return "/art/leonidas_portrait.png";
-  return null; // Combat Drone uses null → renders initial "C" with gear tint
-};
 
-const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover }) => {
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [] }) => {
+  const { t } = useT();
   // 1) Hex dimensions
   const hexSize = 50;
   const hexWidth = hexSize * 2;                // 100px
@@ -47,10 +45,20 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(1.4);
   const [hoveredCoords, setHoveredCoords] = useState<Coordinates | null>(null);
   const [hoveredIntentRange, setHoveredIntentRange] = useState<{ iconId: string; range: number } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  // Center board on mount
+  useEffect(() => {
+    if (!boardRef.current) return;
+    const W = boardRef.current.clientWidth;
+    const H = boardRef.current.clientHeight;
+    const oX = (W - hexWidth) / 2;
+    const oY = (H - hexHeight) / 2;
+    setPanOffset({ x: -oX, y: -oY });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 3) Container size & centering math
   const containerWidth = boardRef.current?.clientWidth ?? 800;
@@ -60,19 +68,21 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
 
   // 4) Compute ranges for highlighting
   const extState = gameState as any;
-  const activeIcon = gameState.players
-    .flatMap(p => p.icons)
-    .find(i => i.playerId === gameState.activePlayerId && i.isAlive);
 
   // Use selectedIcon (from ExtState) if set, otherwise first alive icon for active player
   const selectedIconId: string | undefined =
     extState.selectedIcon ??
     gameState.players[gameState.activePlayerId]?.icons.find(i => i.isAlive)?.id;
 
+  // Use the actually-selected icon for all condition checks (not just first-alive)
+  const selectedIcon = gameState.players
+    .flatMap(p => p.icons)
+    .find(i => i.id === selectedIconId);
+
   const { movementRange, attackRange, abilityRange } = useRangeCalculation(
     gameState,
     selectedIconId,
-    !gameState.targetingMode && !!activeIcon && !activeIcon.cardUsedThisTurn,
+    !gameState.targetingMode && !!selectedIcon && selectedIcon.isAlive,
     gameState.targetingMode?.abilityId === 'basic_attack',
     Boolean(gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack'),
     gameState.targetingMode?.range
@@ -86,28 +96,27 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     ? gameState.board.find(t => t.coordinates.q === hoveredCoords.q && t.coordinates.r === hoveredCoords.r)
     : null;
 
-  const showTerrainTooltip = Boolean(hoveredTile && !cardTargetingMode && !gameState.targetingMode);
-
   const TERRAIN_META: Record<string, { emoji: string; label: string; color: string }> = {
-    forest:       { emoji: "🌲", label: "Forest",       color: "border-green-600/60 bg-green-950/90" },
-    mountain:     { emoji: "⛰️", label: "Mountain",     color: "border-gray-500/60 bg-gray-900/95" },
-    river:        { emoji: "🌊", label: "River",        color: "border-blue-500/60 bg-blue-950/90" },
-    plain:        { emoji: "🌾", label: "Plain",        color: "border-slate-600/40 bg-slate-900/90" },
-    mana_crystal: { emoji: "💎", label: "Mana Crystal", color: "border-purple-500/60 bg-purple-950/90" },
-    beast_camp:   { emoji: "🐗", label: "Beast Camp",   color: "border-orange-600/60 bg-orange-950/90" },
-    base:         { emoji: "🏰", label: "Base",         color: "border-amber-500/60 bg-amber-950/90" },
-    spawn:        { emoji: "🚩", label: "Spawn Zone",   color: "border-slate-500/40 bg-slate-900/90" },
+    forest:       { emoji: "🌲", label: t.terrain.forest.label,       color: "border-green-600/60 bg-green-950/90" },
+    mountain:     { emoji: "⛰️", label: t.terrain.mountain.label,     color: "border-gray-500/60 bg-gray-900/95" },
+    river:        { emoji: "🌊", label: t.terrain.river.label,        color: "border-blue-500/60 bg-blue-950/90" },
+    plain:        { emoji: "🌾", label: t.terrain.plain.label,        color: "border-slate-600/40 bg-slate-900/90" },
+    mana_crystal: { emoji: "💎", label: t.terrain.mana_crystal.label, color: "border-purple-500/60 bg-purple-950/90" },
+    beast_camp:   { emoji: "🐗", label: t.terrain.beast_camp.label,   color: "border-orange-600/60 bg-orange-950/90" },
+    base:         { emoji: "🏰", label: t.terrain.base.label,         color: "border-amber-500/60 bg-amber-950/90" },
+    spawn:        { emoji: "🚩", label: t.terrain.spawn.label,        color: "border-slate-500/40 bg-slate-900/90" },
   };
 
   function terrainTooltipLines(tile: (typeof gameState.board)[0]): string[] {
-    const lines: string[] = [];
-    const t = tile.terrain.type;
-    if (t === 'forest') { lines.push('+25% Defense'); lines.push('Movement costs doubled (2 per hex)'); }
-    if (t === 'mountain') lines.push('Impassable');
-    if (t === 'river') { lines.push('Impassable'); lines.push('Lethal if displaced onto it'); }
-    if (t === 'mana_crystal') { lines.push('Impassable'); lines.push('+1 or +2 Mana at end of turn'); }
-    if (t === 'base') lines.push('+20% Might, Power & Defense');
-    if (t === 'beast_camp') {
+    const ttype = tile.terrain.type;
+    if (ttype === 'forest') return [...t.terrain.forest.lines];
+    if (ttype === 'mountain') return [...t.terrain.mountain.lines];
+    if (ttype === 'river') return [...t.terrain.river.lines];
+    if (ttype === 'mana_crystal') return [...t.terrain.mana_crystal.lines];
+    if (ttype === 'base') return [...t.terrain.base.lines];
+    if (ttype === 'spawn') return [...t.terrain.spawn.lines];
+    if (ttype === 'plain') return [...t.terrain.plain.lines];
+    if (ttype === 'beast_camp') {
       const camps = (gameState as any).objectives?.beastCamps;
       if (camps) {
         const idx = gameState.board
@@ -116,33 +125,57 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         const hp = camps.hp?.[idx] ?? 0;
         const maxHp = camps.maxHp ?? 100;
         const defeated = camps.defeated?.[idx];
-        if (defeated) lines.push('Defeated — team has +15% Might & Power');
-        else { lines.push(`HP: ${hp}/${maxHp}`); lines.push('Defeat for +15% Might & Power'); }
+        if (defeated) return [t.terrain.beast_camp.defeated];
+        return [t.terrain.beast_camp.hpLine.replace('{hp}', String(hp)).replace('{max}', String(maxHp)), t.terrain.beast_camp.defeatFor];
       }
+      return [...t.terrain.beast_camp.lines];
     }
-    if (t === 'base') lines.push('+20% all stats for home team');
-    if (t === 'spawn') lines.push('Respawn zone');
-    if (t === 'plain') lines.push('No special effects');
-    return lines;
+    return [];
   }
   const hoverDamagePreview = useMemo(() => {
-    if (!hoveredCoords || !cardTargetingMode) return null;
-    const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === cardTargetingMode.executorId);
-    const target = gameState.players.flatMap(p => p.icons).find(i =>
-      i.isAlive && i.position.q === hoveredCoords.q && i.position.r === hoveredCoords.r
-    );
-    if (!executor || !target || target.playerId === executor.playerId) return null;
-    const card = cardTargetingMode.card;
-    if (card.effect.damageType === 'atk') {
-      const dmg = resolveBasicAttackDamage(gameState, executor, target);
-      return { q: hoveredCoords.q, r: hoveredCoords.r, text: `-${dmg.toFixed(0)}` };
+    if (!hoveredCoords) return null;
+    const allIcons = gameState.players.flatMap(p => p.icons);
+    const target = allIcons.find(i => i.isAlive && i.position.q === hoveredCoords.q && i.position.r === hoveredCoords.r);
+
+    // Card targeting
+    if (cardTargetingMode) {
+      const executor = allIcons.find(i => i.id === cardTargetingMode.executorId);
+      if (!executor || !target || target.playerId === executor.playerId) return null;
+      const card = cardTargetingMode.card;
+      if (card.effect.damageType === 'atk') {
+        const dmg = resolveBasicAttackDamage(gameState, executor, target);
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: `⚔ ${Math.round(dmg)}` };
+      }
+      if (card.effect.powerMult !== undefined) {
+        const dmg = resolveAbilityDamage(gameState, executor, target, card.effect.powerMult);
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: `💥 ${Math.round(dmg)}` };
+      }
+      if (card.effect.damage) {
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: `💥 ${card.effect.damage}` };
+      }
+      if (card.effect.healing) {
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: `+${card.effect.healing} HP` };
+      }
+      return null;
     }
-    if (card.effect.damage) {
-      return { q: hoveredCoords.q, r: hoveredCoords.r, text: `-${card.effect.damage}` };
+
+    // Ability / basic-attack targeting
+    if (gameState.targetingMode && target) {
+      const { abilityId, iconId } = gameState.targetingMode;
+      const caster = allIcons.find(i => i.id === iconId);
+      if (!caster || target.playerId === caster.playerId) return null;
+      if (abilityId === 'basic_attack') {
+        const dmg = resolveBasicAttackDamage(gameState, caster, target);
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: `⚔ ${Math.round(dmg)}` };
+      }
+      const ability = caster.abilities.find(a => a.id === abilityId);
+      if (ability) {
+        const mult = (ability as any).powerMult ?? 1;
+        const dmg = resolveAbilityDamage(gameState, caster, target, mult);
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: `💥 ${Math.round(dmg)}` };
+      }
     }
-    if (card.effect.healing) {
-      return { q: hoveredCoords.q, r: hoveredCoords.r, text: `+${card.effect.healing} HP` };
-    }
+
     return null;
   }, [hoveredCoords, cardTargetingMode, gameState]);
 
@@ -169,10 +202,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
       }
       if (card.effect.powerMult !== undefined) {
-        const atkStats = calcEffectiveStats(gameState, executor);
-        const defStats = calcEffectiveStats(gameState, hoveredIcon);
-        const terrainMult = 1; // simplified for preview
-        const dmg = Math.max(0.1, atkStats.power * card.effect.powerMult * terrainMult - defStats.defense);
+        const dmg = resolveAbilityDamage(gameState, executor, hoveredIcon, card.effect.powerMult);
         return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
       }
       if (card.effect.damage !== undefined) {
@@ -195,16 +225,12 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       const ability = caster.abilities.find(a => a.id === abilityId);
       if (ability) {
         const healing = (ability as any).healing as number | undefined;
-        const damage  = (ability as any).damage  as number | undefined;
+        const mult = (ability as any).powerMult ?? 1;
         if (healing !== undefined && hoveredIcon.playerId === caster.playerId) {
           return { iconId: hoveredIcon.id, previewHP: Math.min(hoveredIcon.stats.maxHp, hoveredIcon.stats.hp + healing), isDamage: false };
         }
-        if (damage !== undefined && hoveredIcon.playerId !== caster.playerId) {
-          // Use resolveAbilityDamage (includes calcEffectiveStats) for accurate preview
-          const defStats = calcEffectiveStats(gameState, hoveredIcon);
-          const dmg = damage > 0
-            ? Math.max(0.1, damage - defStats.defense)
-            : resolveAbilityDamage(gameState, caster, hoveredIcon, 1.0);
+        if (hoveredIcon.playerId !== caster.playerId) {
+          const dmg = resolveAbilityDamage(gameState, caster, hoveredIcon, mult);
           return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
         }
       }
@@ -249,9 +275,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       y: hexSize * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
     });
 
-    // Sort back-to-front so DOM order gives correct isometric depth (no z-index needed)
+    // Sort back-to-front by screen-y (proportional to q/2 + r) for correct isometric painter's order
     const sorted = [...gameState.board].sort(
-      (a, b) => (a.coordinates.r - b.coordinates.r) || (a.coordinates.q - b.coordinates.q)
+      (a, b) => (a.coordinates.q + 2 * a.coordinates.r) - (b.coordinates.q + 2 * b.coordinates.r)
     );
     return sorted.map(tile => {
       const { q, r } = tile.coordinates;
@@ -294,6 +320,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       const tKey = `${q},${r}`;
       const isOnLine = lineHexSet.has(tKey);
       const isIntentRange = intentRangeHighlight.has(tKey);
+      const laserGridStruckIds: string[] = (gameState as any).laserGridStruckIds ?? [];
+      const isLaserStruck = icon ? laserGridStruckIds.includes(icon.id) : false;
+      const burningForestTiles: string[] = (gameState as any).burningForestTiles ?? [];
+      const isBurning = tile.terrain.type === 'forest' && burningForestTiles.includes(tKey);
+      const pendingFireStartTile: string | undefined = (gameState as any).pendingFireStartTile;
+      const isPendingFireStart = pendingFireStartTile === tKey;
+      const pendingLaserTiles: string[] = (gameState as any).pendingLaserTiles ?? [];
+      const isPendingLaser = pendingLaserTiles.includes(tKey);
 
       // All AI intents for this tile's icon (shown during player's turn)
       const aiIntents: AIIntent[] = (gameState as any).aiIntents ?? [];
@@ -315,6 +349,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             top: y + offsetY,
             width: hexWidth,
             height: hexHeight,
+            transform: 'scale(0.95)',
+            transformOrigin: 'center center',
           }}
           onClick={() => onTileClick(tile.coordinates)}
           onMouseEnter={() => { setHoveredCoords({ q, r }); onTileHover?.(tile); }}
@@ -326,6 +362,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             onTerrainClick={() => { }}
             icon={icon ? (icon.name === "Combat Drone" ? "⚙" : icon.name.charAt(0)) : undefined}
             iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
+            iconName={icon?.name}
             size={hexSize}
             playerColor={playerColor}
             isActiveIcon={isActiveIcon}
@@ -334,13 +371,17 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             isRespawnTarget={isRespawnTarget}
             isInAttackRange={inAttack}
             isInAbilityRange={inAbility}
+            currentHP={icon?.stats.hp}
+            maxHP={icon?.stats.maxHp}
+            previewHP={hpPreview && icon && hpPreview.iconId === icon.id ? hpPreview.previewHP : undefined}
+            isHealPreview={hpPreview && icon && hpPreview.iconId === icon.id ? !hpPreview.isDamage : false}
           />
 
           {/* Line-targeting hover highlight */}
           {isOnLine && (
             <div className="absolute inset-0 pointer-events-none z-20" style={{
               background: "rgba(255,140,0,0.35)",
-              clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+              clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
             }} />
           )}
 
@@ -349,13 +390,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             <>
               <div className="absolute inset-0 pointer-events-none z-15" style={{
                 background: "rgba(220,40,40,0.55)",
-                clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
               }} />
               <svg className="absolute inset-0 pointer-events-none z-16" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
                 <polygon
                   points={[
-                    `${hexWidth/2},0`,`${hexWidth},${hexHeight/4}`,`${hexWidth},${hexHeight*3/4}`,
-                    `${hexWidth/2},${hexHeight}`,`0,${hexHeight*3/4}`,`0,${hexHeight/4}`,
+                    `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
+                    `${hexWidth/4},${hexHeight}`,`0,${hexHeight/2}`,`${hexWidth/4},0`,
                   ].join(' ')}
                   fill="none" stroke="rgba(255,80,80,0.9)" strokeWidth="3"
                 />
@@ -363,20 +404,78 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             </>
           )}
 
-          {icon && (() => {
-            const prev = hpPreview?.iconId === icon.id ? hpPreview : null;
-            return (
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
-                <HPBar
-                  currentHP={icon.stats.hp}
-                  maxHP={icon.stats.maxHp}
-                  size="small"
-                  previewHP={prev?.previewHP}
-                  isDamage={prev?.isDamage ?? true}
+          {/* Laser Grid struck indicator */}
+          {isLaserStruck && (
+            <div className="absolute inset-0 pointer-events-none z-25 flex items-center justify-center"
+              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: "rgba(250,200,0,0.30)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+              }} />
+              <span style={{ fontSize: 18, zIndex: 1, textShadow: "0 0 8px rgba(255,220,0,0.9)" }}>⚡</span>
+            </div>
+          )}
+
+          {/* Pending Laser Grid warning — 1 turn before damage */}
+          {isPendingLaser && !isLaserStruck && (
+            <div className="absolute inset-0 pointer-events-none z-24 flex items-center justify-center"
+              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: "rgba(255,180,0,0.22)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+                animation: "pulse 1s ease-in-out infinite",
+              }} />
+              <svg className="absolute inset-0 pointer-events-none" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
+                <polygon
+                  points={[
+                    `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
+                    `${hexWidth/4},${hexHeight}`,`0,${hexHeight/2}`,`${hexWidth/4},0`,
+                  ].join(' ')}
+                  fill="none" stroke="rgba(255,200,0,0.85)" strokeWidth="2" strokeDasharray="4,3"
                 />
-              </div>
-            );
-          })()}
+              </svg>
+              <span style={{ fontSize: 14, zIndex: 1, textShadow: "0 0 6px rgba(255,200,0,0.9)" }}>⚠</span>
+            </div>
+          )}
+
+          {/* Pending fire start tile warning (before forest fire activates) */}
+          {isPendingFireStart && !isBurning && (
+            <div className="absolute inset-0 pointer-events-none z-23 flex items-center justify-center"
+              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: "rgba(255,120,0,0.25)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+                animation: "pulse 1s ease-in-out infinite",
+              }} />
+              <svg className="absolute inset-0 pointer-events-none" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
+                <polygon
+                  points={[
+                    `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
+                    `${hexWidth/4},${hexHeight}`,`0,${hexHeight/2}`,`${hexWidth/4},0`,
+                  ].join(' ')}
+                  fill="none" stroke="rgba(255,140,0,0.80)" strokeWidth="2" strokeDasharray="4,3"
+                />
+              </svg>
+              <span style={{ fontSize: 14, zIndex: 1, textShadow: "0 0 6px rgba(255,120,0,0.9)" }}>🔥</span>
+            </div>
+          )}
+
+          {/* Burning forest tile indicator */}
+          {isBurning && (
+            <div className="absolute inset-0 pointer-events-none z-23 flex items-center justify-center"
+              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: "rgba(220,80,0,0.40)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+              }} />
+              <span style={{ fontSize: 16, zIndex: 1, textShadow: "0 0 8px rgba(255,120,0,0.9)" }}>🔥</span>
+            </div>
+          )}
+
 
           {/* AI Intent badges (Slay the Spire style) — shown above AI characters during player's turn */}
           {tileIntents.length > 0 && (
@@ -447,14 +546,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const handleMouseUp = () => setIsDragging(false);
   const handleWheel = (e: React.WheelEvent) => {
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(z => Math.min(Math.max(z * delta, 0.5), 2));
+    setZoom(z => Math.min(Math.max(z * delta, 1.0), 2.5));
   };
 
   return (
     <div
       ref={boardRef}
       className="absolute inset-0 cursor-grab"
-      style={{ background: '#070414' }}
+      style={{ background: '#04010f' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -467,33 +566,50 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       }}
     >
       {/* ── ARENA BACKDROP ── */}
-      {/* 1. Warm arena-floor spotlight — the lit sand/pit in the center */}
+      {/* 1. Deep space base — near-black indigo void */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{
-        background: "radial-gradient(circle 480px at 50% 52%, rgba(210,155,55,0.22) 0%, rgba(170,110,30,0.12) 45%, transparent 72%)",
+        background: "radial-gradient(ellipse 120% 90% at 50% 50%, rgba(18,6,48,0.0) 0%, rgba(8,2,28,0.95) 100%)",
       }} />
-      {/* 2. Arena wall ring — visible gold/amber halo at the edge of the pit */}
+      {/* 2. Arena floor energy glow — cyan/teal energy conduit under the tiles */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        background: "radial-gradient(ellipse 600px 500px at 50% 52%, rgba(20,120,160,0.18) 0%, rgba(10,60,100,0.10) 45%, transparent 70%)",
+      }} />
+      {/* 3. Alien arena pit — amber/gold outer ring suggesting an ancient colosseum */}
       <div className="absolute pointer-events-none z-0" style={{
-        width: 960, height: 960,
+        width: 980, height: 980,
         top: "50%", left: "50%",
         transform: "translate(-50%, -48%)",
         borderRadius: "50%",
-        boxShadow: "0 0 0 10px rgba(190,130,40,0.30), 0 0 50px rgba(160,100,25,0.20)",
+        boxShadow: "0 0 0 2px rgba(80,220,255,0.12), 0 0 0 12px rgba(40,100,180,0.18), 0 0 80px rgba(20,80,160,0.25)",
       }} />
-      {/* 3. Dark stands / crowd area outside the arena floor */}
+      {/* 4. Dark void outside the arena — alien crowd stands */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{
-        background: "radial-gradient(circle 540px at 50% 52%, transparent 58%, rgba(28,10,65,0.55) 72%, rgba(14,4,38,0.82) 84%, rgba(3,1,12,0.97) 96%)",
+        background: "radial-gradient(ellipse 560px 520px at 50% 52%, transparent 52%, rgba(8,2,28,0.65) 70%, rgba(4,1,16,0.92) 84%, rgba(1,0,8,0.99) 96%)",
       }} />
-      {/* 4. Purple stadium rim — sci-fi crowd tier suggestion */}
+      {/* 5. Purple-magenta upper atmosphere — alien sky suggestion */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{
-        background: "radial-gradient(ellipse 98% 85% at 50% 108%, rgba(80,30,160,0.55) 0%, rgba(45,12,110,0.30) 30%, transparent 55%)",
+        background: "radial-gradient(ellipse 100% 55% at 50% 0%, rgba(100,20,200,0.22) 0%, rgba(60,10,140,0.12) 45%, transparent 65%)",
       }} />
-      {/* 5. Top spotlight bars — stadium lights from above */}
-      <div className="absolute inset-x-0 top-0 h-36 pointer-events-none z-0" style={{
-        background: "linear-gradient(to bottom, rgba(120,70,200,0.18) 0%, transparent 100%)",
+      {/* 6. Bottom energy source — deep blue/cyan from below */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        background: "radial-gradient(ellipse 100% 30% at 50% 110%, rgba(0,160,255,0.20) 0%, rgba(0,80,180,0.10) 50%, transparent 70%)",
       }} />
-      {/* 6. Subtle scan-line texture on the floor */}
-      <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]" style={{
-        backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0px, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 8px)",
+      {/* 7. Side portal lights — two accent columns suggesting spectator archways */}
+      <div className="absolute inset-y-0 left-0 w-24 pointer-events-none z-0" style={{
+        background: "linear-gradient(to right, rgba(80,20,200,0.20) 0%, transparent 100%)",
+      }} />
+      <div className="absolute inset-y-0 right-0 w-24 pointer-events-none z-0" style={{
+        background: "linear-gradient(to left, rgba(80,20,200,0.20) 0%, transparent 100%)",
+      }} />
+      {/* 8. Fine hex-grid overlay on the floor — animated alien tech pattern */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        backgroundImage: "repeating-linear-gradient(0deg, rgba(100,220,255,1) 0px, rgba(100,220,255,1) 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, rgba(100,220,255,1) 0px, rgba(100,220,255,1) 1px, transparent 1px, transparent 10px)",
+        animation: "arena-pulse 4s ease-in-out infinite",
+      }} />
+      {/* 9. Energy drift layer — slow-moving glow streak across floor */}
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.06]" style={{
+        background: "radial-gradient(ellipse 300px 120px at 50% 52%, rgba(80,220,255,0.8) 0%, transparent 70%)",
+        animation: "arena-energy-drift 8s ease-in-out infinite",
       }} />
 
 <div className="relative w-full h-full flex items-center justify-center z-10">
@@ -508,6 +624,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           <BeastCampHPBar
             gameState={gameState}
             hexSize={hexSize}
+            offsetX={offsetX}
+            offsetY={offsetY}
+          />
+          <AnimationLayer
+            animations={animations}
             offsetX={offsetX}
             offsetY={offsetY}
           />

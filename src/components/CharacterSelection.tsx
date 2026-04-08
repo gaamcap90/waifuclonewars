@@ -1,25 +1,29 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { audioEngine } from "@/audio/AudioEngine";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import ArenaBackground from "@/ui/ArenaBackground";
+import { useT } from "@/i18n";
+import { getCharacterPortrait } from "@/utils/portraits";
 
 interface AbilityBadge {
   icon: string;
   name: string;
   desc: string;
+  waterName?: string;
+  waterDesc?: string;
   kind: "passive" | "ability" | "ultimate";
 }
 
-type Role = "dps_ranged" | "dps_melee" | "support" | "tank";
+type Role = "dps_ranged" | "dps_melee" | "support" | "tank" | "hybrid";
 
 interface Character {
   id: string;
-  name: string;
+  name: string;   // internal English name (used for game logic)
   tagline: string;
   role: Role;
   stats: { hp: number; might: number; power: number };
+  waterStats?: { hp: number; might: number; power: number };
   badges: AbilityBadge[];
 }
 
@@ -29,121 +33,81 @@ interface Props {
   gameMode: "singleplayer" | "multiplayer";
 }
 
-const portraits: Record<"Napoleon" | "Genghis" | "DaVinci" | "Leonidas" | "Sunsin", string> = {
-  Napoleon: "/art/napoleon_portrait.png",
-  Genghis: "/art/genghis_portrait.png",
-  DaVinci: "/art/davinci_portrait.png",
-  Leonidas: "/art/leonidas_portrait.png",
-  Sunsin: "/art/sunsin_portrait.jpg",
-};
 
-function getPortrait(name: string) {
-  if (name.includes("Napoleon")) return portraits.Napoleon;
-  if (name.includes("Genghis")) return portraits.Genghis;
-  if (name.includes("Da Vinci")) return portraits.DaVinci;
-  if (name.includes("Leonidas")) return portraits.Leonidas;
-  if (name.includes("Sun-sin")) return portraits.Sunsin;
-  return undefined;
-}
-
-function rolePill(role: Role) {
+function rolePillStyle(role: Role) {
   switch (role) {
-    case "dps_ranged":
-      return { label: "DPS RANGED", ring: "ring-fuchsia-400", text: "text-fuchsia-400", border: "border-fuchsia-400" };
-    case "dps_melee":
-      return { label: "DPS MELEE", ring: "ring-rose-400", text: "text-rose-400", border: "border-rose-400" };
-    case "support":
-      return { label: "SUPPORT", ring: "ring-emerald-400", text: "text-emerald-400", border: "border-emerald-400" };
-    case "tank":
-      return { label: "TANK", ring: "ring-amber-400", text: "text-amber-400", border: "border-amber-400" };
+    case "dps_ranged": return { ring: "ring-fuchsia-400", text: "text-fuchsia-400", border: "border-fuchsia-400" };
+    case "dps_melee":  return { ring: "ring-rose-400",    text: "text-rose-400",    border: "border-rose-400" };
+    case "support":    return { ring: "ring-emerald-400", text: "text-emerald-400", border: "border-emerald-400" };
+    case "tank":       return { ring: "ring-amber-400",   text: "text-amber-400",   border: "border-amber-400" };
+    case "hybrid":     return { ring: "ring-teal-400",    text: "text-teal-400",    border: "border-teal-400" };
   }
 }
 
+// Static character data — internal English names are used for game engine logic
 const AVAILABLE: Character[] = [
   {
-    id: "napoleon",
-    name: "Napoleon-chan",
-    tagline: "Commander of the Clone Armies",
-    role: "dps_ranged",
+    id: "napoleon", name: "Napoleon-chan", tagline: "", role: "dps_ranged",
     stats: { hp: 100, might: 70, power: 60 },
     badges: [
-      { kind: "passive",  icon: "🎯", name: "Vantage Point",    desc: "On a forest tile, basic attack range becomes 3 — but no DEF bonus from forest (trade-off)." },
-      { kind: "ability",  icon: "💥", name: "Artillery Barrage", desc: "Power×1.4 damage at range 4. (Cost: 2 mana)" },
-      { kind: "ability",  icon: "⚔️", name: "Grande Armée",      desc: "+20% Might & Power to your whole team for 2 turns. (Cost: 3 mana)" },
-      { kind: "ultimate", icon: "⭐", name: "Final Salvo",       desc: "ULTIMATE — 3 random hits of Power×0.7 on enemies within range 4. (Cost: 3 mana, exhaust)" },
+      { kind: "passive",  icon: "🎯", name: "Vantage Point",    desc: "" },
+      { kind: "ability",  icon: "💥", name: "Artillery Barrage", desc: "" },
+      { kind: "ability",  icon: "⚔️", name: "Grande Armée",      desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Final Salvo",       desc: "" },
     ],
   },
   {
-    id: "genghis",
-    name: "Genghis-chan",
-    tagline: "Khan of a Thousand Battlefields",
-    role: "dps_melee",
+    id: "genghis", name: "Genghis-chan", tagline: "", role: "dps_melee",
     stats: { hp: 120, might: 50, power: 40 },
     badges: [
-      { kind: "passive",  icon: "🩸", name: "Bloodlust",      desc: "Each kill: +15 Might and restore 1 Mana. Stacks up to 3×." },
-      { kind: "ability",  icon: "⚡", name: "Mongol Charge",  desc: "Power×1.2 damage at range 3. (Cost: 2 mana)" },
-      { kind: "ability",  icon: "🌀", name: "Horde Tactics",  desc: "Power×0.8 damage to ALL enemies within range 2. (Cost: 3 mana)" },
-      { kind: "ultimate", icon: "⭐", name: "Rider's Fury",   desc: "ULTIMATE — Power×0.7 to all enemies on a line, range 5. (Cost: 3 mana, exhaust)" },
+      { kind: "passive",  icon: "🩸", name: "Bloodlust",     desc: "" },
+      { kind: "ability",  icon: "⚡", name: "Mongol Charge", desc: "" },
+      { kind: "ability",  icon: "🌀", name: "Horde Tactics", desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Rider's Fury",  desc: "" },
     ],
   },
   {
-    id: "davinci",
-    name: "Da Vinci-chan",
-    tagline: "Visionary of the Stars",
-    role: "support",
+    id: "davinci", name: "Da Vinci-chan", tagline: "", role: "support",
     stats: { hp: 80, might: 35, power: 50 },
     badges: [
-      { kind: "passive",  icon: "🔧", name: "Tinkerer",             desc: "At turn start, if Da Vinci hasn't used an exclusive ability card last turn, draw +1 card." },
-      { kind: "ability",  icon: "✈️", name: "Flying Machine",       desc: "Teleport to any hex within range 5. (Cost: 2 mana)" },
-      { kind: "ability",  icon: "💚", name: "Masterpiece",          desc: "Heal an ally within range 3 for 45 HP. (Cost: 3 mana)" },
-      { kind: "ultimate", icon: "⭐", name: "Vitruvian Guardian",   desc: "ULTIMATE — Summon a combat drone: 50 HP, 15 Might, 30 DEF, lasts 2 turns. (Cost: 3 mana, exhaust)" },
+      { kind: "passive",  icon: "🔧", name: "Tinkerer",           desc: "" },
+      { kind: "ability",  icon: "✈️", name: "Flying Machine",     desc: "" },
+      { kind: "ability",  icon: "💚", name: "Masterpiece",        desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Vitruvian Guardian", desc: "" },
     ],
   },
   {
-    id: "leonidas",
-    name: "Leonidas-chan",
-    tagline: "Defender of the Thermopylae Gate",
-    role: "tank",
+    id: "leonidas", name: "Leonidas-chan", tagline: "", role: "tank",
     stats: { hp: 130, might: 40, power: 20 },
     badges: [
-      { kind: "passive",  icon: "🛡️", name: "Phalanx",         desc: "Each turn adjacent to an ally: +8 Defense (stacks up to 3 turns, max +24). Build the wall by staying close." },
-      { kind: "ability",  icon: "⚡", name: "Shield Bash",      desc: "1.5× Power (30 dmg) at range 1 + Armor Break (−20% DEF for 2 turns). (Cost: 2 mana)" },
-      { kind: "ability",  icon: "🏛️", name: "Spartan Wall",     desc: "+30% Defense to Leonidas and all allies within range 2 for 2 turns. (Cost: 3 mana)" },
-      { kind: "ultimate", icon: "⭐", name: "THIS IS SPARTA!",  desc: "ULTIMATE — Charge 3 hexes: 3× Power (60 dmg) to target + Demoralize all adjacent enemies 1t (50% skip turn). (Cost: 3 mana, exhaust)" },
+      { kind: "passive",  icon: "🛡️", name: "Phalanx",        desc: "" },
+      { kind: "ability",  icon: "⚡", name: "Shield Bash",     desc: "" },
+      { kind: "ability",  icon: "🏛️", name: "Spartan Wall",   desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "THIS IS SPARTA!", desc: "" },
     ],
   },
   {
-    id: "sunsin",
-    name: "Sun-sin-chan",
-    tagline: "Admiral of the Turtle Fleet",
-    role: "dps_melee",
+    id: "sunsin", name: "Sun-sin-chan", tagline: "", role: "hybrid",
     stats: { hp: 100, might: 65, power: 60 },
+    waterStats: { hp: 100, might: 91, power: 36 },
     badges: [
-      { kind: "passive",  icon: "🐢", name: "Turtle Ship",        desc: "Can move onto water tiles. On water: +40% Might, +30% Defense, −40% Power, −1 Movement, Range 3 basic attacks. On land: balanced stats, Range 1." },
-      { kind: "ability",  icon: "🔥", name: "Hwajeon / Ramming",  desc: "Land — Power×1.2 at range 3, pushes target back 1 hex. Water — Might×2.0 at range 1, pushes target back 1 hex. (Cost: 2 mana)" },
-      { kind: "ability",  icon: "🚢", name: "Naval Command / Broadside", desc: "Land — +15% Might & Power to allies for 2 turns. Water — Power×0.7 to all enemies in range 3. (Cost: 3 mana)" },
-      { kind: "ultimate", icon: "⭐", name: "Chongtong Barrage",  desc: "ULTIMATE — Land: charge 3 hexes, Power×1.0 to enemies in path. Water: target area at range 5 — main target Power×2.5, all adjacents Power×1.2. (Cost: 3 mana, exhaust)" },
+      { kind: "passive",  icon: "🐢", name: "Turtle Ship",       desc: "", waterDesc: "" },
+      { kind: "ability",  icon: "🔥", name: "Hwajeon",           desc: "", waterName: "Ramming Speed", waterDesc: "" },
+      { kind: "ability",  icon: "🚢", name: "Naval Repairs",     desc: "", waterName: "Broadside",     waterDesc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Chongtong Barrage", desc: "", waterDesc: "" },
     ],
   },
 ];
 
 export default function CharacterSelection({ onStartGame, onBack }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const { t } = useT();
 
   const selected = useMemo(
     () => AVAILABLE.filter((c) => selectedIds.includes(c.id)),
     [selectedIds]
   );
   const maxed = selectedIds.length >= 3;
-
-  // Play character theme when hovering a card (switches immediately on new char)
-  useEffect(() => {
-    if (hoveredId) audioEngine.playTheme(hoveredId);
-  }, [hoveredId]);
-
-  // Stop theme when unmounting (navigating away)
-  useEffect(() => () => { audioEngine.stopTheme(); }, []);
 
   const toggle = (id: string) => {
     setSelectedIds((prev) =>
@@ -159,130 +123,71 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <ArenaBackground />
       <div className="w-[1400px] max-w-[95vw] mx-auto">
-        {/* Back button */}
         {onBack && (
           <button onClick={onBack}
             className="absolute top-4 left-4 flex items-center gap-1.5 font-orbitron text-[11px] text-slate-400 hover:text-white transition-colors tracking-wider">
-            ← MAIN MENU
+            {t.back}
           </button>
         )}
 
-        {/* Title */}
         <div className="text-center mb-8">
-          <h1 className="font-orbitron text-3xl text-white drop-shadow-sm">Select Your Team</h1>
-          <p className="text-slate-300 mt-1">Choose up to three champions</p>
+          <h1 className="font-orbitron text-3xl text-white drop-shadow-sm">{t.characterSelect.title}</h1>
+          <p className="text-slate-300 mt-1">{t.characterSelect.subtitle}</p>
         </div>
 
-        {/* Counter */}
         <div className="flex items-center justify-center mb-6">
           <div className="px-4 py-2 rounded-full border border-indigo-400/40 bg-indigo-500/10 text-indigo-200 font-semibold">
-            Selected: {selectedIds.length}/3
+            {t.characterSelect.selectedCount.replace('{n}', String(selectedIds.length))}
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
           {AVAILABLE.map((c) => {
             const picked = selectedIds.includes(c.id);
-            const role = rolePill(c.role);
             const disabled = maxed && !picked;
-
+            // Build translated character data
+            const charKey = c.id as keyof typeof t.characters;
+            const charT = t.characters[charKey];
+            const translatedC = {
+              ...c,
+              name: charT.name,
+              tagline: charT.tagline,
+              badges: c.badges.map((b, i) => {
+                const abilities = [charT.passive, charT.ability1, charT.ability2, charT.ultimate] as any[];
+                const ab = abilities[i];
+                return {
+                  ...b,
+                  name: ab?.name ?? b.name,
+                  desc: ab?.desc ?? b.desc,
+                  waterName: (ab as any)?.waterName ?? b.waterName,
+                  waterDesc: (ab as any)?.waterDesc ?? b.waterDesc,
+                };
+              }),
+            };
             return (
-              <button
+              <CharacterCard
                 key={c.id}
-                onClick={() => { toggle(c.id); audioEngine.playTheme(c.id); }}
-                onMouseEnter={() => setHoveredId(c.id)}
-                aria-pressed={picked}
+                c={translatedC}
+                picked={picked}
                 disabled={disabled}
-                className={[
-                  "group relative text-left rounded-2xl transition-all",
-                  "bg-slate-900/70 backdrop-blur border border-slate-700/70",
-                  "hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
-                  disabled ? "opacity-40 cursor-not-allowed" : "hover:shadow-lg",
-                  picked
-                    ? `ring-4 ${role.ring} shadow-[0_0_40px_rgba(251,191,36,0.35)] animate-pulse`
-                    : "ring-0",
-                ].join(" ")}
-              >
-                <Card className="bg-transparent border-0 shadow-none">
-                  <CardHeader className="items-center">
-                    <div className="relative">
-                      <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-white/20 transition">
-                        <img
-                          src={getPortrait(c.name)}
-                          alt={c.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-
-                      {/* Selected check badge */}
-                      {picked && (
-                        <div className="absolute -top-2 -right-2 bg-amber-400 text-slate-900 rounded-full p-1 shadow">
-                          <CheckCircle2 className="w-5 h-5" />
-                        </div>
-                      )}
-                    </div>
-
-                    <CardTitle className="mt-3 text-xl text-white">{c.name}</CardTitle>
-
-                    <p className="text-[11px] italic text-slate-400 -mt-1 mb-1">{c.tagline}</p>
-
-                    <div
-                      className={[
-                        "text-xs font-bold px-3 py-1 rounded-full border",
-                        role.text,
-                        role.border,
-                      ].join(" ")}
-                    >
-                      {role.label}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="px-6 pb-6">
-                    <div className="grid grid-cols-3 gap-3 text-sm">
-                      <Stat label="HP" value={c.stats.hp} />
-                      <Stat label="Might" value={c.stats.might} />
-                      <Stat label="Power" value={c.stats.power} />
-                    </div>
-
-                    {/* Passive + Ability badges */}
-                    <div className="mt-4 pt-4 border-t border-slate-700/70">
-                      <div className="text-slate-400 text-[11px] mb-2 uppercase tracking-wide">Passive &amp; Unique Abilities</div>
-                      <div className="flex gap-2 flex-wrap">
-                        {c.badges.map((b) => (
-                          <AbilityBadgeButton key={b.name} badge={b} />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Selected ribbon */}
-                    {picked && (
-                      <div className="mt-4">
-                        <div className="inline-flex items-center gap-2 text-amber-300 font-semibold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-400/40">
-                          Selected
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </button>
+                onToggle={() => toggle(c.id)}
+                onHover={() => {}}
+                t={t}
+              />
             );
           })}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between mt-8">
           <div className="flex items-center gap-2">
-            {selected.map((c) => (
-              <div
-                key={c.id}
-                className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/20"
-                title={c.name}
-              >
-                <img src={getPortrait(c.name)} alt={c.name} className="w-full h-full object-cover" />
-              </div>
-            ))}
+            {selected.map((c) => {
+              const charT = t.characters[c.id as keyof typeof t.characters];
+              return (
+                <div key={c.id} className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/20" title={charT.name}>
+                  <img src={getCharacterPortrait(c.name)} alt={charT.name} className="w-full h-full object-cover" />
+                </div>
+              );
+            })}
           </div>
 
           <Button
@@ -296,7 +201,7 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
                 : "bg-slate-600 cursor-not-allowed",
             ].join(" ")}
           >
-            Start Battle
+            {t.characterSelect.startBattle}
           </Button>
         </div>
       </div>
@@ -304,22 +209,147 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function CharacterCard({ c, picked, disabled, onToggle, onHover, t }: {
+  c: Character;
+  picked: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+  onHover: () => void;
+  t: ReturnType<typeof useT>['t'];
+}) {
+  const [mode, setMode] = useState<"land" | "water">("land");
+  const roleStyle = rolePillStyle(c.role);
+  const hasWaterForm = !!c.waterStats;
+  const displayStats = hasWaterForm && mode === "water" ? c.waterStats! : c.stats;
+  const roleLabel = t.roles[c.role];
+
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={onHover}
+      aria-pressed={picked}
+      disabled={disabled}
+      className={[
+        "group relative text-left rounded-2xl transition-all",
+        "bg-slate-900/70 backdrop-blur border border-slate-700/70",
+        "hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
+        disabled ? "opacity-40 cursor-not-allowed" : "hover:shadow-lg",
+        picked
+          ? `ring-4 ${roleStyle.ring} shadow-[0_0_40px_rgba(251,191,36,0.35)] animate-pulse`
+          : "ring-0",
+      ].join(" ")}
+    >
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardHeader className="items-center">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-white/20 transition">
+              <img src={getCharacterPortrait(c.name)} alt={c.name} className="w-full h-full object-cover" />
+            </div>
+            {picked && (
+              <div className="absolute -top-2 -right-2 bg-amber-400 text-slate-900 rounded-full p-1 shadow">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            )}
+          </div>
+
+          <CardTitle className="mt-3 text-xl text-white">{c.name}</CardTitle>
+          <p className="text-[11px] italic text-slate-400 -mt-1 mb-1">{c.tagline}</p>
+
+          <div className={["text-xs font-bold px-3 py-1 rounded-full border", roleStyle.text, roleStyle.border].join(" ")}>
+            {roleLabel}
+          </div>
+        </CardHeader>
+
+        <CardContent className="px-6 pb-6">
+          {/* Land / Water toggle for Sun-sin */}
+          {hasWaterForm && (
+            <div className="flex gap-0 mb-3" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setMode("land")}
+                className="flex-1 flex items-center justify-center gap-1 text-[10px] font-orbitron font-bold py-1.5 rounded-l-lg border-y border-l transition-all"
+                style={{
+                  background: mode === "land" ? "rgba(134,239,172,0.15)" : "transparent",
+                  borderColor: mode === "land" ? "rgba(134,239,172,0.55)" : "rgba(71,85,105,0.4)",
+                  color: mode === "land" ? "#86efac" : "#475569",
+                }}
+              >
+                {t.characterSelect.land}
+              </button>
+              <button
+                onClick={() => setMode("water")}
+                className="flex-1 flex items-center justify-center gap-1 text-[10px] font-orbitron font-bold py-1.5 rounded-r-lg border-y border-r transition-all"
+                style={{
+                  background: mode === "water" ? "rgba(56,189,248,0.15)" : "transparent",
+                  borderColor: mode === "water" ? "rgba(56,189,248,0.55)" : "rgba(71,85,105,0.4)",
+                  color: mode === "water" ? "#38bdf8" : "#475569",
+                }}
+              >
+                {t.characterSelect.water}
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <Stat label={t.characterSelect.hp}    value={displayStats.hp}    base={hasWaterForm ? c.stats.hp    : undefined} />
+            <Stat label={t.characterSelect.might} value={displayStats.might} base={hasWaterForm ? c.stats.might : undefined} />
+            <Stat label={t.characterSelect.power} value={displayStats.power} base={hasWaterForm ? c.stats.power : undefined} />
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-slate-700/70">
+            <div className="text-slate-400 text-[11px] mb-2 uppercase tracking-wide">
+              {t.characterSelect.passiveLabel}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {c.badges.map((b) => (
+                <AbilityBadgeButton key={b.name} badge={b} mode={hasWaterForm ? mode : undefined} t={t} />
+              ))}
+            </div>
+          </div>
+
+          {picked && (
+            <div className="mt-4">
+              <div className="inline-flex items-center gap-2 text-amber-300 font-semibold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-400/40">
+                {t.characterSelect.selectedBadge}
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </button>
+  );
+}
+
+function Stat({ label, value, base }: { label: string; value: number; base?: number }) {
+  const changed = base !== undefined && value !== base;
+  const up = base !== undefined && value > base;
   return (
     <div className="rounded-lg bg-slate-800/60 border border-slate-700/70 px-3 py-2">
       <div className="text-[11px] text-slate-400">{label}</div>
-      <div className="text-slate-100 font-bold">{value}</div>
+      <div className={["font-bold text-sm leading-tight", changed ? (up ? "text-emerald-400" : "text-red-400") : "text-slate-100"].join(" ")}>
+        {value}
+        {changed && <span className="text-[10px] ml-0.5">{up ? "▲" : "▼"}</span>}
+      </div>
     </div>
   );
 }
 
-function AbilityBadgeButton({ badge }: { badge: AbilityBadge }) {
+function AbilityBadgeButton({ badge, mode, t }: {
+  badge: AbilityBadge;
+  mode?: "land" | "water";
+  t: ReturnType<typeof useT>['t'];
+}) {
   const [hovered, setHovered] = useState(false);
+
+  const isWater = mode === "water" && (!!badge.waterDesc || !!badge.waterName);
+  const isLandWithDual = mode === "land" && (!!badge.waterDesc || !!badge.waterName);
+  const displayName = isWater && badge.waterName ? badge.waterName : badge.name;
+  const displayDesc = isWater && badge.waterDesc ? badge.waterDesc : badge.desc;
 
   const borderColor =
     badge.kind === "passive"  ? "border-purple-500/60 bg-purple-900/40" :
-    badge.kind === "ultimate" ? "border-amber-500/60 bg-amber-900/40" :
-                                "border-slate-600/60 bg-slate-800/60";
+    badge.kind === "ultimate" ? "border-amber-500/60 bg-amber-900/40"   :
+                                "border-sky-500/60 bg-sky-900/30";
 
   return (
     <div className="relative" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
@@ -329,23 +359,36 @@ function AbilityBadgeButton({ badge }: { badge: AbilityBadge }) {
 
       {hovered && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-52 pointer-events-none"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-56 pointer-events-none"
           style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.8))" }}
         >
           <div className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2">
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
               <span className="text-base">{badge.icon}</span>
-              <span className="text-slate-100 text-xs font-bold">{badge.name}</span>
+              <span className="text-slate-100 text-xs font-bold">{displayName}</span>
               {badge.kind === "passive" && (
-                <span className="text-[9px] text-purple-400 border border-purple-500/40 rounded px-1">PASSIVE</span>
+                <span className="text-[9px] text-purple-400 border border-purple-500/40 rounded px-1">
+                  {t.archives.abilityKind.passive}
+                </span>
               )}
               {badge.kind === "ultimate" && (
-                <span className="text-[9px] text-amber-400 border border-amber-500/40 rounded px-1">ULTIMATE</span>
+                <span className="text-[9px] text-amber-400 border border-amber-500/40 rounded px-1">
+                  {t.archives.abilityKind.ultimate}
+                </span>
+              )}
+              {isWater && (
+                <span className="text-[9px] text-sky-400 border border-sky-500/40 rounded px-1">
+                  {t.archives.waterForm}
+                </span>
+              )}
+              {isLandWithDual && (
+                <span className="text-[9px] text-green-400 border border-green-500/40 rounded px-1">
+                  {t.archives.landForm}
+                </span>
               )}
             </div>
-            <p className="text-slate-400 text-[11px] leading-relaxed">{badge.desc}</p>
+            <p className="text-slate-400 text-[11px] leading-relaxed">{displayDesc}</p>
           </div>
-          {/* Arrow */}
           <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-600 rotate-45 mx-auto -mt-1" />
         </div>
       )}

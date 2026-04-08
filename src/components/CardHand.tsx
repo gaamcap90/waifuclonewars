@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { Card, Icon, GameState } from "@/types/game";
 import { calcEffectiveStats } from "@/combat/buffs";
+import { useT } from "@/i18n";
 
 // ── Colour coding by exclusive character ──────────────────────────────────────
 function charColor(card: Card): { border: string; ribbon: string; glow: string } {
@@ -10,6 +11,7 @@ function charColor(card: Card): { border: string; ribbon: string; glow: string }
   if (card.exclusiveTo.includes("Genghis"))  return { border: "border-red-500",    ribbon: "bg-red-700",    glow: "shadow-red-500/60" };
   if (card.exclusiveTo.includes("Da Vinci"))  return { border: "border-green-500",  ribbon: "bg-green-700",  glow: "shadow-green-500/60" };
   if (card.exclusiveTo.includes("Leonidas")) return { border: "border-amber-500",  ribbon: "bg-amber-700",  glow: "shadow-amber-500/60" };
+  if (card.exclusiveTo.includes("Sun-sin"))  return { border: "border-cyan-500",   ribbon: "bg-cyan-700",   glow: "shadow-cyan-500/60" };
   return { border: "border-gray-500", ribbon: "bg-gray-700", glow: "shadow-gray-400/30" };
 }
 
@@ -19,6 +21,7 @@ function charLabel(card: Card): string | null {
   if (card.exclusiveTo.includes("Genghis"))  return "Genghis";
   if (card.exclusiveTo.includes("Da Vinci")) return "Da Vinci";
   if (card.exclusiveTo.includes("Leonidas")) return "Leonidas";
+  if (card.exclusiveTo.includes("Sun-sin"))  return "Sun-sin";
   return null;
 }
 
@@ -32,6 +35,18 @@ function cardTypeIcon(type: Card["type"]): string {
     case "debuff":   return "☠️";
     default:         return "🃏";
   }
+}
+
+function cardArtSrc(card: Card): string | null {
+  const e = card.effect;
+  if (card.type === "ultimate")                      return "/art/cards/ultimate.png";
+  if (e.healing || e.healingMult || e.healZone)      return "/art/cards/heal.png";
+  if (e.defBonus || e.teamDefBuff)                   return "/art/cards/shield.png";
+  if (e.moveBonus || e.teleport)                     return "/art/cards/movement.png";
+  if (card.type === "attack")                        return "/art/cards/attack.png";
+  if (e.atkBonus || e.teamDmgPct)                    return "/art/cards/attack.png";
+  if (card.type === "debuff")                        return "/art/cards/attack.png";
+  return "/art/cards/heal.png"; // buff fallback (e.g. Gamble)
 }
 
 function manaCostColor(cost: number): string {
@@ -98,6 +113,7 @@ function canPlay(card: Card, executor: Icon | null, globalMana: number): boolean
 // ── Pile Viewer Modal ─────────────────────────────────────────────────────────
 
 const PileModal: React.FC<{ title: string; cards: Card[]; onClose: () => void }> = ({ title, cards, onClose }) => {
+  const { t } = useT();
   return createPortal(
     <>
       <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose} />
@@ -107,17 +123,18 @@ const PileModal: React.FC<{ title: string; cards: Card[]; onClose: () => void }>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded border border-gray-600">✕</button>
         </div>
         {cards.length === 0 ? (
-          <div className="text-gray-500 text-xs text-center py-4">Empty</div>
+          <div className="text-gray-500 text-xs text-center py-4">{t.game.hud.emptyPile}</div>
         ) : (
           <div className="flex flex-col gap-1.5">
             {cards.map((c) => {
               const colors = charColor(c);
+              const tCard = (t.cards as Record<string, { name: string; description: string }>)[c.definitionId];
               return (
                 <div key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border bg-gray-800 ${colors.border}`}>
                   <span className="text-base">{cardTypeIcon(c.type)}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-white truncate">{c.name}</div>
-                    <div className="text-[10px] text-gray-400 truncate">{c.description}</div>
+                    <div className="text-xs font-semibold text-white truncate">{tCard?.name ?? c.name}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{tCard?.description ?? c.description}</div>
                   </div>
                   <div className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${manaCostColor(c.manaCost)}`}>{c.manaCost}</div>
                 </div>
@@ -156,6 +173,9 @@ interface CardTileProps {
 }
 
 const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, executor, isSelected, isExhausted, onSelect, globalMana, gameState }) => {
+  const { t } = useT();
+  const tCard = (t.cards as Record<string, { name: string; description: string }>)[card.definitionId];
+  const cardName = tCard?.name ?? card.name;
   const playable = !isExhausted && canPlay(card, executor, globalMana);
   const isUltimate = card.type === "ultimate";
   const colors = charColor(card);
@@ -170,14 +190,16 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
           "bg-gradient-to-b from-gray-900 to-black opacity-40 grayscale",
           colors.border,
         ].join(" ")}
-        title={`${card.name} — Exhausted (used once per combat)`}
+        title={`${cardName} — Exhausted (used once per combat)`}
       >
-        <div className="text-xs font-bold text-gray-400 text-center">EXHAUSTED</div>
+        <div className="text-xs font-bold text-gray-400 text-center">{t.game.hud.exhausted}</div>
         <div className="text-lg mt-1">{cardTypeIcon(card.type)}</div>
-        <div className="text-[9px] text-gray-500 text-center mt-1">{card.name}</div>
+        <div className="text-[9px] text-gray-500 text-center mt-1">{cardName}</div>
       </div>
     );
   }
+
+  const art = cardArtSrc(card);
 
   return (
     <button
@@ -199,10 +221,21 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
           : "cursor-pointer hover:-translate-y-2 hover:scale-105 hover:z-10",
       ].join(" ")}
     >
+      {/* Card art background */}
+      {art && (
+        <img
+          src={art}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: 0.28, pointerEvents: 'none' }}
+        />
+      )}
+
       {/* Character ribbon at top */}
-      <div className={["w-full px-1 py-0.5 flex items-center justify-between", colors.ribbon].join(" ")}>
+      <div className={["relative w-full px-1 py-0.5 flex items-center justify-between", colors.ribbon].join(" ")}>
         <span className="text-[8px] text-white/80 font-semibold truncate">
-          {label ?? "Shared"}
+          {label ?? t.game.hud.sharedCard}
         </span>
         <span className="text-[9px]">{cardTypeIcon(card.type)}</span>
       </div>
@@ -220,12 +253,14 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
       )}
 
       {/* Card name */}
-      <div className="px-1 text-white font-semibold leading-tight text-[10px] flex-1 flex items-center">
-        {card.name}
+      <div className="relative px-1 text-white font-semibold leading-tight text-[10px] flex-1 flex items-center"
+        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+        {cardName}
       </div>
 
       {/* Effect summary */}
-      <div className="px-1 pb-1.5 text-center text-gray-300 text-[9px] leading-tight w-full">
+      <div className="relative px-1 pb-1.5 text-center text-gray-300 text-[9px] leading-tight w-full"
+        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)', background: 'rgba(0,0,0,0.45)' }}>
         {effectLabel(card, executor, gameState)}
       </div>
     </button>
@@ -246,6 +281,7 @@ export interface CardHandProps {
   globalMana: number;
   exhaustedUltimates?: string[];
   onPlayCard: (card: Card, executorId: string) => void;
+  onCardHover?: (cost: number | null) => void;
   gameState?: GameState;
 }
 
@@ -259,8 +295,10 @@ const CardHand: React.FC<CardHandProps> = ({
   globalMana,
   exhaustedUltimates = [],
   onPlayCard,
+  onCardHover,
   gameState,
 }) => {
+  const { t } = useT();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [pileView, setPileView] = useState<'draw' | 'discard' | null>(null);
 
@@ -287,22 +325,27 @@ const CardHand: React.FC<CardHandProps> = ({
             <span className="text-lg">🗑️</span>
             <span className="text-sm font-bold text-orange-400">{discardPileSize}</span>
           </div>
-          <span className="text-[9px] text-gray-500">Discard</span>
+          <span className="text-[9px] text-gray-500">{t.game.hud.discardLabel}</span>
         </button>
 
         {/* Cards */}
         <div className="flex items-end gap-1">
           {cards.map((card) => (
-            <CardTile
+            <div
               key={card.id}
-              card={card}
-              executor={executor}
-              isSelected={card.id === selectedCardId}
-              isExhausted={card.type === "ultimate" && exhaustedUltimates.includes(card.definitionId)}
-              onSelect={() => handleCardClick(card)}
-              globalMana={globalMana}
-              gameState={gameState}
-            />
+              onMouseEnter={() => onCardHover?.(card.manaCost ?? 0)}
+              onMouseLeave={() => onCardHover?.(null)}
+            >
+              <CardTile
+                card={card}
+                executor={executor}
+                isSelected={card.id === selectedCardId}
+                isExhausted={card.type === "ultimate" && exhaustedUltimates.includes(card.definitionId)}
+                onSelect={() => handleCardClick(card)}
+                globalMana={globalMana}
+                gameState={gameState}
+              />
+            </div>
           ))}
         </div>
 
@@ -316,7 +359,7 @@ const CardHand: React.FC<CardHandProps> = ({
             <span className="text-lg">🃏</span>
             <span className="text-sm font-bold text-blue-400">{drawPileSize}</span>
           </div>
-          <span className="text-[9px] text-gray-500">Draw</span>
+          <span className="text-[9px] text-gray-500">{t.game.hud.drawLabel}</span>
         </button>
       </div>
 
@@ -329,10 +372,10 @@ const CardHand: React.FC<CardHandProps> = ({
 
       {/* ── Pile view modals ── */}
       {pileView === 'discard' && (
-        <PileModal title="Discard Pile" cards={discardPileCards} onClose={() => setPileView(null)} />
+        <PileModal title={t.game.hud.discardPileTitle} cards={discardPileCards} onClose={() => setPileView(null)} />
       )}
       {pileView === 'draw' && (
-        <PileModal title="Draw Pile" cards={drawPileCards} onClose={() => setPileView(null)} />
+        <PileModal title={t.game.hud.drawPileTitle} cards={drawPileCards} onClose={() => setPileView(null)} />
       )}
     </div>
   );
