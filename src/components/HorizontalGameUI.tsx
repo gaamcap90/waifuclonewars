@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { GameState, Card as GameCard, Icon } from "@/types/game";
 import HPBar from "./HPBar";
 import CharacterDetailPopup from "./CharacterDetailPopup";
@@ -9,7 +10,7 @@ import { TurnQueueBar } from "./TurnQueueBar";
 import { calcEffectiveStats } from "@/combat/buffs";
 import { useT } from "@/i18n";
 import { getCharacterPortrait } from "@/utils/portraits";
-import EnemyAbilityHUD from "./EnemyAbilityHUD";
+import type { EnemyAbilityDef } from "@/types/roguelike";
 
 interface RunItemSlot {
   icon: string;
@@ -27,6 +28,8 @@ interface HorizontalGameUIProps {
   currentTurnTimer: number;
   runItemsByCharacter?: Record<string, RunItemSlot[]>;
   onToggleHideUI?: () => void;
+  onCardHoverRange?: (range: number | null) => void;
+  onEnemyAbilityHoverRange?: (val: { iconId: string; range: number } | null) => void;
 }
 
 const HorizontalGameUI = ({
@@ -38,10 +41,13 @@ const HorizontalGameUI = ({
   hoveredTile,
   currentTurnTimer,
   runItemsByCharacter,
+  onCardHoverRange,
   onToggleHideUI,
+  onEnemyAbilityHoverRange,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
   const [hoveredCardCost, setHoveredCardCost] = useState<number | null>(null);
+  const [abilityTooltip, setAbilityTooltip] = useState<{ ab: EnemyAbilityDef; icon: Icon; rect: DOMRect } | null>(null);
 
   const { t } = useT();
   const extGameState = gameState as any;
@@ -81,6 +87,14 @@ const HorizontalGameUI = ({
     const hp = gameState.baseHealth[pid];
     const maxHp = 150;
     const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+    const barColor = pct > 60 ? '#22c55e'
+      : pct > 35 ? '#eab308'
+      : pct > 20 ? '#f97316'
+      : '#ef4444';
+    const glowColor = pct > 60 ? 'rgba(34,197,94,0.55)'
+      : pct > 35 ? 'rgba(234,179,8,0.55)'
+      : pct > 20 ? 'rgba(249,115,22,0.55)'
+      : 'rgba(239,68,68,0.55)';
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between">
@@ -88,8 +102,10 @@ const HorizontalGameUI = ({
           <span className="font-mono text-[10px] text-slate-500">{hp}/{maxHp}</span>
         </div>
         <div className="h-1.5 w-full rounded-full relative overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-          <div className="absolute inset-y-0 left-0 rounded-full bg-red-500 transition-all"
-            style={{ width: `${pct}%`, boxShadow: "0 0 5px rgba(239,68,68,0.55)" }} />
+          <div
+            className={`absolute inset-y-0 left-0 rounded-full transition-all ${pct <= 20 ? 'hp-critical-flicker' : ''}`}
+            style={{ width: `${pct}%`, background: barColor, boxShadow: `0 0 5px ${glowColor}` }}
+          />
         </div>
       </div>
     );
@@ -126,6 +142,7 @@ const HorizontalGameUI = ({
     armor_break: { icon: "🔩", color: "bg-orange-900/80 border-orange-600/60 text-orange-200" },
     silence:     { icon: "🤫", color: "bg-purple-900/80 border-purple-600/60 text-purple-200" },
     poison:      { icon: "☠️", color: "bg-green-900/80 border-green-600/60 text-green-200" },
+    stun:        { icon: "⚡", color: "bg-cyan-900/80 border-cyan-600/60 text-cyan-200" },
   };
 
   /* ── Character row ── */
@@ -136,11 +153,26 @@ const HorizontalGameUI = ({
     const borderHex = teamColor === "blue" ? "#3b82f6" : "#ef4444";
     const bgFill = teamColor === "blue" ? "rgba(37,99,235,0.9)" : "rgba(185,28,28,0.9)";
 
+    // Death flash
+    const prevAliveRef = useRef(icon.isAlive);
+    const [flashDeath, setFlashDeath] = useState(false);
+    useEffect(() => {
+      if (prevAliveRef.current && !icon.isAlive) {
+        setFlashDeath(true);
+        setTimeout(() => setFlashDeath(false), 700);
+      }
+      prevAliveRef.current = icon.isAlive;
+    }, [icon.isAlive]);
+
     const passiveDesc = (() => {
       if (icon.name.includes("Napoleon")) return t.characters.napoleon.passive.desc;
       if (icon.name.includes("Genghis"))  return t.characters.genghis.passive.desc;
-      if (icon.name.includes("Da Vinci")) return t.characters.davinci.passive.desc;
-      if (icon.name === "Combat Drone")   return t.game.hud.combatDronePassive;
+      if (icon.name.includes("Da Vinci"))   return t.characters.davinci.passive.desc;
+      if (icon.name.includes("Leonidas"))   return t.characters.leonidas.passive.desc;
+      if (icon.name.includes("Beethoven"))  return t.characters.beethoven.passive.desc;
+      if (icon.name.includes("Huang"))      return t.characters.huang.passive.desc;
+      if (icon.name === "Combat Drone")     return t.game.hud.combatDronePassive;
+      if (icon.name === "Terracotta Archer" || icon.name === "Terracotta Warrior" || icon.name === "Terracotta Cavalry") return "Terracotta unit — expires after 3 turns.";
       if (icon.name.includes("Sun-sin")) {
         const onRiver = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type === 'river';
         return onRiver ? t.characters.sunsin.passive.waterDesc : t.characters.sunsin.passive.desc;
@@ -150,13 +182,18 @@ const HorizontalGameUI = ({
 
     return (
       <div
-        className="flex items-start gap-2 px-2 py-1.5 rounded-lg border transition-all"
+        className="relative flex items-start gap-2 px-2 py-1.5 rounded-lg border transition-all overflow-hidden"
         style={{
-          background: isSelected ? "rgba(100,70,0,0.28)" : icon.isAlive ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.10)",
-          borderColor: isSelected ? "rgba(250,180,0,0.45)" : icon.isAlive ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.03)",
+          background: isSelected ? "rgba(100,70,0,0.28)" : icon.isAlive ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.12)",
+          borderColor: isSelected ? "rgba(250,180,0,0.45)" : icon.isAlive ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.04)",
+          boxShadow: icon.isAlive && !isSelected ? "inset 0 1px 0 rgba(255,255,255,0.06)" : undefined,
           opacity: icon.isAlive ? 1 : 0.50,
         }}
       >
+        {flashDeath && (
+          <div className="absolute inset-0 rounded-lg pointer-events-none"
+            style={{ animation: 'anim-row-death-flash 0.7s ease-out forwards' }} />
+        )}
         {/* Portrait */}
         <button
           onClick={(e) => {
@@ -172,7 +209,7 @@ const HorizontalGameUI = ({
             border: `2px solid ${isSelected ? "rgba(250,180,0,0.70)" : borderHex + "77"}`,
             boxShadow: isSelected ? "0 0 8px rgba(250,180,0,0.40)" : "none",
             cursor: icon.isAlive ? "pointer" : "default",
-            filter: icon.isAlive ? "none" : "grayscale(1)",
+            filter: !icon.isAlive ? "grayscale(1)" : icon.terracottaControlled ? "sepia(0.8) saturate(0.6) hue-rotate(10deg)" : "none",
           }}
           title={`${icon.name} — click for details`}
         >
@@ -192,7 +229,13 @@ const HorizontalGameUI = ({
             <span className="text-[11px] font-bold text-slate-200 truncate">{icon.name}</span>
             {isSelected && <span className="text-[9px] text-amber-400 shrink-0 font-orbitron">{t.game.hud.activeUnit}</span>}
             {!icon.isAlive && (
-              <span className="text-[9px] text-slate-500 shrink-0">
+              <span
+                className="text-[9px] shrink-0"
+                style={{
+                  color: icon.respawnTurns === 1 ? "#f87171" : "#64748b",
+                  animation: icon.respawnTurns === 1 ? "pulse 0.8s ease-in-out infinite" : undefined,
+                  fontWeight: icon.respawnTurns === 1 ? "bold" : undefined,
+                }}>
                 {icon.respawnTurns > 0 ? `💀 ${icon.respawnTurns}t` : "💀"}
               </span>
             )}
@@ -239,9 +282,62 @@ const HorizontalGameUI = ({
             return pills.length > 0 ? <div className="flex flex-wrap gap-0.5 mt-0.5">{pills}</div> : null;
           })()}
 
-          <div className="text-[10px] text-slate-600 mt-0.5 truncate" title={passiveDesc}>
-            ✨ {passiveDesc}
-          </div>
+          {/* Passive — only show for player characters, not enemies */}
+          {icon.playerId === 0 && (
+            <div className="text-[10px] text-slate-600 mt-0.5 truncate" title={passiveDesc}>
+              ✨ {passiveDesc}
+            </div>
+          )}
+
+          {/* Enemy ability cooldowns — one row per ability with hover tooltip */}
+          {icon.playerId === 1 && icon.isAlive && (() => {
+            const abilities = (icon as any).enemyAbilities as EnemyAbilityDef[] | undefined;
+            const cooldowns: Record<string, number> = (icon as any).enemyAbilityCooldowns ?? {};
+            if (!abilities?.length) return null;
+            const visibleAbs = abilities.filter(ab => (cooldowns[ab.id] ?? 0) < 999);
+            if (!visibleAbs.length) return null;
+            return (
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                {visibleAbs.map(ab => {
+                  const cd = cooldowns[ab.id] ?? 0;
+                  const isReady = cd === 0;
+                  const isWarn = cd === 1;
+                  const bg = isReady ? "rgba(160,16,16,0.90)" : isWarn ? "rgba(120,55,0,0.85)" : "rgba(18,12,35,0.80)";
+                  const border = isReady ? "rgba(239,68,68,0.85)" : isWarn ? "rgba(251,146,60,0.80)" : "rgba(80,60,110,0.45)";
+                  const col = isReady ? "#fca5a5" : isWarn ? "#fdba74" : "#7c8da8";
+                  const lbl = isReady ? "NOW" : `${cd}t`;
+                  return (
+                    <div key={ab.id}
+                      onMouseEnter={(e) => {
+                        setAbilityTooltip({ ab, icon, rect: e.currentTarget.getBoundingClientRect() });
+                        const range = ab.effect?.range ?? ab.effect?.dashRange ?? 1;
+                        onEnemyAbilityHoverRange?.({ iconId: icon.id, range });
+                      }}
+                      onMouseLeave={() => {
+                        setAbilityTooltip(null);
+                        onEnemyAbilityHoverRange?.(null);
+                      }}
+                    >
+                      <div
+                        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border w-full cursor-default select-none"
+                        style={{
+                          background: bg, border: `1px solid ${border}`, color: col,
+                          boxShadow: isReady ? "0 0 6px rgba(239,68,68,0.35)" : undefined,
+                          animation: isReady ? "pulse 1.4s ease-in-out infinite" : undefined,
+                        }}>
+                        <span style={{ fontSize: 11 }}>{ab.icon}</span>
+                        <span className="font-orbitron text-[9px] font-bold flex-1 truncate" style={{ color: col }}>{ab.name}</span>
+                        <span className="font-orbitron font-black text-[9px] shrink-0 ml-auto"
+                          style={{ color: isReady ? "#f87171" : col, textShadow: isReady ? "0 0 5px rgba(239,68,68,0.7)" : "none" }}>
+                          {lbl}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {(() => {
             const nameKey = icon.name.includes("Napoleon") ? "napoleon"
@@ -287,17 +383,6 @@ const HorizontalGameUI = ({
     mountain:     { emoji: "🌋", bg: "rgba(20,18,18,0.92)",  border: "rgba(80,70,70,0.60)",   label: t.terrain.mountain.label,     lines: [...t.terrain.mountain.lines] },
     river:        { emoji: "🌊", bg: "rgba(5,15,40,0.92)",   border: "rgba(30,60,140,0.60)",  label: t.terrain.river.label,        lines: [...t.terrain.river.lines] },
     mana_crystal: { emoji: "💎", bg: "rgba(20,5,40,0.92)",   border: "rgba(100,40,180,0.60)", label: t.terrain.mana_crystal.label, lines: [...t.terrain.mana_crystal.lines] },
-    beast_camp:   {
-      emoji: "🐗", bg: "rgba(30,15,5,0.92)", border: "rgba(140,70,20,0.60)", label: t.terrain.beast_camp.label,
-      lines: (() => {
-        const camps = (gameState as any).objectives?.beastCamps;
-        if (!camps) return [t.terrain.beast_camp.defeatFor];
-        const idx = hoveredTile?.coordinates?.q === -2 ? 0 : 1;
-        return camps.defeated?.[idx]
-          ? [t.terrain.beast_camp.defeated]
-          : [t.terrain.beast_camp.hpLine.replace('{hp}', String(camps.hp?.[idx] ?? 0)).replace('{max}', String(camps.maxHp ?? 100)), t.terrain.beast_camp.defeatFor];
-      })(),
-    },
     base: { emoji: "🏰", bg: "rgba(25,20,5,0.92)", border: "rgba(160,120,20,0.60)", label: t.terrain.base.label, lines: [...t.terrain.base.lines] },
   };
 
@@ -465,10 +550,10 @@ const HorizontalGameUI = ({
               {gameState.players[1].name}
             </span>
           </div>
-          <div className="space-y-2 px-3 pb-3 pt-2">
+          <div className="px-3 pb-3 pt-2">
             {showBases && <BaseHPBar pid={1} />}
             {(gameState as any).gameMode !== 'singleplayer' && <GlobalManaBar pid={1} />}
-            <div className="space-y-1 pt-1">
+            <div className="space-y-1 pt-1 overflow-y-auto pr-0.5" style={{ maxHeight: 'calc(100vh - 220px)' }}>
               {gameState.players[1].icons.map(icon => (
                 <CharacterRow key={icon.id} icon={icon} teamColor="red" canSelect={gameState.activePlayerId === 1} />
               ))}
@@ -476,10 +561,6 @@ const HorizontalGameUI = ({
           </div>
         </div>
 
-        {/* Enemy ability cooldown tracker — only shown during player's turn in roguelike */}
-        {gameState.activePlayerId === 0 && (
-          <EnemyAbilityHUD gameState={gameState} />
-        )}
       </div>
 
       {/* BOTTOM ACTION BAR */}
@@ -521,7 +602,7 @@ const HorizontalGameUI = ({
                       const displayOnRiver = displayIcon?.name.includes("Sun-sin") &&
                         (gameState as any).board?.find((t: any) => t.coordinates.q === displayIcon.position.q && t.coordinates.r === displayIcon.position.r)?.terrain.type === 'river';
                       const base = displayOnRiver ? 1 : (displayIcon?.stats.moveRange ?? 2);
-                      const current = Math.min(displayIcon?.stats.movement ?? 0, base);
+                      const current = displayIcon?.stats.movement ?? 0;
                       const totalPips = Math.max(base, current);
                       return (
                         <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
@@ -672,6 +753,7 @@ const HorizontalGameUI = ({
                       exhaustedUltimates={exhaustedUltimates}
                       onPlayCard={onPlayCard}
                       onCardHover={(cost) => setHoveredCardCost(cost)}
+                      onCardHoverRange={onCardHoverRange}
                       gameState={gameState}
                     />
                   )}
@@ -695,6 +777,83 @@ const HorizontalGameUI = ({
           />
         );
       })()}
+
+      {/* Enemy ability hover tooltip portal */}
+      {abilityTooltip && createPortal((() => {
+        const { ab, icon, rect } = abilityTooltip;
+        const cooldowns: Record<string, number> = (icon as any).enemyAbilityCooldowns ?? {};
+        const cd = cooldowns[ab.id] ?? 0;
+        const isReady = cd === 0;
+        const isWarn = cd === 1;
+        const activeDebuffs = icon.debuffs ?? [];
+        const DEBUFF_NAMES: Record<string, string> = {
+          mud_throw: "Slowed", demoralize: "Demoralized", armor_break: "Armor Break",
+          silence: "Silenced", poison: "Poisoned", stun: "Stunned", bleed: "Bleeding",
+        };
+
+        const top = Math.min(rect.bottom + 6, window.innerHeight - 200);
+        const left = Math.max(8, rect.left - 200);
+        return (
+          <div
+            className="fixed z-[9999] pointer-events-none"
+            style={{ top, left, width: 220 }}
+          >
+            <div className="rounded-lg px-3 py-2.5 shadow-2xl"
+              style={{
+                background: "rgba(4,2,18,0.97)",
+                border: isReady ? "1px solid rgba(239,68,68,0.75)" : isWarn ? "1px solid rgba(251,146,60,0.70)" : "1px solid rgba(80,50,140,0.55)",
+                boxShadow: isReady ? "0 0 18px rgba(239,68,68,0.30)" : "0 4px 18px rgba(0,0,0,0.70)",
+              }}>
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-2">
+                <span style={{ fontSize: 18 }}>{ab.icon}</span>
+                <div>
+                  <div className="font-orbitron text-[11px] font-bold text-slate-100">{ab.name}</div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded"
+                      style={{
+                        background: isReady ? "rgba(239,68,68,0.25)" : isWarn ? "rgba(251,146,60,0.20)" : "rgba(80,60,110,0.30)",
+                        color: isReady ? "#f87171" : isWarn ? "#fdba74" : "#7c8da8",
+                        border: `1px solid ${isReady ? "rgba(239,68,68,0.50)" : isWarn ? "rgba(251,146,60,0.45)" : "rgba(80,60,110,0.35)"}`,
+                      }}>
+                      {isReady ? "READY NOW" : `CD ${cd}t`}
+                    </span>
+                    {ab.cooldown > 0 && (
+                      <span className="text-[9px] text-slate-600">/ {ab.cooldown}t cooldown</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Description */}
+              <div className="text-[10px] text-slate-300 leading-relaxed mb-2">{ab.description}</div>
+              {/* Trigger hint */}
+              {ab.triggerCondition === 'low_hp' && ab.hpThreshold && (
+                <div className="text-[9px] text-amber-400/80 mb-1.5">⚠ Triggers below {Math.round(ab.hpThreshold * 100)}% HP</div>
+              )}
+              {ab.oncePerFight && (
+                <div className="text-[9px] text-purple-400/80 mb-1.5">★ Once per fight</div>
+              )}
+              {/* Active debuffs on this enemy */}
+              {activeDebuffs.length > 0 && (
+                <div className="mt-1.5 pt-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-[9px] font-orbitron text-slate-500 mb-1">ACTIVE EFFECTS</div>
+                  <div className="flex flex-wrap gap-1">
+                    {activeDebuffs.map((d, i) => {
+                      const meta = DEBUFF_META[d.type] ?? { icon: "❓", color: "bg-gray-800 border-gray-600 text-gray-300" };
+                      const name = DEBUFF_NAMES[d.type] ?? d.type;
+                      return (
+                        <span key={i} className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[9px] ${meta.color}`}>
+                          {meta.icon} {name} {d.turnsRemaining}t
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })(), document.body)}
     </>
   );
 };

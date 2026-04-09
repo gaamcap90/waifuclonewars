@@ -18,7 +18,7 @@ export const ptBR = {
     archives: 'Arquivos Históricos', archivesSub: 'Biblioteca de Personagens', archivesSoon: 'Biblioteca de Personagens — Em Breve',
     settings: 'Configurações',  settingsSub: 'Controles & Áudio', settingsSoon: 'Controles & Áudio — Em Breve',
     quit: 'Sair',              quitSub: 'Fechar o jogo',
-    footer: 'v0.12 · WAIFU CLONE WARS',
+    footer: 'v0.21 · WAIFU CLONE WARS',
   },
 
   // ── Character Selection ────────────────────────────────────────────────────
@@ -40,7 +40,8 @@ export const ptBR = {
     dps_melee:  'DPS MELEE',
     support:    'SUPPORT',
     tank:       'TANK',
-    hybrid:     'HYBRID',
+    hybrid:      'HYBRID',
+    controller:  'CONTROLADOR',
   },
 
   // ── Characters ─────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export const ptBR = {
       passive:  { name: 'Inventora',             desc: 'No início do turno, se Da Vinci-chan não usou uma carta de habilidade exclusiva no turno anterior, compre +1 carta.' },
       ability1: { name: 'Máquina Voadora',       desc: 'Teleporte para qualquer hexágono dentro do alcance 5. (Custo: 2 mana)' },
       ability2: { name: 'Obra-Prima',            desc: 'Cure um aliado dentro do alcance 3 por 45 HP. (Custo: 3 mana)' },
-      ultimate: { name: 'Guardião Vitruviano',   desc: 'ULTIMATE — Invoca um drone de combate: 50 HP, 15 Força, 30 DEF, dura 2 turnos. (Custo: 3 mana, exaure)' },
+      ultimate: { name: 'Guardião Vitruviano',   desc: 'ULTIMATE — Invoca um drone de combate: HP 75, Força 50, DEF 30. Dura até ser derrotado. (Custo: 3 mana, exaure)' },
     },
     leonidas: {
       name: 'Leonidas-chan',
@@ -94,6 +95,26 @@ export const ptBR = {
       ability1: { name: 'Hwajeon',           desc: '~72 dmg no alcance 3. Empurra o alvo 1 hexágono. (2 mana)',    waterName: 'Velocidade de Rampa', waterDesc: '~72 dmg no alcance 1. Empurra o alvo 1 hexágono. (2 mana, usa Poder reduzido)' },
       ability2: { name: 'Reparos Navais',    desc: 'Selecione uma área. Aliados dentro do alcance 2 curam 10 HP agora e 10 HP no próximo turno. (3 mana)', waterName: 'Salva', waterDesc: '~25 dmg em todos os inimigos no alcance 3. (3 mana)' },
       ultimate: { name: 'Barragem Chongtong', desc: 'ULTIMATE — Avança 3 hexágonos, ~60 dmg nos inimigos no caminho. Cada inimigo acertado é empurrado para o lado. Sun-sin-chan para no último hexágono. (3 mana, exaure)', waterDesc: 'ULTIMATE — Alvo principal ~90 dmg, adjacentes ~43 dmg, alcance 5. (3 mana, exaure)' },
+    },
+    beethoven: {
+      name: 'Beethoven-chan',
+      tagline: 'Regente da Sternensturm',
+      title: 'A Compositora da Tempestade',
+      lore: 'Ludwig van Beethoven compôs música transcendente enquanto estava completamente surdo. Clonada das frequências de ressonância preservadas nas pedras de antigas salas de concerto, ela empunha o próprio som como arma na arena — ondas sônicas que arremessam inimigos pelo campo, melodias que energizam aliados, e um crescendo final — o Götterfunken — que silencia todos os inimigos ao alcance.',
+      passive:  { name: 'Crescendo', desc: 'Cada carta de habilidade exclusiva jogada concede +3 Poder permanentemente (máx. 8 pilhas, +24).' },
+      ability1: { name: 'Schallwelle',  desc: '33 de dano em todos os inimigos em linha até alcance 3, empurra cada um 2 tiles para trás. (2 mana)' },
+      ability2: { name: 'Freudenspur', desc: 'Selecione um tile dentro do alcance 3 — esse tile e os 6 adjacentes formam uma zona de ressonância. Aliados que passam por tiles da zona ganham +2 Movimento. Dura 2 turnos. (3 mana)' },
+      ultimate: { name: 'Götterfunken', desc: 'ULTIMATE (Exaure) — Libere a Sternensturm. 46 de dano e atordoa todos os inimigos dentro do alcance 3 por 1 turno. (3 mana)' },
+    },
+    huang: {
+      name: 'Huang-chan',
+      tagline: 'Imperatriz das Legiões de Terracota',
+      title: 'O Primeiro Imperador',
+      lore: "Qin Shi Huang unificou a China e foi enterrado com 8.000 guerreiros de terracota. Clonada do pó de argila do mausoléu, Huang-chan comanda sua legião novamente — arqueiros, soldados e cavalaria que surgem por comando.",
+      passive:  { name: 'Comando Imperial', desc: 'Não pode jogar cartas de Ataque Básico. Guerreiros de terracota não contam para o limite de unidades.' },
+      ability1: { name: 'Legião de Terracota',          desc: 'Invoca um Guerreiro de Terracota aleatório (Arqueiro ou Corpo a Corpo) em um hex vazio no alcance 3. Dura 3 turnos. (2 mana)' },
+      ability2: { name: 'Comando do Primeiro Imperador', desc: 'Invoca Cavalaria de Terracota em um hex no alcance 4. Adiciona uma carta GRATUITA de Carga de Cavalaria. Dura 3 turnos. (3 mana)' },
+      ultimate: { name: 'Exército Eterno',              desc: 'ULTIMATE — Controla um inimigo não-chefe no alcance 3 por 2 turnos. (3 mana, Exaure)' },
     },
   },
 
@@ -172,7 +193,7 @@ export const ptBR = {
         { title: 'Efeitos de Status',      text: 'Diversas cartas e habilidades aplicam efeitos de status em inimigos ou aliados — reduzindo atributos, restringindo ações ou causando dano ao longo do tempo. Efeitos são exibidos como ícones nos personagens afetados. Passe o cursor sobre um ícone para ver o que faz e quanto tempo dura.' },
       ],
     },
-    footer: 'v0.12 · WAIFU CLONE WARS · IMPÉRIO DE ZNYXORGA',
+    footer: 'v0.21 · WAIFU CLONE WARS · IMPÉRIO DE ZNYXORGA',
   },
 
   // ── Game UI ────────────────────────────────────────────────────────────────
@@ -242,7 +263,6 @@ export const ptBR = {
     river:        { label: 'Rio',             lines: ['Intransponível', 'Letal se deslocado para cá'] },
     plain:        { label: 'Planície',        lines: ['Sem efeitos especiais'] },
     mana_crystal: { label: 'Cristal de Mana', lines: ['Intransponível', '+1 ou +2 Mana ao final do turno'] },
-    beast_camp:   { label: 'Acampamento de Bestas', lines: ['Derrote para +15% Força & Poder'], defeated: '✅ Derrotado — bônus ativos', hpLine: 'HP: {hp}/{max}', defeatFor: 'Derrote para +15% Força & Poder' },
     base:         { label: 'Base',            lines: ['+20% Força, Poder & Defesa'] },
     spawn:        { label: 'Zona de Respawn', lines: ['Zona de renascimento'] },
   },
@@ -270,8 +290,6 @@ export const ptBR = {
     noTargetToHit:      'Nenhum alvo para acertar!',
     cantAttackOwn2:     'Não é possível atacar seu próprio personagem!',
     cantAttackOwnBase2: 'Não é possível atacar sua própria base!',
-    beastCampDefeated:  'Acampamento de Bestas derrotado! Time +15% Força & Poder!',
-    beastCampDefeated2: 'Acampamento de Bestas derrotado! Time ganha +15% Força e Poder!',
     respawnOwnTurn:     'Você só pode renascer no seu turno!',
   },
 
@@ -303,6 +321,9 @@ export const ptBR = {
     sunsin_hwajeon:            { name: 'Hwajeon / Velocidade de Rampa', description: 'Terra: ~72 dmg no alcance 3, empurra o alvo. Água: ~72 dmg no alcance 1, empurra o alvo.' },
     sunsin_naval_command:      { name: 'Reparos Navais / Salva', description: 'Terra: aliados dentro do alcance 2 curam 10 HP agora e 10 HP no próximo turno. Água: ~25 dmg em todos os inimigos no alcance 3.' },
     sunsin_chongtong:          { name: 'Barragem Chongtong',    description: 'ULTIMATE (Exaure) — Terra: avança 3 hexágonos, ~60 dmg, empurra para o lado. Água: ~90 no principal, ~43 adj, alcance 5.' },
+    beethoven_schallwelle:     { name: 'Schallwelle',           description: '33 de dano em todos os inimigos em linha até alcance 3, empurra cada um 2 tiles para trás.' },
+    beethoven_freudenspur:     { name: 'Freudenspur',           description: 'Selecione um tile no alcance 3 — esse tile e os 6 adjacentes formam zona de ressonância. Aliados que passam ganham +2 Movimento. Dura 2 turnos.' },
+    beethoven_gotterfunken:    { name: 'Götterfunken',          description: 'ULTIMATE (Exaure) — 46 de dano e atordoa todos os inimigos no alcance 3 por 1 turno.' },
   } as Record<string, { name: string; description: string }>,
 
   // ── Item names & descriptions ──────────────────────────────────────────────
@@ -326,6 +347,10 @@ export const ptBR = {
     khans_seal:       { name: 'Selo do Khan',           description: 'Fúria da Cavalaria também atordoa cada inimigo acertado por 1 turno.' },
     aerial_lens:      { name: 'Lente Aérea',            description: 'Máquina Voadora pode trocar de posição com uma unidade aliada.' },
     life_formula:     { name: 'Fórmula da Vida',        description: 'Obra-Prima cura 25 HP adicionais.' },
+    resonant_crystal: { name: 'Cristal Ressonante',    description: 'Götterfunken atordoa todos os inimigos atingidos por 2 turnos em vez de 1.' },
+    composers_baton:  { name: 'Batuta do Compositor',  description: 'Aliados sobre uma zona Freudenspur também ganham +5 Defesa no início do turno.' },
+    dragon_kiln:      { name: 'Forno do Dragão',       description: 'Unidades de terracota são invocadas com +20 HP e +10 Força.' },
+    iron_edict:       { name: 'Édito de Ferro',        description: 'Exército Eterno dura 3 turnos em vez de 2.' },
     znyxorgas_eye:    { name: 'Olho de Znyxorga',       description: 'Após derrotar um inimigo, sua próxima carta custa 0 Mana.' },
     void_armor:       { name: 'Armadura do Vazio',      description: 'Uma vez por batalha, nega um golpe letal — sobrevive com 1 HP.' },
     arena_champion:   { name: 'Campeão da Arena',       description: 'Todos os atributos +10 enquanto este personagem estiver vivo.' },

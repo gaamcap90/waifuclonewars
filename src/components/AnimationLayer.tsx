@@ -32,6 +32,16 @@ function FloatingNumber({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: num
     ? '0 0 10px rgba(255,60,60,0.9), 1px 1px 3px #000'
     : '0 0 10px rgba(50,255,100,0.9), 1px 1px 3px #000';
 
+  const val = anim.value ?? 0;
+  const fontSize = isDamage
+    ? val < 10  ? '0.95rem'
+    : val < 20  ? '1.15rem'
+    : val < 35  ? '1.45rem'
+    : val < 55  ? '1.8rem'
+    :             '2.2rem'
+    : '1rem';
+  const fontWeight = isDamage && val >= 35 ? 900 : 700;
+
   return (
     <div
       key={anim.id}
@@ -40,8 +50,8 @@ function FloatingNumber({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: num
         left: c.x - 18,
         top: c.y - 18,
         color,
-        fontWeight: 900,
-        fontSize: isDamage ? '1.15rem' : '1rem',
+        fontWeight,
+        fontSize,
         textShadow: shadow,
         animation: 'anim-float-up-fade 1.35s ease-out forwards',
         pointerEvents: 'none',

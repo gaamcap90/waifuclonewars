@@ -6,7 +6,6 @@ export const useBuffCalculation = () => {
   const calculateBuffedStats = (icon: Icon, gameState: GameState) => {
     const teamBuffs = gameState.teamBuffs;
     
-    // Base team buffs from beast camps
     const mightBonusPct = teamBuffs.mightBonus[icon.playerId] || 0;
     const powerBonusPct = teamBuffs.powerBonus[icon.playerId] || 0;
     const defenseBonusPct = 0; // No team defense bonus yet
@@ -64,8 +63,6 @@ export const useBuffCalculation = () => {
       mightBonus: totalMightBonus,
       powerBonus: totalPowerBonus,
       defenseBonus: totalDefenseBonus,
-      beastCampMightBonus: mightBonusPct,
-      beastCampPowerBonus: powerBonusPct,
       homeBaseBonus: homeBaseBuff,
       forestDefenseBonus: forestDefenseBuff
     };

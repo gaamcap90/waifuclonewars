@@ -30,8 +30,6 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
   const basePower   = character.stats.power;
   const baseDefense = character.stats.defense;
 
-  const beastCampMightBonus   = (baseMight   * buffedStats.beastCampMightBonus)  / 100;
-  const beastCampPowerBonus   = (basePower   * buffedStats.beastCampPowerBonus)  / 100;
   const homeBaseMightBonus    = buffedStats.isOnHomeBase ? (baseMight   * 20) / 100 : 0;
   const homeBasePowerBonus    = buffedStats.isOnHomeBase ? (basePower   * 20) / 100 : 0;
   const homeBaseDefenseBonus  = buffedStats.isOnHomeBase ? (baseDefense * 20) / 100 : 0;
@@ -156,9 +154,8 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)" }}>
               <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.might.toUpperCase()}</div>
               <div className="font-bold text-red-400">{Math.floor(eff.might)}</div>
-              {(beastCampMightBonus > 0 || homeBaseMightBonus > 0 || buffedStats.cardBuffAtk > 0) && (
+              {(homeBaseMightBonus > 0 || buffedStats.cardBuffAtk > 0) && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
-                  {beastCampMightBonus > 0 && `+${fmt(beastCampMightBonus)} camp `}
                   {homeBaseMightBonus   > 0 && `+${fmt(homeBaseMightBonus)} base `}
                   {buffedStats.cardBuffAtk > 0 && <span className="text-yellow-400">+{buffedStats.cardBuffAtk} card</span>}
                 </div>
@@ -168,9 +165,8 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.20)" }}>
               <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.power.toUpperCase()}</div>
               <div className="font-bold text-blue-400">{Math.floor(eff.power)}</div>
-              {(beastCampPowerBonus > 0 || homeBasePowerBonus > 0) && (
+              {homeBasePowerBonus > 0 && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
-                  {beastCampPowerBonus > 0 && `+${fmt(beastCampPowerBonus)} camp `}
                   {homeBasePowerBonus  > 0 && `+${fmt(homeBasePowerBonus)} base`}
                 </div>
               )}

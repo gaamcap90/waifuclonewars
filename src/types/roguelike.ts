@@ -3,7 +3,7 @@
 export type NodeType = 'enemy' | 'elite' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'boss';
 export type FightObjective = 'defeat_all' | 'destroy_base' | 'survive' | 'onslaught';
 export type ItemTier = 'common' | 'uncommon' | 'rare' | 'legendary';
-export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas' | 'sunsin';
+export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas' | 'sunsin' | 'beethoven' | 'huang';
 
 export interface RunNode {
   id: string;
@@ -114,6 +114,9 @@ export interface CharacterRunState {
   xpToNext: number;
   statBonuses: { hp: number; might: number; power: number; defense: number };
   pendingStatPoints: number;
+  pendingAbilityUpgrades: number;   // normal ability upgrade tokens (levels 2 & 4)
+  pendingUltimateUpgrade: number;   // ultimate ability upgrade token (level 6)
+  upgradedAbilityIds: string[];     // definitionIds already upgraded (won't be offered again)
   items: (RunItem | null)[]; // 5 slots
 }
 
@@ -146,4 +149,5 @@ export interface RunState {
   pendingRewards: PendingRewards | null;
   permanentlyDeadIds: CharacterId[];  // chars who died in combat and are gone for the run
   battleCount: number;                // how many combat nodes completed so far
+  upgradedCardDefIds: string[];       // definitionIds upgraded this run (applied at battle start)
 }

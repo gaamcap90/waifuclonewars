@@ -59,13 +59,13 @@ export function TurnQueueBar({
       ) : (
         <button
           onClick={onEndTurn}
-          className="font-orbitron text-[11px] font-bold px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95"
+          className="font-orbitron text-[11px] font-bold px-4 py-2 rounded-lg transition-transform hover:scale-105 active:scale-95"
           style={{
             background: "linear-gradient(135deg, rgba(220,40,40,0.85) 0%, rgba(150,15,15,0.90) 100%)",
             border: "1px solid rgba(239,68,68,0.65)",
             color: "#fca5a5",
-            boxShadow: "0 2px 14px rgba(220,40,40,0.30), inset 0 1px 0 rgba(255,130,130,0.12)",
             letterSpacing: "0.12em",
+            animation: "btn-end-turn-pulse 2s ease-in-out infinite",
           }}
         >
           END TURN

@@ -1,7 +1,8 @@
 // src/components/RoguelikeMap.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { RunState, RunNode, CharacterRunState, RunItem, CharacterId } from "@/types/roguelike";
 import { CARD_REWARD_POOL } from "@/data/roguelikeData";
+import { CARD_UPGRADES, CARD_DEFS } from "@/data/cards";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { useT } from "@/i18n";
 
@@ -10,6 +11,7 @@ interface Props {
   onSelectNode: (nodeId: string) => void;
   onAbandonRun: () => void;
   onAllocateStat?: (characterId: CharacterId, stat: 'hp' | 'might' | 'power' | 'defense') => void;
+  onUpgradeAbility?: (characterId: CharacterId, defId: string, isUltimate: boolean) => void;
 }
 
 const TOTAL_ROWS = 12; // rows 0–11, row 11 = boss
@@ -40,6 +42,7 @@ const TIER_COLOR: Record<string, string> = {
 };
 const EXCLUSIVE_COLOR: Record<string, string> = {
   Napoleon: '#d946ef', Genghis: '#ef4444', 'Da Vinci': '#34d399', Leonidas: '#f59e0b',
+  'Sun-sin': '#06b6d4', Beethoven: '#8b5cf6', 'Huang-chan': '#b45309',
 };
 
 // ── Left Panel Character Card ─────────────────────────────────────────────────
@@ -109,13 +112,21 @@ function LeftPanelCharCard({
           </div>
           <div className="text-[9px] text-purple-400 font-orbitron">{t.roguelike.lvShort.replace('{n}', String(char.level))}</div>
         </div>
-        {char.pendingStatPoints > 0 && (
-          <span className="text-[9px] font-bold text-yellow-400 animate-pulse shrink-0">▲{char.pendingStatPoints}</span>
-        )}
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
+          {char.pendingStatPoints > 0 && (
+            <span className="text-[9px] font-bold text-yellow-400 animate-pulse">▲{char.pendingStatPoints}</span>
+          )}
+          {char.pendingAbilityUpgrades > 0 && (
+            <span className="text-[9px] font-bold text-purple-400 animate-pulse">✦</span>
+          )}
+          {char.pendingUltimateUpgrade > 0 && (
+            <span className="text-[9px] font-bold text-amber-400 animate-pulse">⚡</span>
+          )}
+        </div>
       </div>
 
       {/* HP bar */}
-      <div className="mb-1.5">
+      <div className="mb-1">
         <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
@@ -127,6 +138,34 @@ function LeftPanelCharCard({
           <span className="text-[9px]" style={{ color: hpColor }}>{Math.round(hpPct * 100)}%</span>
         </div>
       </div>
+
+      {/* XP bar */}
+      {char.level < 6 && (
+        <div className="mb-1.5">
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(88,28,135,0.35)' }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, (char.xp / char.xpToNext) * 100)}%`,
+                background: 'linear-gradient(90deg, #7c3aed, #a855f7)',
+                boxShadow: '0 0 4px rgba(168,85,247,0.7)',
+              }}
+            />
+          </div>
+          <div className="flex justify-between mt-0.5">
+            <span className="text-[8px] text-purple-600 font-orbitron">XP</span>
+            <span className="text-[8px] text-purple-500">{char.xp}/{char.xpToNext}</span>
+          </div>
+        </div>
+      )}
+      {char.level >= 6 && (
+        <div className="mb-1.5">
+          <div className="h-1 rounded-full" style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', boxShadow: '0 0 6px rgba(168,85,247,0.5)' }} />
+          <div className="text-center mt-0.5">
+            <span className="text-[8px] text-purple-400 font-orbitron tracking-widest">MAX LEVEL</span>
+          </div>
+        </div>
+      )}
 
       {/* Item slots */}
       <div className="flex gap-1 mt-2">
@@ -148,15 +187,24 @@ function LeftPanelCharCard({
   );
 }
 
-function DeckOverlay({ deckIds, onClose }: { deckIds: string[]; onClose: () => void }) {
+function DeckOverlay({ deckIds, upgradedCardDefIds, onClose }: { deckIds: string[]; upgradedCardDefIds: string[]; onClose: () => void }) {
   const { t } = useT();
-  // Count duplicates
   const counts: Record<string, number> = {};
   for (const id of deckIds) counts[id] = (counts[id] ?? 0) + 1;
   const unique = Object.keys(counts);
   const cardMeta = unique.map(id => {
-    const found = CARD_REWARD_POOL.find(c => c.definitionId === id);
-    return found ?? { definitionId: id, name: id, icon: '🃏', description: '—', manaCost: 0, exclusiveTo: undefined };
+    // If this card is upgraded, show its upgraded version
+    const isUpgraded = upgradedCardDefIds.includes(id);
+    const upgrade = isUpgraded ? CARD_UPGRADES[id] : undefined;
+    const base = CARD_REWARD_POOL.find(c => c.definitionId === id)
+      ?? { definitionId: id, name: id, icon: '🃏', description: '—', manaCost: 0, exclusiveTo: undefined };
+    return {
+      ...base,
+      name: upgrade ? upgrade.upgradedName : base.name,
+      description: upgrade ? (upgrade.patch.description ?? base.description) : base.description,
+      isUpgraded,
+      upgradeLabel: upgrade?.descriptionUpgrade,
+    };
   });
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -176,12 +224,23 @@ function DeckOverlay({ deckIds, onClose }: { deckIds: string[]; onClose: () => v
             const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : null;
             return (
               <div key={card.definitionId}
-                className="flex items-start gap-3 rounded-xl border border-slate-700/40 p-3"
-                style={{ background: 'rgba(8,5,25,0.85)' }}>
+                className="flex items-start gap-3 rounded-xl border p-3 relative"
+                style={{
+                  background: card.isUpgraded ? 'rgba(20,8,8,0.95)' : 'rgba(8,5,25,0.85)',
+                  borderColor: card.isUpgraded ? 'rgba(220,38,38,0.7)' : 'rgba(51,65,85,0.4)',
+                  boxShadow: card.isUpgraded ? '0 0 12px rgba(220,38,38,0.25), inset 0 0 20px rgba(220,38,38,0.05)' : 'none',
+                }}>
+                {/* Upgraded badge */}
+                {card.isUpgraded && (
+                  <div className="absolute -top-2 -right-2 z-10 font-orbitron font-black text-[9px] px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#dc2626', color: '#fff', border: '1px solid rgba(255,100,100,0.5)', boxShadow: '0 0 8px rgba(220,38,38,0.6)' }}>
+                    ✦ +
+                  </div>
+                )}
                 <span className="text-xl shrink-0">{card.icon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-orbitron font-bold text-[12px] text-white">{card.name}</span>
+                    <span className="font-orbitron font-bold text-[12px]" style={{ color: card.isUpgraded ? '#fca5a5' : '#fff' }}>{card.name}</span>
                     {counts[card.definitionId] > 1 && (
                       <span className="text-[10px] text-cyan-400 font-bold">×{counts[card.definitionId]}</span>
                     )}
@@ -192,8 +251,13 @@ function DeckOverlay({ deckIds, onClose }: { deckIds: string[]; onClose: () => v
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-400 text-[11px] mt-0.5 leading-snug">{card.description}</p>
-                  <span className="text-[10px] text-cyan-300 font-orbitron">{t.roguelike.manaLabel.replace('{n}', String(card.manaCost))}</span>
+                  <p className="text-[11px] mt-0.5 leading-snug" style={{ color: card.isUpgraded ? '#fca5a5cc' : '#94a3b8' }}>{card.description}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-cyan-300 font-orbitron">{t.roguelike.manaLabel.replace('{n}', String(card.manaCost))}</span>
+                    {card.isUpgraded && card.upgradeLabel && (
+                      <span className="text-[9px] font-orbitron font-bold" style={{ color: '#f87171' }}>▲ {card.upgradeLabel}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -329,6 +393,103 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
   );
 }
 
+// ── Character names → card exclusiveTo key mapping ───────────────────────────
+const CHAR_TO_EXCLUSIVE: Record<string, string> = {
+  napoleon: 'Napoleon', genghis: 'Genghis', davinci: 'Da Vinci',
+  leonidas: 'Leonidas', sunsin: 'Sun-sin', beethoven: 'Beethoven', huang: 'Huang-chan',
+};
+
+function AbilityUpgradeOverlay({ char, deckIds, upgradedCardDefIds, isUltimate, onClose, onUpgrade }: {
+  char: CharacterRunState;
+  deckIds: string[];
+  upgradedCardDefIds: string[];
+  isUltimate: boolean;
+  onClose: () => void;
+  onUpgrade?: (defId: string) => void;
+}) {
+  const exclusiveKey = CHAR_TO_EXCLUSIVE[char.id] ?? '';
+  // Count copies in deck for each defId
+  const deckCounts: Record<string, number> = {};
+  for (const id of deckIds) deckCounts[id] = (deckCounts[id] ?? 0) + 1;
+
+  // Show ALL abilities for this character that have an upgrade and haven't been upgraded yet
+  // regardless of whether they're currently in the deck
+  const upgradableAbilities = CARD_DEFS.filter(d =>
+    d.exclusiveTo === exclusiveKey &&
+    CARD_UPGRADES[d.definitionId] &&
+    !upgradedCardDefIds.includes(d.definitionId) &&
+    (isUltimate ? d.type === 'ultimate' : d.type !== 'ultimate')
+  );
+
+  const accentColor = isUltimate ? '#fbbf24' : '#a855f7';
+  const accentRgba = isUltimate ? 'rgba(251,191,36,0.5)' : 'rgba(168,85,247,0.5)';
+  const glowRgba = isUltimate ? 'rgba(251,191,36,0.2)' : 'rgba(168,85,247,0.2)';
+  const TYPE_COLOR: Record<string, string> = { attack: '#f87171', defense: '#4ade80', buff: '#60a5fa', movement: '#a78bfa', ultimate: '#fbbf24' };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/75" />
+      <div className="relative z-10 rounded-2xl border p-6 max-w-lg w-full"
+        style={{ background: 'rgba(4,2,18,0.97)', borderColor: accentRgba, boxShadow: `0 0 60px ${glowRgba}` }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-2">
+          <img src={char.portrait} alt={char.displayName} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: accentColor }} />
+          <div className="flex-1">
+            <div className="text-[10px] font-orbitron tracking-[0.3em] mb-0.5" style={{ color: accentColor }}>
+              {isUltimate ? '⚡ ULTIMATE UPGRADE' : 'ABILITY UPGRADE'}
+            </div>
+            <h2 className="font-orbitron font-black text-xl text-white">{char.displayName}</h2>
+            <p className="text-[11px] text-slate-400">Level {char.level} · {isUltimate ? 'Upgrade your ultimate' : 'Choose one ability to upgrade'}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl">✕</button>
+        </div>
+
+        <div className="text-[10px] text-center mb-4 font-orbitron tracking-widest" style={{ color: accentColor + 'aa' }}>
+          ALL COPIES IN YOUR DECK WILL BE UPGRADED
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {upgradableAbilities.map(def => {
+            const upgrade = CARD_UPGRADES[def.definitionId]!;
+            const typeColor = TYPE_COLOR[def.type] ?? '#94a3b8';
+            const copies = deckCounts[def.definitionId] ?? 0;
+            return (
+              <button
+                key={def.definitionId}
+                disabled={!onUpgrade}
+                onClick={() => onUpgrade?.(def.definitionId)}
+                className="text-left rounded-xl border p-4 transition-all hover:scale-[1.02] disabled:opacity-50"
+                style={{ background: 'rgba(10,6,30,0.8)', borderColor: accentColor + '55', boxShadow: '0 0 0px transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = `0 0 18px ${accentColor}55`)}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 0 0px transparent')}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[9px] font-orbitron px-1.5 py-0.5 rounded" style={{ background: typeColor + '22', color: typeColor, border: `1px solid ${typeColor}55` }}>{def.type.toUpperCase()}</span>
+                  <span className="font-orbitron font-bold text-white text-[13px]">{def.name}</span>
+                  <span className="ml-auto font-bold text-[13px]" style={{ color: accentColor }}>→ {upgrade.upgradedName}</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mb-2">{def.description}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-orbitron" style={{ color: accentColor }}>▲</span>
+                    <span className="text-[11px] font-bold" style={{ color: accentColor + 'dd' }}>{upgrade.descriptionUpgrade}</span>
+                  </div>
+                  <span className="text-[10px] font-orbitron"
+                    style={{ color: copies > 0 ? '#22d3ee' : '#475569' }}>
+                    {copies > 0 ? `×${copies} in deck` : 'not in deck'}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NodeTooltip({ node, side }: { node: RunNode; side: 'left' | 'right' }) {
   const { t } = useT();
   const meta = NODE_META[node.type];
@@ -365,12 +526,33 @@ function NodeTooltip({ node, side }: { node: RunNode; side: 'left' | 'right' }) 
   );
 }
 
-export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onAllocateStat }: Props) {
+export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onAllocateStat, onUpgradeAbility }: Props) {
   const { t } = useT();
   const [hovered, setHovered] = useState<string | null>(null);
   const [showDeck, setShowDeck] = useState(false);
   const [detailChar, setDetailChar] = useState<CharacterRunState | null>(null);
+  const [abilityUpgradeChar, setAbilityUpgradeChar] = useState<{ char: CharacterRunState; isUltimate: boolean } | null>(null);
   const { map, unlockedNodeIds, completedNodeIds, gold, act, characters, deckCardIds, permanentlyDeadIds } = runState as any;
+
+  // Auto-open stat point overlay for the first character with pending points
+  useEffect(() => {
+    if (detailChar) return;
+    const charWithPoints = (characters as CharacterRunState[]).find(
+      c => c.pendingStatPoints > 0 && !permanentlyDeadIds?.includes(c.id)
+    );
+    if (charWithPoints) setDetailChar(charWithPoints);
+  }, [runState.characters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-open ability upgrade overlay once all stat points are spent
+  // Normal upgrades (levels 2 & 4) first, then ultimate (level 6)
+  useEffect(() => {
+    if (detailChar || abilityUpgradeChar) return;
+    const chars = characters as CharacterRunState[];
+    const normalChar = chars.find(c => c.pendingAbilityUpgrades > 0 && !permanentlyDeadIds?.includes(c.id));
+    if (normalChar) { setAbilityUpgradeChar({ char: normalChar, isUltimate: false }); return; }
+    const ultChar = chars.find(c => c.pendingUltimateUpgrade > 0 && !permanentlyDeadIds?.includes(c.id));
+    if (ultChar) setAbilityUpgradeChar({ char: ultChar, isUltimate: true });
+  }, [runState.characters, detailChar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-compute positions as percentages
   const getPos = (node: RunNode) => ({
@@ -492,9 +674,9 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
               {lines.map(l => l && (
                 <line key={l.key}
                   x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke={l.done ? 'rgba(34,211,238,0.80)' : 'rgba(148,100,220,0.55)'}
-                  strokeWidth={l.done ? 0.8 : 0.6}
-                  strokeDasharray={l.done ? '' : '1.8,1.4'}
+                  stroke={l.done ? 'rgba(34,211,238,0.95)' : 'rgba(180,130,255,0.80)'}
+                  strokeWidth={l.done ? 1.4 : 1.1}
+                  strokeDasharray={l.done ? '' : '4,2'}
                   filter="url(#glow-line)"
                   vectorEffect="non-scaling-stroke"
                 />
@@ -609,7 +791,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
       </div>
 
       {/* Deck viewer overlay */}
-      {showDeck && <DeckOverlay deckIds={deckCardIds} onClose={() => setShowDeck(false)} />}
+      {showDeck && <DeckOverlay deckIds={deckCardIds} upgradedCardDefIds={runState.upgradedCardDefIds} onClose={() => setShowDeck(false)} />}
 
       {/* Character detail overlay */}
       {detailChar && (
@@ -618,8 +800,42 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
           onClose={() => setDetailChar(null)}
           onAllocateStat={onAllocateStat ? (stat) => {
             onAllocateStat(detailChar.id as CharacterId, stat);
-            // Refresh detailChar from characters so stat points update live
-            setDetailChar(prev => prev ? { ...prev, pendingStatPoints: prev.pendingStatPoints - 1, statBonuses: { ...prev.statBonuses, [stat]: prev.statBonuses[stat] + (stat === 'hp' ? 8 : 5) }, maxHp: stat === 'hp' ? prev.maxHp + 8 : prev.maxHp, currentHp: stat === 'hp' ? prev.currentHp + 8 : prev.currentHp } : null);
+            const remaining = detailChar.pendingStatPoints - 1;
+            const updated = { ...detailChar, pendingStatPoints: remaining, statBonuses: { ...detailChar.statBonuses, [stat]: detailChar.statBonuses[stat] + (stat === 'hp' ? 8 : 5) }, maxHp: stat === 'hp' ? detailChar.maxHp + 8 : detailChar.maxHp, currentHp: stat === 'hp' ? detailChar.currentHp + 8 : detailChar.currentHp };
+            if (remaining > 0) {
+              setDetailChar(updated);
+            } else {
+              // Check if another character still has points
+              const next = (characters as CharacterRunState[]).find(
+                c => c.id !== detailChar.id && c.pendingStatPoints > 0 && !permanentlyDeadIds?.includes(c.id)
+              );
+              setDetailChar(next ?? null);
+            }
+          } : undefined}
+        />
+      )}
+
+      {/* Ability upgrade overlay */}
+      {abilityUpgradeChar && (
+        <AbilityUpgradeOverlay
+          char={abilityUpgradeChar.char}
+          deckIds={deckCardIds}
+          upgradedCardDefIds={runState.upgradedCardDefIds}
+          isUltimate={abilityUpgradeChar.isUltimate}
+          onClose={() => setAbilityUpgradeChar(null)}
+          onUpgrade={onUpgradeAbility ? (defId) => {
+            const { char: aChar, isUltimate } = abilityUpgradeChar;
+            onUpgradeAbility(aChar.id as CharacterId, defId, isUltimate);
+            const remainingNormal = isUltimate ? aChar.pendingAbilityUpgrades : aChar.pendingAbilityUpgrades - 1;
+            const remainingUlt = isUltimate ? aChar.pendingUltimateUpgrade - 1 : aChar.pendingUltimateUpgrade;
+            const updatedChar = { ...aChar, pendingAbilityUpgrades: remainingNormal, pendingUltimateUpgrade: remainingUlt, upgradedAbilityIds: [...aChar.upgradedAbilityIds, defId] };
+            if (!isUltimate && remainingNormal > 0) { setAbilityUpgradeChar({ char: updatedChar, isUltimate: false }); return; }
+            if (isUltimate && remainingUlt > 0) { setAbilityUpgradeChar({ char: updatedChar, isUltimate: true }); return; }
+            const chars = characters as CharacterRunState[];
+            const nextNormal = chars.find(c => c.id !== aChar.id && c.pendingAbilityUpgrades > 0 && !permanentlyDeadIds?.includes(c.id));
+            if (nextNormal) { setAbilityUpgradeChar({ char: nextNormal, isUltimate: false }); return; }
+            const nextUlt = chars.find(c => c.id !== aChar.id && c.pendingUltimateUpgrade > 0 && !permanentlyDeadIds?.includes(c.id));
+            setAbilityUpgradeChar(nextUlt ? { char: nextUlt, isUltimate: true } : null);
           } : undefined}
         />
       )}

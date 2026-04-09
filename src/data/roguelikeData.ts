@@ -58,7 +58,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'berserker',
     abilities: [
       { id: 'battle_rage', name: 'Battle Rage', icon: '🔥', description: 'Gains +25 Might and +10 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: 10, duration: 2 } },
-      { id: 'champion_strike', name: "Champion's Strike", icon: '⚔️', description: 'Deals 1.8× Might damage to the nearest enemy within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.8 } },
+      { id: 'champion_strike', name: "Champion's Strike", icon: '⚔️', description: 'Deals 1× Might damage to the nearest enemy within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.0, singleTarget: true } },
     ] as EnemyAbilityDef[],
   },
   spore_cluster: {
@@ -124,7 +124,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 65, maxHp: 65, might: 45, power: 40, defense: 5, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
-      { id: 'shadow_step', name: 'Shadow Step', icon: '🌑', description: 'Phases through reality — teleports adjacent to the closest enemy and strikes for 1.4× Might (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.4 } },
+      { id: 'shadow_step', name: 'Shadow Step', icon: '🌑', description: 'Phases through reality — teleports adjacent to the closest enemy and strikes for 1× Might (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.0 } },
     ] as EnemyAbilityDef[],
   },
   krath_berserker: {
@@ -284,6 +284,24 @@ export const ITEMS: RunItem[] = [
     targetCharacter: 'sunsin',
     description: 'Naval Repairs / Broadside also grants all nearby allies +30 DEF for 1 turn.',
     passiveTag: 'sunsin_naval_def_aura' },
+  // RARE — Beethoven
+  { id: 'resonant_crystal', name: 'Resonant Crystal', icon: '🔮', tier: 'rare',
+    targetCharacter: 'beethoven',
+    description: 'Götterfunken stuns all hit enemies for 2 turns instead of 1.',
+    passiveTag: 'beethoven_gotterfunken_stun2' },
+  { id: 'composers_baton', name: "Composer's Baton", icon: '🎼', tier: 'rare',
+    targetCharacter: 'beethoven',
+    description: 'Allies standing on a Freudenspur zone also gain +5 Defense at turn start.',
+    passiveTag: 'beethoven_freud_def5' },
+  // RARE — Huang-chan
+  { id: 'dragon_kiln', name: 'Dragon Kiln', icon: '🏺', tier: 'rare',
+    targetCharacter: 'huang',
+    description: 'Terracotta units are summoned with +20 HP and +10 Might.',
+    passiveTag: 'huang_terra_buff' },
+  { id: 'iron_edict', name: 'Iron Edict', icon: '📜', tier: 'rare',
+    targetCharacter: 'huang',
+    description: 'Eternal Army lasts 3 turns instead of 2.',
+    passiveTag: 'huang_control_extend' },
   // LEGENDARY
   { id: 'znyxorgas_eye', name: "Znyxorga's Eye", icon: '👁️', tier: 'legendary',
     description: 'After defeating an enemy, your next 2 cards cost 0 Mana.',
@@ -326,6 +344,12 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'sunsin_hwajeon',        name: 'Hwajeon / Ramming',         icon: '🔥', manaCost: 2, description: 'Land: ~72 dmg range 3, push back. Water: ~72 dmg range 1, push back.', exclusiveTo: 'Sun-sin' },
   { definitionId: 'sunsin_naval_command',  name: 'Naval Repairs / Broadside', icon: '🚢', manaCost: 3, description: 'Land: Heal allies in area 10 HP now + 10 HP next turn. Water: ~25 dmg all enemies range 3.', exclusiveTo: 'Sun-sin' },
   { definitionId: 'sunsin_chongtong',      name: 'Chongtong Barrage',         icon: '⭐', manaCost: 3, description: 'ULTIMATE — Land: charge 3 hexes, ~60 dmg + push sideways. Water: ~90 main, ~43 adj, range 5.', exclusiveTo: 'Sun-sin' },
+  { definitionId: 'beethoven_schallwelle', name: 'Schallwelle',  icon: '🌊', manaCost: 2, description: 'Sonic wave — Power×0.5 dmg on a line, pushes each enemy 2 tiles back. Range 3.', exclusiveTo: 'Beethoven' },
+  { definitionId: 'beethoven_freudenspur', name: 'Freudenspur',  icon: '🎶', manaCost: 3, description: 'Place resonance zone (7 tiles). Allies on zone gain +2 Movement at turn start. Lasts 2 turns.', exclusiveTo: 'Beethoven' },
+  { definitionId: 'beethoven_gotterfunken', name: 'Götterfunken', icon: '⭐', manaCost: 3, description: 'ULTIMATE — Stun all enemies within range 3 for 1 turn. No damage.', exclusiveTo: 'Beethoven' },
+  { definitionId: 'huang_terracotta_summon', name: 'Terracotta Legion',        icon: '🗿', manaCost: 2, description: 'Summon Terracotta Archer or Warrior (random) on a hex. HP 40, scales with stats. Lasts 2 turns.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_first_emperor',    name: "First Emperor's Command",   icon: '⚔️', manaCost: 3, description: 'Summon Terracotta Cavalry adjacent to you. HP 60, scales with stats. Lasts 2 turns. Gain free Cavalry Charge.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_eternal_army',     name: 'Eternal Army',              icon: '⭐', manaCost: 3, description: 'ULTIMATE — Control a non-boss enemy for 2 turns. They attack nearest foe.', exclusiveTo: 'Huang-chan' },
   { definitionId: 'shared_quick_move',   name: 'Quick Move',  icon: '🏃', manaCost: 1, description: '+2 movement this turn.' },
   { definitionId: 'shared_gamble',       name: 'Gamble',      icon: '🎲', manaCost: 0, description: 'Draw 3 cards, discard 1 at random.' },
   { definitionId: 'shared_basic_attack', name: 'Basic Attack (+1 copy)', icon: '⚔️', manaCost: 1, description: 'Add another Basic Attack card permanently to your deck.' },
@@ -557,11 +581,13 @@ export const SHARED_STARTING_CARDS: string[] = [
 
 // One signature ability card per character (added only if that character is selected)
 export const CHARACTER_STARTING_CARDS: Record<string, string> = {
-  napoleon: 'napoleon_artillery_barrage',
-  genghis:  'genghis_mongol_charge',
-  davinci:  'davinci_masterpiece',
-  leonidas: 'leonidas_shield_bash',
-  sunsin:   'sunsin_hwajeon',
+  napoleon:  'napoleon_artillery_barrage',
+  genghis:   'genghis_mongol_charge',
+  davinci:   'davinci_masterpiece',
+  leonidas:  'leonidas_shield_bash',
+  sunsin:    'sunsin_hwajeon',
+  beethoven: 'beethoven_schallwelle',
+  huang:     'huang_terracotta_summon',
 };
 
 // ── Starting Characters ───────────────────────────────────────────────────────
@@ -572,30 +598,49 @@ export function buildStartingCharacters(): CharacterRunState[] {
       id: 'napoleon', displayName: 'Napoleon-chan', portrait: '/art/napoleon_portrait.png',
       currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
       items: [null, null, null, null, null],
     },
     {
       id: 'genghis', displayName: 'Genghis-chan', portrait: '/art/genghis_portrait.png',
       currentHp: 120, maxHp: 120, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
       items: [null, null, null, null, null],
     },
     {
       id: 'davinci', displayName: 'Da Vinci-chan', portrait: '/art/davinci_portrait.png',
       currentHp: 80, maxHp: 80, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
       items: [null, null, null, null, null],
     },
     {
       id: 'leonidas', displayName: 'Leonidas-chan', portrait: '/art/leonidas_portrait.png',
       currentHp: 130, maxHp: 130, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
       items: [null, null, null, null, null],
     },
     {
       id: 'sunsin', displayName: 'Sun-sin-chan', portrait: '/art/sunsin_portrait.png',
       currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [null, null, null, null, null],
+    },
+    {
+      id: 'beethoven', displayName: 'Beethoven-chan', portrait: '/art/beethoven_portrait.png',
+      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [null, null, null, null, null],
+    },
+    {
+      id: 'huang', displayName: 'Huang-chan', portrait: '/art/huang_portrait.png',
+      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
       items: [null, null, null, null, null],
     },
   ];
@@ -628,18 +673,46 @@ export function pickCardRewards(currentDeck: string[], rng: () => number, charac
   return shuffled.slice(0, 3);
 }
 
+/**
+ * Roll an item tier based on encounter type.
+ *
+ * Normal:  Common 55% | Uncommon 33% | Rare 10% | Legendary 2%
+ * Elite:   Common 20% | Uncommon 50% | Rare 25% | Legendary 5%
+ * Boss:    Uncommon 10% | Rare 65% | Legendary 25%
+ */
+export function rollItemTier(
+  encounterType: 'enemy' | 'elite' | 'boss',
+  rng: () => number,
+): 'common' | 'uncommon' | 'rare' | 'legendary' {
+  const r = rng();
+  if (encounterType === 'boss') {
+    if (r < 0.25) return 'legendary';
+    if (r < 0.90) return 'rare';
+    return 'uncommon';
+  }
+  if (encounterType === 'elite') {
+    if (r < 0.05) return 'legendary';
+    if (r < 0.30) return 'rare';
+    if (r < 0.80) return 'uncommon';
+    return 'common';
+  }
+  // normal enemy
+  if (r < 0.02) return 'legendary';
+  if (r < 0.12) return 'rare';
+  if (r < 0.45) return 'uncommon';
+  return 'common';
+}
+
 export function pickItemReward(tier: 'common' | 'uncommon' | 'rare' | 'legendary', rng: () => number, teamCharIds?: string[]): RunItem {
-  const pool = ITEMS.filter(i => {
-    if (tier === 'legendary') return i.tier === 'legendary';
-    if (tier === 'rare') return i.tier === 'rare' || i.tier === 'uncommon';
-    if (tier === 'uncommon') return i.tier === 'uncommon' || i.tier === 'common';
-    return i.tier === 'common';
-  }).filter(i => {
-    // Filter out character-specific items when that character isn't on the team
+  // Strict tier match — character-specific items only if that character is alive on the team
+  const pool = ITEMS.filter(i => i.tier === tier).filter(i => {
     if (!i.targetCharacter || !teamCharIds || teamCharIds.length === 0) return true;
     return teamCharIds.some(id => id.toLowerCase().includes(i.targetCharacter!));
   });
-  // If filtering left us with nothing, fall back to generic items only
-  const safePool = pool.length > 0 ? pool : ITEMS.filter(i => !i.targetCharacter);
-  return pick(safePool, rng);
+  // Fall back: generic items of same tier, then any generic item
+  const safePool = pool.length > 0
+    ? pool
+    : ITEMS.filter(i => i.tier === tier && !i.targetCharacter);
+  const finalPool = safePool.length > 0 ? safePool : ITEMS.filter(i => !i.targetCharacter);
+  return pick(finalPool, rng);
 }

@@ -13,7 +13,7 @@ import CharacterSelection from "@/components/CharacterSelection";
 import UltimateIndicator from "@/components/UltimateIndicator";
 import RoguelikeMap from "@/components/RoguelikeMap";
 import RewardsScreen from "@/components/RewardsScreen";
-import { CampfireScreen, MerchantScreen, TreasureScreen, UnknownScreen, RunDefeatScreen } from "@/components/roguelike/RoomScreens";
+import { CampfireScreen, MerchantScreen, TreasureScreen, UnknownScreen, RunDefeatScreen, RunVictoryScreen } from "@/components/roguelike/RoomScreens";
 import useGameState from "@/hooks/useGameStateNew";
 import { useRunState } from "@/hooks/useRunState";
 import { useAudio } from "@/hooks/useAudio";
@@ -21,20 +21,22 @@ import { Toaster } from "@/components/ui/sonner";
 import CombatLogPanel from "@/ui/CombatLogPanel";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { CharacterId } from "@/types/roguelike";
-import { pickCardRewards } from "@/data/roguelikeData";
+import { pickCardRewards, pickItemReward } from "@/data/roguelikeData";
 import MusicPlayer from "@/components/MusicPlayer";
 import { useAnimations, nextAnimId } from "@/hooks/useAnimations";
 
 const Index = () => {
-  const [gameMode, setGameMode] = useState<'loading' | 'menu' | 'archives' | 'settings' | 'rules' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated'>('loading');
+  const [gameMode, setGameMode] = useState<'loading' | 'menu' | 'archives' | 'settings' | 'rules' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated' | 'runVictory'>('loading');
   const handleLoadingComplete = useCallback(() => setGameMode('menu'), []);
   const [pendingMode, setPendingMode] = useState<'singleplayer' | 'multiplayer'>('singleplayer');
   const [selectedCharacters, setSelectedCharacters] = useState<any[]>([]);
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
   const [prevModeBeforeRules, setPrevModeBeforeRules] = useState<string | null>(null);
   const [hoveredTile, setHoveredTile] = useState<any>(null);
+  const [hoveredCardRange, setHoveredCardRange] = useState<number | null>(null);
+  const [hoveredEnemyAbilityRange, setHoveredEnemyAbilityRange] = useState<{ iconId: string; range: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const { runState, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint } = useRunState();
+  const { runState, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, removeCardFromDeck, addItemToCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility } = useRunState();
   const { gameState, selectTile, endTurn, basicAttack, useAbility, playCard, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, startBattle, resetGame, cancelTargeting } = useGameState(
     (gameMode === 'singleplayer' || gameMode === 'multiplayer') ? gameMode : 'singleplayer',
     selectedCharacters
@@ -46,6 +48,10 @@ const Index = () => {
   const [turnFlash, setTurnFlash] = useState<0 | 1 | null>(null);
   const [showEnemyBanner, setShowEnemyBanner] = useState(false);
   const [hideUI, setHideUI] = useState(false);
+  const [shakeActive, setShakeActive] = useState(false);
+  const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [phaseBanner, setPhaseBanner] = useState<{ enemyName: string; abilityName: string; icon: string } | null>(null);
+  const prevPhaseBannerRef = useRef<string | null>(null);
 
   // ── Animations: detect HP changes + movement between renders ──────────────────
   // iconId → { hp, q, r } snapshot from previous render
@@ -71,6 +77,12 @@ const Index = () => {
             position: icon.position,
             value: dmg,
           });
+          // Screen shake on heavy hits
+          if (dmg >= 20) {
+            if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+            setShakeActive(true);
+            shakeTimerRef.current = setTimeout(() => setShakeActive(false), 200);
+          }
           addAnimation({
             id: nextAnimId('impact'),
             type: 'impact',
@@ -133,6 +145,17 @@ const Index = () => {
     }
     prevActivePlayerRef.current = gameState.activePlayerId;
   }, [gameState.activePlayerId]);
+
+  // ── Boss phase announcement ───────────────────────────────────────────────────
+  const rawPhaseBanner = (gameState as any).phaseBanner as { enemyName: string; abilityName: string; icon: string } | null | undefined;
+  useEffect(() => {
+    if (!rawPhaseBanner) return;
+    const key = `${rawPhaseBanner.enemyName}:${rawPhaseBanner.abilityName}`;
+    if (key === prevPhaseBannerRef.current) return; // already shown this one
+    prevPhaseBannerRef.current = key;
+    setPhaseBanner(rawPhaseBanner);
+    setTimeout(() => setPhaseBanner(null), 2800);
+  }, [rawPhaseBanner]);
 
   // ── Music: start playlist on load; switch to battle track in combat ──────────
   useEffect(() => {
@@ -225,7 +248,7 @@ const Index = () => {
     setActiveNodeId(nodeId);
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
       const mapSeed = runState.seed ^ (runState.battleCount * 31337);
-      startBattle(runState.characters, runState.deckCardIds, node.encounter ?? null, mapSeed, true);
+      startBattle(runState.characters, runState.deckCardIds, node.encounter ?? null, mapSeed, true, runState.battleCount, runState.upgradedCardDefIds);
       setGameMode('singleplayer');
     }
     if (node.type === 'campfire') {
@@ -428,6 +451,7 @@ const Index = () => {
         onSelectNode={handleNodeSelect}
         onAbandonRun={() => { abandonRun(); setGameMode('menu'); }}
         onAllocateStat={allocateStatPoint}
+        onUpgradeAbility={upgradeAbility}
       />
     );
   }
@@ -437,8 +461,10 @@ const Index = () => {
       <RewardsScreen
         runState={runState}
         onCollect={(cardId, equipItems) => {
+          const completedNode = runState.map.find(n => n.id === runState.pendingRewards?.completedNodeId);
+          const isFinalBoss = completedNode?.type === 'boss' && runState.act === 3;
           collectRewards(cardId, equipItems);
-          setGameMode('roguelikeMap');
+          setGameMode(isFinalBoss ? 'runVictory' : 'roguelikeMap');
         }}
       />
     );
@@ -448,7 +474,8 @@ const Index = () => {
     return (
       <CampfireScreen
         runState={runState}
-        onHeal={(charId) => { healAtCampfire(charId); }}
+        onHealAll={() => { healAllAtCampfire(); }}
+        onRemoveCard={(cardId) => { removeCardFromDeck(cardId); }}
         onLeave={() => {
           completeNonCombatNode(activeNodeId!);
           setActiveNodeId(null);
@@ -464,6 +491,31 @@ const Index = () => {
         runState={runState}
         onBuyCard={(cardId, cost) => { buyCardFromMerchant(cardId, cost); }}
         onBuyHeal={(cost) => { buyHealAllFromMerchant(cost); }}
+        onDuplicateItem={(item, characterId, slotIndex, cost) => {
+          spendGold(cost);
+          addItemToCharacter(item, characterId, slotIndex);
+        }}
+        onMysteryBox={(cost) => {
+          spendGold(cost);
+          const roll = Math.random();
+          if (roll < 0.40) {
+            // item — give to first character with an open slot, or slot 0
+            const item = pickItemReward('uncommon', Math.random, runState.characters.map(c => c.id));
+            const target = runState.characters.find(c => c.currentHp > 0 && c.items.some(s => s === null))
+              ?? runState.characters.find(c => c.currentHp > 0);
+            if (target && item) {
+              const slotIdx = target.items.findIndex(s => s === null);
+              addItemToCharacter(item, target.id as CharacterId, slotIdx >= 0 ? slotIdx : 0);
+            }
+            return 'item';
+          } else if (roll < 0.75) {
+            addGold(80);
+            return 'gold';
+          } else {
+            hurtAllCharacters(20);
+            return 'damage';
+          }
+        }}
         onLeave={() => {
           completeNonCombatNode(activeNodeId!);
           setActiveNodeId(null);
@@ -495,21 +547,71 @@ const Index = () => {
         runState={runState}
         onChoice={(result) => {
           const rng = () => Math.random();
+          const charIds = runState.characters.map(c => c.id);
+
+          // Pick a random curse card definitionId
+          const CURSE_IDS = ['curse_burden', 'curse_malaise', 'curse_void_echo', 'curse_dread', 'curse_chains'];
+          const randomCurse = () => CURSE_IDS[(Math.random() * CURSE_IDS.length) | 0];
+
           if (result === 'gold') {
+            // Wounded Clone: help her — lose 20 HP, gain 60 gold
             hurtAllCharacters(20);
             addGold(60);
+          } else if (result === 'heal') {
+            // Altar pray or Abandoned Medkit — restore 30% HP to all
+            healAllAtCampfire();
           } else if (result === 'card') {
-            // Altar: pay 30 HP for a card. Rift: 50/50 card or heavy damage.
-            const eventRoll = rng();
-            if (eventRoll < 0.5) {
-              hurtAllCharacters(30);
-              const [card] = pickCardRewards(runState.deckCardIds, rng, runState.characters.map(c => c.id));
+            // Altar offer (pay 30 HP) or Spectral Merchant (pay 50 gold)
+            hurtAllCharacters(30);
+            const [card] = pickCardRewards(runState.deckCardIds, rng, charIds);
+            if (card) addCardToDeck(card.definitionId);
+          } else if (result === 'card_or_damage') {
+            // Unstable Rift: 50/50 card or 40 damage
+            if (rng() < 0.5) {
+              const [card] = pickCardRewards(runState.deckCardIds, rng, charIds);
               if (card) addCardToDeck(card.definitionId);
             } else {
-              hurtAllCharacters(40); // rift backfired
+              hurtAllCharacters(40);
             }
           } else if (result === 'damage') {
             hurtAllCharacters(40);
+          } else if (result === 'item') {
+            // Supply Crate: guaranteed item
+            const item = pickItemReward('uncommon', rng, charIds);
+            const target = runState.characters.find(c => c.currentHp > 0 && c.items.some(s => s === null))
+              ?? runState.characters.find(c => c.currentHp > 0);
+            if (target && item) {
+              const slotIdx = target.items.findIndex(s => s === null);
+              addItemToCharacter(item, target.id as CharacterId, slotIdx >= 0 ? slotIdx : 0);
+            }
+          } else if (result === 'item_gamble') {
+            // Fallen Cache: 50/50 item or 35 damage
+            if (rng() < 0.50) {
+              const item = pickItemReward('uncommon', rng, charIds);
+              const target = runState.characters.find(c => c.currentHp > 0 && c.items.some(s => s === null))
+                ?? runState.characters.find(c => c.currentHp > 0);
+              if (target && item) {
+                const slotIdx = target.items.findIndex(s => s === null);
+                addItemToCharacter(item, target.id as CharacterId, slotIdx >= 0 ? slotIdx : 0);
+              }
+            } else {
+              hurtAllCharacters(35);
+            }
+          } else if (result === 'curse') {
+            // Experimental Serum: heal 20 HP + curse
+            healAllAtCampfire(); // heals 30% but close enough; we can accept that
+            addCardToDeck(randomCurse());
+          } else if (result === 'gold_curse') {
+            // Toxic Bloom: gain 40 gold + curse
+            addGold(40);
+            addCardToDeck(randomCurse());
+          } else if (result === 'heal_or_damage') {
+            // Reality Fracture: 50/50 heal or damage
+            if (rng() < 0.5) {
+              healAllAtCampfire();
+            } else {
+              hurtAllCharacters(40);
+            }
           }
           completeNonCombatNode(activeNodeId!);
           setActiveNodeId(null);
@@ -528,6 +630,15 @@ const Index = () => {
     );
   }
 
+  if (gameMode === 'runVictory' && runState) {
+    return (
+      <RunVictoryScreen
+        runState={runState}
+        onBackToMenu={() => { abandonRun(); setGameMode('menu'); }}
+      />
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <ArenaBackground />
@@ -535,12 +646,19 @@ const Index = () => {
       {!hideUI && <MusicPlayer />}
 
       {/* Full-screen game board */}
-      <GameBoard
-        gameState={gameState}
-        onTileClick={handleSelectTile}
-        onTileHover={setHoveredTile}
-        animations={animations}
-      />
+      <div
+        className="absolute inset-0"
+        style={shakeActive ? { animation: 'screen-shake 0.18s ease-out' } : undefined}
+      >
+        <GameBoard
+          gameState={gameState}
+          onTileClick={handleSelectTile}
+          onTileHover={setHoveredTile}
+          animations={animations}
+          hoverPreviewRange={hoveredCardRange}
+          externalIntentRange={hoveredEnemyAbilityRange}
+        />
+      </div>
 
       {/* Turn transition flash */}
       {turnFlash !== null && (
@@ -577,6 +695,47 @@ const Index = () => {
         </div>
       )}
 
+      {/* Boss Phase Announcement Banner */}
+      {phaseBanner && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(60,0,80,0.95) 0%, rgba(120,0,40,0.95) 100%)',
+            border: '2px solid rgba(220,80,255,0.75)',
+            borderRadius: '12px',
+            padding: '22px 48px',
+            textAlign: 'center',
+            boxShadow: '0 0 60px rgba(200,0,255,0.55), 0 0 120px rgba(180,0,60,0.30), inset 0 1px 0 rgba(255,200,255,0.15)',
+            animation: 'anim-phase-banner 2.8s ease-in-out forwards',
+          }}>
+            <div style={{
+              fontSize: '0.75rem',
+              letterSpacing: '0.32em',
+              textTransform: 'uppercase',
+              color: 'rgba(220,150,255,0.85)',
+              marginBottom: '6px',
+            }}>PHASE SHIFT</div>
+            <div style={{
+              fontSize: '1.6rem',
+              fontWeight: 900,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: '#ffffff',
+              textShadow: '0 0 24px rgba(240,100,255,0.9), 0 0 8px rgba(255,80,80,0.7)',
+              lineHeight: 1.1,
+            }}>{phaseBanner.icon} {phaseBanner.enemyName}</div>
+            <div style={{
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,160,100,0.95)',
+              textShadow: '0 0 14px rgba(255,100,50,0.8)',
+              marginTop: '8px',
+            }}>{phaseBanner.abilityName}</div>
+          </div>
+        </div>
+      )}
+
       {/* UI Overlays */}
       {!hideUI && (
         <div className="absolute inset-0 pointer-events-none">
@@ -589,6 +748,8 @@ const Index = () => {
             hoveredTile={hoveredTile}
             currentTurnTimer={currentTurnTimer}
             onToggleHideUI={() => setHideUI(prev => !prev)}
+            onCardHoverRange={setHoveredCardRange}
+            onEnemyAbilityHoverRange={setHoveredEnemyAbilityRange}
             runItemsByCharacter={runState ? Object.fromEntries(
               runState.characters.map(c => [c.id, c.items.filter(Boolean).map(item => ({ icon: item!.icon, name: item!.name, description: item!.description }))])
             ) : undefined}

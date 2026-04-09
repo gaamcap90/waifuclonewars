@@ -50,7 +50,6 @@ export default function HexTile({
     river:        "/art/tiles/River_180.png",
     plain:        "/art/tiles/Plains_180.png",
     mana_crystal: "/art/tiles/Mana_Crystal_180.png",
-    beast_camp:   "/art/tiles/Beast_Camp_180.png",
     base_blue:    "/art/tiles/Blue_Base_180.png",
     base_red:     "/art/tiles/Red_Base_180.png",
     spawn_blue:   "/art/tiles/Spawn_Blue_180.png",
@@ -64,7 +63,7 @@ export default function HexTile({
   // 2.5D elevation height per terrain
   const elevMap: Record<string, number> = {
     mountain: 4, forest: 3, base_blue: 3, base_red: 3,
-    mana_crystal: 3, beast_camp: 2, plain: 2,
+    mana_crystal: 3, plain: 2,
     spawn_blue: 2, spawn_red: 2, river: 0,
   };
   const elev = elevMap[key] ?? 4;
@@ -74,7 +73,6 @@ export default function HexTile({
     base_blue:    "rgba(15,25,80,0.92)",
     base_red:     "rgba(80,12,12,0.92)",
     mana_crystal: "rgba(42,12,72,0.92)",
-    beast_camp:   "rgba(58,32,8,0.92)",
     plain:        "rgba(42,35,22,0.88)",
     spawn_blue:   "rgba(12,18,58,0.88)",
     spawn_red:    "rgba(58,12,12,0.88)",

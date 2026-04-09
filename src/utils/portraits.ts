@@ -7,6 +7,16 @@ const HERO_PORTRAITS: Array<[string, string]> = [
   ["Da Vinci",    "/art/davinci_portrait.png"],
   ["Leonidas",    "/art/leonidas_portrait.png"],
   ["Sun-sin",     "/art/sunsin_portrait.png"],
+  ["Beethoven",   "/art/beethoven_portrait.png"],
+  ["Huang",       "/art/huang_portrait.png"],
+];
+
+// Summoned unit portraits
+const SUMMON_PORTRAITS: Array<[string, string]> = [
+  ["Terracotta Cavalry",  "/art/terracotta_cavalry_portrait.png"],
+  ["Terracotta Archer",   "/art/terracotta_archer_portrait.png"],
+  ["Terracotta Warrior",  "/art/terracotta_warrior_portrait.png"],
+  ["Combat Drone",        "/art/vitruvian_guardian_portrait.png"],
 ];
 
 // Enemy portraits — drop PNGs into public/art/enemies/ and they auto-appear
@@ -31,6 +41,9 @@ const ENEMY_PORTRAITS: Array<[string, string]> = [
 
 export function getCharacterPortrait(name: string | undefined | null): string | null {
   if (!name) return null;
+  for (const [key, path] of SUMMON_PORTRAITS) {
+    if (name.includes(key)) return path;
+  }
   for (const [key, path] of HERO_PORTRAITS) {
     if (name.includes(key)) return path;
   }

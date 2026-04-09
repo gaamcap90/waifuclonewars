@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck, AIIntent, Debuff } from "@/types/game";
+import { GameState, Coordinates, Icon, HexTile, TerrainType, Card, Hand, Deck, AIIntent, Debuff, Zone } from "@/types/game";
 import type { CharacterRunState, EncounterDef, FightObjective, EnemyAbilityDef } from "@/types/roguelike";
-import { buildDeckForTeam, drawCards, buildDeckFromIds } from "@/data/cards";
+import { buildDeckForTeam, drawCards, buildDeckFromIds, CARD_DEFS, instantiateCard } from "@/data/cards";
 import { toast } from "sonner";
 import { getT } from "@/i18n";
 import { seededRng as rngFromSeed } from "@/utils/rng";
@@ -196,19 +196,12 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
     (q >= 4 && q <= 6 && r >= -5 && r <= -3)
   )
     return { type: "spawn", effects: {} };
-  // Beast camps — top-center and bottom-center
-  if ((q === 0 && r === -4) || (q === 0 && r === 4))
-    return { type: "beast_camp", effects: {} };
-
-  // Mountain clusters distributed across the map (not a solid border ring)
+  // Mountains — pushed to flanks and outer edges (distance ≥ 4 from center)
   const mtn = new Set([
-    // Interior blind spots
-    '-2,-3','-1,-3','2,3','1,3',
-    // Flank blockers
+    // Near-center boulders for variety (distance 4)
+    '-1,-3','1,3',
+    // Flank clusters (distance 4)
     '-4,2','-4,3','4,-2','4,-3',
-    // Center-flank pair
-    '-3,-1','-3,-2','3,1','3,2',
-    // Outer flank
     '-5,1','-5,2','5,-1','5,-2',
     // Top/bottom edge caps
     '0,-6','-1,-6','1,-6','0,6','1,6','-1,6',
@@ -216,11 +209,9 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
     '-6,2','-6,3','6,-2','6,-3',
     // Diagonal edge corners
     '2,-5','3,-5','-2,5','-3,5',
-    // Far-left edge
-    '-7,2','-7,3','-7,4',
-    // Far-right edge
-    '7,-2','7,-3','7,-4',
-    // Extra interior scatter
+    // Far edges
+    '-7,2','-7,3','-7,4','7,-2','7,-3','7,-4',
+    // Scatter (distance 5+)
     '-5,-1','5,1',
     '-1,-5','1,5',
     '-4,-1','4,1',
@@ -229,24 +220,26 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (mtn.has(key))
     return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
 
-  // River segments in four connected chunks
+  // Rivers — middle ring (distance 3) + 2 scenic center tiles
+  // Removed (2,-2),(2,-1),(-2,2),(-2,1) — distance-2 tiles that blocked main center corridors
   const river = new Set([
-    '1,-3','2,-2','2,-1','3,-2',   // top-right chunk
-    '-1,3','-2,2','-2,1','-3,2',  // bottom-left chunk
-    '-1,-2','-2,-1',               // upper-left trickle
-    '1,2','2,1',                   // lower-right trickle
+    '1,-3','3,-2',          // right-side (distance 3)
+    '-1,3','-3,2',          // left-side (distance 3)
+    '-1,-2','-2,-1',        // upper-left trickle (distance 3)
+    '1,2','2,1',            // lower-right trickle (distance 3)
+    '0,-2','0,2',           // scenic water above/below crystal (non-blocking)
   ]);
   if (river.has(key))
     return { type: "river", effects: { movementModifier: -999 } as any };
 
-  // Forest in six connected clusters
+  // Forest — traversable cover throughout center
   const forest = new Set([
-    '-4,0','-3,0','-4,1','-3,1','-5,0','-5,1', // left-center cluster (larger)
-    '4,0','3,0','4,-1','3,-1','5,0','5,-1',      // right-center cluster (larger)
-    '-1,-1','0,-2','-1,-2','-2,-2',               // upper-center patch
-    '1,1','0,2','1,2','2,2',                      // lower-center patch
-    '-1,1','-2,1',                                // left of mana crystal
-    '1,-1','2,-1',                                // right of mana crystal
+    '-4,0','-3,0','-4,1','-3,1','-5,0','-5,1', // left-center cluster
+    '4,0','3,0','4,-1','3,-1','5,0','5,-1',      // right-center cluster
+    '-1,-1','-1,-2','-2,-2',                      // upper-center patch
+    '1,1','1,2','2,2',                            // lower-center patch
+    '-1,1','-2,1','-2,0',                         // left of crystal
+    '1,-1','2,-1','2,0',                          // right of crystal
   ]);
   if (forest.has(key))
     return { type: "forest", effects: { dodgeBonus: true, stealthBonus: true } };
@@ -279,9 +272,6 @@ function getRandomTerrainForPosition(q: number, r: number, forestSet: Set<string
   if ((q === -6 && r === 5) || (q === 6 && r === -5)) return { type: "base", effects: { movementModifier: -999 } };
   if ((q >= -6 && q <= -4 && r >= 3 && r <= 5) || (q >= 4 && q <= 6 && r >= -5 && r <= -3))
     return { type: "spawn", effects: {} };
-  // Beast camps fixed at top-center and bottom-center
-  if ((q === 0 && r === -4) || (q === 0 && r === 4))
-    return { type: "beast_camp", effects: {} };
   if (mountainSet.has(key)) return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
   if (riverSet.has(key)) return { type: "river", effects: { movementModifier: -999 } as any };
   if (forestSet.has(key)) return { type: "forest", effects: { dodgeBonus: true, stealthBonus: true } };
@@ -302,10 +292,11 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
     {q:-3,r:0},{q:3,r:0},{q:0,r:3},{q:0,r:-3},
   ];
   const RIVER_OPTIONS: {q:number,r:number}[][] = [
-    [{q:-2,r:1},{q:-1,r:1}],[{q:-1,r:-1},{q:0,r:-1},{q:1,r:-1}],
+    // Replaced center-zone river options (distance ≤ 2) with distance-3+ options
     [{q:2,r:-3},{q:1,r:-3}],[{q:-2,r:3},{q:-1,r:3}],
-    [{q:-2,r:-1},{q:-1,r:-1}],[{q:1,r:2},{q:0,r:2}],
-    [{q:3,r:-2},{q:2,r:-2}],[{q:-3,r:2},{q:-2,r:2}],
+    [{q:3,r:-3},{q:3,r:-2}],[{q:-3,r:3},{q:-3,r:2}],
+    [{q:-2,r:-1},{q:-3,r:-1}],[{q:2,r:1},{q:3,r:1}],
+    [{q:-1,r:-2},{q:0,r:-3}],[{q:1,r:2},{q:0,r:3}],
   ];
 
   const numClusters = 6 + Math.floor(rng() * 4); // 6–9 forest clusters
@@ -316,8 +307,7 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
     const pat = FOREST_PATTERNS[Math.floor(rng() * FOREST_PATTERNS.length)];
     for (const [dq, dr] of pat) {
       const fq = a.q + dq, fr = a.r + dr;
-      // Don't place forest on beast camp tiles
-      if (!((fq === 0 && fr === -4) || (fq === 0 && fr === 4))) forestSet.add(`${fq},${fr}`);
+      forestSet.add(`${fq},${fr}`);
     }
   }
 
@@ -328,12 +318,13 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
     for (const pos of shuffledRivers[rv]) riverSet.add(`${pos.q},${pos.r}`);
   }
 
-  // Internal mountain clusters (2–3 small rock formations mid-field)
+  // Mountain clusters — pushed to flanks (distance ≥ 4 from center)
   const MOUNTAIN_ANCHORS: {q:number,r:number}[] = [
-    {q:3,r:-1},{q:-3,r:1},{q:2,r:2},{q:-2,r:-2},
-    {q:3,r:-3},{q:-3,r:3},{q:1,r:-4},{q:-1,r:4},
-    {q:-1,r:-2},{q:1,r:2},{q:3,r:0},{q:-3,r:0},
-    {q:2,r:-3},{q:-2,r:3},{q:0,r:3},{q:0,r:-3},
+    {q:4,r:-1},{q:-4,r:1},{q:4,r:-2},{q:-4,r:2},
+    {q:2,r:2},{q:-2,r:-2},{q:2,r:-4},{q:-2,r:4},
+    {q:4,r:-3},{q:-4,r:3},{q:5,r:-2},{q:-5,r:2},
+    {q:3,r:-4},{q:-3,r:4},{q:1,r:-4},{q:-1,r:4},
+    {q:0,r:-4},{q:0,r:4},
   ];
   const MOUNTAIN_PATTERNS: [number,number][][] = [
     [[0,0]],                     // single boulder
@@ -350,12 +341,11 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
     const pat = MOUNTAIN_PATTERNS[Math.floor(rng() * MOUNTAIN_PATTERNS.length)];
     for (const [dq, dr] of pat) {
       const hq = a.q + dq, hr = a.r + dr;
-      // Don't place on crystal, bases, spawn zones, or beast camps
+      // Don't place on crystal, bases, or spawn zones
       const onCrystal = hq === 0 && hr === 0;
       const onBase = (hq === -6 && hr === 5) || (hq === 6 && hr === -5);
       const onSpawn = (hq >= -6 && hq <= -4 && hr >= 3 && hr <= 5) || (hq >= 4 && hq <= 6 && hr >= -5 && hr <= -3);
-      const onBeastCamp = (hq === 0 && hr === -4) || (hq === 0 && hr === 4);
-      if (!onCrystal && !onBase && !onSpawn && !onBeastCamp) mountainSet.add(`${hq},${hr}`);
+      if (!onCrystal && !onBase && !onSpawn) mountainSet.add(`${hq},${hr}`);
     }
   }
 
@@ -372,7 +362,7 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
 
 // ── Enemy icon builder from encounter ────────────────────────────────────────
 
-function buildEnemyIconsFromEncounter(encounter: EncounterDef): Icon[] {
+function buildEnemyIconsFromEncounter(encounter: EncounterDef, scaleFactor = 1.0): Icon[] {
   const p2Spawns = [
     { q: 4, r: -3 }, { q: 5, r: -3 }, { q: 4, r: -4 },
     { q: 5, r: -4 }, { q: 6, r: -3 }, { q: 6, r: -4 },
@@ -388,15 +378,16 @@ function buildEnemyIconsFromEncounter(encounter: EncounterDef): Icon[] {
     for (let c = 0; c < template.count && spawnIdx < p2Spawns.length; c++, spawnIdx++) {
       nameIdx[template.name] = (nameIdx[template.name] ?? 0);
       const label = nameCount[template.name] > 1 ? ` ${String.fromCharCode(65 + nameIdx[template.name]++)}` : '';
+      const sc = (v: number) => Math.round(v * scaleFactor);
       icons.push({
         id: `1-${template.id}-${spawnIdx}`,
         name: `${template.name}${label}`,
         role: template.ai === 'ranged' ? 'dps_ranged' : template.ai === 'defensive' ? 'tank' : 'dps_melee',
         stats: {
-          hp: template.stats.hp, maxHp: template.stats.maxHp,
+          hp: sc(template.stats.hp), maxHp: sc(template.stats.maxHp),
           moveRange: template.stats.moveRange, speed: 6,
-          might: template.stats.might, power: template.stats.power,
-          defense: template.stats.defense,
+          might: sc(template.stats.might), power: sc(template.stats.power),
+          defense: sc(template.stats.defense),
           movement: template.stats.moveRange,
           mana: 0, maxMana: 0,
         },
@@ -424,9 +415,9 @@ const createInitialIcons = (): Icon[] => {
       role: "dps_ranged" as const,
       stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 70, power: 60, defense: 15, movement: 2 },
       abilities: [
-        { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 0 },
-        { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
-        { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 0 },
+        { id: "1", name: "Artillery Barrage", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 0 },
+        { id: "2", name: "Grande Armée", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
+        { id: "ultimate", name: "Final Salvo", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 0 },
       ],
       passive: "Tactical Genius: +1 movement range when commanding from high ground",
     },
@@ -435,9 +426,9 @@ const createInitialIcons = (): Icon[] => {
       role: "dps_melee" as const,
       stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 40, defense: 25, movement: 2 },
       abilities: [
-        { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack through enemies. Deals 48 damage.", damage: 0 },
-        { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 1, description: "Teleport behind target. Deals 60 damage + fear effect.", damage: 0 },
-        { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Charge through up to 3 enemies, dealing 24 damage each", damage: 0 },
+        { id: "1", name: "Mongol Charge", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "48 damage at range 3 + Bleed (16 HP/turn, 2 turns).", damage: 0, powerMult: 1.2, bleedMult: 0.4 },
+        { id: "2", name: "Horde Tactics", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "20 dmg per enemy × enemy count to ALL in range 2.", damage: 0, scalingAoE: true, perEnemyMult: 0.5 },
+        { id: "ultimate", name: "Rider's Fury", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: 40 damage on a line. Doubled if target <50% HP.", damage: 0, powerMult: 1.0, executeDouble: true },
       ],
       passive: "Conqueror's Fury: +15% damage for each enemy defeated this match",
     },
@@ -449,7 +440,7 @@ const createInitialIcons = (): Icon[] => {
         {
           id: "1",
           name: "Flying Machine",
-          manaCost: 4,
+          manaCost: 2,
           cooldown: 0,
           currentCooldown: 0,
           range: 4,
@@ -457,16 +448,27 @@ const createInitialIcons = (): Icon[] => {
           damage: 0,
           targetMode: "hex" as any, // NEW: hex-target ability
         },
-        { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals 45 HP + shields allies from next attack.", healing: 45 },
-        { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons a 2-turn drone that auto-attacks nearby enemies", damage: 0 },
+        { id: "2", name: "Masterpiece", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Heals 45 HP + shields allies from next attack.", healing: 45 },
+        { id: "ultimate", name: "Vitruvian Guardian", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons a 2-turn drone that auto-attacks nearby enemies", damage: 0 },
       ],
       passive: "Renaissance Mind: Gains +1 mana when casting spells near mana crystals",
+    },
+    {
+      name: "Huang-chan",
+      role: "controller" as const,
+      stats: { hp: 90, maxHp: 90, moveRange: 2, speed: 5, might: 30, power: 55, defense: 25, movement: 2 },
+      abilities: [
+        { id: "1", name: "Terracotta Legion", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Summon a random Terracotta Warrior (Archer: range 2 — or Melee: range 1) on a target hex. Lasts 2 turns.", damage: 0, summonTerracotta: true },
+        { id: "2", name: "First Emperor's Command", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Summon a Terracotta Cavalry (scales with your stats) adjacent to you. Lasts 2 turns. Gain free Cavalry Charge card in hand.", damage: 0, summonCavalry: true },
+        { id: "ultimate", name: "Eternal Army", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Control a non-boss enemy for 2 turns.", damage: 0, controlEnemy: true, controlDuration: 2 },
+      ],
+      passive: "Imperial Command: Cannot play Basic Attack cards. Guaranteed 1 Basic Attack card drawn each turn (for Terracotta units). Terracotta units may only use Basic Attacks.",
     },
   ];
 
   const icons: Icon[] = [];
-  const p1 = [{ q: -4, r: 3 }, { q: -5, r: 3 }, { q: -4, r: 4 }];
-  const p2 = [{ q: 4, r: -3 }, { q: 5, r: -3 }, { q: 4, r: -4 }];
+  const p1 = [{ q: -4, r: 3 }, { q: -5, r: 3 }, { q: -4, r: 4 }, { q: -5, r: 4 }];
+  const p2 = [{ q: 4, r: -3 }, { q: 5, r: -3 }, { q: 4, r: -4 }, { q: 5, r: -4 }];
 
   for (let pid = 0; pid < 2; pid++) {
     iconTemplates.forEach((t, i) => {
@@ -507,6 +509,7 @@ type ExtState = GameState & {
   spawnInterval: number;        // 0 if not onslaught
   isRoguelikeRun: boolean;
   arenaEvent?: import('@/types/game').ArenaEventDef | null;
+  phaseBanner?: { enemyName: string; abilityName: string; icon: string } | null;
 };
 
 /** Remove `card` from `playerId`'s hand and put it in discard (no mid-turn replacement draw). */
@@ -558,7 +561,7 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       .filter((t): t is string => !!t) ?? [];
     // move_plus_1: add +1 to base movement range
     const movePlusOne = itemPassiveTags.includes('move_plus_1') ? 1 : 0;
-    const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 35 : 15;
+    const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 35 : template.role === "controller" ? 25 : 15;
     const maxHpWithItems = (runChar ? runChar.maxHp : template.stats.hp) + itemBonus.hp;
     // If character was at full HP before the item, scale up currentHp too (item heals to new max)
     const baseHp = runChar
@@ -573,12 +576,12 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       stats: {
         hp:        baseHp,
         maxHp:     maxHp,
-        moveRange: (template.role === "tank" ? 2 : 3) + movePlusOne,
+        moveRange: (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne,
         speed:     template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : template.role === "tank" ? 3 : 4,
         might:     template.stats.might + (statBonus.might ?? 0) + itemBonus.might,
         power:     (template.stats.power ?? 50) + (statBonus.power ?? 0) + itemBonus.power,
         defense:   baseDefense + (statBonus.defense ?? 0) + itemBonus.defense,
-        movement:  (template.role === "tank" ? 2 : 3) + movePlusOne,
+        movement:  (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne,
         mana: 3,
         maxMana: 3,
       },
@@ -611,33 +614,43 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
 
 function getAbilitiesForCharacter(name: string) {
   if (name.includes("Napoleon")) return [
-    { id: "1", name: "Artillery Barrage", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Power×1.4 damage.", damage: 0, powerMult: 1.4 },
-    { id: "2", name: "Grande Armée", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 2, description: "+20% Might & Power to all allies for 2 turns.", damage: 0 },
-    { id: "ultimate", name: "Final Salvo", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 4, description: "ULTIMATE: 3 hits of Power×0.7 on random enemies", damage: 0, powerMult: 0.7 },
+    { id: "1", name: "Artillery Barrage", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Power×1.4 damage.", damage: 0, powerMult: 1.4 },
+    { id: "2", name: "Grande Armée", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "+20% Might & Power to all allies for 2 turns.", damage: 0 },
+    { id: "ultimate", name: "Final Salvo", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 4, description: "ULTIMATE: 3 hits of Power×0.7 on random enemies", damage: 0, powerMult: 0.7 },
   ];
   if (name.includes("Genghis")) return [
-    { id: "1", name: "Mongol Charge", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack. Power×1.2 damage.", damage: 0, powerMult: 1.2 },
-    { id: "2", name: "Horde Tactics", manaCost: 5, cooldown: 0, currentCooldown: 0, range: 2, description: "Power×0.8 damage to ALL enemies in range 2.", damage: 0, powerMult: 0.8 },
-    { id: "ultimate", name: "Rider's Fury", manaCost: 7, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Power×0.7 to all enemies on a line", damage: 0, powerMult: 0.7 },
+    { id: "1", name: "Mongol Charge", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack. Power×1.2 damage + Bleed (Power×0.4/turn, 2 turns).", damage: 0, powerMult: 1.2, bleedMult: 0.4 },
+    { id: "2", name: "Horde Tactics", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Power×0.5 per enemy in range 2 to ALL enemies in range 2.", damage: 0, scalingAoE: true, perEnemyMult: 0.5 },
+    { id: "ultimate", name: "Rider's Fury", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Power×1 to all enemies in a line. Doubled if target <50% HP.", damage: 0, powerMult: 1.0, executeDouble: true },
   ];
   if (name.includes("Da Vinci")) return [
-    { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 5, description: "Teleport to any hex.", damage: 0, targetMode: "hex" as any },
-    { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 3, description: "Heals 45 HP to an ally.", healing: 45 },
-    { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons attack drone", damage: 0 },
+    { id: "1", name: "Flying Machine", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 999, description: "Teleport to any hex (unlimited range).", damage: 0, targetMode: "hex" as any },
+    { id: "2", name: "Masterpiece", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Heals 45 HP to an ally.", healing: 45 },
+    { id: "ultimate", name: "Vitruvian Guardian", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons attack drone", damage: 0 },
   ];
   if (name.includes("Leonidas")) return [
-    { id: "1", name: "Shield Bash", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Power×1.5 damage + Armor Break.", damage: 0, powerMult: 1.5 },
-    { id: "2", name: "Spartan Wall", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 2, description: "+20 Defense to all nearby allies.", damage: 0, teamDefBuff: 20 },
-    { id: "ultimate", name: "THIS IS SPARTA!", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×3 damage + Demoralize nearby.", damage: 0, powerMult: 3.0 },
+    { id: "1", name: "Shield Bash", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "Power×1.5 damage + Armor Break.", damage: 0, powerMult: 1.5 },
+    { id: "2", name: "Spartan Wall", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "+20 Defense to all nearby allies.", damage: 0, teamDefBuff: 20 },
+    { id: "ultimate", name: "THIS IS SPARTA!", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×2 damage + Demoralize nearby.", damage: 0, powerMult: 2.0 },
+  ];
+  if (name.includes("Beethoven")) return [
+    { id: "1", name: "Schallwelle",  manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Sonic wave — Power×0.5 dmg on a line, pushes each enemy 2 tiles back.", damage: 0, powerMult: 0.5 },
+    { id: "2", name: "Freudenspur", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Place resonance zone (7 tiles). Allies on zone gain +2 Movement at turn start. Lasts 2 turns.", damage: 0 },
+    { id: "ultimate", name: "Götterfunken", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Stun all enemies within range 3 for 1 turn.", damage: 0 },
   ];
   if (name.includes("Sun-sin")) return [
     { id: "1", name: "Hwajeon / Ramming Speed", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Land: Power×1.2 at range 3, Poison. Water: Might×2.0 range 1.", damage: 0, powerMult: 1.2 },
     { id: "2", name: "Naval Command / Broadside", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "Land: +15% Might/Power to all allies. Water: Power×0.7 AoE range 3.", damage: 0 },
-    { id: "ultimate", name: "Chongtong Barrage", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Land: charge 3 hexes. Water: Power×2.5 target + Power×1.2 adjacents.", damage: 0, powerMult: 2.5 },
+    { id: "ultimate", name: "Chongtong Barrage", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Land: charge 3 hexes. Water: Power×2.5 target + Power×1.2 adjacents.", damage: 0, powerMult: 2.5 },
+  ];
+  if (name.includes("Huang")) return [
+    { id: "1", name: "Terracotta Legion", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Summon Terracotta Archer (Might×1.5, Def×1) or Warrior (Might×1, Def×1) on target hex. HP 40, Power 0. Lasts 1 turn.", damage: 0, summonTerracotta: true },
+    { id: "2", name: "First Emperor's Command", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Summon Terracotta Cavalry (Might×1.5, Def×1.5, Power×1) adjacent to you. HP 60, Move 3. Lasts 2 turns. Gain free Cavalry Charge.", damage: 0, summonCavalry: true },
+    { id: "ultimate", name: "Eternal Army", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Control a non-boss enemy for 2 turns.", damage: 0, controlEnemy: true, controlDuration: 2 },
   ];
   // fallback (shouldn't be reached)
   return [
-    { id: "1", name: "Flying Machine", manaCost: 4, cooldown: 0, currentCooldown: 0, range: 5, description: "Teleport to any hex.", damage: 0, targetMode: "hex" as any },
+    { id: "1", name: "Flying Machine", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 999, description: "Teleport to any hex (unlimited range).", damage: 0, targetMode: "hex" as any },
     { id: "2", name: "Masterpiece", manaCost: 6, cooldown: 0, currentCooldown: 0, range: 3, description: "Heals 45 HP to an ally.", healing: 45 },
     { id: "ultimate", name: "Vitruvian Guardian", manaCost: 8, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons attack drone", damage: 0 },
   ];
@@ -649,6 +662,8 @@ function getPassiveForCharacter(name: string) {
   if (name.includes("Da Vinci")) return "Tinkerer: Draw +1 card at turn start if no exclusive ability was used last turn";
   if (name.includes("Leonidas")) return "Phalanx: Each turn adjacent to an ally, gain +8 Defense (stacks up to 3 turns)";
   if (name.includes("Sun-sin")) return "Turtle Ship: Can enter water tiles. On water: +40% Might, +30% DEF, −40% Power, Move 1, Range 3";
+  if (name.includes("Beethoven")) return "Taubheit: Cannot be pushed or displaced while playing an ability card";
+  if (name.includes("Huang"))    return "Imperial Command: Cannot play Basic Attack cards. Guaranteed at least 1 Basic Attack card is drawn each turn (for Terracotta units to use). Terracotta units may only use Basic Attack cards.";
   return "";
 }
 
@@ -807,8 +822,12 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
       abilitiesUsed++;
     } else if (effect.type === 'aoe_damage') {
       const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
-      const targets = playerIcons().filter(e => hexDistance(currentAi.position, e.position) <= (effect.range ?? 2));
-      if (!targets.length) continue;
+      const inRange = playerIcons().filter(e => hexDistance(currentAi.position, e.position) <= (effect.range ?? 2));
+      if (!inRange.length) continue;
+      // singleTarget: only hit the nearest enemy (Champion's Strike)
+      const targets = (effect as any).singleTarget
+        ? [inRange.sort((a, b) => hexDistance(currentAi.position, a.position) - hexDistance(currentAi.position, b.position))[0]]
+        : inRange;
       const dmg = effect.damage ?? Math.round(calcEffectiveStats(s, currentAi).might * (effect.multiplier ?? 1.0));
       for (const t of targets) {
         const newHp = Math.round(Math.max(0, t.stats.hp - dmg));
@@ -950,6 +969,10 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
         }),
       })),
     };
+    // Phase announcement: once-per-fight low_hp triggers = boss phase change
+    if (ab.oncePerFight && ab.triggerCondition === 'low_hp') {
+      s = { ...s, phaseBanner: { enemyName: ai.name, abilityName: ab.name, icon: ab.icon } };
+    }
   }
 
   return s;
@@ -1108,6 +1131,56 @@ function executeAITurn(state: ExtState): ExtState {
     }
   }
 
+  // ── Controlled enemy units (Huang-chan Eternal Army): simple AI ──────────────
+  // These units now have playerId === 0 but terracottaControlled === true.
+  // They act during the AI turn: move toward + attack nearest enemy (player 1 unit).
+  for (const ctrlUnit of s.players[0].icons.filter(ic => ic.isAlive && ic.terracottaControlled)) {
+    const attackRange = ctrlUnit.role === "dps_ranged" ? 2 : 1;
+    const enemiesForCtrl = s.players[1].icons.filter(ic => ic.isAlive);
+    if (!enemiesForCtrl.length) continue;
+
+    // Move toward nearest enemy
+    if (!ctrlUnit.movedThisTurn && ctrlUnit.stats.movement > 0) {
+      const budget = Math.min(ctrlUnit.stats.movement, ctrlUnit.stats.moveRange);
+      const ctrlOccupied = new Set(s.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.id !== ctrlUnit.id).map(ic => tileKey(ic.position.q, ic.position.r)));
+      const ctrlCosts = reachableWithCosts(s.board, ctrlUnit.position, budget, ctrlOccupied, false);
+      if (ctrlCosts.size) {
+        let ctrlBest: { coord: Coordinates; score: number } | null = null;
+        for (const [key] of ctrlCosts.entries()) {
+          const [qStr, rStr] = key.split(",");
+          const cand: Coordinates = { q: parseInt(qStr, 10), r: parseInt(rStr, 10) };
+          const minD = Math.min(...enemiesForCtrl.map(e => hexDistance(cand, e.position)));
+          if (!ctrlBest || minD < ctrlBest.score) ctrlBest = { coord: cand, score: minD };
+        }
+        if (ctrlBest) {
+          const destTaken = s.players.flatMap(p => p.icons).some(ic => ic.isAlive && ic.id !== ctrlUnit.id && ic.position.q === ctrlBest!.coord.q && ic.position.r === ctrlBest!.coord.r);
+          if (!destTaken) {
+            s.players = s.players.map(p => ({
+              ...p, icons: p.icons.map(ic => ic.id === ctrlUnit.id ? { ...ic, position: ctrlBest!.coord, movedThisTurn: true, stats: { ...ic.stats, movement: 0 } } : ic),
+            }));
+          }
+        }
+      }
+    }
+
+    // Attack nearest enemy if in range
+    const refreshed = s.players[0].icons.find(ic => ic.id === ctrlUnit.id);
+    if (refreshed && !refreshed.cardUsedThisTurn) {
+      const ctrlTarget = enemiesForCtrl.find(e => hexDistance(refreshed.position, e.position) <= attackRange);
+      if (ctrlTarget) {
+        const ctrlStats = calcEffectiveStats(s, refreshed);
+        const tgtStats = calcEffectiveStats(s, ctrlTarget);
+        const ctrlDmg = Math.max(1, ctrlStats.might - tgtStats.defense);
+        const newHp = Math.round(Math.max(0, ctrlTarget.stats.hp - ctrlDmg));
+        s.players = s.players.map(p => ({
+          ...p, icons: p.icons.map(ic => ic.id !== ctrlTarget.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 }),
+        }));
+        s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === refreshed.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
+        pushLog(s, `[Controlled] ${refreshed.name} attacked ${ctrlTarget.name} for ${ctrlDmg.toFixed(0)} dmg`, 0);
+      }
+    }
+  }
+
   return { ...s, aiIntents: [] };
 }
 
@@ -1197,6 +1270,10 @@ function applyDmgToIcon(ic: Icon, dmg: number, s: ExtState, logFn?: (msg: string
   if (dmg > 0 && !ic.firstHitNegated && ic.itemPassiveTags?.includes('negate_first_hit')) {
     if (logFn) logFn(`${ic.name} Diamond Shell: first hit negated!`);
     return { ...ic, firstHitNegated: true };
+  }
+  // Turtle Hull: Yi Sun-sin takes 20% less damage from all sources
+  if (dmg > 0 && ic.itemPassiveTags?.includes('sunsin_dmg_reduce_20pct')) {
+    dmg = Math.floor(dmg * 0.80);
   }
   const rawHp = Math.max(0, ic.stats.hp - dmg);
   // Void Armor: once per fight, survive a lethal hit at 1 HP
@@ -1365,14 +1442,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     // Compute and store AI intents + beast camp intents
     setGameState((prev) => {
       const intents = computeAIIntents(prev as ExtState);
-      // Beast camp intents — each active camp shows attack intention
-      const campDefs = [{ q: 0, r: -4 }, { q: 0, r: 4 }];
-      const beastCampIntents: { campQ: number; campR: number; range1Dmg: number; range2Dmg: number }[] = [];
-      for (let campIdx = 0; campIdx < campDefs.length; campIdx++) {
-        if ((prev.objectives as any)?.beastCamps?.defeated?.[campIdx]) continue;
-        beastCampIntents.push({ campQ: campDefs[campIdx].q, campR: campDefs[campIdx].r, range1Dmg: 50, range2Dmg: 30 });
-      }
-      return { ...prev, aiIntents: intents, beastCampIntents };
+      return { ...prev, aiIntents: intents };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.activePlayerId, gameState.gameMode]);
@@ -1399,6 +1469,33 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.activePlayerId, gameState.gameMode]);
+
+  /* =========================
+     Immediate victory check — fires after any state change that kills a unit
+     Doesn't wait for End Turn — victory triggers the moment the last enemy falls.
+     ========================= */
+  useEffect(() => {
+    if (gameState.phase !== 'playing') return;
+    const ext = gameState as unknown as ExtState;
+    const p0Alive = gameState.players[0].icons.some(ic => ic.isAlive);
+    const p1Alive = gameState.players[1].icons.some(ic => ic.isAlive);
+    if (!p0Alive) {
+      setGameState(prev => prev.phase === 'playing' ? { ...prev, phase: 'defeat' as any, winner: 1 } : prev);
+    } else if (!p1Alive && ext.encounterObjective !== 'destroy_base') {
+      setGameState(prev => prev.phase === 'playing' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
+    }
+  }, [gameState.players]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Immediate survive victory — fires as soon as currentTurn exceeds the target */
+  useEffect(() => {
+    if (gameState.phase !== 'playing') return;
+    const ext = gameState as unknown as ExtState;
+    if (ext.encounterObjective === 'survive' && ext.survivalTurnsTarget > 0) {
+      if (gameState.currentTurn > ext.survivalTurnsTarget && gameState.players[0].icons.some(ic => ic.isAlive)) {
+        setGameState(prev => prev.phase === 'playing' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
+      }
+    }
+  }, [gameState.currentTurn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* =========================
      Input handlers (PLAYER targeting)
@@ -1437,8 +1534,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
 
           const dronePower = executor.stats.power;
-          const droneHp   = Math.round(dronePower * 1.0);
-          const droneMight = Math.round(dronePower * 0.6);
+          const droneHp   = Math.round(dronePower * 1.5);
+          const droneMight = Math.round(dronePower * 1.0);
           const droneDef   = Math.round(dronePower * 0.6);
           const drone: Icon = {
             id: `drone_${makeId()}`,
@@ -1460,7 +1557,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             movedThisTurn: false,
             hasUltimate: false,
             ultimateUsed: true,
-            droneExpiresTurn: state.currentTurn + 2,
           };
           updated.players = updated.players.map(p =>
             p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, drone] }
@@ -1506,6 +1602,173 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }),
           }));
           pushLog(updated, `${executor.name} used ${card.name} to teleport!`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Huang-chan: Terracotta Summon ─────────────────────────────────────
+        if (card.effect.summonTerracotta) {
+          const occupied = updated.players.flatMap(p => p.icons).some(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
+          const tile = state.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
+          const isArcher = Math.random() < 0.5;
+          const exStats = calcEffectiveStats(updated, executor);
+          const terracottaUnit: Icon = {
+            id: `terracotta_${makeId()}`,
+            name: isArcher ? "Terracotta Archer" : "Terracotta Warrior",
+            role: isArcher ? "dps_ranged" : "dps_melee",
+            stats: {
+              hp: 40 + (card.effect.summonHpBonus ?? 0), maxHp: 40 + (card.effect.summonHpBonus ?? 0),
+              moveRange: 2, speed: 4,
+              might: isArcher ? Math.round(exStats.might * 1.5) : exStats.might,
+              power: 0,
+              defense: exStats.defense,
+              movement: 2, mana: 0, maxMana: 0,
+              attackRange: isArcher ? 2 : 1,
+            },
+            abilities: [], passive: "Terracotta",
+            position: coordinates, playerId: executor.playerId,
+            isAlive: true, respawnTurns: 0,
+            cardUsedThisTurn: false, movedThisTurn: false,
+            hasUltimate: false, ultimateUsed: true,
+            droneExpiresTurn: state.currentTurn + 2,
+          };
+          updated.players = updated.players.map(p =>
+            p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, terracottaUnit] }
+          );
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid] = Math.max(0, newMana[pid] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          pushLog(updated, `${executor.name} summoned a ${terracottaUnit.name}!`, executor.playerId);
+          // Inject 1 Basic Attack card so the terracotta unit can use it
+          const baDef = CARD_DEFS.find((d: any) => d.definitionId === 'shared_basic_attack');
+          if (baDef) {
+            const baCard = instantiateCard(baDef as any);
+            const baHandArr = (updated as any).hands;
+            const baPid = executor.playerId as 0 | 1;
+            if (baHandArr?.[baPid]) {
+              (updated as any).hands = [...baHandArr];
+              (updated as any).hands[baPid] = { ...baHandArr[baPid], cards: [...baHandArr[baPid].cards, baCard] };
+            }
+          }
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Huang-chan: First Emperor's Command (Cavalry summon) ──────────────
+        if (card.effect.summonCavalry) {
+          const occupied = updated.players.flatMap(p => p.icons).some(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
+          const tile = state.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
+          const cavStats = calcEffectiveStats(updated, executor);
+          const cavalryUnit: Icon = {
+            id: `terracotta_cav_${makeId()}`,
+            name: "Terracotta Cavalry",
+            role: "dps_melee",
+            stats: {
+              hp: 60, maxHp: 60,
+              moveRange: 3, speed: 7,
+              might: Math.round(cavStats.might * 1.5) + (card.effect.cavalryMightBonus ?? 0),
+              power: cavStats.power,
+              defense: Math.round(cavStats.defense * 1.5),
+              movement: 3, mana: 0, maxMana: 0,
+              attackRange: 1,
+            },
+            abilities: [], passive: "Terracotta",
+            position: coordinates, playerId: executor.playerId,
+            isAlive: true, respawnTurns: 0,
+            cardUsedThisTurn: false, movedThisTurn: false,
+            hasUltimate: false, ultimateUsed: true,
+            droneExpiresTurn: state.currentTurn + 2,
+          };
+          updated.players = updated.players.map(p =>
+            p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, cavalryUnit] }
+          );
+          // Inject free Cavalry Charge card into caster's hand
+          const cpid = executor.playerId as 0 | 1;
+          const chargeDef = CARD_DEFS.find((d: any) => d.definitionId === 'huang_cavalry_charge');
+          if (chargeDef) {
+            const chargeCard = { ...instantiateCard(chargeDef), manaCost: 0 };
+            const handArr = (updated as any).hands;
+            if (handArr?.[cpid]) {
+              (updated as any).hands = [...handArr];
+              (updated as any).hands[cpid] = { ...handArr[cpid], cards: [...handArr[cpid].cards, chargeCard] };
+            }
+          }
+          if (card.manaCost > 0) {
+            const pid2 = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid2] = Math.max(0, newMana[pid2] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          pushLog(updated, `${executor.name} summoned Terracotta Cavalry + free Cavalry Charge!`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Huang-chan: Eternal Army (control enemy) ──────────────────────────
+        if (card.effect.controlEnemy) {
+          const targetIcon = state.players.flatMap(p => p.icons).find(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (!targetIcon || targetIcon.playerId === executor.playerId) {
+            toast.error(getT().messages.mustTargetEnemy);
+            return prev;
+          }
+          const isBossTarget = targetIcon.name.includes("Iron Wall") || targetIcon.name.includes("Twin Terror") ||
+            targetIcon.name.includes("Terror Alpha") || targetIcon.name.includes("Terror Beta") ||
+            targetIcon.name.includes("Znyxorga");
+          if (isBossTarget) {
+            toast.error("Cannot control a boss or mini-boss unit!");
+            return prev;
+          }
+          if (targetIcon.terracottaControlled) {
+            toast.error("This unit is already controlled!");
+            return prev;
+          }
+          const controlDuration = card.effect.controlDuration ?? 2;
+          // Move the target icon to the player's team (change playerId)
+          const originalPlayerId = targetIcon.playerId;
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic =>
+              ic.id !== targetIcon.id ? ic : {
+                ...ic,
+                terracottaControlled: true,
+                controlledByPlayer: executor.playerId,
+                controlExpiresTurn: state.currentTurn + controlDuration,
+                playerId: executor.playerId,
+              }
+            ),
+          }));
+          if (card.manaCost > 0) {
+            const pid3 = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid3] = Math.max(0, newMana[pid3] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          pushLog(updated, `${executor.name} ETERNAL ARMY — ${targetIcon.name} is now under your control for ${controlDuration} turns!`, executor.playerId);
           updated = consumeCardFromHand(updated, card, executor.playerId);
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
@@ -1565,6 +1828,44 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, abilityUsedThisTurn: true }),
           }));
           updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Freudenspur zone placement — player clicked a tile to center the zone ──
+        if (state.targetingMode?.abilityId === "freudenspur_zone") {
+          const card = state.cardTargetingMode!.card;
+          const zone: Zone = {
+            center: coordinates,
+            radius: 1,
+            effect: 'moveBonus',
+            magnitude: card.effect.moveBonus ?? 2,
+            ownerId: executor.playerId,
+            turnsRemaining: card.effect.zoneDuration ?? 2,
+          };
+          updated = { ...updated, activeZones: [...(updated.activeZones ?? []), zone] } as ExtState;
+          // Crescendo passive stack
+          if (executor.name.includes("Beethoven")) {
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+                ...ic, passiveStacks: Math.min(8, (ic.passiveStacks ?? 0) + 1),
+              }),
+            }));
+            const stacks = Math.min(8, (executor.passiveStacks ?? 0) + 1);
+            pushLog(updated, `${executor.name} Crescendo: ${stacks}/8 (+${stacks * 3} Power)`, executor.playerId);
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, abilityUsedThisTurn: true }),
+          }));
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid] = Math.max(0, newMana[pid] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          pushLog(updated, `${executor.name} plays Freudenspur — resonance zone active for ${zone.turnsRemaining} turns!`, executor.playerId);
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
 
@@ -1841,7 +2142,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && lineKeys.has(tileKey(ic.position.q, ic.position.r)));
             if (enemies.length === 0) { toast.error(getT().messages.noEnemiesOnLine); return prev; }
             for (const enemy of enemies) {
-              const dmg = computeCardDamage(enemy);
+              let dmg = computeCardDamage(enemy);
+              // executeDouble: double damage if target is below 50% HP
+              if (card.effect.executeDouble && enemy.stats.hp < enemy.stats.maxHp * 0.5) {
+                dmg = dmg * 2;
+              }
               const newEnemyHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
               updated.players = updated.players.map(p => ({
                 ...p,
@@ -1852,7 +2157,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   respawnTurns: newEnemyHp > 0 ? ic.respawnTurns : 4,
                 }),
               }));
-              pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
+              const executeLabel = card.effect.executeDouble && enemy.stats.hp < enemy.stats.maxHp * 0.5 ? " (EXECUTE×2)" : "";
+              pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg${executeLabel}`, executor.playerId);
               // Khan's Seal: stun each hit enemy for 1 turn
               if (newEnemyHp > 0 && executor.itemPassiveTags?.includes('genghis_fury_stun')) {
                 const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
@@ -1864,6 +2170,40 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 }));
                 pushLog(updated, `${enemy.name} STUNNED by Khan's Seal!`, executor.playerId);
               }
+              // Schallwelle pushback: push each hit enemy along the wave direction
+              if (card.effect.pushback && newEnemyHp > 0) {
+                const DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+                const dq = enemy.position.q - executor.position.q;
+                const dr = enemy.position.r - executor.position.r;
+                const dir = DIRS.reduce((best, d) =>
+                  (dq * d.q + dr * d.r) > (dq * best.q + dr * best.r) ? d : best
+                );
+                for (let step = 0; step < card.effect.pushback; step++) {
+                  const pushed = updated.players.flatMap(p => p.icons).find(ic => ic.id === enemy.id);
+                  if (!pushed || !pushed.isAlive) break;
+                  const dest = { q: pushed.position.q + dir.q, r: pushed.position.r + dir.r };
+                  const destTile = updated.board.find(t => t.coordinates.q === dest.q && t.coordinates.r === dest.r);
+                  const isOccupied = updated.players.flatMap(p => p.icons).some(
+                    ic => ic.id !== pushed.id && ic.isAlive && ic.position.q === dest.q && ic.position.r === dest.r
+                  );
+                  if (!destTile || isOccupied) break;
+                  updated.players = updated.players.map(p => ({
+                    ...p, icons: p.icons.map(ic => ic.id !== pushed.id ? ic : { ...ic, position: dest }),
+                  }));
+                }
+                pushLog(updated, `${enemy.name} pushed back by Schallwelle!`, executor.playerId);
+              }
+            }
+            // Beethoven Crescendo passive
+            if (executor.name.includes("Beethoven") && card.exclusiveTo === "Beethoven") {
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+                  ...ic, passiveStacks: Math.min(8, (ic.passiveStacks ?? 0) + 1),
+                }),
+              }));
+              const stacks = Math.min(8, (executor.passiveStacks ?? 0) + 1);
+              pushLog(updated, `${executor.name} Crescendo: ${stacks}/8 (+${stacks * 3} Power)`, executor.playerId);
             }
             updated.players = updated.players.map(p => ({
               ...p,
@@ -1948,6 +2288,35 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   icons: p.icons.map(ic => ic.id !== pushed.id ? ic : { ...ic, position: dest }),
                 }));
                 pushLog(updated, `${pushed.name} was pushed back!`, executor.playerId);
+              }
+            }
+            // bleedMult: apply bleed debuff after single-target damage (Mongol Charge)
+            if (card.effect.bleedMult !== undefined && newHp > 0) {
+              const atkStats = calcEffectiveStats(updated, executor);
+              const bleedDmg = Math.round(atkStats.power * card.effect.bleedMult);
+              const bleedDebuff: Debuff = { type: 'bleed', magnitude: bleedDmg, turnsRemaining: card.effect.debuffDuration ?? 2 };
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                  ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'bleed'), bleedDebuff],
+                }),
+              }));
+              pushLog(updated, `${targetIcon.name} is Bleeding — ${bleedDmg} HP/turn for ${card.effect.debuffDuration ?? 2} turns`, executor.playerId);
+            }
+            // aoeDemoralize: apply Demoralize to all enemies adjacent to the primary target (THIS IS SPARTA!)
+            if (card.effect.aoeDemoralize) {
+              const adjacentEnemies = updated.players
+                .flatMap(p => p.icons)
+                .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 1);
+              const demoDebuff: Debuff = { type: 'demoralize', magnitude: 50, turnsRemaining: 1 };
+              for (const adj of adjacentEnemies) {
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== adj.id ? ic : {
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'demoralize'), demoDebuff],
+                  }),
+                }));
+                pushLog(updated, `${adj.name} is Demoralized by THIS IS SPARTA! (1 turn)`, executor.playerId);
               }
             }
           } else {
@@ -2197,9 +2566,176 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               ),
             }));
             pushLog(updated, `${caster.name} cast ${ability.name} on ${targetIcon.name}, healing ${heal} HP`, caster.playerId);
+          } else if ((ability as any).scalingAoE) {
+            // Horde Tactics: Power × perEnemyMult × enemyCount to ALL enemies in range
+            const perEnemyMult = (ability as any).perEnemyMult as number ?? 0.5;
+            const casterStats = calcEffectiveStats(updated, caster);
+            const enemiesInRange = updated.players
+              .flatMap(p => p.icons)
+              .filter(ic => ic.isAlive && ic.playerId !== caster.playerId && hexDistance(caster.position, ic.position) <= (ability.range ?? 2));
+            const enemyCount = enemiesInRange.length;
+            if (enemyCount === 0) { toast.error(getT().messages.noTargetToHit); return prev; }
+            const scaledMult = perEnemyMult * enemyCount;
+            for (const enemy of enemiesInRange) {
+              const enemyStats = calcEffectiveStats(updated, enemy);
+              const dmg = Math.max(0.1, casterStats.power * scaledMult - enemyStats.defense);
+              updated.players = updated.players.map(player => ({
+                ...player,
+                icons: player.icons.map(ic =>
+                  ic.id !== enemy.id ? ic : {
+                    ...ic,
+                    stats: { ...ic.stats, hp: Math.round(Math.max(0, ic.stats.hp - dmg)) },
+                    isAlive: ic.stats.hp - dmg > 0,
+                    respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
+                  }
+                ),
+              }));
+              pushLog(updated, `${caster.name} Horde Tactics hit ${enemy.name} for ${dmg.toFixed(0)} dmg (${enemyCount} targets × ${perEnemyMult})`, caster.playerId);
+            }
+          } else if ((ability as any).summonTerracotta) {
+            // ── Huang-chan Ability 1: Terracotta Legion ──────────────────────────
+            const occupied = updated.players.flatMap(p => p.icons).some(
+              ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+            );
+            if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
+            const tile = updated.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+            if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
+            const isArcher = Math.random() < 0.5;
+            const casterStats = calcEffectiveStats(updated, caster);
+            const terracottaUnit: Icon = {
+              id: `terracotta_${makeId()}`,
+              name: isArcher ? "Terracotta Archer" : "Terracotta Warrior",
+              role: isArcher ? "dps_ranged" : "dps_melee",
+              stats: {
+                hp: 40, maxHp: 40,
+                moveRange: 2, speed: 4,
+                might: isArcher ? Math.round(casterStats.might * 1.5) : casterStats.might,
+                power: 0,
+                defense: casterStats.defense,
+                movement: 2, mana: 0, maxMana: 0,
+                attackRange: isArcher ? 2 : 1,
+              },
+              abilities: [],
+              passive: "Terracotta",
+              position: coordinates,
+              playerId: caster.playerId,
+              isAlive: true,
+              respawnTurns: 0,
+              cardUsedThisTurn: false,
+              movedThisTurn: false,
+              hasUltimate: false,
+              ultimateUsed: true,
+              droneExpiresTurn: updated.currentTurn + 2,
+            };
+            updated.players = updated.players.map(p =>
+              p.id !== caster.playerId ? p : { ...p, icons: [...p.icons, terracottaUnit] }
+            );
+            pushLog(updated, `${caster.name} summoned a ${terracottaUnit.name}!`, caster.playerId);
+            // Inject 1 Basic Attack card so the terracotta unit can use it
+            const baDef2 = CARD_DEFS.find((d: any) => d.definitionId === 'shared_basic_attack');
+            if (baDef2) {
+              const baCard2 = instantiateCard(baDef2 as any);
+              const baHandArr2 = (updated as any).hands;
+              const baPid2 = caster.playerId as 0 | 1;
+              if (baHandArr2?.[baPid2]) {
+                (updated as any).hands = [...baHandArr2];
+                (updated as any).hands[baPid2] = { ...baHandArr2[baPid2], cards: [...baHandArr2[baPid2].cards, baCard2] };
+              }
+            }
+          } else if ((ability as any).summonCavalry) {
+            // ── Huang-chan Ability 2: First Emperor's Command ────────────────────
+            const occupied = updated.players.flatMap(p => p.icons).some(
+              ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+            );
+            if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
+            const tile = updated.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+            if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
+            const cavCasterStats = calcEffectiveStats(updated, caster);
+            const cavalryUnit: Icon = {
+              id: `terracotta_cav_${makeId()}`,
+              name: "Terracotta Cavalry",
+              role: "dps_melee",
+              stats: {
+                hp: 60, maxHp: 60,
+                moveRange: 3, speed: 7,
+                might: Math.round(cavCasterStats.might * 1.5),
+                power: cavCasterStats.power,
+                defense: Math.round(cavCasterStats.defense * 1.5),
+                movement: 3, mana: 0, maxMana: 0,
+                attackRange: 1,
+              },
+              abilities: [],
+              passive: "Terracotta",
+              position: coordinates,
+              playerId: caster.playerId,
+              isAlive: true,
+              respawnTurns: 0,
+              cardUsedThisTurn: false,
+              movedThisTurn: false,
+              hasUltimate: false,
+              ultimateUsed: true,
+              droneExpiresTurn: updated.currentTurn + 2,
+            };
+            updated.players = updated.players.map(p =>
+              p.id !== caster.playerId ? p : { ...p, icons: [...p.icons, cavalryUnit] }
+            );
+            // Inject free Cavalry Charge card into caster's hand
+            const pid = caster.playerId as 0 | 1;
+            const chargeDef = CARD_DEFS.find((d: any) => d.definitionId === 'huang_cavalry_charge');
+            if (chargeDef) {
+              const chargeCard = { ...instantiateCard(chargeDef), manaCost: 0 };
+              const handArr = (updated as any).hands;
+              if (handArr?.[pid]) {
+                (updated as any).hands = [...handArr];
+                (updated as any).hands[pid] = { ...handArr[pid], cards: [...handArr[pid].cards, chargeCard] };
+              }
+            }
+            pushLog(updated, `${caster.name} summoned Terracotta Cavalry and gained a free Cavalry Charge!`, caster.playerId);
+          } else if ((ability as any).controlEnemy) {
+            // ── Huang-chan Ultimate: Eternal Army ────────────────────────────────
+            if (!targetIcon || targetIcon.playerId === caster.playerId) {
+              toast.error(getT().messages.mustTargetEnemy);
+              return prev;
+            }
+            // Exclude bosses and named mini-bosses (Iron Wall, Twin Terror, Znyxorga)
+            const isBossTarget = targetIcon.name.includes("Iron Wall") || targetIcon.name.includes("Twin Terror") ||
+              targetIcon.name.includes("Terror Alpha") || targetIcon.name.includes("Terror Beta") ||
+              targetIcon.name.includes("Znyxorga");
+            if (isBossTarget) {
+              toast.error("Cannot control a boss or mini-boss unit!");
+              return prev;
+            }
+            if (targetIcon.terracottaControlled) {
+              toast.error("This unit is already controlled!");
+              return prev;
+            }
+            const controlDuration = (ability as any).controlDuration ?? 2;
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic =>
+                ic.id !== targetIcon.id ? ic : {
+                  ...ic,
+                  terracottaControlled: true,
+                  controlledByPlayer: caster.playerId,
+                  controlExpiresTurn: updated.currentTurn + controlDuration,
+                  // Switch playerId so it acts with player's team
+                  playerId: caster.playerId,
+                }
+              ),
+            }));
+            updated.players = updated.players.map((p) => ({
+              ...p,
+              icons: p.icons.map((ic) => (ic.id === caster.id ? { ...ic, ultimateUsed: true } : ic)),
+            }));
+            pushLog(updated, `${caster.name} ETERNAL ARMY — ${targetIcon.name} is now under your control for ${controlDuration} turns!`, caster.playerId);
           } else if (typeof (ability as any).damage === "number") {
             if (targetIcon) {
-              const dmg = (ability as any).damage > 0 ? (ability as any).damage : resolveAbilityDamage(updated, caster, targetIcon, (ability as any).powerMult ?? 1.0);
+              let dmg = (ability as any).damage > 0 ? (ability as any).damage : resolveAbilityDamage(updated, caster, targetIcon, (ability as any).powerMult ?? 1.0);
+              // Rider's Fury execute: double damage if target below 50% HP
+              if ((ability as any).executeDouble && targetIcon.stats.hp < targetIcon.stats.maxHp * 0.5) {
+                dmg *= 2;
+                pushLog(updated, `EXECUTE! ${targetIcon.name} below 50% HP — Rider's Fury damage doubled!`, caster.playerId);
+              }
               updated.players = updated.players.map((player) => ({
                 ...player,
                 icons: player.icons.map((ic) =>
@@ -2214,6 +2750,21 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ),
               }));
               pushLog(updated, `${caster.name} cast ${ability.name} on ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, caster.playerId);
+              // Mongol Charge bleed: apply bleed debuff after damage
+              if ((ability as any).bleedMult !== undefined) {
+                const bleedDmg = Math.round(calcEffectiveStats(updated, caster).power * (ability as any).bleedMult);
+                const bleedDebuff = { type: 'bleed' as const, magnitude: bleedDmg, turnsRemaining: 2 };
+                updated.players = updated.players.map(player => ({
+                  ...player,
+                  icons: player.icons.map(ic =>
+                    ic.id !== targetIcon.id ? ic : {
+                      ...ic,
+                      debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'bleed'), bleedDebuff],
+                    }
+                  ),
+                }));
+                pushLog(updated, `${targetIcon.name} is Bleeding — ${bleedDmg} HP per turn for 2 turns`, caster.playerId);
+              }
             } else {
               if (isOwnBase) {
                 toast.error(getT().messages.cantAttackOwnBase2);
@@ -2353,11 +2904,14 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               stats: {
                 ...ic.stats,
                 // Sun-sin: cap remaining movement to 1 when stepping onto river, restore to moveRange when leaving
-                movement: landingOnRiver
-                  ? Math.min(1, Math.max(0, ic.stats.movement - moveCost))
-                  : landingOnLand
-                    ? Math.max(0, ic.stats.movement - moveCost)
-                    : Math.max(0, ic.stats.movement - moveCost),
+                movement: (() => {
+                  const zoneBonus = (state.activeZones ?? []).find(
+                    z => z.ownerId === me.playerId && hexDistance(coordinates, z.center) <= z.radius
+                  )?.magnitude ?? 0;
+                  return landingOnRiver
+                    ? Math.min(1, Math.max(0, ic.stats.movement - moveCost))
+                    : Math.max(0, ic.stats.movement - moveCost + zoneBonus);
+                })(),
               },
             }
             : ic
@@ -2415,7 +2969,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const isRanged = me.name.includes("Napoleon") || me.name.includes("Da Vinci");
       const range = me.name.includes("Napoleon") && onForest ? 3
         : me.name.includes("Sun-sin") && onRiver ? 3
-        : isRanged ? 2 : 1;
+        : isRanged ? 2
+        : (me.stats.attackRange ?? 1);
       return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
     });
   }, []);
@@ -2463,14 +3018,24 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const sunsinOnRiver = ic.name.includes("Sun-sin") && ic.isAlive &&
               prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r)?.terrain.type === 'river';
             const frozen = demoSkip || isStunned;
+            // Freudenspur zone bonus at turn start (lifts water cap for Sun-sin when in zone)
+            const sunsinZoneBonus = (sunsinOnRiver && !frozen)
+              ? (prev.activeZones ?? []).reduce((sum, z) => {
+                  if (z.ownerId === nextPlayer && ic.isAlive && hexDistance(ic.position, z.center) <= z.radius) {
+                    return sum + z.magnitude;
+                  }
+                  return sum;
+                }, 0)
+              : 0;
             const baseMove = frozen ? 0 : Math.max(0, ic.stats.moveRange - moveReduction);
+            const finalMove = baseMove;
             return {
               ...ic,
               cardBuffAtk: 0,
               cardBuffDef: 0,
               cardsUsedThisTurn: frozen ? 3 : 0,
               movedThisTurn: frozen ? true : false,
-              stats: { ...ic.stats, movement: sunsinOnRiver ? Math.min(1, baseMove) : baseMove },
+              stats: { ...ic.stats, movement: sunsinOnRiver ? Math.min(1 + sunsinZoneBonus, finalMove + sunsinZoneBonus) : finalMove },
             };
           }
           return ic;
@@ -2534,45 +3099,6 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }));
       }
 
-      // Beast camp attacks: each non-defeated camp attacks a random player character in range
-      // Range 1 → 50 dmg, Range 2 → 30 dmg (one attack per camp per turn, on turn end)
-      const campDefs = [{ q: 0, r: -4 }, { q: 0, r: 4 }];
-      for (let campIdx = 0; campIdx < campDefs.length; campIdx++) {
-        const camp = campDefs[campIdx];
-        if ((prev.objectives as any)?.beastCamps?.defeated?.[campIdx]) continue;
-        const allAlive = playersAfter.flatMap(p => p.icons).filter(ic => ic.isAlive);
-        // Find targets within range 2
-        const range1Targets = allAlive.filter(ic => hexDistance(ic.position, camp) === 1);
-        const range2Targets = allAlive.filter(ic => hexDistance(ic.position, camp) === 2);
-        let target: Icon | undefined;
-        let campDmg = 0;
-        if (range1Targets.length > 0) {
-          target = range1Targets[Math.floor(Math.random() * range1Targets.length)];
-          campDmg = 50;
-        } else if (range2Targets.length > 0) {
-          target = range2Targets[Math.floor(Math.random() * range2Targets.length)];
-          campDmg = 30;
-        }
-        if (target && campDmg > 0) {
-          pushLog({ ...prev, players: playersAfter } as any,
-            `Beast Camp attacked ${target.name} for ${campDmg} dmg!`, 1);
-          const targetId = target.id;
-          playersAfter = playersAfter.map(p => ({
-            ...p,
-            icons: p.icons.map(ic => {
-              if (ic.id !== targetId) return ic;
-              const newHp = Math.max(0, ic.stats.hp - campDmg);
-              if (newHp <= 0) {
-                pushLog({ ...prev, players: playersAfter } as any,
-                  `${ic.name} was slain by the Beast Camp!`, 1);
-                return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
-              }
-              return { ...ic, stats: { ...ic.stats, hp: newHp } };
-            }),
-          }));
-        }
-      }
-
       // River kill: any character standing on a river tile at end of turn drowns (Sun-sin is immune)
       let boardAfter = [...prev.board];
       let floodIsActive = !!(prev as any).floodActive;
@@ -2596,16 +3122,56 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }),
       }));
 
-      // Remove expired drones (Vitruvian Guardian lasts 3 rounds)
+      // Remove expired drones / terracotta warriors (droneExpiresTurn used for both)
       const newCurrentTurn = nextPlayer === 0 ? prev.currentTurn + 1 : prev.currentTurn;
       playersAfter = playersAfter.map(p => ({
         ...p,
         icons: p.icons.filter(ic => !ic.droneExpiresTurn || ic.droneExpiresTurn > newCurrentTurn),
       }));
 
+      // Expire controlled enemy units (Eternal Army) — return them to enemy team
+      playersAfter = playersAfter.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.terracottaControlled) return ic;
+          if (ic.controlExpiresTurn !== undefined && ic.controlExpiresTurn <= newCurrentTurn) {
+            // Return to enemy (player 1 in singleplayer)
+            const originalPlayer = ic.controlledByPlayer === 0 ? 1 : 0;
+            pushLog(prev as any, `${ic.name} breaks free from Eternal Army control!`, originalPlayer);
+            return {
+              ...ic,
+              terracottaControlled: false,
+              controlledByPlayer: undefined,
+              controlExpiresTurn: undefined,
+              playerId: originalPlayer,
+            };
+          }
+          return ic;
+        }),
+      }));
+
       // ── Arena Events (single-player runs only, starting turn 3, ~35% chance per round) ──
       const extPrevArena = prev as ExtState;
-      let arenaEvent: import('@/types/game').ArenaEventDef | null = null;
+      // Carry previous event forward for 2 endTurn cycles so the banner persists through the AI turn
+      const prevArenaEvent = (extPrevArena as any).arenaEvent ?? null;
+      const prevArenaEventAge: number = (extPrevArena as any).arenaEventAge ?? 0;
+      let arenaEvent: import('@/types/game').ArenaEventDef | null =
+        (prevArenaEvent && prevArenaEventAge < 2) ? prevArenaEvent : null;
+      let arenaEventAge: number = arenaEvent ? prevArenaEventAge + 1 : 0;
+      let gravityCrushSaved: Record<string, number> | undefined = (extPrevArena as any).gravityCrushSaved;
+
+      // Restore movement stats when gravity_crush expires
+      if (prevArenaEvent?.id === 'gravity_crush' && prevArenaEventAge >= 2 && gravityCrushSaved) {
+        playersAfter = playersAfter.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => {
+            const origRange = gravityCrushSaved![ic.id];
+            if (origRange === undefined) return ic;
+            return { ...ic, stats: { ...ic.stats, moveRange: origRange, movement: origRange } };
+          }),
+        }));
+        gravityCrushSaved = undefined;
+      }
       if (extPrevArena.isRoguelikeRun && nextPlayer === 0 && newCurrentTurn >= 3) {
         // Tick down flood/fire countdowns and activate when they reach 0
         if (pendingFloodCountdown !== undefined && pendingFloodCountdown > 0) {
@@ -2670,6 +3236,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           if (eligibleEvents.length === 0) { /* all permanent events already active */ }
           else {
           arenaEvent = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+          arenaEventAge = 0; // Reset age so new event stays visible for 2 full turns
           pushLog(prev as any, `🌌 ARENA EVENT: ${arenaEvent.name} — ${arenaEvent.description}`, 0);
 
           if (arenaEvent.id === 'gravity_surge') {
@@ -2754,6 +3321,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               }));
             }
           } else if (arenaEvent.id === 'gravity_crush') {
+            const crushSave: Record<string, number> = {};
+            playersAfter.forEach(p => p.icons.forEach(ic => { if (ic.isAlive) crushSave[ic.id] = ic.stats.moveRange; }));
             playersAfter = playersAfter.map(p => ({
               ...p,
               icons: p.icons.map(ic => !ic.isAlive ? ic : {
@@ -2764,6 +3333,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 },
               }),
             }));
+            gravityCrushSaved = crushSave;
           }
           } // end if (eligibleEvents.length > 0)
         } // end if (Math.random() < 0.35)
@@ -2790,7 +3360,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 id: `1-wave-${newCurrentTurn}-${Math.random().toString(36).slice(2)}`,
                 position: freeSpawn,
                 stats: { ...template.stats, hp: template.stats.maxHp, movement: template.stats.moveRange },
-                isAlive: true, respawnTurns: 0, movedThisTurn: false, cardUsedThisTurn: false,
+                isAlive: true, respawnTurns: 0, movedThisTurn: true, cardUsedThisTurn: true,
               };
               playersAfter = playersAfter.map(p => p.id !== 1 ? p : { ...p, icons: [...p.icons, newEnemy] });
               pushLog(prev as any, `Onslaught! A new enemy has arrived!`, 1);
@@ -2915,6 +3485,18 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         if (newCurrentTurn > extPrev.survivalTurnsTarget && p0Alive) { newPhase = "victory"; winner = 0; }
       }
 
+      // Tick bleed damage before debuff duration decrement
+      playersAfter = playersAfter.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive || !ic.debuffs?.length) return ic;
+          const bleed = ic.debuffs.find(d => d.type === 'bleed');
+          if (!bleed) return ic;
+          const newHp = Math.max(0, ic.stats.hp - bleed.magnitude);
+          return { ...ic, stats: { ...ic.stats, hp: Math.round(newHp) }, isAlive: newHp > 0 };
+        }),
+      }));
+
       // Tick down debuffs on all icons (every turn end; expire at 0)
       playersAfter = playersAfter.map(p => ({
         ...p,
@@ -2926,6 +3508,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           return { ...ic, debuffs: newDebuffs };
         }),
       }));
+
+      // Tick down active zones (Freudenspur) — every turn transition
+      const updatedActiveZones: Zone[] = (prev.activeZones ?? [])
+        .map(z => ({ ...z, turnsRemaining: z.turnsRemaining - 1 }))
+        .filter(z => z.turnsRemaining > 0);
 
       // Process regen buffs (Naval Repairs): apply heal, then tick down
       playersAfter = playersAfter.map(p => ({
@@ -3019,8 +3606,48 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         const deckWithOld = { ...startDeck, discardPile: [...startDeck.discardPile, ...startHand.cards] };
         const drawCount = startHand.maxSize + extraDraw;
         const { drawn, newDraw, newDiscard } = drawCards(deckWithOld.drawPile, deckWithOld.discardPile, drawCount);
-        hands[nextPlayer] = { ...startHand, cards: drawn };
-        decks[nextPlayer] = { drawPile: newDraw, discardPile: newDiscard };
+        let finalDrawn = drawn;
+        let finalDraw = newDraw;
+        let finalDiscard = newDiscard;
+        // ── Huang Imperial Command guarantees ────────────────────────────────────
+        const nextIcons = playersAfter.find(p => p.id === nextPlayer)?.icons ?? [];
+        const hasHuang = nextIcons.some(ic => ic.isAlive && ic.name.includes("Huang"));
+        if (hasHuang) {
+          // 1) Guarantee ≥1 Basic Attack in hand (for Terracotta units)
+          if (!finalDrawn.some(c => c.definitionId === 'shared_basic_attack')) {
+            const fromDrawIdx = finalDraw.findIndex(c => c.definitionId === 'shared_basic_attack');
+            const fromDiscardIdx = finalDiscard.findIndex(c => c.definitionId === 'shared_basic_attack');
+            if (fromDrawIdx !== -1) {
+              const card = finalDraw[fromDrawIdx];
+              finalDraw = finalDraw.filter((_, i) => i !== fromDrawIdx);
+              finalDrawn = [card, ...finalDrawn];
+            } else if (fromDiscardIdx !== -1) {
+              const card = finalDiscard[fromDiscardIdx];
+              finalDiscard = finalDiscard.filter((_, i) => i !== fromDiscardIdx);
+              finalDrawn = [card, ...finalDrawn];
+            }
+          }
+
+          // 2) Guarantee Terracotta Legion in hand as an EXTRA card, until it is used for the first time.
+          //    "Used for the first time" = a copy has entered the discard pile (was played).
+          //    Check the full discard (deckWithOld includes previous discard + old hand).
+          const legionInHand = finalDrawn.some(c => c.definitionId === 'huang_terracotta_summon');
+          const legionEverUsed = deckWithOld.discardPile.some(c => c.definitionId === 'huang_terracotta_summon');
+          if (!legionInHand && !legionEverUsed) {
+            // Pull from draw pile first; otherwise inject a fresh instance
+            const fromDrawIdx = finalDraw.findIndex(c => c.definitionId === 'huang_terracotta_summon');
+            if (fromDrawIdx !== -1) {
+              const card = finalDraw[fromDrawIdx];
+              finalDraw = finalDraw.filter((_, i) => i !== fromDrawIdx);
+              finalDrawn = [card, ...finalDrawn];
+            } else {
+              const def = CARD_DEFS.find((d: any) => d.definitionId === 'huang_terracotta_summon');
+              if (def) finalDrawn = [instantiateCard(def as any), ...finalDrawn];
+            }
+          }
+        }
+        hands[nextPlayer] = { ...startHand, cards: finalDrawn };
+        decks[nextPlayer] = { drawPile: finalDraw, discardPile: finalDiscard };
       }
 
       return {
@@ -3039,6 +3666,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         phase: newPhase,
         winner,
         arenaEvent,
+        arenaEventAge,
+        gravityCrushSaved,
         floodActive: floodIsActive,
         laserGridStruckIds,
         forestFireActive: forestFireIsActive,
@@ -3047,6 +3676,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         pendingFloodCountdown,
         pendingFireCountdown,
         pendingFireStartTile,
+        activeZones: updatedActiveZones,
         ...(hands && { hands }),
         ...(decks && { decks }),
       } as ExtState;
@@ -3110,6 +3740,23 @@ const playCard = useCallback((card: Card, executorId: string) => {
       return prev;
     }
 
+    // Huang-chan Imperial Command: cannot play Basic Attack cards
+    if (executor.name.includes("Huang") && card.definitionId === "shared_basic_attack") {
+      toast.error("Huang-chan cannot play Basic Attack cards!");
+      return prev;
+    }
+
+    // Terracotta unit card restrictions
+    if (executor.name.includes("Terracotta")) {
+      const isCavalry = executor.name.includes("Cavalry");
+      const allowed = card.definitionId === "shared_basic_attack" ||
+        (isCavalry && card.definitionId === "huang_cavalry_charge");
+      if (!allowed) {
+        toast.error("Terracotta units can only use Basic Attack cards!");
+        return prev;
+      }
+    }
+
     // Vitruvian Guardian → drone placement targeting
     if (card.definitionId === "davinci_vitruvian_guardian") {
       const range = card.effect.range ?? 3;
@@ -3120,9 +3767,33 @@ const playCard = useCallback((card: Card, executorId: string) => {
       };
     }
 
-    // Flying Machine card → teleport targeting (range scales with Power)
+    // Huang-chan Terracotta summon cards → hex placement targeting
+    if (card.effect.summonTerracotta) {
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: "summon_terracotta", iconId: executorId, range: card.effect.range ?? 3 },
+      };
+    }
+    if (card.effect.summonCavalry) {
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: "summon_cavalry", iconId: executorId, range: card.effect.range ?? 4 },
+      };
+    }
+    // Huang-chan Eternal Army → target an enemy unit
+    if (card.effect.controlEnemy) {
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: "control_enemy", iconId: executorId, range: card.effect.range ?? 3 },
+      };
+    }
+
+    // Flying Machine card → teleport targeting (unlimited range)
     if (card.effect.teleport) {
-      const range = Math.floor(executor.stats.power / 10);
+      const range = card.effect.range ?? 999;
       return {
         ...state,
         cardTargetingMode: { card, executorId },
@@ -3220,18 +3891,29 @@ const playCard = useCallback((card: Card, executorId: string) => {
       return { ...updated };
     }
 
+    // Freudenspur — enter targeting mode: player picks a tile, zone placed at that tile (radius 1)
+    if (card.effect.moveZone) {
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: "freudenspur_zone", iconId: executorId, range: card.effect.range ?? 3 },
+      };
+    }
+
     // Damage / healing / single-target powerMult → enter targeting mode
     const needsTarget =
       card.effect.damage !== undefined ||
       ((card.effect.healing !== undefined || card.effect.healingMult !== undefined) && !card.effect.selfCast) ||
       (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget && !card.effect.randomTargets) ||
-      card.effect.debuffType !== undefined;
+      (card.effect.debuffType !== undefined && !card.effect.allEnemiesInRange);
 
     if (needsTarget) {
       const isBasicAttack = card.definitionId === "shared_basic_attack";
-      const attackRange = executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") ? 2
+      const napoleonOnForest = executor.name.includes("Napoleon") && executorTileType === 'forest';
+      const attackRange = napoleonOnForest ? 3
+        : executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") ? 2
         : (sunsinOnRiver) ? 3
-        : 1;
+        : (executor.stats.attackRange ?? 1);
       const cardRange = card.effect.range ?? (isBasicAttack ? attackRange : 3);
 
       if (isBasicAttack) {
@@ -3299,7 +3981,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       np[pid] = Math.min((np[pid] ?? 0) + card.effect.teamDmgPct, 60);
       updated.teamBuffs = { ...updated.teamBuffs, mightBonus: nm, powerBonus: np };
       pushLog(updated, `${executor.name} played ${card.name} (+${card.effect.teamDmgPct}% team dmg)`, executor.playerId);
-    } else if (card.effect.powerMult && card.effect.allEnemiesInRange) {
+    } else if (card.effect.powerMult && card.effect.allEnemiesInRange && !card.effect.debuffType) {
       // AoE: fires immediately (no directional target needed)
       const range = card.effect.range ?? 2;
       const executorTile = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r);
@@ -3324,6 +4006,33 @@ const playCard = useCallback((card: Card, executorId: string) => {
         pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
       }
       // falls through to mana deduction + consumeCard below
+    } else if (card.effect.scalingAoE) {
+      // Horde Tactics: damage = power × perEnemyMult × number of enemies in range (immediate, no targeting)
+      const range = card.effect.range ?? 2;
+      const perEnemyMult = card.effect.perEnemyMult ?? 0.5;
+      const atkStats = calcEffectiveStats(updated, executor);
+      const enemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
+      );
+      if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+      const totalDmgPerHit = Math.round(atkStats.power * perEnemyMult * enemies.length);
+      for (const enemy of enemies) {
+        const defStats = calcEffectiveStats(updated, enemy);
+        const dmg = Math.max(1, totalDmgPerHit - defStats.defense);
+        const newEnemyHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic,
+            stats: { ...ic.stats, hp: newEnemyHp },
+            isAlive: newEnemyHp > 0,
+            respawnTurns: newEnemyHp > 0 ? ic.respawnTurns : 4,
+          }),
+        }));
+        pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg} dmg (×${enemies.length})`, executor.playerId);
+        updated = applyKillPassives(updated, executorId, enemy.isAlive, enemy.stats.hp - dmg <= 0);
+      }
+      // falls through to mana deduction + consumeCard below
     } else if (card.effect.powerMult && card.effect.lineTarget) {
       // Line target: requires player to click a direction hex — enter targeting mode
       const cardRange = card.effect.range ?? 5;
@@ -3332,6 +4041,54 @@ const playCard = useCallback((card: Card, executorId: string) => {
         cardTargetingMode: { card, executorId },
         targetingMode: { abilityId: card.definitionId, iconId: executorId, range: cardRange },
       };
+    } else if (card.effect.allEnemiesInRange && card.effect.debuffType) {
+      // Götterfunken: AoE stun (optionally with damage) — hits all enemies in range
+      const range = card.effect.range ?? 3;
+      const enemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
+      );
+      if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+      const aoeDebuff: Debuff = {
+        type: card.effect.debuffType,
+        magnitude: card.effect.debuffMagnitude ?? 0,
+        turnsRemaining: card.effect.debuffDuration ?? 1,
+      };
+      for (const enemy of enemies) {
+        if (card.effect.powerMult) {
+          const atkStats = calcEffectiveStats(updated, executor);
+          const defStats = calcEffectiveStats(updated, enemy);
+          const dmg = Math.max(0.1, atkStats.power * card.effect.powerMult - defStats.defense);
+          const newEnemyHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+              ...ic,
+              stats: { ...ic.stats, hp: newEnemyHp },
+              isAlive: newEnemyHp > 0,
+              respawnTurns: newEnemyHp > 0 ? ic.respawnTurns : 4,
+            }),
+          }));
+        }
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== aoeDebuff.type), aoeDebuff],
+          }),
+        }));
+      }
+      pushLog(updated, `${executor.name} Götterfunken — ${enemies.length} enem${enemies.length !== 1 ? 'ies' : 'y'} STUNNED!`, executor.playerId);
+      // Beethoven Crescendo passive
+      if (executor.name.includes("Beethoven") && card.exclusiveTo === "Beethoven") {
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+            ...ic, passiveStacks: Math.min(8, (ic.passiveStacks ?? 0) + 1),
+          }),
+        }));
+        const stacks = Math.min(8, (executor.passiveStacks ?? 0) + 1);
+        pushLog(updated, `${executor.name} Crescendo: ${stacks}/8 (+${stacks * 3} Power)`, executor.playerId);
+      }
+      // falls through to mana deduction + consumeCard below
     } else if (card.effect.randomTargets && card.effect.powerMult) {
       // Final Salvo: fire multiHit random hits at enemies within range (no targeting click needed)
       const range = card.effect.range ?? 4;
@@ -3494,6 +4251,8 @@ const startBattle = useCallback((
   encounter?: EncounterDef | null,
   mapSeed?: number,
   isRoguelikeRun?: boolean,
+  battleCount?: number,
+  upgradedCardDefIds?: string[],
 ) => {
   const sel = selectedCharactersRef.current;
   if (!sel || sel.length === 0) return;
@@ -3504,8 +4263,12 @@ const startBattle = useCallback((
       : sel;
     const p0Icons = buildIconsFromSelection(aliveSelected, runChars).filter(i => i.playerId === 0);
     // Player 1 icons — from encounter (roguelike) or mirror player (standard)
+    // Progressive difficulty: +3% per roguelike battle, capped at +60%
+    const scaleFactor = (isRoguelikeRun && battleCount != null)
+      ? Math.min(1.60, 1 + battleCount * 0.03)
+      : 1.0;
     const p1Icons = encounter
-      ? buildEnemyIconsFromEncounter(encounter)
+      ? buildEnemyIconsFromEncounter(encounter, scaleFactor)
       : buildIconsFromSelection(sel, runChars).filter(i => i.playerId === 1);
     const allIcons = [...p0Icons, ...p1Icons];
 
@@ -3513,8 +4276,9 @@ const startBattle = useCallback((
     const speedQueue    = normalizeSpeedQueue(speedQueueRaw, allIcons);
     const p0Names = p0Icons.map(i => i.name);
     const p1Names = p1Icons.map(i => i.name);
+    const upgradedSet = upgradedCardDefIds ? new Set(upgradedCardDefIds) : undefined;
     const buildHand = (names: string[], ids?: string[]): [Hand, Deck] => {
-      const allCards = ids ? buildDeckFromIds(ids) : buildDeckForTeam(names);
+      const allCards = ids ? buildDeckFromIds(ids, upgradedSet) : buildDeckForTeam(names);
       const handSizeBonus = (runChars ?? []).reduce((sum, c) => {
         return sum + c.items.filter(Boolean).reduce((s, item) => {
           if (item?.passiveTag === 'hand_size_plus_1') return s + 1;
@@ -3531,13 +4295,14 @@ const startBattle = useCallback((
     // Use random map for first battle (when mapSeed provided), else standard map
     const rawBoard = mapSeed != null ? generateRandomBattleBoard(mapSeed) : createInitialBoard();
     const rogueObjective = (encounter?.objective ?? 'defeat_all') as FightObjective;
-    // Remove base + spawn tiles when objective isn't destroy_base (roguelike — no respawning)
-    const board = (isRoguelikeRun && rogueObjective !== 'destroy_base')
-      ? rawBoard.map(tile =>
-          (tile.terrain.type === 'base' || tile.terrain.type === 'spawn')
-            ? { ...tile, terrain: { type: 'plain' as const, effects: {} } }
-            : tile
-        )
+    // In roguelike: spawn tiles are always plain (no respawn zones). Base tiles are plain too,
+    // unless the objective is destroy_base (where the base is the actual combat target).
+    const board = isRoguelikeRun
+      ? rawBoard.map(tile => {
+          if (tile.terrain.type === 'spawn') return { ...tile, terrain: { type: 'plain' as const, effects: {} } };
+          if (tile.terrain.type === 'base' && rogueObjective !== 'destroy_base') return { ...tile, terrain: { type: 'plain' as const, effects: {} } };
+          return tile;
+        })
       : rawBoard;
     return {
       currentTurn: 1,

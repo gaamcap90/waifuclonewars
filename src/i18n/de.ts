@@ -18,7 +18,7 @@ export const de = {
     archives: 'Historische Archive', archivesSub: 'Charakterbibliothek', archivesSoon: 'Charakterbibliothek — Demnächst verfügbar',
     settings: 'Spieleinstellungen', settingsSub: 'Steuerung & Audio', settingsSoon: 'Steuerung & Audio — Demnächst verfügbar',
     quit: 'Beenden',              quitSub: 'Spiel verlassen',
-    footer: 'v0.12 · WAIFU CLONE WARS',
+    footer: 'v0.21 · WAIFU CLONE WARS',
   },
 
   // ── Character Selection ────────────────────────────────────────────────────
@@ -40,7 +40,8 @@ export const de = {
     dps_melee:  'DPS NAHKAMPF',
     support:    'SUPPORT',
     tank:       'TANK',
-    hybrid:     'HYBRID',
+    hybrid:      'HYBRID',
+    controller:  'CONTROLLER',
   },
 
   // ── Characters ─────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export const de = {
       passive:  { name: 'Tüftlerin',              desc: 'Zu Rundenbeginn: Wenn Da Vinci-chan in der letzten Runde keine exklusive Fähigkeitskarte gespielt hat, +1 Karte ziehen.' },
       ability1: { name: 'Flying Machine',          desc: 'Teleportiere zu einem beliebigen Hex in Reichweite 5. (Kosten: 2 Mana)' },
       ability2: { name: 'Masterpiece',             desc: 'Heile einen Verbündeten in Reichweite 3 um 45 LP. (Kosten: 3 Mana)' },
-      ultimate: { name: 'Vitruvian Guardian',      desc: 'ULTIMATIV — Beschwöre eine Kampfdrohne: 50 LP, 15 Stärke, 30 DEF, hält 2 Runden. (Kosten: 3 Mana, erschöpft)' },
+      ultimate: { name: 'Vitruvian Guardian',      desc: 'ULTIMATIV — Beschwöre eine Kampfdrohne: HP 75, Stärke 50, DEF 30. Hält bis zur Niederlage. (Kosten: 3 Mana, erschöpft)' },
     },
     leonidas: {
       name: 'Leonidas-chan',
@@ -94,6 +95,26 @@ export const de = {
       ability1: { name: 'Hwajeon',             desc: '~72 Schaden bei Reichweite 3. Schiebt Ziel 1 Hex zurück. (2 Mana)', waterName: 'Ramming Speed', waterDesc: '~72 Schaden bei Reichweite 1. Schiebt Ziel 1 Hex zurück. (2 Mana, verwendet reduzierte Kraft)' },
       ability2: { name: 'Marinereparaturen',   desc: 'Zielbereich wählen. Verbündete in Reichweite 2 heilen jetzt 10 LP und 10 LP nächste Runde. (3 Mana)', waterName: 'Broadside', waterDesc: '~25 Schaden an alle Gegner in Reichweite 3. (3 Mana)' },
       ultimate: { name: 'Chongtong Barrage',   desc: 'ULTIMATIV — Sturm über 3 Hexfelder, ~60 Schaden an Gegner im Pfad. Jeder getroffene Gegner wird seitwärts geschleudert. Sun-sin-chan endet am letzten Hex. (3 Mana, erschöpft)', waterDesc: 'ULTIMATIV — Hauptziel ~90 Schaden, Angrenzende ~43 Schaden, Reichweite 5. (3 Mana, erschöpft)' },
+    },
+    beethoven: {
+      name: 'Beethoven-chan',
+      tagline: 'Dirigentin des Sternensturms',
+      title: 'Die Sturm-Komponistin',
+      lore: 'Ludwig van Beethoven schuf transzendente Musik, während er vollständig taub war. Aus den Resonanzfrequenzen alter Konzertsäle geklont, schwingt sie im Kampf mit dem Klang selbst: Schallwellen, die Feinde über das Schlachtfeld schleudern, Melodien, die Verbündete beflügeln, und ein finales Crescendo — das Götterfunken — das alle Feinde in Reichweite verstummen lässt.',
+      passive:  { name: 'Crescendo', desc: 'Jede gespielte exklusive Fähigkeitenkarte verleiht dauerhaft +3 Kraft (max. 8 Stapel, +24 max).' },
+      ability1: { name: 'Schallwelle',  desc: '33 Schaden an alle Feinde in einer Linie bis Reichweite 3, schiebt jeden 2 Felder zurück. (2 Mana)' },
+      ability2: { name: 'Freudenspur', desc: 'Wähle ein Hex in Reichweite 3 — dieses Hex und alle 6 angrenzenden Hexes werden zur Resonanzzone. Verbündete, die Zonenfelder betreten, erhalten +2 Bewegung. Hält 2 Runden. (3 Mana)' },
+      ultimate: { name: 'Götterfunken', desc: 'ULTIMATIV (Erschöpft) — Entfessle den Sternensturm. 46 Schaden und alle Feinde in Reichweite 3 werden 1 Runde betäubt. (3 Mana)' },
+    },
+    huang: {
+      name: 'Huang-chan',
+      tagline: 'Kaiserin der Terrakotta-Legionen',
+      title: 'Der Erste Kaiser',
+      lore: "Qin Shi Huang einte China und ließ 8.000 Terrakotta-Krieger erbauen. Aus Tonstaub des Mausoleums geklont, kommandiert Huang-chan ihre Legion erneut — Bogenschützen, Fußsoldaten und Kavallerie, die auf Befehl aufsteigen.",
+      passive:  { name: 'Kaiserlicher Befehl', desc: 'Kann keine Basisangriffskarten spielen. Terrakotta-Krieger zählen nicht zum Einheitenlimit.' },
+      ability1: { name: 'Terrakotta-Legion',       desc: 'Beschwöre einen zufälligen Terrakotta-Krieger (Bogenschütze oder Nahkämpfer) auf ein leeres Hex in Reichweite 3. Hält 3 Runden. (2 Mana)' },
+      ability2: { name: 'Befehl des Ersten Kaisers', desc: 'Beschwöre Terrakotta-Kavallerie auf ein Hex in Reichweite 4. Erhalte eine KOSTENLOSE Kavalleriesturm-Karte. Hält 3 Runden. (3 Mana)' },
+      ultimate: { name: 'Ewige Armee',             desc: 'ULTIMATIV — Übernimm die Kontrolle über einen Nicht-Boss-Feind in Reichweite 3 für 2 Runden. (3 Mana, Erschöpft)' },
     },
   },
 
@@ -164,7 +185,7 @@ export const de = {
         { title: 'Statuseffekte',          text: 'Verschiedene Karten und Fähigkeiten wenden Statuseffekte auf Feinde oder Verbündete an — sie verringern Werte, schränken Aktionen ein oder verursachen Schaden über Zeit. Effekte werden als Symbole auf betroffenen Charakteren angezeigt. Zeige auf ein Symbol, um dessen Wirkung und Dauer zu sehen.' },
       ],
     },
-    footer: 'v0.12 · WAIFU CLONE WARS · IMPERIUM VON ZNYXORGA',
+    footer: 'v0.21 · WAIFU CLONE WARS · IMPERIUM VON ZNYXORGA',
   },
 
   // ── Game UI ────────────────────────────────────────────────────────────────
@@ -234,7 +255,6 @@ export const de = {
     river:        { label: 'Fluss',            lines: ['Unpassierbar', 'Tödlich bei erzwungenem Betreten'] },
     plain:        { label: 'Ebene',            lines: ['Keine besonderen Effekte'] },
     mana_crystal: { label: 'Mana-Kristall',    lines: ['Unpassierbar', '+1 oder +2 Mana am Rundenende'] },
-    beast_camp:   { label: 'Bestiencamp',      lines: ['Besiegen für +15% Stärke & Kraft'], defeated: '✅ Besiegt — Boni aktiv', hpLine: 'LP: {hp}/{max}', defeatFor: 'Besiegen für +15% Stärke & Kraft' },
     base:         { label: 'Basis',            lines: ['+20% Stärke, Kraft & Verteidigung'] },
     spawn:        { label: 'Spawn-Zone',       lines: ['Respawn-Bereich'] },
   },
@@ -262,8 +282,6 @@ export const de = {
     noTargetToHit:     'Kein Trefferziel!',
     cantAttackOwn2:    'Kann den eigenen Charakter nicht angreifen!',
     cantAttackOwnBase2: 'Kann die eigene Basis nicht angreifen!',
-    beastCampDefeated: 'Bestiencamp besiegt! Team +15% Stärke & Kraft!',
-    beastCampDefeated2: 'Bestiencamp besiegt! Team erhält +15% Stärke und Kraft!',
     respawnOwnTurn:    'Du kannst nur in deiner eigenen Runde respawnen!',
   },
 
@@ -295,6 +313,9 @@ export const de = {
     sunsin_hwajeon:         { name: 'Hwajeon / Ramming Speed', description: 'Land: ~72 Schaden bei Reichweite 3, schiebt Ziel zurück. Wasser: ~72 Schaden bei Reichweite 1, schiebt Ziel zurück.' },
     sunsin_naval_command:   { name: 'Marinereparaturen / Broadside', description: 'Land: Verbündete in Reichweite 2 heilen jetzt 10 LP und 10 LP nächste Runde. Wasser: ~25 Schaden an alle Gegner in Reichweite 3.' },
     sunsin_chongtong:       { name: 'Chongtong Barrage',   description: 'ULTIMATIV (Erschöpft) — Land: Sturm über 3 Hexfelder, ~60 Schaden, seitwärts schleudern. Wasser: ~90 Hauptziel, ~43 Angrenzende, Reichweite 5.' },
+    beethoven_schallwelle:  { name: 'Schallwelle',          description: 'Schallwelle — 33 Schaden an alle Feinde in einer Linie bis Reichweite 3, schiebt jeden 2 Felder zurück.' },
+    beethoven_freudenspur:  { name: 'Freudenspur',          description: 'Wähle ein Hex in Reichweite 3 — dieses und alle 6 angrenzenden werden Resonanzzone. Verbündete erhalten +2 Bewegung beim Betreten. 2 Runden.' },
+    beethoven_gotterfunken: { name: 'Götterfunken',         description: 'ULTIMATIV (Erschöpft) — 46 Schaden und alle Feinde in Reichweite 3 werden 1 Runde betäubt.' },
   } as Record<string, { name: string; description: string }>,
 
   // ── Item names & descriptions ──────────────────────────────────────────────
@@ -318,6 +339,10 @@ export const de = {
     khans_seal:        { name: 'Siegel der Khanin',     description: "Rider's Fury betäubt jeden getroffenen Feind für 1 Runde." },
     aerial_lens:       { name: 'Luftlinse',             description: 'Flying Machine kann die Position mit einer verbündeten Einheit tauschen.' },
     life_formula:      { name: 'Lebensformel',          description: 'Masterpiece heilt zusätzliche 25 LP.' },
+    resonant_crystal:  { name: 'Resonanzkristall',     description: 'Götterfunken betäubt alle getroffenen Feinde 2 Runden statt 1.' },
+    composers_baton:   { name: 'Dirigentenstab',       description: 'Verbündete auf einer Freudenspur-Zone erhalten zu Rundenbeginn auch +5 Verteidigung.' },
+    dragon_kiln:       { name: 'Drachenkammer',        description: 'Terrakotta-Einheiten werden mit +20 LP und +10 Stärke beschworen.' },
+    iron_edict:        { name: 'Eisernes Edikt',       description: 'Ewige Armee dauert 3 Runden statt 2.' },
     znyxorgas_eye:     { name: "Auge von Znyxorga",     description: 'Nach dem Besiegen eines Feindes kostet deine nächste Karte 0 Mana.' },
     void_armor:        { name: 'Leerérüstung',          description: 'Einmal pro Kampf: negiere einen tödlichen Treffer — überlebe stattdessen mit 1 LP.' },
     arena_champion:    { name: 'Arena-Champion',        description: 'Alle Werte +10, solange dieser Charakter am Leben ist.' },

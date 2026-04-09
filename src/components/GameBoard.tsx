@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import HexTile from "./HexTile";
-import BeastCampHPBar from "./BeastCampHPBar";
 import AIIntentBadge from "./AIIntentBadge";
 import AnimationLayer from "./AnimationLayer";
 import { GameState, Coordinates, AIIntent } from "@/types/game";
@@ -31,10 +30,12 @@ interface GameBoardProps {
   onTileClick: (coordinates: Coordinates) => void;
   onTileHover?: (tile: GameState['board'][number] | null) => void;
   animations?: AnimEvent[];
+  hoverPreviewRange?: number | null;
+  externalIntentRange?: { iconId: string; range: number } | null;
 }
 
 
-const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [] }) => {
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], hoverPreviewRange, externalIntentRange }) => {
   const { t } = useT();
   // 1) Hex dimensions
   const hexSize = 50;
@@ -88,7 +89,19 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     gameState.targetingMode?.range
   );
 
-  // 5) Hover damage preview when a damage card is selected
+  // 5) Card hover range preview — highlights tiles within hoverPreviewRange of the active executor
+  const hoverPreviewSet = useMemo((): Set<string> => {
+    if (!hoverPreviewRange || hoverPreviewRange <= 0 || !selectedIcon) return new Set();
+    const set = new Set<string>();
+    for (const tile of gameState.board) {
+      const { q, r } = tile.coordinates;
+      const d = (Math.abs(q - selectedIcon.position.q) + Math.abs(r - selectedIcon.position.r) + Math.abs((q + r) - (selectedIcon.position.q + selectedIcon.position.r))) / 2;
+      if (d > 0 && d <= hoverPreviewRange) set.add(`${q},${r}`);
+    }
+    return set;
+  }, [hoverPreviewRange, selectedIcon, gameState.board]);
+
+  // 5b) Hover damage preview when a damage card is selected
   const cardTargetingMode = (gameState as any).cardTargetingMode as { card: any; executorId: string } | undefined;
 
   // 5a) Terrain tooltip (shown when nothing is being targeted)
@@ -102,7 +115,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     river:        { emoji: "🌊", label: t.terrain.river.label,        color: "border-blue-500/60 bg-blue-950/90" },
     plain:        { emoji: "🌾", label: t.terrain.plain.label,        color: "border-slate-600/40 bg-slate-900/90" },
     mana_crystal: { emoji: "💎", label: t.terrain.mana_crystal.label, color: "border-purple-500/60 bg-purple-950/90" },
-    beast_camp:   { emoji: "🐗", label: t.terrain.beast_camp.label,   color: "border-orange-600/60 bg-orange-950/90" },
     base:         { emoji: "🏰", label: t.terrain.base.label,         color: "border-amber-500/60 bg-amber-950/90" },
     spawn:        { emoji: "🚩", label: t.terrain.spawn.label,        color: "border-slate-500/40 bg-slate-900/90" },
   };
@@ -116,20 +128,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     if (ttype === 'base') return [...t.terrain.base.lines];
     if (ttype === 'spawn') return [...t.terrain.spawn.lines];
     if (ttype === 'plain') return [...t.terrain.plain.lines];
-    if (ttype === 'beast_camp') {
-      const camps = (gameState as any).objectives?.beastCamps;
-      if (camps) {
-        const idx = gameState.board
-          .filter(b => b.terrain.type === 'beast_camp')
-          .findIndex(b => b.coordinates.q === tile.coordinates.q && b.coordinates.r === tile.coordinates.r);
-        const hp = camps.hp?.[idx] ?? 0;
-        const maxHp = camps.maxHp ?? 100;
-        const defeated = camps.defeated?.[idx];
-        if (defeated) return [t.terrain.beast_camp.defeated];
-        return [t.terrain.beast_camp.hpLine.replace('{hp}', String(hp)).replace('{max}', String(maxHp)), t.terrain.beast_camp.defeatFor];
-      }
-      return [...t.terrain.beast_camp.lines];
-    }
     return [];
   }
   const hoverDamagePreview = useMemo(() => {
@@ -251,22 +249,20 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const lineHexSet = useMemo(() => new Set(lineHexes.map(h => `${h.q},${h.r}`)), [lineHexes]);
 
   // 5d) AI intent range hover — highlight tiles within that range from the AI icon
+  //     Also handles externalIntentRange (from sidebar enemy ability hover)
   const intentRangeHighlight = useMemo((): Set<string> => {
-    if (!hoveredIntentRange) return new Set();
-    const aiIntents: AIIntent[] = (gameState as any).aiIntents ?? [];
-    const intent = aiIntents.find(i => i.iconId === hoveredIntentRange.iconId);
-    if (!intent) return new Set();
-    const aiIcon = gameState.players.flatMap(p => p.icons).find(i => i.id === hoveredIntentRange.iconId);
+    const active = hoveredIntentRange ?? externalIntentRange ?? null;
+    if (!active) return new Set();
+    const aiIcon = gameState.players.flatMap(p => p.icons).find(i => i.id === active.iconId);
     if (!aiIcon) return new Set();
     const set = new Set<string>();
-    // Mark all tiles within intent range
     for (const tile of gameState.board) {
       const { q, r } = tile.coordinates;
       const dist = Math.max(Math.abs(q - aiIcon.position.q), Math.abs(r - aiIcon.position.r), Math.abs((q + r) - (aiIcon.position.q + aiIcon.position.r)));
-      if (dist <= hoveredIntentRange.range) set.add(`${q},${r}`);
+      if (dist <= active.range) set.add(`${q},${r}`);
     }
     return set;
-  }, [hoveredIntentRange, gameState]);
+  }, [hoveredIntentRange, externalIntentRange, gameState]);
 
   // 6) Memoized board rendering
   const renderBoard = useMemo(() => {
@@ -320,6 +316,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       const tKey = `${q},${r}`;
       const isOnLine = lineHexSet.has(tKey);
       const isIntentRange = intentRangeHighlight.has(tKey);
+      const isHoverPreview = hoverPreviewSet.has(tKey);
       const laserGridStruckIds: string[] = (gameState as any).laserGridStruckIds ?? [];
       const isLaserStruck = icon ? laserGridStruckIds.includes(icon.id) : false;
       const burningForestTiles: string[] = (gameState as any).burningForestTiles ?? [];
@@ -328,17 +325,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       const isPendingFireStart = pendingFireStartTile === tKey;
       const pendingLaserTiles: string[] = (gameState as any).pendingLaserTiles ?? [];
       const isPendingLaser = pendingLaserTiles.includes(tKey);
+      const activeZones: { center: {q:number,r:number}; radius: number }[] = (gameState as any).activeZones ?? [];
+      const isInZone = activeZones.some(z => {
+        const dist = Math.max(Math.abs(q - z.center.q), Math.abs(r - z.center.r), Math.abs((q + r) - (z.center.q + z.center.r)));
+        return dist <= z.radius;
+      });
 
       // All AI intents for this tile's icon (shown during player's turn)
       const aiIntents: AIIntent[] = (gameState as any).aiIntents ?? [];
       const tileIntents = icon && icon.playerId === 1 ? aiIntents.filter(i => i.iconId === icon.id) : [];
-
-      // Beast camp intents — shown on beast_camp tiles
-      const beastCampIntents: { campQ: number; campR: number; range1Dmg: number; range2Dmg: number }[] =
-        (gameState as any).beastCampIntents ?? [];
-      const campIntent = tile.terrain.type === 'beast_camp'
-        ? beastCampIntents.find(ci => ci.campQ === q && ci.campR === r)
-        : undefined;
 
       return (
         <div
@@ -352,7 +347,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             transform: 'scale(0.95)',
             transformOrigin: 'center center',
           }}
-          onClick={() => onTileClick(tile.coordinates)}
           onMouseEnter={() => { setHoveredCoords({ q, r }); onTileHover?.(tile); }}
           onMouseLeave={() => { setHoveredCoords(null); onTileHover?.(null); }}
         >
@@ -382,6 +376,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             <div className="absolute inset-0 pointer-events-none z-20" style={{
               background: "rgba(255,140,0,0.35)",
               clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+            }} />
+          )}
+
+          {/* Card hover range preview — soft cyan tint showing ability reach */}
+          {isHoverPreview && !gameState.targetingMode && (
+            <div className="absolute inset-0 pointer-events-none z-14" style={{
+              background: "rgba(34,211,238,0.18)",
+              clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+              border: "1px solid rgba(34,211,238,0.40)",
             }} />
           )}
 
@@ -440,6 +443,29 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             </div>
           )}
 
+          {/* Freudenspur resonance zone */}
+          {isInZone && (
+            <div className="absolute inset-0 pointer-events-none z-22 flex items-center justify-center"
+              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: "rgba(100,220,255,0.15)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+                animation: "pulse 2s ease-in-out infinite",
+              }} />
+              <svg className="absolute inset-0 pointer-events-none" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
+                <polygon
+                  points={[
+                    `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
+                    `${hexWidth/4},${hexHeight}`,`0,${hexHeight/2}`,`${hexWidth/4},0`,
+                  ].join(' ')}
+                  fill="none" stroke="rgba(100,220,255,0.55)" strokeWidth="2" strokeDasharray="5,3"
+                />
+              </svg>
+              <span style={{ fontSize: 11, zIndex: 1, textShadow: "0 0 6px rgba(100,220,255,0.9)", opacity: 0.8 }}>♪</span>
+            </div>
+          )}
+
           {/* Pending fire start tile warning (before forest fire activates) */}
           {isPendingFireStart && !isBurning && (
             <div className="absolute inset-0 pointer-events-none z-23 flex items-center justify-center"
@@ -484,19 +510,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
                 intents={tileIntents}
                 onHoverRange={(range) => setHoveredIntentRange(range ? { iconId: icon!.id, range } : null)}
               />
-            </div>
-          )}
-
-          {/* Beast Camp attack intent badge */}
-          {campIntent && (
-            <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none">
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-white text-xs font-bold shadow-lg bg-orange-800/95 border-orange-500 whitespace-nowrap">
-                  <span>🐗</span>
-                  <span>⚔ {campIntent.range1Dmg}</span>
-                </div>
-                <div className="text-[9px] text-orange-300 font-orbitron text-center">R1·{campIntent.range1Dmg} / R2·{campIntent.range2Dmg}</div>
-              </div>
             </div>
           )}
 
@@ -621,12 +634,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           }}
         >
           {renderBoard}
-          <BeastCampHPBar
-            gameState={gameState}
-            hexSize={hexSize}
-            offsetX={offsetX}
-            offsetY={offsetY}
-          />
           <AnimationLayer
             animations={animations}
             offsetX={offsetX}

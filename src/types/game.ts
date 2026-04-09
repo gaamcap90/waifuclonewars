@@ -60,6 +60,9 @@ export interface Icon {
   freeCardsLeft?: number;      // next_2_cards_free_on_kill: remaining free cards
   firstAbilityUsed?: boolean;  // first_ability_free: first ability card has been used this fight
   firstHitNegated?: boolean;   // negate_first_hit (Diamond Shell): first hit this fight already negated
+  terracottaControlled?: boolean;  // Huang-chan Eternal Army: this enemy is currently controlled
+  controlledByPlayer?: number;     // which player controls it (0 = player)
+  controlExpiresTurn?: number;     // turn on which control expires
 }
 
 export interface Ability {
@@ -81,7 +84,7 @@ export interface Ability {
 export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate' | 'debuff';
 export type CardRarity = 'common' | 'rare' | 'ultimate';
 
-export type DebuffType = 'mud_throw' | 'demoralize' | 'armor_break' | 'silence' | 'poison' | 'stun';
+export type DebuffType = 'mud_throw' | 'demoralize' | 'armor_break' | 'silence' | 'poison' | 'stun' | 'bleed';
 
 export interface Debuff {
   type: DebuffType;
@@ -120,6 +123,28 @@ export interface EffectValues {
   lineCharge?: boolean;         // charge in a line, deal damage + push enemies sideways (Chongtong land)
   chargeDist?: number;          // max hexes to charge
   pushSide?: boolean;           // push hit enemies perpendicular to charge direction
+  moveZone?: boolean;           // place a movement buff zone centered on caster, radius = range
+  zoneDuration?: number;        // turns the zone lasts
+  summonTerracotta?: boolean;   // Huang-chan Ability 1: summon a random terracotta warrior on target hex
+  summonCavalry?: boolean;      // Huang-chan Ability 2: summon a terracotta cavalry + inject free charge card
+  controlEnemy?: boolean;       // Huang-chan Ultimate: turn an enemy into a temporary ally
+  controlDuration?: number;     // how many turns the control lasts
+  bleedMult?: number;           // Genghis Mongol Charge: apply bleed = power * bleedMult per turn for 2 turns
+  scalingAoE?: boolean;         // Genghis Horde Tactics: damage per enemy = power * perEnemyMult × enemy count
+  perEnemyMult?: number;        // multiplier per enemy in range for scalingAoE
+  executeDouble?: boolean;      // Genghis Rider's Fury: double damage if target < 50% HP
+  summonHpBonus?: number;       // extra HP added to summoned terracotta units (Terracotta Legion upgrade)
+  cavalryMightBonus?: number;   // extra Might added to summoned cavalry (First Emperor's Command upgrade)
+  aoeDemoralize?: boolean;      // after hitting primary target, apply demoralize to all adjacent enemies (THIS IS SPARTA!)
+}
+
+export interface Zone {
+  center: Coordinates;
+  radius: number;
+  effect: 'moveBonus';
+  magnitude: number;   // e.g. +2 movement
+  ownerId: number;     // player who placed the zone
+  turnsRemaining: number;
 }
 
 export interface Card {
@@ -204,6 +229,7 @@ export interface GameState {
   pendingFloodCountdown?: number;   // Turns until Alien Tide activates (2 = 2 turns notice)
   pendingFireCountdown?: number;    // Turns until Forest Fire activates (2 = 2 turns notice)
   pendingFireStartTile?: string;    // "q,r" key of tile that will catch fire (shown as warning on board)
+  activeZones?: Zone[];             // Beethoven Freudenspur movement buff zones
 }
 
 export interface ArenaEventDef {

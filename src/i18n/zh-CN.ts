@@ -18,7 +18,7 @@ export const zhCN = {
     archives: '历史档案馆', archivesSub: '角色图鉴', archivesSoon: '角色图鉴 — 即将推出',
     settings: '游戏设置',    settingsSub: '操控与音频', settingsSoon: '操控与音频 — 即将推出',
     quit: '退出',            quitSub: '退出游戏',
-    footer: 'v0.12 · WAIFU CLONE WARS',
+    footer: 'v0.21 · WAIFU CLONE WARS',
   },
 
   // ── Character Selection ────────────────────────────────────────────────────
@@ -40,7 +40,8 @@ export const zhCN = {
     dps_melee:  '近战输出',
     support:    '辅助',
     tank:       '坦克',
-    hybrid:     '混合',
+    hybrid:      '混合',
+    controller:  '控制者',
   },
 
   // ── Characters ─────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export const zhCN = {
       passive:  { name: '工匠天赋',     desc: '回合开始时，若达芬奇-chan上一回合未使用专属技能卡，则额外抽1张牌。' },
       ability1: { name: '飞行机器',     desc: '传送至射程5内任意格。（消耗：2法力）' },
       ability2: { name: '传世杰作',     desc: '治疗射程3内一名友军45点HP。（消耗：3法力）' },
-      ultimate: { name: '维特鲁威守护者', desc: '终极——召唤一架战斗无人机：HP50，攻击15，DEF30，持续2回合。（消耗：3法力，耗尽）' },
+      ultimate: { name: '维特鲁威守护者', desc: '终极——召唤一架战斗无人机：HP75，攻击50，防御30。持续直至被击败。（消耗：3法力，耗尽）' },
     },
     leonidas: {
       name: '列奥尼达斯-chan',
@@ -94,6 +95,26 @@ export const zhCN = {
       ability1: { name: '火箭弹',   desc: '射程3，约72伤害，将目标击退1格。（2法力）', waterName: '冲撞速度', waterDesc: '射程1，约72伤害，将目标击退1格。（2法力，使用削减后的PWR）' },
       ability2: { name: '海军维修', desc: '选定一个区域，射程2内友军立即回复10HP，下回合再回复10HP。（3法力）', waterName: '舷炮齐射', waterDesc: '对射程3内所有敌人造成约25伤害。（3法力）' },
       ultimate: { name: '天统炮击', desc: '终极——冲锋3格，对路径上的敌人造成约60伤害，每个被击中的敌人向侧面击飞，李舜臣-chan停在最后一格。（3法力，耗尽）', waterDesc: '终极——主目标约90伤害，相邻目标约43伤害，射程5。（3法力，耗尽）' },
+    },
+    beethoven: {
+      name: '贝多芬-chan',
+      tagline: '星暴风的指挥家',
+      title: '风暴作曲家',
+      lore: '路德维希·范·贝多芬在完全失聪的状态下创作出了超凡的音乐。她由古老音乐厅石墙中保存的共鸣频率复制而来，在竞技场中将声音本身化为武器——将敌人轰出战场的冲击波、鼓舞友军的旋律，以及令范围内所有敌人陷入沉默的终章：神圣火花。',
+      passive:  { name: '渐强', desc: '每次打出专属技能牌，永久获得+8能量（最多叠3层，+24上限）。' },
+      ability1: { name: '音波',   desc: '对射程3直线内所有敌人造成33伤害，并各推后2格。（2法力）' },
+      ability2: { name: '欢愉踪迹', desc: '指定射程3内一格——该格及相邻6格形成共鸣区域。友军经过区域格时获得+2移动力。持续2回合。（3法力）' },
+      ultimate: { name: '神圣火花', desc: '终极（耗尽）——释放星暴风。造成46伤害并使射程3内所有敌人眩晕1回合。（3法力）' },
+    },
+    huang: {
+      name: '嬴政-chan',
+      tagline: '兵马俑军团的女皇',
+      title: '始皇帝',
+      lore: '秦始皇统一中国，以八千件兵马俑随葬。帝国从陵墓黄土中提取了她的基因印记，嬴政-chan再次统领军团——弓兵、步兵与骑兵奉召而至。',
+      passive:  { name: '皇命', desc: '无法打出基本攻击牌。兵马俑战士不计入己方单位上限。' },
+      ability1: { name: '兵马俑军团',   desc: '在射程3内空格召唤随机兵马俑（弓兵/近战，各50%）。持续3回合。（2法力）' },
+      ability2: { name: '始皇令',       desc: '在射程4内召唤兵马俑骑兵。立即获得一张免费骑兵冲锋牌。持续3回合。（3法力）' },
+      ultimate: { name: '永恒军团',     desc: '终极——控制射程3内非Boss敌人2回合。（3法力，耗尽）' },
     },
   },
 
@@ -164,7 +185,7 @@ export const zhCN = {
         { title: '状态效果',       text: '多种卡牌和技能可对敌人或友军施加状态效果——降低属性、限制行动或持续造成伤害。效果以图标显示在受影响角色上。悬停图标可查看效果内容及剩余持续时间。' },
       ],
     },
-    footer: 'v0.12 · WAIFU CLONE WARS · 兹尼索尔加帝国',
+    footer: 'v0.21 · WAIFU CLONE WARS · 兹尼索尔加帝国',
   },
 
   // ── Game UI ────────────────────────────────────────────────────────────────
@@ -234,7 +255,6 @@ export const zhCN = {
     river:        { label: '河流',       lines: ['无法通行', '被击飞至此即死'] },
     plain:        { label: '平原',       lines: ['无特殊效果'] },
     mana_crystal: { label: '法力水晶',   lines: ['无法通行', '回合结束时+1或+2法力'] },
-    beast_camp:   { label: '野兽营地',   lines: ['击败可获得+15% 攻击 & PWR'], defeated: '✅ 已击败——增益生效', hpLine: 'HP: {hp}/{max}', defeatFor: '击败可获得+15% 攻击 & PWR' },
     base:         { label: '基地',       lines: ['+20% 攻击、PWR & 防御'] },
     spawn:        { label: '重生区',     lines: ['重生点'] },
   },
@@ -262,8 +282,6 @@ export const zhCN = {
     noTargetToHit:     '没有可命中的目标！',
     cantAttackOwn2:    '无法攻击己方角色！',
     cantAttackOwnBase2: '无法攻击己方基地！',
-    beastCampDefeated: '野兽营地已击败！全队+15% 攻击 & PWR！',
-    beastCampDefeated2: '野兽营地已击败！全队获得+15%攻击与PWR加成！',
     respawnOwnTurn:    '只能在己方回合进行重生！',
   },
 
@@ -295,6 +313,9 @@ export const zhCN = {
     sunsin_hwajeon:         { name: '火箭弹 / 冲撞速度', description: '陆地：射程3约72伤害，击退目标。水域：射程1约72伤害，击退目标。' },
     sunsin_naval_command:   { name: '海军维修 / 舷炮齐射', description: '陆地：射程2内友军立即回复10HP，下回合再回复10HP。水域：对射程3内所有敌人造成约25伤害。' },
     sunsin_chongtong:       { name: '天统炮击',       description: '终极（耗尽）——陆地：冲锋3格约60伤害，击飞至侧面。水域：主目标约90，相邻约43，射程5。' },
+    beethoven_schallwelle:  { name: '音波',           description: '对射程3直线内所有敌人造成33伤害，并各推后2格。' },
+    beethoven_freudenspur:  { name: '欢愉踪迹',       description: '指定射程3内一格——该格及相邻6格形成共鸣区域。友军经过区域格时获得+2移动力。持续2回合。' },
+    beethoven_gotterfunken: { name: '神圣火花',       description: '终极（耗尽）——造成46伤害并使射程3内所有敌人眩晕1回合。' },
   } as Record<string, { name: string; description: string }>,
 
   // ── Item names & descriptions ──────────────────────────────────────────────
@@ -318,6 +339,10 @@ export const zhCN = {
     khans_seal:        { name: '大汗印记',       description: '骑者怒火对每个被命中的敌人额外施加1回合眩晕。' },
     aerial_lens:       { name: '空中棱镜',       description: '飞行机器可以与一名友军交换位置。' },
     life_formula:      { name: '生命配方',       description: '传世杰作额外回复25HP。' },
+    resonant_crystal:  { name: '共鸣水晶',       description: '神圣火花对所有被命中的敌人施加2回合眩晕（原为1回合）。' },
+    composers_baton:   { name: '指挥棒',         description: '站在弗罗伊登斯普尔区域的友军在回合开始时额外获得+5防御。' },
+    dragon_kiln:       { name: '龙窑',           description: '陶俑单位召唤时拥有+20HP和+10攻击力。' },
+    iron_edict:        { name: '铁令',           description: '永恒军队持续时间从2回合延长至3回合。' },
     znyxorgas_eye:     { name: '兹尼索尔加之眼', description: '击败敌人后，你的下一张牌消耗0法力。' },
     void_armor:        { name: '虚空铠甲',       description: '每场战斗一次：抵消致命伤害——以1HP存活。' },
     arena_champion:    { name: '竞技场冠军',     description: '该角色存活期间所有属性+10。' },

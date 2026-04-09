@@ -5,7 +5,7 @@ import {
 } from "@/types/roguelike";
 import {
   generateActMap, buildStartingCharacters, SHARED_STARTING_CARDS, CHARACTER_STARTING_CARDS,
-  XP_TO_NEXT, pickCardRewards, pickItemReward,
+  XP_TO_NEXT, pickCardRewards, pickItemReward, rollItemTier,
 } from "@/data/roguelikeData";
 import { seededRng } from "@/utils/rng";
 
@@ -36,6 +36,7 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
     pendingRewards: null,
     permanentlyDeadIds: [],
     battleCount: 0,
+    upgradedCardDefIds: [],
   };
 }
 
@@ -94,16 +95,16 @@ export function useRunState() {
         .filter(c => (result.finalHps[c.id] ?? 1) > 0)
         .map(c => c.id);
 
-      // Item drop — boss fights give one rare item per living character
+      // Item drop — tier rolled per encounter type; character-specific items only if that char is alive
       let itemDrop: RunItem | undefined;
       let bossItems: RunItem[] | undefined;
       if (result.won && node.type === 'boss') {
         const livingChars = prev.characters.filter(c => (result.finalHps[c.id] ?? 0) > 0);
-        bossItems = livingChars.map(() => pickItemReward('rare', rng, livingCharIds));
+        bossItems = livingChars.map(() => pickItemReward(rollItemTier('boss', rng), rng, livingCharIds));
       } else if (result.won && enc.guaranteedItem) {
-        itemDrop = pickItemReward('rare', rng, livingCharIds);
+        itemDrop = pickItemReward(rollItemTier('elite', rng), rng, livingCharIds);
       } else if (result.won && rng() < enc.itemDropChance) {
-        itemDrop = pickItemReward('uncommon', rng, livingCharIds);
+        itemDrop = pickItemReward(rollItemTier(node.type === 'elite' ? 'elite' : 'enemy', rng), rng, livingCharIds);
       }
 
       // Update character HPs + track permanent deaths
@@ -173,15 +174,17 @@ export function useRunState() {
       const chars = prev.characters.map(c => {
         if (!r) return c;
         if (c.currentHp <= 0) return c;
-        let { xp, level, xpToNext, pendingStatPoints } = c;
+        let { xp, level, xpToNext, pendingStatPoints, pendingAbilityUpgrades, pendingUltimateUpgrade } = c;
         xp += r.xp;
         while (xp >= xpToNext && level < 6) {
           xp -= xpToNext;
           level++;
           xpToNext = XP_TO_NEXT[level] ?? 9999;
           pendingStatPoints += 2;
+          if (level === 2 || level === 4) pendingAbilityUpgrades += 1;
+          if (level === 6) pendingUltimateUpgrade += 1;
         }
-        return { ...c, xp, level, xpToNext, pendingStatPoints };
+        return { ...c, xp, level, xpToNext, pendingStatPoints, pendingAbilityUpgrades, pendingUltimateUpgrade };
       });
 
       // Equip all assigned items (regular drop + boss items all go through the same path)
@@ -253,6 +256,30 @@ export function useRunState() {
             maxHp: stat === 'hp' ? c.maxHp + amount : c.maxHp,
             currentHp: stat === 'hp' ? c.currentHp + amount : c.currentHp,
             statBonuses: { ...c.statBonuses, [stat]: c.statBonuses[stat] + amount },
+          };
+        }),
+      };
+    });
+  }, []);
+
+  // Spend one pending ability upgrade token: upgrade all copies of defId in the deck
+  const upgradeAbility = useCallback((characterId: CharacterId, defId: string, isUltimate: boolean) => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        upgradedCardDefIds: prev.upgradedCardDefIds.includes(defId)
+          ? prev.upgradedCardDefIds
+          : [...prev.upgradedCardDefIds, defId],
+        characters: prev.characters.map(c => {
+          if (c.id !== characterId) return c;
+          if (isUltimate && c.pendingUltimateUpgrade <= 0) return c;
+          if (!isUltimate && c.pendingAbilityUpgrades <= 0) return c;
+          return {
+            ...c,
+            pendingAbilityUpgrades: isUltimate ? c.pendingAbilityUpgrades : c.pendingAbilityUpgrades - 1,
+            pendingUltimateUpgrade: isUltimate ? c.pendingUltimateUpgrade - 1 : c.pendingUltimateUpgrade,
+            upgradedAbilityIds: [...c.upgradedAbilityIds, defId],
           };
         }),
       };
@@ -344,6 +371,49 @@ export function useRunState() {
     });
   }, []);
 
+  // Heal all living characters by 30% max HP (campfire heal-all option)
+  const healAllAtCampfire = useCallback(() => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        characters: prev.characters.map(c => {
+          if (c.currentHp <= 0) return c;
+          const heal = Math.floor(c.maxHp * 0.30);
+          return { ...c, currentHp: Math.min(c.maxHp, c.currentHp + heal) };
+        }),
+      };
+    });
+  }, []);
+
+  // Remove one copy of a card from the deck (campfire remove-card option)
+  const removeCardFromDeck = useCallback((cardId: string) => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      const idx = prev.deckCardIds.indexOf(cardId);
+      if (idx === -1) return prev;
+      const newDeck = [...prev.deckCardIds];
+      newDeck.splice(idx, 1);
+      return { ...prev, deckCardIds: newDeck };
+    });
+  }, []);
+
+  // Add an item directly to a character's slot (unknown events / mystery box)
+  const addItemToCharacter = useCallback((item: RunItem, characterId: CharacterId, slotIndex: number) => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        characters: prev.characters.map(c => {
+          if (c.id !== characterId) return c;
+          const items = [...c.items];
+          items[slotIndex] = item;
+          return { ...c, items };
+        }),
+      };
+    });
+  }, []);
+
   return {
     runState,
     startRun,
@@ -353,6 +423,7 @@ export function useRunState() {
     completeNonCombatNode,
     collectRewards,
     allocateStatPoint,
+    upgradeAbility,
     spendGold,
     addGold,
     addCardToDeck,
@@ -360,5 +431,8 @@ export function useRunState() {
     buyHealAllFromMerchant,
     hurtAllCharacters,
     healAtCampfire,
+    healAllAtCampfire,
+    removeCardFromDeck,
+    addItemToCharacter,
   };
 }

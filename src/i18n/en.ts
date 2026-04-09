@@ -18,7 +18,7 @@ export const en = {
     archives: 'Historical Archives', archivesSub: 'Character Library', archivesSoon: 'Character Library — Coming Soon',
     settings: 'Game Settings',    settingsSub: 'Controls & Audio', settingsSoon: 'Controls & Audio — Coming Soon',
     quit: 'Quit',                 quitSub: 'Exit game',
-    footer: 'v0.12 · WAIFU CLONE WARS',
+    footer: 'v0.21 · WAIFU CLONE WARS',
   },
 
   // ── Character Selection ────────────────────────────────────────────────────
@@ -40,7 +40,8 @@ export const en = {
     dps_melee:  'DPS MELEE',
     support:    'SUPPORT',
     tank:       'TANK',
-    hybrid:     'HYBRID',
+    hybrid:      'HYBRID',
+    controller:  'CONTROLLER',
   },
 
   // ── Characters ─────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export const en = {
       passive:  { name: 'Tinkerer',           desc: "At turn start, if Da Vinci hasn't used an exclusive ability card last turn, draw +1 card." },
       ability1: { name: 'Flying Machine',     desc: 'Teleport to any hex within range 5. (Cost: 2 mana)' },
       ability2: { name: 'Masterpiece',        desc: 'Heal an ally within range 3 for 45 HP. (Cost: 3 mana)' },
-      ultimate: { name: 'Vitruvian Guardian', desc: 'ULTIMATE — Summon a combat drone: 50 HP, 15 Might, 30 DEF, lasts 2 turns. (Cost: 3 mana, exhaust)' },
+      ultimate: { name: 'Vitruvian Guardian', desc: 'ULTIMATE — Summon a combat drone: HP 75, Might 50, DEF 30. Lasts until defeated. (Cost: 3 mana, exhaust)' },
     },
     leonidas: {
       name: 'Leonidas-chan',
@@ -94,6 +95,26 @@ export const en = {
       ability1: { name: 'Hwajeon',     desc: '~72 dmg at range 3. Pushes target back 1 hex. (2 mana)',    waterName: 'Ramming Speed', waterDesc: '~72 dmg at range 1. Pushes target back 1 hex. (2 mana, uses reduced Power)' },
       ability2: { name: 'Naval Repairs', desc: 'Target an area. Allies within range 2 heal 10 HP now and 10 HP next turn. (3 mana)', waterName: 'Broadside', waterDesc: '~25 dmg to all enemies in range 3. (3 mana)' },
       ultimate: { name: 'Chongtong Barrage', desc: 'ULTIMATE — Charge 3 hexes, ~60 dmg to enemies in path. Each hit enemy pushed sideways. Sun-sin ends at last hex. (3 mana, exhaust)', waterDesc: 'ULTIMATE — Main target ~90 dmg, adjacents ~43 dmg, range 5. (3 mana, exhaust)' },
+    },
+    beethoven: {
+      name: 'Beethoven-chan',
+      tagline: 'Conductor of the Sternensturm',
+      title: 'The Storm Composer',
+      lore: 'Ludwig van Beethoven composed transcendent music while completely deaf. Cloned from resonant frequencies preserved in old concert hall stone, she wields sound as a weapon in the arena — pushing, stunning, and rallying allies with pure sonic force.',
+      passive:  { name: 'Crescendo', desc: 'Each exclusive ability card played grants +3 Power permanently (up to 8 stacks, +24 max).' },
+      ability1: { name: 'Schallwelle',  desc: 'Sonic wave — 33 damage to all enemies in a line up to range 3, pushes each 2 tiles back. (2 mana)' },
+      ability2: { name: 'Freudenspur', desc: 'Target a tile within range 3 — that tile and all 6 adjacent tiles become a resonance zone. Allies passing through gain +2 Movement. Lasts 2 turns. (3 mana)' },
+      ultimate: { name: 'Götterfunken', desc: 'ULTIMATE — Unleash the Sternensturm. Deal 46 damage and stun all enemies within range 3 for 1 turn. (3 mana, exhaust)' },
+    },
+    huang: {
+      name: 'Huang-chan',
+      tagline: 'Empress of the Terracotta Legions',
+      title: 'The First Emperor',
+      lore: "Qin Shi Huang unified China, built the Great Wall, and was buried with 8,000 terracotta warriors. The Empire of Znyxorga extracted her echo from clay dust at the mausoleum and grew her in their vats. Huang-chan commands her legion once more — archers, footsoldiers, and cavalry that rise on command. She does not fight alone. She never has.",
+      passive:  { name: 'Imperial Command', desc: 'Cannot play Basic Attack cards. Guaranteed ≥1 Basic Attack card in hand each turn (for Terracotta units to use). Terracotta units may only use Basic Attacks.' },
+      ability1: { name: 'Terracotta Legion',       desc: 'Summon a random Terracotta Warrior (Archer: Might×1.5 range 2 — or Melee: Might×1 range 1) on a hex within range 3. HP 40, scales with your stats. Lasts 2 turns. (2 mana)' },
+      ability2: { name: "First Emperor's Command", desc: 'Summon a Terracotta Cavalry (Might×1.5, Def×1.5, Power×1, Move 3) on an adjacent hex. HP 60, scales with your stats. Lasts 2 turns. Gain a FREE Cavalry Charge card. (3 mana)' },
+      ultimate: { name: 'Eternal Army',            desc: 'ULTIMATE — Control a non-boss enemy within range 3 for 2 turns. They attack the nearest foe and use no abilities. (3 mana, exhaust)' },
     },
   },
 
@@ -164,7 +185,7 @@ export const en = {
         { title: 'Status Effects',   text: 'Various cards and abilities apply status effects to enemies or allies — reducing stats, restricting actions, or dealing damage over time. Effects are shown as icons on affected characters. Hover an icon to see what it does and how long it lasts.' },
       ],
     },
-    footer: 'v0.12 · WAIFU CLONE WARS · EMPIRE OF ZNYXORGA',
+    footer: 'v0.21 · WAIFU CLONE WARS · EMPIRE OF ZNYXORGA',
   },
 
   // ── Game UI ────────────────────────────────────────────────────────────────
@@ -234,7 +255,6 @@ export const en = {
     river:        { label: 'River',          lines: ['Impassable', 'Lethal if displaced onto it'] },
     plain:        { label: 'Arena Floor',    lines: ['No modifiers'] },
     mana_crystal: { label: 'Mana Crystal',   lines: ['+1 Mana on Entry'] },
-    beast_camp:   { label: 'Beast Camp',   lines: ['Defeat for +15% Might & Power'], defeated: '✅ Defeated — buffs active', hpLine: 'HP: {hp}/{max}', defeatFor: 'Defeat for +15% Might & Power' },
     base:         { label: 'Base',         lines: ['+20% Might, Power & Defense'] },
     spawn:        { label: 'Spawn Zone',   lines: ['Respawn zone'] },
   },
@@ -262,8 +282,6 @@ export const en = {
     noTargetToHit:     'No target to hit!',
     cantAttackOwn2:    'Cannot attack your own character!',
     cantAttackOwnBase2: 'Cannot attack your own base!',
-    beastCampDefeated: 'Beast Camp defeated! Team +15% Might & Power!',
-    beastCampDefeated2: 'Beast Camp defeated! Team gains +15% Might and Power!',
     respawnOwnTurn:    'You can only respawn on your turn!',
   },
 
@@ -295,6 +313,9 @@ export const en = {
     sunsin_hwajeon:         { name: 'Hwajeon / Ramming Speed', description: 'Land: ~72 dmg at range 3, pushes target back. Water: ~72 dmg at range 1, pushes target back.' },
     sunsin_naval_command:   { name: 'Naval Repairs / Broadside', description: 'Land: allies within range 2 heal 10 HP now and 10 HP next turn. Water: ~25 dmg to all enemies in range 3.' },
     sunsin_chongtong:       { name: 'Chongtong Barrage',   description: 'ULTIMATE (Exhaust) — Land: charge 3 hexes, ~60 dmg, push sideways. Water: ~90 main, ~43 adj, range 5.' },
+    beethoven_schallwelle:  { name: 'Schallwelle',          description: 'Sonic wave — 33 damage to all enemies in a line up to range 3, pushes each 2 tiles back.' },
+    beethoven_freudenspur:  { name: 'Freudenspur',          description: 'Target a tile within range 3 — that tile and all 6 adjacent tiles become a resonance zone. Allies passing through gain +2 Movement. Lasts 2 turns.' },
+    beethoven_gotterfunken: { name: 'Götterfunken',         description: 'ULTIMATE (Exhaust) — Unleash the Sternensturm. Deal 46 damage and stun all enemies within range 3 for 1 turn.' },
   } as Record<string, { name: string; description: string }>,
 
   // ── Item names & descriptions ──────────────────────────────────────────────
@@ -318,6 +339,10 @@ export const en = {
     khans_seal:        { name: "Khan's Seal",       description: "Rider's Fury also stuns each hit enemy for 1 turn." },
     aerial_lens:       { name: 'Aerial Lens',       description: 'Flying Machine can swap position with an allied unit.' },
     life_formula:      { name: 'Life Formula',      description: 'Masterpiece heals an additional 25 HP.' },
+    resonant_crystal:  { name: 'Resonant Crystal',  description: 'Götterfunken stuns all hit enemies for 2 turns instead of 1.' },
+    composers_baton:   { name: "Composer's Baton",  description: 'Allies on a Freudenspur zone also gain +5 Defense at turn start.' },
+    dragon_kiln:       { name: 'Dragon Kiln',       description: 'Terracotta units are summoned with +20 HP and +10 Might.' },
+    iron_edict:        { name: 'Iron Edict',        description: 'Eternal Army lasts 3 turns instead of 2.' },
     znyxorgas_eye:     { name: "Znyxorga's Eye",    description: 'After defeating an enemy, your next card costs 0 Mana.' },
     void_armor:        { name: 'Void Armor',        description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.' },
     arena_champion:    { name: 'Arena Champion',    description: 'All stats +10 while this character is alive.' },

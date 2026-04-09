@@ -75,8 +75,7 @@ export const useRangeCalculation = (
       .some(icon =>
         icon.position.q === coords.q &&
         icon.position.r === coords.r &&
-        // Alive icons always block; dead enemy icons also block (can't walk onto corpse)
-        (icon.isAlive || icon.playerId !== activePlayerId)
+        icon.isAlive // Dead icons free their tile immediately — consistent with movement logic
       );
 
     return !isOccupied;

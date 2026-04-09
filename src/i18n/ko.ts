@@ -18,7 +18,7 @@ export const ko = {
     archives: '역사 기록보관소',   archivesSub: '캐릭터 도서관', archivesSoon: '캐릭터 도서관 — 준비 중',
     settings: '게임 설정',         settingsSub: '조작 & 음향', settingsSoon: '조작 & 음향 — 준비 중',
     quit: '종료',                  quitSub: '게임 나가기',
-    footer: 'v0.12 · WAIFU CLONE WARS',
+    footer: 'v0.21 · WAIFU CLONE WARS',
   },
 
   // ── Character Selection ────────────────────────────────────────────────────
@@ -40,7 +40,8 @@ export const ko = {
     dps_melee:  'DPS 근접',
     support:    '지원',
     tank:       '탱크',
-    hybrid:     '혼합',
+    hybrid:      '혼합',
+    controller:  '컨트롤러',
   },
 
   // ── Characters ─────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export const ko = {
       passive:  { name: '수선공',         desc: '턴 시작 시, 다빈치가 이전 턴에 전용 능력 카드를 사용하지 않았다면 카드를 +1 장 더 뽑는다.' },
       ability1: { name: '비행 기계',       desc: '사거리 5 내 임의의 헥스로 순간이동한다. (소모: 마나 2)' },
       ability2: { name: '걸작',            desc: '사거리 3 내 아군을 45 HP 회복시킨다. (소모: 마나 3)' },
-      ultimate: { name: '비트루비우스 수호자', desc: '궁극기 — 전투 드론 소환: HP 50, ATK 15, DEF 30, 2턴 지속. (소모: 마나 3, 소진)' },
+      ultimate: { name: '비트루비우스 수호자', desc: '궁극기 — 전투 드론 소환: HP 75, ATK 50, DEF 30. 격파될 때까지 지속. (소모: 마나 3, 소진)' },
     },
     leonidas: {
       name: '레오니다스-찬',
@@ -94,6 +95,26 @@ export const ko = {
       ability1: { name: '화전',   desc: '사거리 3, 약 72 피해. 대상을 1헥스 밀어낸다. (마나 2)',    waterName: '당파', waterDesc: '사거리 1, 약 72 피해. 대상을 1헥스 밀어낸다. (마나 2, 감소된 PWR 사용)' },
       ability2: { name: '해군 수리', desc: '범위 지정. 사거리 2 내 아군이 즉시 10 HP, 다음 턴에 10 HP 추가 회복. (마나 3)', waterName: '함포 사격', waterDesc: '사거리 3 내 모든 적에게 약 25 피해. (마나 3)' },
       ultimate: { name: '천통 포격', desc: '궁극기 — 3헥스 돌진, 경로의 적에게 약 60 피해. 피격 적은 옆으로 밀려남. 이순신은 마지막 헥스에 위치. (마나 3, 소진)', waterDesc: '궁극기 — 주 대상 약 90 피해, 인접 대상 약 43 피해, 사거리 5. (마나 3, 소진)' },
+    },
+    beethoven: {
+      name: '베토벤-chan',
+      tagline: '슈테른슈투름의 지휘자',
+      title: '폭풍의 작곡가',
+      lore: '루트비히 판 베토벤은 완전히 청각을 잃은 채로 초월적인 음악을 창조했다. 오래된 연주홀의 공명 주파수에서 복제된 그녀는 소리 자체를 무기로 휘두른다 — 적을 전장 너머로 날려버리는 충격파, 아군을 고무하는 선율, 그리고 사거리 내 모든 적을 침묵시키는 최후의 클라이맥스, 괴테르풍켄.',
+      passive:  { name: '크레셴도', desc: '전용 능력 카드를 사용할 때마다 영구적으로 PWR +8 (최대 3중첩, +24).' },
+      ability1: { name: '샬벨레',  desc: '사거리 3의 직선 내 모든 적에게 33 피해, 각각 2칸 밀어냄. (마나 2)' },
+      ability2: { name: '프로이덴슈퍼', desc: '사거리 3 내 타일을 지정 — 해당 타일과 인접 6타일이 공명 구역이 된다. 구역 타일을 지나는 아군은 이동력 +2. 2턴 지속. (마나 3)' },
+      ultimate: { name: '괴테르풍켄', desc: '궁극기 (소진) — 슈테른슈투름을 해방한다. 46 피해 + 사거리 3 내 모든 적을 1턴 기절. (마나 3)' },
+    },
+    huang: {
+      name: '황-chan',
+      tagline: '테라코타 군단의 여제',
+      title: '시황제',
+      lore: '진시황은 중국을 통일하고 8,000개의 테라코타 병사와 함께 묻혔다. 황릉의 점토 먼지에서 복제된 황-chan은 다시 한번 군단을 지휘한다.',
+      passive:  { name: '황제의 명령', desc: '기본 공격 카드를 사용할 수 없다. 테라코타 전사는 유닛 한도에 포함되지 않는다.' },
+      ability1: { name: '테라코타 군단',     desc: '사거리 3 내 빈 타일에 무작위 테라코타 전사(궁수/근접) 소환. 3턴 지속. (마나 2)' },
+      ability2: { name: '시황제의 명령',     desc: '사거리 4 내 테라코타 기병 소환. 무료 기병 돌격 카드 획득. 3턴 지속. (마나 3)' },
+      ultimate: { name: '영원한 군대',       desc: '궁극기 — 사거리 3 내 비-보스 적 2턴 제어. (마나 3, 소진)' },
     },
   },
 
@@ -164,7 +185,7 @@ export const ko = {
         { title: '상태 이상',      text: '다양한 카드와 능력이 적이나 아군에게 상태 이상을 부여합니다 — 스탯 감소, 행동 제한, 지속 피해 등. 효과는 영향을 받은 캐릭터에 아이콘으로 표시됩니다. 아이콘에 커서를 올리면 효과와 지속 시간을 확인할 수 있습니다.' },
       ],
     },
-    footer: 'v0.12 · WAIFU CLONE WARS · 즈닉소르가 제국',
+    footer: 'v0.21 · WAIFU CLONE WARS · 즈닉소르가 제국',
   },
 
   // ── Game UI ────────────────────────────────────────────────────────────────
@@ -234,7 +255,6 @@ export const ko = {
     river:        { label: '강',           lines: ['이동 불가', '밀쳐지면 즉사'] },
     plain:        { label: '평원',         lines: ['특수 효과 없음'] },
     mana_crystal: { label: '마나 크리스탈', lines: ['이동 불가', '턴 종료 시 마나 +1 또는 +2'] },
-    beast_camp:   { label: '야수 캠프',    lines: ['처치 시 ATK & PWR +15%'], defeated: '✅ 처치됨 — 버프 활성', hpLine: 'HP: {hp}/{max}', defeatFor: '처치 시 ATK & PWR +15%' },
     base:         { label: '기지',         lines: ['ATK, PWR & DEF +20%'] },
     spawn:        { label: '소환 구역',    lines: ['부활 구역'] },
   },
@@ -262,8 +282,6 @@ export const ko = {
     noTargetToHit:     '맞출 대상이 없습니다!',
     cantAttackOwn2:    '아군 캐릭터를 공격할 수 없습니다!',
     cantAttackOwnBase2: '아군 기지를 공격할 수 없습니다!',
-    beastCampDefeated: '야수 캠프 처치! 팀 ATK & PWR +15%!',
-    beastCampDefeated2: '야수 캠프 처치! 팀 전체 ATK & PWR +15% 획득!',
     respawnOwnTurn:    '자신의 턴에만 부활할 수 있습니다!',
   },
 
@@ -295,6 +313,9 @@ export const ko = {
     sunsin_hwajeon:         { name: '화전 / 당파',      description: '육지: 사거리 3, 약 72 피해, 대상 밀어냄. 수상: 사거리 1, 약 72 피해, 대상 밀어냄.' },
     sunsin_naval_command:   { name: '해군 수리 / 함포 사격', description: '육지: 사거리 2 내 아군이 즉시 10 HP, 다음 턴에 10 HP 추가 회복. 수상: 사거리 3 내 모든 적에게 약 25 피해.' },
     sunsin_chongtong:       { name: '천통 포격',         description: '궁극기 (소진) — 육지: 3헥스 돌진, 약 60 피해, 옆으로 밀어냄. 수상: 주 대상 약 90, 인접 약 43, 사거리 5.' },
+    beethoven_schallwelle:  { name: '샬벨레',            description: '사거리 3 직선 내 모든 적에게 33 피해, 각각 2칸 밀어냄.' },
+    beethoven_freudenspur:  { name: '프로이덴슈퍼',      description: '사거리 3 내 타일을 지정 — 해당 타일과 인접 6타일이 공명 구역이 된다. 구역 타일을 지나는 아군은 이동력 +2. 2턴 지속.' },
+    beethoven_gotterfunken: { name: '괴테르풍켄',        description: '궁극기 (소진) — 46 피해 + 사거리 3 내 모든 적을 1턴 기절.' },
   } as Record<string, { name: string; description: string }>,
 
   // ── Item names & descriptions ──────────────────────────────────────────────
@@ -318,6 +339,10 @@ export const ko = {
     khans_seal:        { name: '칸의 인장',         description: '기사의 분노가 피격된 각 적을 1턴간 기절시킨다.' },
     aerial_lens:       { name: '공중 렌즈',         description: '비행 기계로 아군 유닛과 위치를 교환할 수 있다.' },
     life_formula:      { name: '생명 공식',         description: '걸작이 25 HP를 추가로 회복한다.' },
+    resonant_crystal:  { name: '공명 수정',         description: '신의 불꽃이 피격된 모든 적을 2턴간 기절시킨다 (기존 1턴).' },
+    composers_baton:   { name: '지휘봉',            description: '프로이덴스푸르 구역 위의 아군은 턴 시작 시 추가로 방어력 +5을 얻는다.' },
+    dragon_kiln:       { name: '용의 가마',         description: '테라코타 유닛이 +20 HP와 +10 공격력으로 소환된다.' },
+    iron_edict:        { name: '철의 칙령',         description: '영원한 군대의 지속 시간이 2턴에서 3턴으로 늘어난다.' },
     znyxorgas_eye:     { name: '즈닉소르가의 눈',   description: '적을 처치한 후 다음 카드 사용 비용이 0이 된다.' },
     void_armor:        { name: '공허 갑옷',         description: '전투당 한 번, 치명타를 무효화한다 — HP 1로 생존한다.' },
     arena_champion:    { name: '아레나 챔피언',     description: '이 캐릭터가 살아 있는 동안 모든 스탯 +10.' },

@@ -34,6 +34,11 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
     might += (icon.passiveStacks ?? 0) * 15;
   }
 
+  // Beethoven Crescendo passive: +3 Power per exclusive ability played (stacks up to 8)
+  if (icon.name.includes("Beethoven") && (icon.passiveStacks ?? 0) > 0) {
+    power += (icon.passiveStacks ?? 0) * 3;
+  }
+
   // Leonidas Phalanx passive: +8 Defense per adjacency stack (stacks up to 3)
   if (icon.name.includes("Leonidas") && (icon.passiveStacks ?? 0) > 0) {
     defense += (icon.passiveStacks ?? 0) * 8;

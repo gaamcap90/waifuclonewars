@@ -57,7 +57,7 @@ const VictoryScreen = ({ isVictory, onBackToMenu, onPlayAgain, playAgainLabel = 
           className="font-orbitron text-[10px] tracking-[0.5em] mb-2 uppercase"
           style={{ color: accentColor + 'aa' }}
         >
-          {isVictory ? 'The Empire of Znyxorga declares' : 'The Empire of Znyxorga declares'}
+          {isVictory ? '— SECTOR LIBERATED —' : '— LAST CLONE FALLS —'}
         </p>
 
         {/* Main title */}
@@ -83,8 +83,8 @@ const VictoryScreen = ({ isVictory, onBackToMenu, onPlayAgain, playAgainLabel = 
         {/* Flavor text */}
         <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-[340px]">
           {isVictory
-            ? 'The arena crowd erupts. Your tactical brilliance has silenced the galaxy — and earned the respect of the Clone Wars.'
-            : 'The Empire of Znyxorga claims this sector. Study your defeat — your clones will grow stronger.'}
+            ? 'The battlefield falls silent. Through brilliance and sacrifice, your clones have carved their names into history.'
+            : 'The Empire of Znyxorga claims this sector. Your clones will remember — and return stronger.'}
         </p>
 
         {/* Buttons */}

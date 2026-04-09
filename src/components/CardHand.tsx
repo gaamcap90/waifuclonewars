@@ -12,6 +12,8 @@ function charColor(card: Card): { border: string; ribbon: string; glow: string }
   if (card.exclusiveTo.includes("Da Vinci"))  return { border: "border-green-500",  ribbon: "bg-green-700",  glow: "shadow-green-500/60" };
   if (card.exclusiveTo.includes("Leonidas")) return { border: "border-amber-500",  ribbon: "bg-amber-700",  glow: "shadow-amber-500/60" };
   if (card.exclusiveTo.includes("Sun-sin"))  return { border: "border-cyan-500",   ribbon: "bg-cyan-700",   glow: "shadow-cyan-500/60" };
+  if (card.exclusiveTo.includes("Beethoven")) return { border: "border-violet-500", ribbon: "bg-violet-700", glow: "shadow-violet-500/60" };
+  if (card.exclusiveTo.includes("Huang"))    return { border: "border-orange-700",  ribbon: "bg-orange-900", glow: "shadow-orange-700/60" };
   return { border: "border-gray-500", ribbon: "bg-gray-700", glow: "shadow-gray-400/30" };
 }
 
@@ -22,6 +24,8 @@ function charLabel(card: Card): string | null {
   if (card.exclusiveTo.includes("Da Vinci")) return "Da Vinci";
   if (card.exclusiveTo.includes("Leonidas")) return "Leonidas";
   if (card.exclusiveTo.includes("Sun-sin"))  return "Sun-sin";
+  if (card.exclusiveTo.includes("Beethoven")) return "Beethoven";
+  if (card.exclusiveTo.includes("Huang"))    return "Huang-chan";
   return null;
 }
 
@@ -39,14 +43,30 @@ function cardTypeIcon(type: Card["type"]): string {
 
 function cardArtSrc(card: Card): string | null {
   const e = card.effect;
+  // Specific summon art
+  if (e.summonCavalry)                               return "/art/cards/terracotta_cavalry.png";
+  if (e.summonTerracotta)                            return "/art/cards/terracotta_warrior.png";
+  // Da Vinci ultimate
+  if (card.type === "ultimate" && card.exclusiveTo?.includes("Da Vinci")) return "/art/cards/vitruvian_guardian.png";
+  // Generic ultimate
   if (card.type === "ultimate")                      return "/art/cards/ultimate.png";
+  // Debuff types — specific art per debuff
+  if (e.debuffType === 'armor_break')                return "/art/cards/armor_break.png";
+  if (e.debuffType === 'demoralize' || e.aoeDemoralize) return "/art/cards/demoralize.png";
+  if (e.debuffType === 'mud_throw')                  return "/art/cards/mud_throw.png";
+  if (e.debuffType === 'poison')                     return "/art/cards/poison_dart.png";
+  if (e.debuffType === 'silence')                    return "/art/cards/silence.png";
+  // Buff cards
+  if (e.swapCount)                                   return "/art/cards/gamble.png";
+  if (e.atkBonus && !e.teamDmgPct)                   return "/art/cards/battle_cry.png";
+  if (e.teamDmgPct)                                  return "/art/cards/attack.png";
+  // Defense / heal / movement
   if (e.healing || e.healingMult || e.healZone)      return "/art/cards/heal.png";
-  if (e.defBonus || e.teamDefBuff)                   return "/art/cards/shield.png";
+  if (e.defBonus || e.teamDefBuff)                   return "/art/cards/defense.png";
   if (e.moveBonus || e.teleport)                     return "/art/cards/movement.png";
-  if (card.type === "attack")                        return "/art/cards/attack.png";
-  if (e.atkBonus || e.teamDmgPct)                    return "/art/cards/attack.png";
-  if (card.type === "debuff")                        return "/art/cards/attack.png";
-  return "/art/cards/heal.png"; // buff fallback (e.g. Gamble)
+  // Attacks
+  if (card.type === "attack" || card.type === "debuff") return "/art/cards/attack.png";
+  return "/art/cards/heal.png";
 }
 
 function manaCostColor(cost: number): string {
@@ -107,6 +127,13 @@ function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): 
 function canPlay(card: Card, executor: Icon | null, globalMana: number): boolean {
   if (!executor || !executor.isAlive) return false;
   if (card.exclusiveTo && !executor.name.includes(card.exclusiveTo)) return false;
+  // Terracotta units: warriors/archers may only use basic attack; cavalry may also use cavalry charge
+  if (executor.name.includes("Terracotta")) {
+    const isCavalry = executor.name.includes("Cavalry");
+    const allowed = card.definitionId === "shared_basic_attack" ||
+      (isCavalry && card.definitionId === "huang_cavalry_charge");
+    if (!allowed) return false;
+  }
   return globalMana >= card.manaCost;
 }
 
@@ -127,13 +154,26 @@ const PileModal: React.FC<{ title: string; cards: Card[]; onClose: () => void }>
         ) : (
           <div className="flex flex-col gap-1.5">
             {cards.map((c) => {
-              const colors = charColor(c);
+              const isCurseCard = c.definitionId.startsWith('curse_');
+              const colors = isCurseCard
+                ? { border: 'border-red-800', ribbon: 'bg-red-950', glow: '' }
+                : charColor(c);
               const tCard = (t.cards as Record<string, { name: string; description: string }>)[c.definitionId];
               return (
-                <div key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border bg-gray-800 ${colors.border}`}>
-                  <span className="text-base">{cardTypeIcon(c.type)}</span>
+                <div key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border ${isCurseCard ? 'bg-red-950/40' : 'bg-gray-800'} ${colors.border}`}>
+                  {isCurseCard ? (
+                    <span className="text-base w-8 h-8 flex items-center justify-center">☠️</span>
+                  ) : (() => {
+                    const art = cardArtSrc(c);
+                    return art
+                      ? <img src={art} alt={c.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                      : <span className="text-base w-8 h-8 flex items-center justify-center">{cardTypeIcon(c.type)}</span>;
+                  })()}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-white truncate">{tCard?.name ?? c.name}</div>
+                    <div className="text-xs font-semibold truncate" style={{ color: isCurseCard ? '#fca5a5' : 'white' }}>
+                      {tCard?.name ?? c.name}
+                      {isCurseCard && <span className="ml-1 text-[8px] text-red-400 font-bold">CURSE</span>}
+                    </div>
                     <div className="text-[10px] text-gray-400 truncate">{tCard?.description ?? c.description}</div>
                   </div>
                   <div className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${manaCostColor(c.manaCost)}`}>{c.manaCost}</div>
@@ -178,7 +218,10 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
   const cardName = tCard?.name ?? card.name;
   const playable = !isExhausted && canPlay(card, executor, globalMana);
   const isUltimate = card.type === "ultimate";
-  const colors = charColor(card);
+  const isCurse = card.definitionId.startsWith('curse_');
+  const colors = isCurse
+    ? { border: 'border-red-800', ribbon: 'bg-red-950', glow: 'shadow-red-900/60' }
+    : charColor(card);
   const label = charLabel(card);
 
   if (isExhausted) {
@@ -209,7 +252,9 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
         "relative flex flex-col items-start justify-between",
         "w-20 h-28 rounded-xl border-2 overflow-hidden",
         "transition-all duration-150 select-none",
-        isUltimate
+        isCurse
+          ? "bg-gradient-to-b from-red-950 to-gray-950"
+          : isUltimate
           ? "bg-gradient-to-b from-yellow-950 to-gray-900"
           : "bg-gradient-to-b from-gray-800 to-gray-950",
         colors.border,
@@ -234,10 +279,10 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
 
       {/* Character ribbon at top */}
       <div className={["relative w-full px-1 py-0.5 flex items-center justify-between", colors.ribbon].join(" ")}>
-        <span className="text-[8px] text-white/80 font-semibold truncate">
-          {label ?? t.game.hud.sharedCard}
+        <span className="text-[8px] font-semibold truncate" style={{ color: isCurse ? '#fca5a5' : undefined }}>
+          {isCurse ? 'CURSE' : (label ?? t.game.hud.sharedCard)}
         </span>
-        <span className="text-[9px]">{cardTypeIcon(card.type)}</span>
+        <span className="text-[9px]">{isCurse ? '☠️' : cardTypeIcon(card.type)}</span>
       </div>
 
       {/* Mana cost pip */}
@@ -282,6 +327,7 @@ export interface CardHandProps {
   exhaustedUltimates?: string[];
   onPlayCard: (card: Card, executorId: string) => void;
   onCardHover?: (cost: number | null) => void;
+  onCardHoverRange?: (range: number | null) => void;
   gameState?: GameState;
 }
 
@@ -296,17 +342,21 @@ const CardHand: React.FC<CardHandProps> = ({
   exhaustedUltimates = [],
   onPlayCard,
   onCardHover,
+  onCardHoverRange,
   gameState,
 }) => {
   const { t } = useT();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [pileView, setPileView] = useState<'draw' | 'discard' | null>(null);
+  const [flyingCardId, setFlyingCardId] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{ card: Card; rect: DOMRect } | null>(null);
 
   const selectedCard = cards.find((c) => c.id === selectedCardId) ?? null;
 
   const handleCardClick = (card: Card) => {
     if (!executor || !canPlay(card, executor, globalMana)) return;
-    // Single click: execute immediately (instant effects) or enter targeting (attacks/heals)
+    setFlyingCardId(card.id);
+    setTimeout(() => setFlyingCardId(null), 420);
     onPlayCard(card, executor.id);
     setSelectedCardId(null);
   };
@@ -333,8 +383,21 @@ const CardHand: React.FC<CardHandProps> = ({
           {cards.map((card) => (
             <div
               key={card.id}
-              onMouseEnter={() => onCardHover?.(card.manaCost ?? 0)}
-              onMouseLeave={() => onCardHover?.(null)}
+              className="relative"
+              onMouseEnter={(e) => {
+                onCardHover?.(card.manaCost ?? 0);
+                onCardHoverRange?.(card.effect?.range ?? null);
+                setTooltip({ card, rect: e.currentTarget.getBoundingClientRect() });
+              }}
+              onMouseLeave={() => {
+                onCardHover?.(null);
+                onCardHoverRange?.(null);
+                setTooltip(null);
+              }}
+              style={flyingCardId === card.id ? {
+                animation: 'anim-card-flyout 0.42s ease-in forwards',
+                pointerEvents: 'none',
+              } : undefined}
             >
               <CardTile
                 card={card}
@@ -376,6 +439,42 @@ const CardHand: React.FC<CardHandProps> = ({
       )}
       {pileView === 'draw' && (
         <PileModal title={t.game.hud.drawPileTitle} cards={drawPileCards} onClose={() => setPileView(null)} />
+      )}
+
+      {/* ── Card hover tooltip (portal, fixed positioning to escape overflow-hidden) ── */}
+      {tooltip && createPortal(
+        <div
+          className="pointer-events-none z-[9999]"
+          style={{
+            position: 'fixed',
+            left: tooltip.rect.left + tooltip.rect.width / 2,
+            top: tooltip.rect.top - 8,
+            transform: 'translate(-50%, -100%)',
+            minWidth: 200,
+            maxWidth: 260,
+          }}
+        >
+          <div className="rounded-xl shadow-2xl px-3 py-2.5"
+            style={{ background: "rgba(4,2,18,0.98)", border: "1px solid rgba(100,70,160,0.55)" }}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="text-base">{tooltip.card.type === 'ultimate' ? '✨' : tooltip.card.type === 'attack' ? '⚔️' : tooltip.card.type === 'defense' ? '🛡️' : tooltip.card.type === 'debuff' ? '☠️' : '⬆️'}</span>
+              <span className="font-orbitron font-bold text-[12px] text-white flex-1">{(t.cards as Record<string, { name: string; description: string }>)[tooltip.card.definitionId]?.name ?? tooltip.card.name}</span>
+              <span className="font-orbitron font-bold text-[11px] text-blue-300 shrink-0">{tooltip.card.manaCost} 💧</span>
+            </div>
+            <p className="text-[10px] text-slate-300 leading-snug">{(t.cards as Record<string, { name: string; description: string }>)[tooltip.card.definitionId]?.description ?? tooltip.card.description}</p>
+            {tooltip.card.effect?.range && tooltip.card.effect.range < 999 && (
+              <div className="mt-1.5 text-[9px] font-orbitron text-cyan-400">◎ Range {tooltip.card.effect.range} hexes</div>
+            )}
+            {tooltip.card.type === 'ultimate' && (
+              <div className="mt-1 text-[9px] font-orbitron text-yellow-400">⚡ EXHAUST — once per combat</div>
+            )}
+          </div>
+          {/* Arrow pointing down */}
+          <div className="flex justify-center">
+            <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(100,70,160,0.55)' }} />
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -15,7 +15,7 @@ interface AbilityBadge {
   kind: "passive" | "ability" | "ultimate";
 }
 
-type Role = "dps_ranged" | "dps_melee" | "support" | "tank" | "hybrid";
+type Role = "dps_ranged" | "dps_melee" | "support" | "tank" | "hybrid" | "controller";
 
 interface Character {
   id: string;
@@ -40,7 +40,8 @@ function rolePillStyle(role: Role) {
     case "dps_melee":  return { ring: "ring-rose-400",    text: "text-rose-400",    border: "border-rose-400" };
     case "support":    return { ring: "ring-emerald-400", text: "text-emerald-400", border: "border-emerald-400" };
     case "tank":       return { ring: "ring-amber-400",   text: "text-amber-400",   border: "border-amber-400" };
-    case "hybrid":     return { ring: "ring-teal-400",    text: "text-teal-400",    border: "border-teal-400" };
+    case "hybrid":      return { ring: "ring-teal-400",    text: "text-teal-400",    border: "border-teal-400" };
+    case "controller":  return { ring: "ring-violet-400",  text: "text-violet-400",  border: "border-violet-400" };
   }
 }
 
@@ -95,6 +96,26 @@ const AVAILABLE: Character[] = [
       { kind: "ability",  icon: "🔥", name: "Hwajeon",           desc: "", waterName: "Ramming Speed", waterDesc: "" },
       { kind: "ability",  icon: "🚢", name: "Naval Repairs",     desc: "", waterName: "Broadside",     waterDesc: "" },
       { kind: "ultimate", icon: "⭐", name: "Chongtong Barrage", desc: "", waterDesc: "" },
+    ],
+  },
+  {
+    id: "beethoven", name: "Beethoven-chan", tagline: "", role: "controller",
+    stats: { hp: 90, might: 35, power: 65 },
+    badges: [
+      { kind: "passive",  icon: "🎵", name: "Taubheit",     desc: "" },
+      { kind: "ability",  icon: "🌊", name: "Schallwelle",  desc: "" },
+      { kind: "ability",  icon: "🎶", name: "Freudenspur",  desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Götterfunken", desc: "" },
+    ],
+  },
+  {
+    id: "huang", name: "Huang-chan", tagline: "", role: "controller",
+    stats: { hp: 90, might: 30, power: 55 },
+    badges: [
+      { kind: "passive",  icon: "🏺", name: "Imperial Command",         desc: "" },
+      { kind: "ability",  icon: "⚔️", name: "Terracotta Legion",        desc: "" },
+      { kind: "ability",  icon: "🐴", name: "First Emperor's Command",  desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Eternal Army",             desc: "" },
     ],
   },
 ];

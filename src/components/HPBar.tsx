@@ -33,7 +33,7 @@ const HPBar = ({ currentHP, maxHP, size = 'small', previewHP, isDamage = true }:
     <div className={`relative overflow-hidden rounded-full border border-border bg-black/40 ${sizeClasses[size]}`}>
       {/* Main HP fill */}
       <div
-        className={`h-full rounded-full transition-all duration-150 ${fillColor}`}
+        className={`h-full rounded-full transition-all duration-150 ${fillColor} ${fillPct <= 25 ? 'hp-critical-flicker' : ''}`}
         style={{ width: `${fillPct}%` }}
       />
 
