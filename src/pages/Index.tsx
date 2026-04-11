@@ -22,8 +22,10 @@ import CombatLogPanel from "@/ui/CombatLogPanel";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { CharacterId } from "@/types/roguelike";
 import { pickCardRewards, pickItemReward } from "@/data/roguelikeData";
+import { CARD_DEFS, CARD_UPGRADES } from "@/data/cards";
 import MusicPlayer from "@/components/MusicPlayer";
 import { useAnimations, nextAnimId } from "@/hooks/useAnimations";
+import { getCharacterPortrait } from "@/utils/portraits";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<'loading' | 'menu' | 'archives' | 'settings' | 'rules' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated' | 'runVictory'>('loading');
@@ -36,7 +38,8 @@ const Index = () => {
   const [hoveredCardRange, setHoveredCardRange] = useState<number | null>(null);
   const [hoveredEnemyAbilityRange, setHoveredEnemyAbilityRange] = useState<{ iconId: string; range: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const { runState, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, removeCardFromDeck, addItemToCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility } = useRunState();
+  const { runState, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, upgradeSharedCard, removeCardFromDeck, addItemToCharacter, removeItemFromCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility } = useRunState();
+  const [pendingEventItem, setPendingEventItem] = useState<import('@/types/roguelike').RunItem | null>(null);
   const { gameState, selectTile, endTurn, basicAttack, useAbility, playCard, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, startBattle, resetGame, cancelTargeting } = useGameState(
     (gameMode === 'singleplayer' || gameMode === 'multiplayer') ? gameMode : 'singleplayer',
     selectedCharacters
@@ -52,6 +55,7 @@ const Index = () => {
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [phaseBanner, setPhaseBanner] = useState<{ enemyName: string; abilityName: string; icon: string } | null>(null);
   const prevPhaseBannerRef = useRef<string | null>(null);
+  const [battleTransition, setBattleTransition] = useState<{ label: string; icon: string } | null>(null);
 
   // ── Animations: detect HP changes + movement between renders ──────────────────
   // iconId → { hp, q, r } snapshot from previous render
@@ -97,6 +101,7 @@ const Index = () => {
               type: 'death',
               position: icon.position,
             });
+            playSound('unit_death');
           }
         } else if (delta > 0.5) {
           // Healing received
@@ -116,7 +121,7 @@ const Index = () => {
         }
       }
 
-      // Movement trail — fire when position changed
+      // Movement trail + sound — fire when position changed
       if (prev !== undefined && (prev.q !== icon.position.q || prev.r !== icon.position.r)) {
         // Trail at old position (where they were)
         addAnimation({
@@ -125,6 +130,8 @@ const Index = () => {
           position: { q: prev.q, r: prev.r },
           color: icon.playerId === 0 ? 'rgba(100,180,255,0.7)' : 'rgba(255,100,100,0.7)',
         });
+        // Only play move sound for player team (avoid noise during AI multi-move)
+        if (icon.playerId === 0) playSound('card_play');
       }
 
       snap.set(icon.id, { hp: currHp, q: icon.position.q, r: icon.position.r });
@@ -179,7 +186,7 @@ const Index = () => {
         } else if (t.includes('healing') || t.includes('heal')) {
           playSound('heal');
         // Debuffs
-        } else if (t.includes('applied') || t.includes('silence') || t.includes('demoralize') || t.includes('armor break') || t.includes('mud') || t.includes('poison')) {
+        } else if (t.includes('applied') || t.includes('silence') || t.includes('rooted') || t.includes('armor break') || t.includes('mud') || t.includes('poison') || t.includes('blinded')) {
           playSound('debuff_apply');
         // Named ability damage (cast X on Y)
         } else if (t.includes('cast ') || t.includes('used ') || t.includes('summoned')) {
@@ -204,14 +211,23 @@ const Index = () => {
     prevLogLenRef.current = current;
   }, [combatLog.length]);
 
-  // ── SFX: turn change ──────────────────────────────────────────────────────
+  // ── SFX: turn change + card draw ─────────────────────────────────────────
   const prevTurnRef = useRef<number>(gameState.currentTurn ?? 1);
+  const prevHandSizeRef = useRef<number>((gameState as any).hand?.length ?? 0);
   useEffect(() => {
     if ((gameState.currentTurn ?? 1) > prevTurnRef.current) {
       playSound('turn_start');
     }
     prevTurnRef.current = gameState.currentTurn ?? 1;
   }, [gameState.currentTurn]);
+  // Card draw sound — fires when hand gains cards (draw phase)
+  useEffect(() => {
+    const hand: any[] = (gameState as any).hand ?? [];
+    if (hand.length > prevHandSizeRef.current && gameState.activePlayerId === 0) {
+      playSound('card_draw');
+    }
+    prevHandSizeRef.current = hand.length;
+  }, [(gameState as any).hand?.length]);
 
   // ── SFX: victory / defeat ─────────────────────────────────────────────────
   const prevPhaseRef = useRef(gameState.phase);
@@ -248,8 +264,14 @@ const Index = () => {
     setActiveNodeId(nodeId);
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
       const mapSeed = runState.seed ^ (runState.battleCount * 31337);
-      startBattle(runState.characters, runState.deckCardIds, node.encounter ?? null, mapSeed, true, runState.battleCount, runState.upgradedCardDefIds);
-      setGameMode('singleplayer');
+      const transLabel = node.type === 'boss' ? 'BOSS BATTLE' : node.type === 'elite' ? 'ELITE ENCOUNTER' : 'COMBAT';
+      const transIcon = node.type === 'boss' ? '💀' : node.type === 'elite' ? '⚡' : '⚔️';
+      setBattleTransition({ label: transLabel, icon: transIcon });
+      setTimeout(() => {
+        startBattle(runState.characters, runState.deckCardIds, node.encounter ?? null, mapSeed, true, runState.battleCount, runState.upgradedCardDefIds, runState.act as 1 | 2 | 3);
+        setGameMode('singleplayer');
+        setTimeout(() => setBattleTransition(null), 800);
+      }, 1100);
     }
     if (node.type === 'campfire') {
       setGameMode('campfire');
@@ -343,7 +365,7 @@ const Index = () => {
       const isAoe = card?.effect?.allEnemiesInRange
         || card?.effect?.teamDefBuff !== undefined
         || card?.effect?.teamDmgPct !== undefined
-        || card?.effect?.aoeDemoralize
+        || card?.effect?.aoeRooted
         || card?.effect?.healZone
         || card?.effect?.lineTarget
         || card?.effect?.multiHit;
@@ -476,6 +498,7 @@ const Index = () => {
         runState={runState}
         onHealAll={() => { healAllAtCampfire(); }}
         onRemoveCard={(cardId) => { removeCardFromDeck(cardId); }}
+        onUpgradeSharedCard={(defId) => { upgradeSharedCard(defId); }}
         onLeave={() => {
           completeNonCombatNode(activeNodeId!);
           setActiveNodeId(null);
@@ -495,25 +518,44 @@ const Index = () => {
           spendGold(cost);
           addItemToCharacter(item, characterId, slotIndex);
         }}
+        onSellItem={(item, characterId, slotIndex, goldGained) => {
+          removeItemFromCharacter(characterId, slotIndex);
+          addGold(goldGained);
+        }}
         onMysteryBox={(cost) => {
           spendGold(cost);
           const roll = Math.random();
-          if (roll < 0.40) {
-            // item — give to first character with an open slot, or slot 0
-            const item = pickItemReward('uncommon', Math.random, runState.characters.map(c => c.id));
+          const charIds = runState.characters.map(c => c.id);
+          const CURSE_IDS = ['curse_burden', 'curse_malaise', 'curse_void_echo', 'curse_dread', 'curse_chains'];
+          const giveItem = (tier: 'common' | 'uncommon' | 'rare' | 'legendary') => {
+            const item = pickItemReward(tier, Math.random, charIds);
             const target = runState.characters.find(c => c.currentHp > 0 && c.items.some(s => s === null))
               ?? runState.characters.find(c => c.currentHp > 0);
             if (target && item) {
               const slotIdx = target.items.findIndex(s => s === null);
               addItemToCharacter(item, target.id as CharacterId, slotIdx >= 0 ? slotIdx : 0);
             }
-            return 'item';
-          } else if (roll < 0.75) {
-            addGold(80);
-            return 'gold';
-          } else {
+          };
+          // 15% damage | 15% curse | 20% common | 35% uncommon | 10% rare | 5% legendary
+          if (roll < 0.15) {
             hurtAllCharacters(20);
             return 'damage';
+          } else if (roll < 0.30) {
+            const curse = CURSE_IDS[(Math.random() * CURSE_IDS.length) | 0];
+            addCardToDeck(curse);
+            return 'curse';
+          } else if (roll < 0.50) {
+            giveItem('common');
+            return 'item';
+          } else if (roll < 0.85) {
+            giveItem('uncommon');
+            return 'item';
+          } else if (roll < 0.95) {
+            giveItem('rare');
+            return 'item';
+          } else {
+            giveItem('legendary');
+            return 'item';
           }
         }}
         onLeave={() => {
@@ -549,9 +591,10 @@ const Index = () => {
           const rng = () => Math.random();
           const charIds = runState.characters.map(c => c.id);
 
-          // Pick a random curse card definitionId
-          const CURSE_IDS = ['curse_burden', 'curse_malaise', 'curse_void_echo', 'curse_dread', 'curse_chains'];
-          const randomCurse = () => CURSE_IDS[(Math.random() * CURSE_IDS.length) | 0];
+          const randomCurse = () => {
+            const CURSE_IDS = ['curse_burden', 'curse_malaise', 'curse_void_echo', 'curse_dread', 'curse_chains'];
+            return CURSE_IDS[(Math.random() * CURSE_IDS.length) | 0];
+          };
 
           if (result === 'gold') {
             // Wounded Clone: help her — lose 20 HP, gain 60 gold
@@ -576,34 +619,24 @@ const Index = () => {
           } else if (result === 'damage') {
             hurtAllCharacters(40);
           } else if (result === 'item') {
-            // Supply Crate: guaranteed item
+            // Supply Crate: guaranteed item — let player assign it
             const item = pickItemReward('uncommon', rng, charIds);
-            const target = runState.characters.find(c => c.currentHp > 0 && c.items.some(s => s === null))
-              ?? runState.characters.find(c => c.currentHp > 0);
-            if (target && item) {
-              const slotIdx = target.items.findIndex(s => s === null);
-              addItemToCharacter(item, target.id as CharacterId, slotIdx >= 0 ? slotIdx : 0);
-            }
+            if (item) { setPendingEventItem(item); return; }
           } else if (result === 'item_gamble') {
             // Fallen Cache: 50/50 item or 35 damage
             if (rng() < 0.50) {
               const item = pickItemReward('uncommon', rng, charIds);
-              const target = runState.characters.find(c => c.currentHp > 0 && c.items.some(s => s === null))
-                ?? runState.characters.find(c => c.currentHp > 0);
-              if (target && item) {
-                const slotIdx = target.items.findIndex(s => s === null);
-                addItemToCharacter(item, target.id as CharacterId, slotIdx >= 0 ? slotIdx : 0);
-              }
+              if (item) { setPendingEventItem(item); return; }
             } else {
               hurtAllCharacters(35);
             }
           } else if (result === 'curse') {
-            // Experimental Serum: heal 20 HP + curse
-            healAllAtCampfire(); // heals 30% but close enough; we can accept that
-            addCardToDeck(randomCurse());
+            // Experimental Serum: flat 20 HP to all + Malaise (fitting: lethargy from alien injection)
+            hurtAllCharacters(-20); // negative = heal; reuse hurtAll with negative for flat heal
+            addCardToDeck('curse_malaise');
           } else if (result === 'gold_curse') {
-            // Toxic Bloom: gain 40 gold + curse
-            addGold(40);
+            // Toxic Bloom: +60 gold + random curse
+            addGold(60);
             addCardToDeck(randomCurse());
           } else if (result === 'heal_or_damage') {
             // Reality Fracture: 50/50 heal or damage
@@ -612,12 +645,104 @@ const Index = () => {
             } else {
               hurtAllCharacters(40);
             }
+          } else if (result === 'item_curse') {
+            // Void Peddler: gain uncommon item + random curse
+            const item = pickItemReward('uncommon', rng, charIds);
+            if (item) { addCardToDeck(randomCurse()); setPendingEventItem(item); return; }
+            addCardToDeck(randomCurse());
+          } else if (result === 'upgrade_curse') {
+            // The Corruptor: upgrade a random existing shared card in deck + Chains of Znyxorga
+            const upgradeableIds = runState.deckCardIds.filter(id => {
+              const def = CARD_DEFS.find((d: any) => d.definitionId === id);
+              return def && def.exclusiveTo === null && CARD_UPGRADES[id] && !runState.upgradedCardDefIds.includes(id);
+            });
+            if (upgradeableIds.length > 0) {
+              const pick = upgradeableIds[(Math.random() * upgradeableIds.length) | 0];
+              upgradeSharedCard(pick);
+            }
+            addCardToDeck('curse_chains');
           }
           completeNonCombatNode(activeNodeId!);
           setActiveNodeId(null);
           setGameMode('roguelikeMap');
         }}
       />
+    );
+  }
+
+  // Pending event item overlay — shown after unknown events that give an item
+  if (pendingEventItem && runState) {
+    const TIER_COLOR: Record<string, string> = {
+      common: '#94a3b8', uncommon: '#22c55e', rare: '#60a5fa', legendary: '#f59e0b',
+    };
+    const item = pendingEventItem;
+    const completeAndNavigate = () => {
+      setPendingEventItem(null);
+      completeNonCombatNode(activeNodeId!);
+      setActiveNodeId(null);
+      setGameMode('roguelikeMap');
+    };
+    return (
+      <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.92)' }} />
+        <div className="relative z-10 rounded-2xl p-8 w-full max-w-lg"
+          style={{ background: 'rgba(4,2,18,0.97)', border: '1px solid rgba(80,50,140,0.5)' }}>
+          <div className="text-center mb-6">
+            <span className="text-4xl">{item.icon}</span>
+            <p className="font-orbitron font-black text-xl text-white mt-2">{item.name}</p>
+            <p className="text-[11px] font-orbitron mt-1" style={{ color: TIER_COLOR[item.tier] }}>{item.tier.toUpperCase()}</p>
+            {item.targetCharacter && (
+              <p className="text-[10px] font-orbitron mt-0.5" style={{ color: TIER_COLOR[item.tier] }}>
+                {item.targetCharacter.toUpperCase()} ONLY
+              </p>
+            )}
+            <p className="text-slate-300 text-[12px] mt-2">{item.description}</p>
+            <p className="text-slate-500 text-[11px] mt-3">Choose who equips this item</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            {runState.characters
+              .filter(c => c.currentHp > 0)
+              .map(char => (
+                <div key={char.id} className="rounded-xl border border-slate-700/50 p-3"
+                  style={{ background: 'rgba(8,5,25,0.9)' }}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <img src={char.portrait} alt={char.displayName} className="w-8 h-8 rounded-full object-cover border border-slate-600" />
+                    <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {char.items.map((slotItem, idx) => {
+                      if (slotItem) return null;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            addItemToCharacter(item, char.id as CharacterId, idx);
+                            completeAndNavigate();
+                          }}
+                          className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
+                          style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
+                        >
+                          + Slot {idx + 1}
+                        </button>
+                      );
+                    })}
+                    {char.items.every(s => s !== null) && (
+                      <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+          <div className="text-center mt-5">
+            <button
+              onClick={completeAndNavigate}
+              className="text-slate-500 hover:text-slate-300 text-[10px] font-orbitron underline"
+            >
+              Skip — discard item
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -644,6 +769,36 @@ const Index = () => {
       <ArenaBackground />
       <Toaster />
       {!hideUI && <MusicPlayer />}
+
+      {/* Battle transition curtain */}
+      {battleTransition && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none"
+          style={{ animation: 'anim-battle-curtain 1.9s ease-in-out forwards' }}>
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.94)' }} />
+          <div className="relative z-10 text-center" style={{ animation: 'anim-battle-title 1.5s ease-in-out forwards' }}>
+            <div style={{ fontSize: '4rem', marginBottom: 8, filter: 'drop-shadow(0 0 30px rgba(255,60,60,0.9))' }}>
+              {battleTransition.icon}
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-orbitron, monospace)',
+              fontSize: '0.75rem',
+              letterSpacing: '0.42em',
+              color: 'rgba(255,140,140,0.80)',
+              textTransform: 'uppercase',
+              marginBottom: 8,
+            }}>ENTERING</div>
+            <div style={{
+              fontFamily: 'var(--font-orbitron, monospace)',
+              fontSize: '2.6rem',
+              fontWeight: 900,
+              letterSpacing: '0.10em',
+              color: '#ffffff',
+              textShadow: '0 0 40px rgba(255,60,60,0.85), 0 0 80px rgba(200,0,0,0.40)',
+              textTransform: 'uppercase',
+            }}>{battleTransition.label}</div>
+          </div>
+        </div>
+      )}
 
       {/* Full-screen game board */}
       <div
@@ -672,28 +827,66 @@ const Index = () => {
         }} />
       )}
 
-      {/* Enemy turn banner */}
-      {showEnemyBanner && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-          <div style={{
-            background: 'rgba(140,15,15,0.90)',
-            border: '2px solid rgba(255,70,70,0.85)',
-            borderRadius: 6,
-            padding: '10px 32px',
-            color: 'white',
-            fontFamily: 'var(--font-orbitron, monospace)',
-            fontSize: '1.25rem',
-            fontWeight: 900,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            textShadow: '0 0 18px rgba(255,50,50,0.9)',
-            boxShadow: '0 0 35px rgba(200,20,20,0.45)',
-            animation: 'anim-enemy-banner 1.6s ease-in-out forwards',
-          }}>
-            {t.game.enemyTurn}
+      {/* Enemy turn banner — cinematic with portrait strip */}
+      {showEnemyBanner && (() => {
+        const enemyIcons = gameState.players[1]?.icons.filter(i => i.isAlive) ?? [];
+        return (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0,
+              background: 'linear-gradient(135deg, rgba(100,5,5,0.97) 0%, rgba(60,0,0,0.97) 100%)',
+              border: '1px solid rgba(255,60,60,0.70)',
+              borderRadius: 10,
+              overflow: 'hidden',
+              boxShadow: '0 0 60px rgba(200,10,10,0.50), 0 0 120px rgba(150,0,0,0.25)',
+              animation: 'anim-enemy-banner 1.6s ease-in-out forwards',
+            }}>
+              {/* Portrait strip */}
+              {enemyIcons.length > 0 && (
+                <div style={{ display: 'flex', gap: 0, borderRight: '1px solid rgba(255,60,60,0.30)' }}>
+                  {enemyIcons.slice(0, 3).map(icon => {
+                    const portrait = getCharacterPortrait(icon.name);
+                    return (
+                      <div key={icon.id} style={{ width: 52, height: 64, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                        {portrait ? (
+                          <img src={portrait} alt={icon.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 10%', filter: 'brightness(0.75) saturate(0.8)' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: 'rgba(185,28,28,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+                            {icon.name.charAt(0)}
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(60,0,0,0.7) 100%)' }} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Text block */}
+              <div style={{ padding: '12px 28px 12px 18px' }}>
+                <div style={{
+                  fontFamily: 'var(--font-orbitron, monospace)',
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.30em',
+                  color: 'rgba(255,140,140,0.75)',
+                  textTransform: 'uppercase',
+                  marginBottom: 3,
+                }}>⚔ ENEMY</div>
+                <div style={{
+                  fontFamily: 'var(--font-orbitron, monospace)',
+                  fontSize: '1.2rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: '#fff',
+                  textShadow: '0 0 22px rgba(255,60,60,0.95)',
+                }}>{t.game.enemyTurn}</div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Boss Phase Announcement Banner */}
       {phaseBanner && (
@@ -818,27 +1011,56 @@ const Index = () => {
         />
       )}
 
-      {(gameMode === 'singleplayer' || gameMode === 'multiplayer') && (gameState.phase === 'victory' || gameState.phase === 'defeat') && (
+      {(gameMode === 'singleplayer' || gameMode === 'multiplayer') && (gameState.phase === 'victory' || gameState.phase === 'defeat') && (() => {
+        const allIcons = gameState.players[0].icons;
+        const enemyIcons = gameState.players[1].icons;
+        const enemiesKilled = enemyIcons.filter(i => !i.isAlive).length;
+        const turnsElapsed = gameState.currentTurn ?? 1;
+        const combatLog: any[] = (gameState as any).combatLog ?? [];
+        const totalDmg = combatLog.reduce((acc: number, e: any) => {
+          const m = e?.text?.match(/(\d+)\s*(?:dmg|damage)/i);
+          return acc + (m ? parseInt(m[1]) : 0);
+        }, 0);
+        const combatStats = [
+          { label: 'ENEMIES', value: enemiesKilled, accent: '#f87171' },
+          { label: 'TURNS', value: turnsElapsed, accent: '#fbbf24' },
+          { label: 'DAMAGE', value: totalDmg > 0 ? totalDmg : '—', accent: '#fb923c' },
+        ];
+        const HERO_NAMES_CHECK = ["Napoleon", "Genghis", "Da Vinci", "Leonidas", "Sun-sin", "Beethoven", "Huang"];
+        const characterResults = allIcons
+          .filter(icon => HERO_NAMES_CHECK.some(n => icon.name.includes(n)))
+          .map(icon => ({
+            name: icon.name,
+            portrait: getCharacterPortrait(icon.name),
+            hpPct: icon.stats.maxHp > 0 ? icon.stats.hp / icon.stats.maxHp : 0,
+            isAlive: icon.isAlive,
+          }));
+        return (
         <VictoryScreen
           isVictory={gameState.phase === 'victory'}
           playAgainLabel={pendingMode === 'singleplayer' ? 'NEXT ROUND' : 'PLAY AGAIN'}
+          combatStats={combatStats}
+          characterResults={characterResults}
           onBackToMenu={handleBackToMenu}
           onPlayAgain={() => {
             if (pendingMode === 'singleplayer' && runState && activeNodeId) {
               const won = gameState.phase === 'victory';
               const allIcons = gameState.players[0].icons;
               const finalHps: Record<string, number> = {};
-              (['napoleon', 'genghis', 'davinci', 'leonidas', 'sunsin'] as CharacterId[]).forEach(id => {
+              const finalPassiveStacks: Record<string, number> = {};
+              (['napoleon', 'genghis', 'davinci', 'leonidas', 'sunsin', 'beethoven', 'huang'] as CharacterId[]).forEach(id => {
                 const icon = allIcons.find(i => i.name.toLowerCase().includes(
                   id === 'davinci' ? 'vinci' : id === 'sunsin' ? 'sun-sin' : id
                 ));
                 finalHps[id] = icon?.stats.hp ?? 0;
+                if ((icon?.passiveStacks ?? 0) > 0) finalPassiveStacks[id] = icon!.passiveStacks!;
               });
               completeCombat({
                 nodeId: activeNodeId,
                 won,
                 turnsElapsed: gameState.currentTurn ?? 1,
                 finalHps: finalHps as any,
+                finalPassiveStacks,
               });
               setActiveNodeId(null);
               setGameMode(won ? 'rewards' : 'runDefeated');
@@ -847,7 +1069,8 @@ const Index = () => {
             }
           }}
         />
-      )}
+        );
+      })()}
     </div>
   );
 };

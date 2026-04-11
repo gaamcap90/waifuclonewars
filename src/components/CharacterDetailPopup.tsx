@@ -6,6 +6,7 @@ import HPBar from "./HPBar";
 import { useBuffCalculation } from "@/hooks/useBuffCalculation";
 import { calcEffectiveStats } from "@/combat/buffs";
 import { useT } from "@/i18n";
+import { getCharacterPortrait } from "@/utils/portraits";
 
 interface CharacterDetailPopupProps {
   character: Icon;
@@ -43,11 +44,12 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
   const debuffLabel = (type: string): string => {
     const map: Record<string, string> = {
       mud_throw:   `🐾 ${t.cards.shared_mud_throw?.name ?? 'Mud Throw'}`,
-      demoralize:  `💔 ${t.cards.shared_demoralize?.name ?? 'Demoralize'}`,
+      rooted:      `🌿 ${(t.cards as any).shared_entangle?.name ?? 'Rooted'}`,
       armor_break: `🔩 ${t.cards.shared_armor_break?.name ?? 'Armor Break'}`,
       silence:     `🤫 ${t.cards.shared_silence?.name ?? 'Silence'}`,
       poison:      `☠️ ${t.cards.shared_poison_dart?.name ?? 'Poison'}`,
       stun:        `⚡ Stun`,
+      taunted:     `📢 Taunt`,
     };
     return map[type] ?? type;
   };
@@ -66,14 +68,10 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
     return character.passive ?? t.game.popup.noPassive;
   })();
 
-  const portrait = (() => {
-    if (character.name.includes("Napoleon")) return "/art/napoleon_portrait.png";
-    if (character.name.includes("Genghis"))  return "/art/genghis_portrait.png";
-    if (character.name.includes("Da Vinci")) return "/art/davinci_portrait.png";
-    if (character.name.includes("Leonidas")) return "/art/leonidas_portrait.png";
-    if (character.name.includes("Sun-sin"))  return "/art/sunsin_portrait.png";
-    return null;
-  })();
+  const portrait = getCharacterPortrait(character.name);
+
+  const HERO_NAMES = ["Napoleon", "Genghis", "Da Vinci", "Leonidas", "Sun-sin", "Beethoven", "Huang"];
+  const hasPassive = HERO_NAMES.some(n => character.name.includes(n)) || !!character.passive;
 
   const isBlue       = character.playerId === 0;
   const teamBorder   = isBlue ? "rgba(60,100,220,0.60)" : "rgba(220,60,60,0.60)";
@@ -226,11 +224,13 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             </div>
           )}
 
-          {/* Passive */}
-          <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
-            <div className="font-orbitron text-[9px] text-purple-400 tracking-wider mb-0.5">{t.game.popup.passive.toUpperCase()}</div>
-            <div className="text-[10px] text-slate-400 leading-relaxed">{passiveText}</div>
-          </div>
+          {/* Passive — only shown for heroes with a defined passive */}
+          {hasPassive && (
+            <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
+              <div className="font-orbitron text-[9px] text-purple-400 tracking-wider mb-0.5">{t.game.popup.passive.toUpperCase()}</div>
+              <div className="text-[10px] text-slate-400 leading-relaxed">{passiveText}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>,

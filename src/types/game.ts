@@ -4,7 +4,7 @@ export interface Coordinates {
 }
 
 export interface TerrainType {
-  type: 'forest' | 'mountain' | 'river' | 'plain' | 'mana_crystal' | 'beast_camp' | 'base' | 'spawn';
+  type: 'forest' | 'mountain' | 'river' | 'plain' | 'mana_crystal' | 'beast_camp' | 'base' | 'spawn' | 'lake' | 'desert' | 'snow' | 'ice' | 'mud' | 'ash' | 'ruins';
   effects: {
     movementModifier?: number;
     dodgeBonus?: boolean;
@@ -31,8 +31,9 @@ export interface Icon {
     mana: number;    // Current mana (0–3 default)
     maxMana: number; // Max mana per turn (default 3)
   };
-  cardBuffAtk?: number; // Temporary ATK bonus from cards this turn
+  cardBuffAtk?: number; // Temporary Might bonus from cards this turn
   cardBuffDef?: number; // Temporary DEF bonus from cards this turn
+  cardBuffPow?: number; // Temporary Power bonus from cards this turn
   abilities: Ability[];
   passive: string;
   position: Coordinates;
@@ -63,6 +64,9 @@ export interface Icon {
   terracottaControlled?: boolean;  // Huang-chan Eternal Army: this enemy is currently controlled
   controlledByPlayer?: number;     // which player controls it (0 = player)
   controlExpiresTurn?: number;     // turn on which control expires
+  isDecoy?: boolean;               // Decoy card: this unit is a decoy, explodes on death
+  decoyExplosionDmg?: number;      // flat damage dealt to nearby enemies when decoy is killed
+  decoyExplosionRange?: number;    // radius of decoy explosion
 }
 
 export interface Ability {
@@ -81,15 +85,16 @@ export interface Ability {
 
 // ── Card System ──────────────────────────────────────────────────────────────
 
-export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate' | 'debuff';
+export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate' | 'debuff' | 'curse';
 export type CardRarity = 'common' | 'rare' | 'ultimate';
 
-export type DebuffType = 'mud_throw' | 'demoralize' | 'armor_break' | 'silence' | 'poison' | 'stun' | 'bleed';
+export type DebuffType = 'mud_throw' | 'rooted' | 'armor_break' | 'silence' | 'poison' | 'stun' | 'bleed' | 'blinded' | 'taunted';
 
 export interface Debuff {
   type: DebuffType;
   magnitude: number;   // amount of the debuff (stat reduction, move reduction, etc.)
   turnsRemaining: number;
+  sourceIconId?: string; // ID of unit that applied the debuff (used by taunt to track taunter)
 }
 
 export interface EffectValues {
@@ -135,7 +140,19 @@ export interface EffectValues {
   executeDouble?: boolean;      // Genghis Rider's Fury: double damage if target < 50% HP
   summonHpBonus?: number;       // extra HP added to summoned terracotta units (Terracotta Legion upgrade)
   cavalryMightBonus?: number;   // extra Might added to summoned cavalry (First Emperor's Command upgrade)
-  aoeDemoralize?: boolean;      // after hitting primary target, apply demoralize to all adjacent enemies (THIS IS SPARTA!)
+  aoeRooted?: boolean;          // after hitting primary target, apply Rooted to all adjacent enemies (THIS IS SPARTA!)
+  mightMult?: number;           // for Basic Attack+: damage = (might × mightMult) − defense
+  tauntDefBonus?: number;       // Taunt card: +DEF granted to executor while taunting
+  fortify?: boolean;            // Fortify card: consume all movement, grant DEF+ATK buff
+  jump?: boolean;               // Jump card: teleport executor to target tile (costs 1 movement)
+  coneTarget?: boolean;         // Suppressive Fire: hits all enemies in a cone toward clicked hex
+  selfHpCostPct?: number;       // Blood Price: executor loses this % of current HP (cannot kill self)
+  teamDmgFlat?: number;         // Blood Price: flat Might bonus applied to all alive allies this turn
+  teamPowerFlat?: number;       // Blood Price: flat Power bonus applied to all alive allies this turn
+  placeDecoy?: boolean;         // Decoy: place a decoy unit on a target tile within range
+  decoyHp?: number;             // HP of the spawned decoy unit
+  decoyExplosion?: number;      // flat damage dealt to enemies in decoyRange when decoy is destroyed
+  decoyRange?: number;          // AoE radius for decoy explosion
 }
 
 export interface Zone {

@@ -47,26 +47,34 @@ export default function HexTile({
   const terrainMap: Record<string,string> = {
     forest:       "/art/tiles/Forest_180.png",
     mountain:     "/art/tiles/Mountains.png",
-    river:        "/art/tiles/River_180.png",
+    river:        "/art/tiles/River_180_new.png",
     plain:        "/art/tiles/Plains_180.png",
     mana_crystal: "/art/tiles/Mana_Crystal_180.png",
     base_blue:    "/art/tiles/Blue_Base_180.png",
     base_red:     "/art/tiles/Red_Base_180.png",
     spawn_blue:   "/art/tiles/Spawn_Blue_180.png",
     spawn_red:    "/art/tiles/Spawn_Red_180.png",
+    lake:         "/art/tiles/Lake_180.png",
+    desert:       "/art/tiles/Desert_180_new.png",
+    snow:         "/art/tiles/Snow_180_new.png",
+    ice:          "/art/tiles/Ice_180_new.png",
+    mud:          "/art/tiles/Mud_180_new.png",
+    ash:          "/art/tiles/Plains_180.png",
+    ruins:        "/art/tiles/Plains_180.png",
   };
   let key: string = tile.terrain.type;
   if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
   if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
   const imgSrc = terrainMap[key] || terrainMap.plain;
 
-  // 2.5D elevation height per terrain
+  // 2.5D elevation wall height per terrain (px, rendered below hex face)
   const elevMap: Record<string, number> = {
-    mountain: 4, forest: 3, base_blue: 3, base_red: 3,
-    mana_crystal: 3, plain: 2,
-    spawn_blue: 2, spawn_red: 2, river: 0,
+    mountain: 32, forest: 20, base_blue: 18, base_red: 18,
+    mana_crystal: 18, plain: 8,
+    spawn_blue: 8, spawn_red: 8, river: 0,
+    lake: 0, desert: 4, snow: 6, ice: 0, mud: 0, ash: 4, ruins: 10,
   };
-  const elev = elevMap[key] ?? 4;
+  const elev = elevMap[key] ?? 8;
   const elevColorMap: Record<string, string> = {
     mountain:     "rgba(40,32,28,0.92)",
     forest:       "rgba(12,38,12,0.92)",
@@ -77,6 +85,13 @@ export default function HexTile({
     spawn_blue:   "rgba(12,18,58,0.88)",
     spawn_red:    "rgba(58,12,12,0.88)",
     river:        "rgba(4,12,42,0.88)",
+    lake:         "rgba(4,18,52,0.92)",
+    desert:       "rgba(120,80,10,0.88)",
+    snow:         "rgba(180,210,230,0.85)",
+    ice:          "rgba(100,160,210,0.88)",
+    mud:          "rgba(35,22,10,0.90)",
+    ash:          "rgba(60,55,50,0.88)",
+    ruins:        "rgba(50,42,65,0.90)",
   };
   const elevColor = elevColorMap[key] ?? "rgba(38,32,28,0.88)";
 
@@ -98,94 +113,145 @@ export default function HexTile({
   // Unique clipPath ID per tile
   const clipId = `hex-clip-${tile.coordinates.q}-${tile.coordinates.r}`;
 
+  // Counter-tilt angle — must match the rotateX in GameBoard.tsx
+  const BOARD_TILT = 0;
+  // Scale factor to compensate for vertical compression from the tilt
+  // cos(26°) ≈ 0.899, so we scale Y up by 1/cos to restore original proportions
+  const tiltCompensate = 1 / Math.cos((BOARD_TILT * Math.PI) / 180);
+
+  // Only enable 3D compositing when actually tilted (avoids quality degradation at 0°)
+  const isTilted = BOARD_TILT > 0;
+  const counterRotStyle: React.CSSProperties = isTilted
+    ? { transformOrigin: '50% 50%', transform: `rotateX(-${BOARD_TILT}deg) scaleY(${tiltCompensate})` }
+    : {};
+
   return (
     <div
       className="relative cursor-pointer"
       onClick={onClick}
       onContextMenu={e => { e.preventDefault(); onTerrainClick?.(e); }}
-      style={{ width: hexWidth, height: hexHeight }}
+      style={{ width: hexWidth, height: hexHeight, ...(isTilted ? { transformStyle: 'preserve-3d' } : {}) }}
     >
+      {/* ── Counter-rotated top surface — faces camera despite board tilt ── */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ ...counterRotStyle, zIndex: 1 }}
+      >
+        <svg
+          className="absolute inset-0 select-none"
+          style={{ overflow: 'visible' }}
+          width={hexWidth}
+          height={hexHeight}
+          viewBox={`0 0 ${hexWidth} ${hexHeight}`}
+        >
+          <defs>
+            <clipPath id={clipId}>
+              <polygon points={pts} />
+            </clipPath>
+          </defs>
+          {/* Terrain image, clipped to exactly the hex */}
+          <image
+            href={imgSrc}
+            x="0" y="0"
+            width={hexWidth}
+            height={hexHeight}
+            preserveAspectRatio="xMidYMid slice"
+            clipPath={`url(#${clipId})`}
+            style={{ imageRendering: 'high-quality' } as React.CSSProperties}
+          />
+
+          {/* Tile border */}
+          <polygon points={pts} className="fill-transparent stroke-black stroke-[1px]" />
+
+          {/* Outline & highlight rings */}
+          <polygon
+            points={pts}
+            className={cn(
+              "fill-transparent transition-colors",
+              tile.highlighted   && "stroke-gray-300 stroke-[1px]",
+              isTargetable       && "stroke-red-400 stroke-[2px] fill-red-500/20",
+              isValidMovement    && "stroke-green-400 stroke-[2px] fill-green-400/20",
+              isInAttackRange    && "stroke-red-400 stroke-[2px] fill-red-400/20",
+              isInAbilityRange   && "stroke-orange-400 stroke-[2px] fill-orange-400/20",
+              isRespawnTarget    && "stroke-blue-400 stroke-[2px] fill-blue-400/20",
+              isActiveIcon       && "stroke-active-turn stroke-[2px]"
+            )}
+          />
+
+          {/* Team-coloured ring */}
+          {playerColor && (
+            <polygon
+              points={pts}
+              fill="none"
+              stroke={playerColor === "blue" ? "#60a5fa" : "#f87171"}
+              strokeWidth={isActiveIcon ? 5 : 3}
+              opacity={0.95}
+            />
+          )}
+        </svg>
+      </div>
+
+      {/* ── Wall SVG — stays in tilted board space (walls only) ── */}
       <svg
         className="absolute inset-0 select-none pointer-events-none"
-        style={{ overflow: 'visible' }}
+        style={{ overflow: 'visible', zIndex: 2 }}
         width={hexWidth}
         height={hexHeight}
         viewBox={`0 0 ${hexWidth} ${hexHeight}`}
       >
         <defs>
-          <clipPath id={clipId}>
+          <clipPath id={`${clipId}-wall`}>
             <polygon points={pts} />
           </clipPath>
         </defs>
 
-        {/* Terrain image, clipped to exactly the hex */}
-        <image
-          href={imgSrc}
-          x="0"
-          y="0"
-          width={hexWidth}
-          height={hexHeight}
-          preserveAspectRatio="xMidYMid slice"
-          clipPath={`url(#${clipId})`}
-          style={{ imageRendering: 'high-quality' } as React.CSSProperties}
-        />
+        {/* 2.5D south-facing wall — three faces with shading */}
+        {elev > 0 && (() => {
+          const H  = elev;
+          // Hex bottom vertices
+          const bLx = hexWidth / 4,      bRx = hexWidth * 3 / 4, bY  = hexHeight;
+          // Hex mid-side vertices
+          const mLx = 0,                  mRx = hexWidth,           mY  = hexHeight / 2;
 
-        {/* 2.5D front face — wall below hex face */}
-        {elev > 0 && (
-          <>
-            {/* Base wall (terrain-tinted) — flat bottom edge drops straight down */}
-            <polygon
-              points={[
-                `${hexWidth / 4},${hexHeight}`,
-                `${hexWidth * 3 / 4},${hexHeight}`,
-                `${hexWidth * 3 / 4},${hexHeight + elev}`,
-                `${hexWidth / 4},${hexHeight + elev}`,
-              ].join(" ")}
-              fill={elevColor}
-            />
-            {/* Top-edge catchlight */}
-            <polyline
-              points={`${hexWidth / 4},${hexHeight} ${hexWidth * 3 / 4},${hexHeight}`}
-              stroke="rgba(255,255,255,0.20)"
-              strokeWidth={0.75}
-              fill="none"
-            />
-          </>
-        )}
+          // Three face polygons (drop straight down by H)
+          const centerPts = `${bLx},${bY} ${bRx},${bY} ${bRx},${bY+H} ${bLx},${bY+H}`;
+          const leftPts   = `${mLx},${mY} ${bLx},${bY} ${bLx},${bY+H} ${mLx},${mY+H}`;
+          const rightPts  = `${bRx},${bY} ${mRx},${mY} ${mRx},${mY+H} ${bRx},${bY+H}`;
 
-        {/* Tile border */}
-        <polygon points={pts} className="fill-transparent stroke-black stroke-[1px]" />
+          return (
+            <>
+              {/* Left diagonal — deepest shadow */}
+              <polygon points={leftPts}   fill={elevColor} />
+              <polygon points={leftPts}   fill="black" opacity={0.50} />
+              {/* Center south — most visible, base color */}
+              <polygon points={centerPts} fill={elevColor} />
+              <polygon points={centerPts} fill="black" opacity={0.15} />
+              {/* Right diagonal — lighter, catches ambient */}
+              <polygon points={rightPts}  fill={elevColor} />
+              <polygon points={rightPts}  fill="black" opacity={0.30} />
+              {/* Top edge catchlight along full lower perimeter */}
+              <polyline
+                points={`${mLx},${mY} ${bLx},${bY} ${bRx},${bY} ${mRx},${mY}`}
+                stroke="rgba(255,255,255,0.28)" strokeWidth={1} fill="none"
+              />
+              {/* Bottom shadow line */}
+              <polyline
+                points={`${mLx},${mY+H} ${bLx},${bY+H} ${bRx},${bY+H} ${mRx},${mY+H}`}
+                stroke="rgba(0,0,0,0.60)" strokeWidth={1} fill="none"
+              />
+            </>
+          );
+        })()}
 
-        {/* Outline & highlight rings */}
-        <polygon
-          points={pts}
-          className={cn(
-            "fill-transparent transition-colors",
-            tile.highlighted   && "stroke-gray-300 stroke-[1px]",
-            isTargetable       && "stroke-red-400 stroke-[2px] fill-red-500/20",
-            isValidMovement    && "stroke-green-400 stroke-[2px] fill-green-400/20",
-            isInAttackRange    && "stroke-red-400 stroke-[2px] fill-red-400/20",
-            isInAbilityRange   && "stroke-orange-400 stroke-[2px] fill-orange-400/20",
-            isRespawnTarget    && "stroke-blue-400 stroke-[2px] fill-blue-400/20",
-            isActiveIcon       && "stroke-active-turn stroke-[2px]"
-          )}
-        />
-
-        {/* Team-coloured ring — thick, glowing, rendered on top of portrait */}
-        {playerColor && (
-          <polygon
-            points={pts}
-            fill="none"
-            stroke={playerColor === "blue" ? "#60a5fa" : "#f87171"}
-            strokeWidth={isActiveIcon ? 5 : 3}
-            opacity={0.95}
-          />
-        )}
       </svg>
 
-      {/* ── Character portrait — hex-clipped, fills tile ── */}
+      {/* ── Character portrait — counter-rotated to face camera ── */}
       {icon && (
-        <div className="absolute inset-0 z-10" style={{ clipPath: `url(#${clipId})` }}>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ ...counterRotStyle, zIndex: 10 }}
+        >
+        <div className="absolute inset-0" style={{ clipPath: `url(#${clipId})` }}>
           {iconPortrait ? (
             <>
               <img
@@ -196,6 +262,7 @@ export default function HexTile({
                   objectFit: 'cover',
                   objectPosition: 'center 20%',
                   imageRendering: 'auto',
+                  animation: 'anim-idle-bob 3s ease-in-out infinite',
                 }}
               />
               {/* Dark vignette to make edges read cleanly against terrain */}
@@ -231,15 +298,18 @@ export default function HexTile({
             </div>
           )}
         </div>
+        </div>
       )}
 
-      {/* ── Pedestal base — shown below hex for all characters ── */}
+      {/* ── Pedestal base — counter-rotated to face camera ── */}
       {icon && (
         <div style={{
           position: 'absolute',
           bottom: -10,
           left: '50%',
-          transform: 'translateX(-50%)',
+          transform: isTilted
+            ? `translateX(-50%) rotateX(-${BOARD_TILT}deg) scaleY(${tiltCompensate})`
+            : 'translateX(-50%)',
           width: '72%',
           pointerEvents: 'none',
           zIndex: 11,

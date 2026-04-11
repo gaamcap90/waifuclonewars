@@ -264,6 +264,24 @@ All colors MUST be HSL.
   100% { transform: translateY(-95px) scale(0.55); opacity: 0; filter: brightness(2.5); }
 }
 
+@keyframes card-foil-sweep {
+  0%   { left: -80%; }
+  100% { left: 160%; }
+}
+
+.card-foil-hover:hover .card-foil-sheen {
+  animation: card-foil-sweep 0.55s ease-in-out forwards;
+}
+
+/* ── Curse card pulse ──────────────────────────────────────────────── */
+@keyframes curse-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px #7f1d1d66, 0 0 8px #7f1d1d44; }
+  50%       { box-shadow: 0 0 0 2px #dc262666, 0 0 16px #dc262655; }
+}
+.animate-curse-pulse {
+  animation: curse-pulse 2s ease-in-out infinite;
+}
+
 @keyframes screen-shake {
   0%, 100% { transform: translate(0, 0); }
   15%       { transform: translate(-4px, 2px); }
@@ -276,6 +294,33 @@ All colors MUST be HSL.
 @keyframes anim-row-death-flash {
   0%   { background: rgba(210,25,25,0.52); box-shadow: inset 0 0 18px rgba(255,50,50,0.65); }
   100% { background: rgba(210,25,25,0);    box-shadow: inset 0 0 0px rgba(255,50,50,0); }
+}
+
+@keyframes anim-hex-death-flash {
+  0%   { opacity: 0.95; transform: translate(-50%, -50%) scale(0.55); filter: brightness(3.0); }
+  18%  { opacity: 0.90; transform: translate(-50%, -50%) scale(1.15); filter: brightness(1.8); }
+  55%  { opacity: 0.55; transform: translate(-50%, -50%) scale(1.05); filter: brightness(1.0); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.30); filter: brightness(0.5); }
+}
+
+@keyframes anim-idle-bob {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-2px); }
+}
+
+@keyframes anim-battle-curtain {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  72%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes anim-battle-title {
+  0%   { opacity: 0; transform: scale(0.80) translateY(12px); }
+  18%  { opacity: 1; transform: scale(1.06) translateY(0px); filter: brightness(2.0); }
+  30%  { opacity: 1; transform: scale(1.00) translateY(0px); filter: brightness(1.0); }
+  75%  { opacity: 1; transform: scale(1.00) translateY(0px); }
+  100% { opacity: 0; transform: scale(0.95) translateY(-8px); }
 }
 
 @keyframes hp-critical-flicker {

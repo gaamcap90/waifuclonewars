@@ -49,7 +49,7 @@ function rolePillStyle(role: Role) {
 const AVAILABLE: Character[] = [
   {
     id: "napoleon", name: "Napoleon-chan", tagline: "", role: "dps_ranged",
-    stats: { hp: 100, might: 70, power: 60 },
+    stats: { hp: 100, might: 65, power: 60 },
     badges: [
       { kind: "passive",  icon: "🎯", name: "Vantage Point",    desc: "" },
       { kind: "ability",  icon: "💥", name: "Artillery Barrage", desc: "" },
@@ -69,7 +69,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "davinci", name: "Da Vinci-chan", tagline: "", role: "support",
-    stats: { hp: 80, might: 35, power: 50 },
+    stats: { hp: 85, might: 35, power: 50 },
     badges: [
       { kind: "passive",  icon: "🔧", name: "Tinkerer",           desc: "" },
       { kind: "ability",  icon: "✈️", name: "Flying Machine",     desc: "" },
@@ -79,7 +79,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "leonidas", name: "Leonidas-chan", tagline: "", role: "tank",
-    stats: { hp: 130, might: 40, power: 20 },
+    stats: { hp: 130, might: 40, power: 28 },
     badges: [
       { kind: "passive",  icon: "🛡️", name: "Phalanx",        desc: "" },
       { kind: "ability",  icon: "⚡", name: "Shield Bash",     desc: "" },
@@ -156,10 +156,23 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
           <p className="text-slate-300 mt-1">{t.characterSelect.subtitle}</p>
         </div>
 
-        <div className="flex items-center justify-center mb-6">
+        <div className="flex items-center justify-center gap-4 mb-6">
           <div className="px-4 py-2 rounded-full border border-indigo-400/40 bg-indigo-500/10 text-indigo-200 font-semibold">
             {t.characterSelect.selectedCount.replace('{n}', String(selectedIds.length))}
           </div>
+          <Button
+            size="lg"
+            disabled={selected.length !== 3}
+            onClick={() => onStartGame(selected)}
+            className={[
+              "px-8 text-white font-bold transition",
+              selected.length === 3
+                ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30"
+                : "bg-slate-600 cursor-not-allowed",
+            ].join(" ")}
+          >
+            {t.characterSelect.startBattle}
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
@@ -199,8 +212,8 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
           })}
         </div>
 
-        <div className="flex items-center justify-between mt-8">
-          <div className="flex items-center gap-2">
+        {selected.length > 0 && (
+          <div className="flex items-center gap-2 mt-6">
             {selected.map((c) => {
               const charT = t.characters[c.id as keyof typeof t.characters];
               return (
@@ -210,21 +223,7 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
               );
             })}
           </div>
-
-          <Button
-            size="lg"
-            disabled={selected.length !== 3}
-            onClick={() => onStartGame(selected)}
-            className={[
-              "px-8 text-white font-bold transition",
-              selected.length === 3
-                ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30"
-                : "bg-slate-600 cursor-not-allowed",
-            ].join(" ")}
-          >
-            {t.characterSelect.startBattle}
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );

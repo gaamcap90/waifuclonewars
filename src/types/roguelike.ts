@@ -101,6 +101,7 @@ export interface CardReward {
   description: string;
   manaCost: number;
   exclusiveTo?: string; // e.g. 'Napoleon' | 'Genghis' | 'Da Vinci'
+  rarity?: 'common' | 'uncommon' | 'rare' | 'ultimate';
 }
 
 export interface CharacterRunState {
@@ -118,6 +119,7 @@ export interface CharacterRunState {
   pendingUltimateUpgrade: number;   // ultimate ability upgrade token (level 6)
   upgradedAbilityIds: string[];     // definitionIds already upgraded (won't be offered again)
   items: (RunItem | null)[]; // 5 slots
+  passiveStacks?: number;           // persisted passive stacks (e.g. Genghis Bloodlust with Eternal Hunger item)
 }
 
 export interface CombatResult {
@@ -125,6 +127,7 @@ export interface CombatResult {
   won: boolean;
   turnsElapsed: number;
   finalHps: Record<CharacterId, number>; // HP each character ended with
+  finalPassiveStacks?: Record<string, number>; // passive stacks to persist (e.g. Genghis bloodlust)
 }
 
 export interface PendingRewards {

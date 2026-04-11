@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Card, Icon, GameState } from "@/types/game";
 import { calcEffectiveStats } from "@/combat/buffs";
@@ -37,6 +37,7 @@ function cardTypeIcon(type: Card["type"]): string {
     case "movement": return "💨";
     case "ultimate": return "✨";
     case "debuff":   return "☠️";
+    case "curse":    return "💀";
     default:         return "🃏";
   }
 }
@@ -52,7 +53,7 @@ function cardArtSrc(card: Card): string | null {
   if (card.type === "ultimate")                      return "/art/cards/ultimate.png";
   // Debuff types — specific art per debuff
   if (e.debuffType === 'armor_break')                return "/art/cards/armor_break.png";
-  if (e.debuffType === 'demoralize' || e.aoeDemoralize) return "/art/cards/demoralize.png";
+  if (e.debuffType === 'rooted' || e.aoeRooted) return "/art/cards/armor_break.png";
   if (e.debuffType === 'mud_throw')                  return "/art/cards/mud_throw.png";
   if (e.debuffType === 'poison')                     return "/art/cards/poison_dart.png";
   if (e.debuffType === 'silence')                    return "/art/cards/silence.png";
@@ -76,7 +77,21 @@ function manaCostColor(cost: number): string {
   return "bg-purple-800 text-purple-100";
 }
 
+function curseEffectLabel(card: Card): string {
+  switch (card.definitionId) {
+    case 'curse_burden':    return 'Deck clutter — no penalty';
+    case 'curse_malaise':   return '⚠ End turn: 1 dmg/unplayed card';
+    case 'curse_void_echo': return '⚠ Turn start: −1 mana';
+    case 'curse_dread':     return '⚠ End turn: 10% stun each char';
+    case 'curse_chains':    return '⚠ End turn: −1 all stats (perm)';
+    default:                return '⚠ Curse — play to discard';
+  }
+}
+
 function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): string {
+  // Curse cards show their passive penalty instead of an active effect
+  if (card.type === 'curse') return curseEffectLabel(card);
+
   const e = card.effect;
   // Teleport card (Flying Machine)
   if (e.teleport) return `Teleport r${e.range ?? 5}`;
@@ -86,7 +101,7 @@ function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): 
   if (e.debuffType) {
     switch (e.debuffType) {
       case 'mud_throw':   return `-${e.debuffMagnitude} MOV (${e.debuffDuration}t)`;
-      case 'demoralize':  return `50% skip turn (${e.debuffDuration}t)`;
+      case 'rooted':      return `Root (${e.debuffDuration}t)`;
       case 'armor_break': return `-${e.debuffMagnitude} DEF (${e.debuffDuration}t)`;
       case 'silence':     return `Silence (${e.debuffDuration}t)`;
       case 'poison':      return `Poison (−${e.debuffMagnitude}/t)`;
@@ -159,6 +174,10 @@ const PileModal: React.FC<{ title: string; cards: Card[]; onClose: () => void }>
                 ? { border: 'border-red-800', ribbon: 'bg-red-950', glow: '' }
                 : charColor(c);
               const tCard = (t.cards as Record<string, { name: string; description: string }>)[c.definitionId];
+              // Upgraded cards have name ending '+' — use card.name directly; otherwise use translation
+              const isUpgraded = c.name.endsWith('+');
+              const cardDisplayName = isUpgraded ? c.name : (tCard?.name ?? c.name);
+              const cardDisplayDesc = isUpgraded ? c.description : (tCard?.description ?? c.description);
               return (
                 <div key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border ${isCurseCard ? 'bg-red-950/40' : 'bg-gray-800'} ${colors.border}`}>
                   {isCurseCard ? (
@@ -170,11 +189,11 @@ const PileModal: React.FC<{ title: string; cards: Card[]; onClose: () => void }>
                       : <span className="text-base w-8 h-8 flex items-center justify-center">{cardTypeIcon(c.type)}</span>;
                   })()}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold truncate" style={{ color: isCurseCard ? '#fca5a5' : 'white' }}>
-                      {tCard?.name ?? c.name}
+                    <div className="text-xs font-semibold truncate" style={{ color: isCurseCard ? '#fca5a5' : isUpgraded ? '#34d399' : 'white' }}>
+                      {cardDisplayName}
                       {isCurseCard && <span className="ml-1 text-[8px] text-red-400 font-bold">CURSE</span>}
                     </div>
-                    <div className="text-[10px] text-gray-400 truncate">{tCard?.description ?? c.description}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{cardDisplayDesc}</div>
                   </div>
                   <div className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${manaCostColor(c.manaCost)}`}>{c.manaCost}</div>
                 </div>
@@ -215,7 +234,9 @@ interface CardTileProps {
 const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, executor, isSelected, isExhausted, onSelect, globalMana, gameState }) => {
   const { t } = useT();
   const tCard = (t.cards as Record<string, { name: string; description: string }>)[card.definitionId];
-  const cardName = tCard?.name ?? card.name;
+  // Upgraded cards end with '+' — use card.name directly; otherwise prefer translation for localization
+  const isUpgraded = card.name.endsWith('+');
+  const cardName = isUpgraded ? card.name : (tCard?.name ?? card.name);
   const playable = !isExhausted && canPlay(card, executor, globalMana);
   const isUltimate = card.type === "ultimate";
   const isCurse = card.definitionId.startsWith('curse_');
@@ -244,69 +265,145 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
 
   const art = cardArtSrc(card);
 
+  // Character color as raw hex for inline glow effects
+  const glowHex = isCurse ? '#991b1b'
+    : isUltimate ? '#ca8a04'
+    : !label ? '#4b5563'
+    : label === 'Napoleon' ? '#7c3aed'
+    : label === 'Genghis'  ? '#b91c1c'
+    : label === 'Da Vinci' ? '#15803d'
+    : label === 'Leonidas' ? '#b45309'
+    : label === 'Sun-sin'  ? '#0e7490'
+    : label === 'Beethoven'? '#6d28d9'
+    : label === 'Huang-chan'? '#c2410c'
+    : '#4b5563';
+
   return (
     <button
       onClick={playable ? onSelect : undefined}
       title={card.description}
       className={[
+        isCurse ? "" : "card-foil-hover",
         "relative flex flex-col items-start justify-between",
         "w-20 h-28 rounded-xl border-2 overflow-hidden",
         "transition-all duration-150 select-none",
-        isCurse
-          ? "bg-gradient-to-b from-red-950 to-gray-950"
-          : isUltimate
-          ? "bg-gradient-to-b from-yellow-950 to-gray-900"
-          : "bg-gradient-to-b from-gray-800 to-gray-950",
-        colors.border,
+        isCurse ? "border-red-700 animate-curse-pulse" : colors.border,
         isSelected
-          ? `shadow-lg ${colors.glow} scale-110 -translate-y-3 z-20`
+          ? `scale-110 -translate-y-3 z-20`
           : "shadow-sm",
         !playable
           ? "opacity-40 cursor-not-allowed grayscale"
           : "cursor-pointer hover:-translate-y-2 hover:scale-105 hover:z-10",
       ].join(" ")}
+      style={{
+        background: isCurse
+          ? 'linear-gradient(160deg, #1f0000 0%, #0a0000 60%, #1a0008 100%)'
+          : isUltimate
+          ? 'linear-gradient(160deg, #2a1f00 0%, #0d0b00 100%)'
+          : 'linear-gradient(160deg, #0f1118 0%, #060810 100%)',
+        boxShadow: isCurse
+          ? isSelected
+            ? '0 0 0 2px #7f1d1d, 0 0 20px #7f1d1daa, 0 8px 24px rgba(0,0,0,0.8)'
+            : '0 0 0 1px #7f1d1d66, 0 0 10px #7f1d1d44, 0 2px 8px rgba(0,0,0,0.6)'
+          : isSelected
+          ? `0 0 0 1px ${glowHex}99, 0 0 18px ${glowHex}66, 0 8px 24px rgba(0,0,0,0.7)`
+          : playable
+          ? `0 0 0 0px transparent, 0 2px 8px rgba(0,0,0,0.5)`
+          : undefined,
+      }}
     >
-      {/* Card art background */}
-      {art && (
-        <img
-          src={art}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: 0.28, pointerEvents: 'none' }}
-        />
+      {/* Curse stripe overlay — diagonal warning pattern */}
+      {isCurse && (
+        <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden" style={{
+          backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(120,0,0,0.12) 6px, rgba(120,0,0,0.12) 8px)',
+        }} />
       )}
 
-      {/* Character ribbon at top */}
-      <div className={["relative w-full px-1 py-0.5 flex items-center justify-between", colors.ribbon].join(" ")}>
-        <span className="text-[8px] font-semibold truncate" style={{ color: isCurse ? '#fca5a5' : undefined }}>
-          {isCurse ? 'CURSE' : (label ?? t.game.hud.sharedCard)}
+      {/* Card art — full bleed, fades into card bg (curse: skull art or void) */}
+      {art && !isCurse && (
+        <>
+          <img
+            src={art}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ opacity: 0.46, pointerEvents: 'none' }}
+          />
+          {/* Gradient over art — keeps top/bottom readable */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: `linear-gradient(to bottom,
+              rgba(0,0,0,0.55) 0%,
+              rgba(0,0,0,0.10) 30%,
+              rgba(0,0,0,0.10) 55%,
+              rgba(0,0,0,0.75) 100%)`,
+          }} />
+          {/* Character color tint at bottom */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: `linear-gradient(to top, ${glowHex}44 0%, transparent 45%)`,
+          }} />
+        </>
+      )}
+
+      {/* Curse: large centered skull */}
+      {isCurse && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.13 }}>
+          <span style={{ fontSize: '3.5rem', lineHeight: 1 }}>💀</span>
+        </div>
+      )}
+
+      {/* Foil shimmer — only for non-curse cards */}
+      {!isCurse && (
+        <div className="card-foil-sheen absolute top-0 bottom-0 pointer-events-none" style={{
+          left: '-80%',
+          width: '60%',
+          background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%)',
+          transform: 'skewX(-12deg)',
+        }} />
+      )}
+
+      {/* Inner frame line — decorative inset border */}
+      <div className="absolute inset-[3px] rounded-lg pointer-events-none"
+        style={{ border: `1px solid ${isCurse ? '#7f1d1d' : glowHex + '40'}` }} />
+
+      {/* Header ribbon */}
+      <div className="relative w-full px-1 py-0.5 flex items-center justify-between"
+        style={{ background: isCurse ? 'linear-gradient(90deg, #7f1d1dee 0%, #450a0a88 100%)' : `linear-gradient(90deg, ${glowHex}cc 0%, ${glowHex}55 100%)` }}>
+        <span className="text-[8px] font-bold tracking-wider truncate" style={{ color: isCurse ? '#fca5a5' : 'rgba(255,255,255,0.9)' }}>
+          {isCurse ? '💀 CURSE' : (label ?? t.game.hud.sharedCard)}
         </span>
-        <span className="text-[9px]">{isCurse ? '☠️' : cardTypeIcon(card.type)}</span>
+        <span className="text-[9px]">{cardTypeIcon(card.type)}</span>
       </div>
 
-      {/* Mana cost pip */}
-      <div className={`absolute top-5 -left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${manaCostColor(card.manaCost)} shadow`}>
+      {/* Mana cost gem — curses always 0, shown as dark */}
+      <div className={`absolute top-5 -left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${isCurse ? 'bg-red-950 text-red-400 border border-red-800' : manaCostColor(card.manaCost)} shadow-lg`}
+        style={{ boxShadow: '0 0 6px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.15) inset' }}>
         {card.manaCost}
       </div>
 
       {/* Ultimate badge */}
       {isUltimate && (
-        <div className="absolute top-5 -right-1.5 text-[8px] bg-yellow-500 text-black rounded-full px-1 font-bold leading-4">
+        <div className="absolute top-5 -right-1.5 text-[8px] bg-yellow-400 text-black rounded-full px-1 font-black leading-4"
+          style={{ boxShadow: '0 0 8px rgba(250,210,0,0.70)' }}>
           ULT
         </div>
       )}
 
       {/* Card name */}
-      <div className="relative px-1 text-white font-semibold leading-tight text-[10px] flex-1 flex items-center"
-        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+      <div className="relative px-1.5 font-bold leading-tight text-[10px] flex-1 flex items-center"
+        style={{ color: isCurse ? '#fca5a5' : 'white', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)' }}>
         {cardName}
       </div>
 
-      {/* Effect summary */}
-      <div className="relative px-1 pb-1.5 text-center text-gray-300 text-[9px] leading-tight w-full"
-        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)', background: 'rgba(0,0,0,0.45)' }}>
-        {effectLabel(card, executor, gameState)}
+      {/* Effect summary bar */}
+      <div className="relative px-1.5 pb-1.5 text-center w-full"
+        style={{
+          background: 'rgba(0,0,0,0.60)',
+          borderTop: `1px solid ${glowHex}33`,
+        }}>
+        <span className="text-[9px] font-semibold leading-tight"
+          style={{ color: 'rgba(220,220,240,0.92)', textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+          {effectLabel(card, executor, gameState)}
+        </span>
       </div>
     </button>
   );
@@ -352,6 +449,11 @@ const CardHand: React.FC<CardHandProps> = ({
   const [tooltip, setTooltip] = useState<{ card: Card; rect: DOMRect } | null>(null);
 
   const selectedCard = cards.find((c) => c.id === selectedCardId) ?? null;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scroll = useCallback((dir: -1 | 1) => {
+    scrollRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' });
+  }, []);
+  const SCROLL_THRESHOLD = 8;
 
   const handleCardClick = (card: Card) => {
     if (!executor || !canPlay(card, executor, globalMana)) return;
@@ -379,14 +481,35 @@ const CardHand: React.FC<CardHandProps> = ({
         </button>
 
         {/* Cards */}
-        <div className="flex items-end gap-1">
+        {cards.length > SCROLL_THRESHOLD && (
+          <button
+            onClick={() => scroll(-1)}
+            className="flex-shrink-0 w-7 h-10 rounded-lg bg-gray-800/80 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition-colors flex items-center justify-center text-sm font-bold"
+          >‹</button>
+        )}
+        <div
+          ref={scrollRef}
+          className={`flex items-end gap-1 ${cards.length > SCROLL_THRESHOLD ? 'overflow-x-hidden' : ''}`}
+          style={cards.length > SCROLL_THRESHOLD ? { maxWidth: `${SCROLL_THRESHOLD * 84}px` } : undefined}
+        >
           {cards.map((card) => (
             <div
               key={card.id}
               className="relative"
               onMouseEnter={(e) => {
                 onCardHover?.(card.manaCost ?? 0);
-                onCardHoverRange?.(card.effect?.range ?? null);
+                // Resolve effective hover range: explicit range, OR basic-attack → use executor's actual attack range
+                const explicitRange = typeof card.effect?.range === 'number' ? card.effect.range : null;
+                let hoverRange: number | null = explicitRange;
+                if (!hoverRange && card.definitionId === 'shared_basic_attack' && executor) {
+                  const isRanged = executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") || executor.name.includes("Beethoven");
+                  const onWaterTile = ['river', 'lake'].includes(gameState?.board?.find(t =>
+                    t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r
+                  )?.terrain.type ?? '');
+                  const sunsinOnWater = executor.name.includes("Sun-sin") && onWaterTile;
+                  hoverRange = sunsinOnWater ? 3 : isRanged ? 2 : (executor.stats.attackRange ?? 1);
+                }
+                onCardHoverRange?.(hoverRange);
                 setTooltip({ card, rect: e.currentTarget.getBoundingClientRect() });
               }}
               onMouseLeave={() => {
@@ -411,6 +534,12 @@ const CardHand: React.FC<CardHandProps> = ({
             </div>
           ))}
         </div>
+        {cards.length > SCROLL_THRESHOLD && (
+          <button
+            onClick={() => scroll(1)}
+            className="flex-shrink-0 w-7 h-10 rounded-lg bg-gray-800/80 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition-colors flex items-center justify-center text-sm font-bold"
+          >›</button>
+        )}
 
         {/* Draw pile */}
         <button
@@ -458,10 +587,14 @@ const CardHand: React.FC<CardHandProps> = ({
             style={{ background: "rgba(4,2,18,0.98)", border: "1px solid rgba(100,70,160,0.55)" }}>
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="text-base">{tooltip.card.type === 'ultimate' ? '✨' : tooltip.card.type === 'attack' ? '⚔️' : tooltip.card.type === 'defense' ? '🛡️' : tooltip.card.type === 'debuff' ? '☠️' : '⬆️'}</span>
-              <span className="font-orbitron font-bold text-[12px] text-white flex-1">{(t.cards as Record<string, { name: string; description: string }>)[tooltip.card.definitionId]?.name ?? tooltip.card.name}</span>
+              <span className="font-orbitron font-bold text-[12px] flex-1" style={{ color: tooltip.card.name.endsWith('+') ? '#34d399' : 'white' }}>
+                {tooltip.card.name.endsWith('+') ? tooltip.card.name : ((t.cards as Record<string, { name: string; description: string }>)[tooltip.card.definitionId]?.name ?? tooltip.card.name)}
+              </span>
               <span className="font-orbitron font-bold text-[11px] text-blue-300 shrink-0">{tooltip.card.manaCost} 💧</span>
             </div>
-            <p className="text-[10px] text-slate-300 leading-snug">{(t.cards as Record<string, { name: string; description: string }>)[tooltip.card.definitionId]?.description ?? tooltip.card.description}</p>
+            <p className="text-[10px] text-slate-300 leading-snug">
+              {tooltip.card.name.endsWith('+') ? tooltip.card.description : ((t.cards as Record<string, { name: string; description: string }>)[tooltip.card.definitionId]?.description ?? tooltip.card.description)}
+            </p>
             {tooltip.card.effect?.range && tooltip.card.effect.range < 999 && (
               <div className="mt-1.5 text-[9px] font-orbitron text-cyan-400">◎ Range {tooltip.card.effect.range} hexes</div>
             )}

@@ -1,5 +1,6 @@
 // src/components/RoguelikeMap.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { RunState, RunNode, CharacterRunState, RunItem, CharacterId } from "@/types/roguelike";
 import { CARD_REWARD_POOL } from "@/data/roguelikeData";
 import { CARD_UPGRADES, CARD_DEFS } from "@/data/cards";
@@ -14,17 +15,57 @@ interface Props {
   onUpgradeAbility?: (characterId: CharacterId, defId: string, isUltimate: boolean) => void;
 }
 
-const TOTAL_ROWS = 12; // rows 0–11, row 11 = boss
+// ── Horizontal pure-SVG coordinate system ────────────────────────────────────
+// Layout: floor 0 = left, floor 11 (boss) = right.
+// Tracks 0-4 run top→bottom across the 5 possible vertical positions.
+// Both connection paths and node circles share this one coordinate space,
+// so connections are ALWAYS pixel-perfect.
 
-// 5-column grid — StS style positions
-const COL_PCT: Record<number, number> = { 0: 10, 1: 27.5, 2: 50, 3: 72.5, 4: 90 };
-function nodeXPct(col: number, _rowCount: number): number {
-  return COL_PCT[col] ?? 50;
+const SVG_W = 1300;
+const SVG_H = 540;      // shorter → less vertical swing
+const MAP_PAD_X = 85;
+const MAP_PAD_Y = 95;   // large padding compresses track spread to ~88px between tracks
+
+/** X position for a floor/row (0 = leftmost, 11 = rightmost) */
+function floorX(row: number): number {
+  return MAP_PAD_X + (row / 11) * (SVG_W - 2 * MAP_PAD_X);
 }
 
-function rowYPct(row: number): number {
-  // row 0 = bottom (92%), row 11 = top (4%)
-  return 92 - (row / (TOTAL_ROWS - 1)) * 88;
+/** Y position for a track/col (0 = top, 4 = bottom) */
+function trackY(col: number): number {
+  // span = SVG_H - 2*MAP_PAD_Y = 540-190 = 350px across 4 steps → ~88px each
+  return MAP_PAD_Y + (col / 4) * (SVG_H - 2 * MAP_PAD_Y);
+}
+
+const NODE_R = 22; // regular node radius
+const BOSS_R = 40; // boss node radius
+
+/** Horizontal S-curve: leaves source going right, arrives at target going right.
+ *  Same-track connections (y1 ≈ y2) get a small upward bow so they're never
+ *  a flat line hidden under adjacent node circles. */
+function bezierPath(x1: number, y1: number, x2: number, y2: number): string {
+  const mx = (x1 + x2) / 2;
+  if (Math.abs(y1 - y2) < 10) {
+    // Bow upward so the path arcs visibly above node circles (r=22).
+    // bow=45 → arc midpoint ≈34px above baseline → arc emerges above circle tops.
+    const bow = 45;
+    return `M ${x1} ${y1} C ${mx} ${y1 - bow} ${mx} ${y2 - bow} ${x2} ${y2}`;
+  }
+  return `M ${x1} ${y1} C ${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;
+}
+
+function svgToScreen(
+  svgEl: SVGSVGElement,
+  svgX: number,
+  svgY: number,
+): { x: number; y: number } {
+  const pt = svgEl.createSVGPoint();
+  pt.x = svgX;
+  pt.y = svgY;
+  const ctm = svgEl.getScreenCTM();
+  if (!ctm) return { x: 0, y: 0 };
+  const s = pt.matrixTransform(ctm);
+  return { x: s.x, y: s.y };
 }
 
 const NODE_META: Record<string, { icon: string; label: string; color: string; glow: string }> = {
@@ -57,6 +98,7 @@ function LeftPanelCharCard({
 }) {
   const { t } = useT();
   const hpPct = char.currentHp / char.maxHp;
+  const [itemTooltip, setItemTooltip] = useState<{ item: RunItem; rect: DOMRect } | null>(null);
   const hpColor = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#f87171';
 
   if (isDead) {
@@ -66,12 +108,12 @@ function LeftPanelCharCard({
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
             <img src={char.portrait} alt={char.displayName}
-              className="w-12 h-12 rounded-full object-cover border-2 border-red-900/50 grayscale" />
-            <div className="absolute inset-0 rounded-full flex items-center justify-center text-lg"
+              className="w-14 h-14 rounded-full object-cover border-2 border-red-900/50 grayscale" />
+            <div className="absolute inset-0 rounded-full flex items-center justify-center text-xl"
               style={{ background: 'rgba(0,0,0,0.55)' }}>💀</div>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-orbitron font-bold text-[11px] text-red-400 truncate">{char.displayName}</div>
+            <div className="font-orbitron font-bold text-[12px] text-red-400 truncate">{char.displayName}</div>
             <div className="text-[9px] text-red-700 font-orbitron tracking-wider mt-0.5">{t.roguelike.fallen}</div>
           </div>
         </div>
@@ -82,7 +124,7 @@ function LeftPanelCharCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-xl border p-3 transition-all hover:bg-purple-900/10"
+      className="w-full text-left rounded-xl border p-3.5 transition-all hover:bg-purple-900/10"
       style={{
         background: 'rgba(6,3,22,0.80)',
         borderColor: char.pendingStatPoints > 0 ? 'rgba(234,179,8,0.70)' : 'rgba(100,80,160,0.5)',
@@ -90,12 +132,16 @@ function LeftPanelCharCard({
       }}
     >
       {/* Portrait + name row */}
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-3 mb-2.5">
         <div className="relative shrink-0">
           <img
             src={char.portrait}
             alt={char.displayName}
-            className="w-12 h-12 rounded-full object-cover border-2 border-slate-600/50"
+            className="w-14 h-14 rounded-full object-cover border-2"
+            style={{
+              borderColor: hpPct > 0.6 ? 'rgba(74,222,128,0.75)' : hpPct > 0.3 ? 'rgba(251,191,36,0.75)' : 'rgba(248,113,113,0.85)',
+              boxShadow: hpPct > 0.6 ? '0 0 8px rgba(74,222,128,0.40)' : hpPct > 0.3 ? '0 0 8px rgba(251,191,36,0.40)' : '0 0 10px rgba(248,113,113,0.55)',
+            }}
           />
           {/* Level badge */}
           <div
@@ -106,43 +152,47 @@ function LeftPanelCharCard({
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-orbitron font-bold text-[11px] text-white truncate">
+          <div className="font-orbitron font-bold text-[13px] text-white truncate">
             {char.displayName.replace('-chan', '')}
-            <span className="text-slate-500 font-normal">-chan</span>
+            <span className="text-slate-500 font-normal text-[11px]">-chan</span>
           </div>
-          <div className="text-[9px] text-purple-400 font-orbitron">{t.roguelike.lvShort.replace('{n}', String(char.level))}</div>
+          <div className="text-[9px] text-purple-400 font-orbitron mt-0.5">{t.roguelike.lvShort.replace('{n}', String(char.level))}</div>
         </div>
         <div className="flex flex-col items-end gap-0.5 shrink-0">
           {char.pendingStatPoints > 0 && (
-            <span className="text-[9px] font-bold text-yellow-400 animate-pulse">▲{char.pendingStatPoints}</span>
+            <span className="text-[10px] font-bold text-yellow-400 animate-pulse">▲{char.pendingStatPoints}</span>
           )}
           {char.pendingAbilityUpgrades > 0 && (
-            <span className="text-[9px] font-bold text-purple-400 animate-pulse">✦</span>
+            <span className="text-[10px] font-bold text-purple-400 animate-pulse">✦</span>
           )}
           {char.pendingUltimateUpgrade > 0 && (
-            <span className="text-[9px] font-bold text-amber-400 animate-pulse">⚡</span>
+            <span className="text-[10px] font-bold text-amber-400 animate-pulse">⚡</span>
           )}
         </div>
       </div>
 
       {/* HP bar */}
-      <div className="mb-1">
-        <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div className="mb-1.5">
+        <div className="flex justify-between mb-0.5">
+          <span className="text-[9px] text-slate-500 font-orbitron">HP</span>
+          <span className="text-[9px]" style={{ color: hpColor }}>{char.currentHp}/{char.maxHp}</span>
+        </div>
+        <div className="h-2 rounded-full bg-slate-800/80 overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${hpPct * 100}%`, background: hpColor, boxShadow: `0 0 6px ${hpColor}80` }}
           />
         </div>
-        <div className="flex justify-between mt-0.5">
-          <span className="text-[9px] text-slate-500">{char.currentHp}/{char.maxHp} HP</span>
-          <span className="text-[9px]" style={{ color: hpColor }}>{Math.round(hpPct * 100)}%</span>
-        </div>
       </div>
 
       {/* XP bar */}
-      {char.level < 6 && (
-        <div className="mb-1.5">
-          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(88,28,135,0.35)' }}>
+      {char.level < 6 ? (
+        <div className="mb-2">
+          <div className="flex justify-between mb-0.5">
+            <span className="text-[8px] text-purple-600 font-orbitron">XP</span>
+            <span className="text-[8px] text-purple-500">{char.xp}/{char.xpToNext}</span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(88,28,135,0.35)' }}>
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -152,37 +202,83 @@ function LeftPanelCharCard({
               }}
             />
           </div>
-          <div className="flex justify-between mt-0.5">
-            <span className="text-[8px] text-purple-600 font-orbitron">XP</span>
-            <span className="text-[8px] text-purple-500">{char.xp}/{char.xpToNext}</span>
-          </div>
         </div>
-      )}
-      {char.level >= 6 && (
-        <div className="mb-1.5">
-          <div className="h-1 rounded-full" style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', boxShadow: '0 0 6px rgba(168,85,247,0.5)' }} />
+      ) : (
+        <div className="mb-2">
+          <div className="h-1.5 rounded-full" style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', boxShadow: '0 0 6px rgba(168,85,247,0.5)' }} />
           <div className="text-center mt-0.5">
             <span className="text-[8px] text-purple-400 font-orbitron tracking-widest">MAX LEVEL</span>
           </div>
         </div>
       )}
 
-      {/* Item slots */}
-      <div className="flex gap-1 mt-2">
-        {char.items.map((item, i) => (
-          <div
-            key={i}
-            className="w-8 h-8 rounded-lg border flex items-center justify-center text-xs"
-            style={{
-              background: item ? 'rgba(10,6,30,0.9)' : 'rgba(5,3,15,0.4)',
-              borderColor: item ? TIER_COLOR[item.tier] + '60' : 'rgba(60,40,100,0.3)',
-            }}
-            title={item ? item.name : 'Empty slot'}
-          >
-            {item ? item.icon : <span className="text-slate-700 text-[10px]">·</span>}
-          </div>
-        ))}
+      {/* Inventory section */}
+      <div className="border-t border-slate-700/40 pt-2 mt-1">
+        <p className="font-orbitron text-[7px] tracking-[0.35em] text-slate-600 mb-1.5">INVENTORY</p>
+        <div className="flex gap-1.5">
+          {char.items.map((item, i) => (
+            <div
+              key={i}
+              className="flex-1 h-9 rounded-lg border flex items-center justify-center text-sm"
+              style={{
+                background: item ? 'rgba(10,6,30,0.9)' : 'rgba(5,3,15,0.4)',
+                borderColor: item ? TIER_COLOR[item.tier] + '70' : 'rgba(60,40,100,0.25)',
+                boxShadow: item && itemTooltip?.item === item ? `0 0 10px ${TIER_COLOR[item.tier]}60` : item ? `0 0 6px ${TIER_COLOR[item.tier]}30` : 'none',
+              }}
+              onMouseEnter={item ? (e) => setItemTooltip({ item, rect: e.currentTarget.getBoundingClientRect() }) : undefined}
+              onMouseLeave={() => setItemTooltip(null)}
+            >
+              {item ? item.icon : <span className="text-slate-800 text-[10px]">·</span>}
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Item tooltip portal */}
+      {itemTooltip && createPortal(
+        <div
+          className="pointer-events-none z-[9999]"
+          style={{
+            position: 'fixed',
+            left: itemTooltip.rect.left + itemTooltip.rect.width / 2,
+            top: itemTooltip.rect.top - 8,
+            transform: 'translate(-50%, -100%)',
+            minWidth: 180,
+            maxWidth: 240,
+          }}
+        >
+          <div style={{
+            background: 'rgba(6,3,22,0.97)',
+            border: `1px solid ${TIER_COLOR[itemTooltip.item.tier]}50`,
+            borderRadius: 10,
+            padding: '10px 12px',
+            boxShadow: `0 0 18px ${TIER_COLOR[itemTooltip.item.tier]}30, 0 4px 24px rgba(0,0,0,0.8)`,
+          }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-lg">{itemTooltip.item.icon}</span>
+              <span className="font-orbitron font-bold text-[12px] text-white">{itemTooltip.item.name}</span>
+              <span className="ml-auto text-[9px] font-bold font-orbitron px-1.5 py-0.5 rounded"
+                style={{ color: TIER_COLOR[itemTooltip.item.tier], background: TIER_COLOR[itemTooltip.item.tier] + '18', border: `1px solid ${TIER_COLOR[itemTooltip.item.tier]}40` }}>
+                {itemTooltip.item.tier.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{itemTooltip.item.description}</p>
+            {itemTooltip.item.targetCharacter && (
+              <p className="text-[9px] mt-1.5 font-orbitron" style={{ color: EXCLUSIVE_COLOR[itemTooltip.item.targetCharacter] ?? '#94a3b8' }}>
+                {itemTooltip.item.targetCharacter} exclusive
+              </p>
+            )}
+          </div>
+          {/* Arrow */}
+          <div style={{
+            width: 0, height: 0, margin: '0 auto',
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: `6px solid ${TIER_COLOR[itemTooltip.item.tier]}50`,
+          }} />
+        </div>,
+        document.body
+      )}
     </button>
   );
 }
@@ -359,7 +455,7 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
                 </div>
                 {/* Tooltip */}
                 {item && hoveredItem === item && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none rounded-lg border border-slate-600/60 p-3 w-52"
+                  <div className="absolute bottom-full left-0 mb-2 z-50 pointer-events-none rounded-lg border border-slate-600/60 p-3 w-52"
                     style={{ background: 'rgba(4,2,18,0.97)' }}>
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="text-base">{item.icon}</span>
@@ -490,16 +586,25 @@ function AbilityUpgradeOverlay({ char, deckIds, upgradedCardDefIds, isUltimate, 
   );
 }
 
-function NodeTooltip({ node, side }: { node: RunNode; side: 'left' | 'right' }) {
+function NodeTooltipPortal({
+  node, sx, sy,
+}: { node: RunNode; sx: number; sy: number }) {
   const { t } = useT();
   const meta = NODE_META[node.type];
   const nodeLabel = (t.roguelike.nodeLabels as Record<string, string>)[node.type] ?? meta.label;
   const enc = node.encounter;
-  const left = side === 'left' ? '110%' : 'auto';
-  const right = side === 'right' ? '110%' : 'auto';
-  return (
-    <div className="absolute z-50 pointer-events-none rounded-xl border border-slate-600/60 p-3 w-56 shadow-2xl"
-      style={{ background: 'rgba(4,2,18,0.97)', top: '50%', transform: 'translateY(-50%)', left, right }}>
+
+  // Clamp so tooltip stays within viewport
+  const W = 224;
+  const rawLeft = sx + 18;
+  const left = rawLeft + W > window.innerWidth ? sx - W - 18 : rawLeft;
+  const top = Math.max(8, Math.min(sy - 60, window.innerHeight - 220));
+
+  return createPortal(
+    <div
+      className="fixed z-[9999] pointer-events-none rounded-xl border border-slate-600/60 p-3 shadow-2xl"
+      style={{ background: 'rgba(4,2,18,0.97)', width: W, left, top }}
+    >
       <div className="flex items-center gap-2 mb-2">
         <span className="text-lg">{meta.icon}</span>
         <span className="font-orbitron font-bold text-sm" style={{ color: meta.color }}>{nodeLabel}</span>
@@ -522,13 +627,15 @@ function NodeTooltip({ node, side }: { node: RunNode; side: 'left' | 'right' }) 
       {node.type === 'merchant' && <p className="text-[11px] text-green-300 leading-relaxed">{t.roguelike.nodeTips.merchant}</p>}
       {node.type === 'treasure' && <p className="text-[11px] text-yellow-300 leading-relaxed">{t.roguelike.nodeTips.treasure}</p>}
       {node.type === 'unknown' && <p className="text-[11px] text-slate-400 leading-relaxed">{t.roguelike.nodeTips.unknown}</p>}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
 export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onAllocateStat, onUpgradeAbility }: Props) {
   const { t } = useT();
-  const [hovered, setHovered] = useState<string | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredInfo, setHoveredInfo] = useState<{ node: RunNode; sx: number; sy: number } | null>(null);
   const [showDeck, setShowDeck] = useState(false);
   const [detailChar, setDetailChar] = useState<CharacterRunState | null>(null);
   const [abilityUpgradeChar, setAbilityUpgradeChar] = useState<{ char: CharacterRunState; isUltimate: boolean } | null>(null);
@@ -544,7 +651,6 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
   }, [runState.characters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-open ability upgrade overlay once all stat points are spent
-  // Normal upgrades (levels 2 & 4) first, then ultimate (level 6)
   useEffect(() => {
     if (detailChar || abilityUpgradeChar) return;
     const chars = characters as CharacterRunState[];
@@ -554,61 +660,53 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
     if (ultChar) setAbilityUpgradeChar({ char: ultChar, isUltimate: true });
   }, [runState.characters, detailChar]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pre-compute positions as percentages
-  const getPos = (node: RunNode) => ({
-    xPct: nodeXPct(node.col, node.rowCount),
-    yPct: rowYPct(node.row),
-  });
+  // Build a lookup for fast node position access
+  const nodeById = new Map<string, RunNode>((map as RunNode[]).map(n => [n.id, n]));
 
-  // Build connection line data
-  const lines = map.flatMap(node => {
-    const from = getPos(node);
-    return node.connections.map(cid => {
-      const target = map.find(n => n.id === cid);
+  // Build connection paths with three visual states:
+  //   'done'   — source was completed (solid cyan)
+  //   'active' — source is currently unlocked/available (bright purple solid)
+  //   'locked' — neither (dim gray-purple dashed, still visible)
+  const connPaths = (map as RunNode[]).flatMap(node =>
+    node.connections.map(cid => {
+      const target = nodeById.get(cid);
       if (!target) return null;
-      const to = getPos(target);
-      const pathDone = completedNodeIds.includes(node.id);
+      const srcDone     = completedNodeIds.includes(node.id);
+      const srcUnlocked = unlockedNodeIds.includes(node.id);
+      const state: 'done' | 'active' | 'locked' =
+        srcDone ? 'done' : srcUnlocked ? 'active' : 'locked';
       return {
         key: `${node.id}-${cid}`,
-        x1: from.xPct, y1: from.yPct,
-        x2: to.xPct, y2: to.yPct,
-        done: pathDone,
+        d: bezierPath(
+          floorX(node.row), trackY(node.col),
+          floorX(target.row), trackY(target.col),
+        ),
+        state,
       };
-    }).filter(Boolean);
-  });
+    }).filter(Boolean)
+  );
 
   return (
     <div className="fixed inset-0 overflow-hidden flex flex-col">
       <ArenaBackground />
 
-      {/* ── Simplified Header ── */}
+      {/* ── Header ── */}
       <div className="relative z-20 shrink-0 flex items-center gap-4 px-5 py-2 border-b border-slate-800/60"
         style={{ background: 'rgba(2,4,14,0.94)' }}>
-        {/* Act + title */}
         <div className="shrink-0">
           <span className="font-orbitron text-[10px] text-slate-500 tracking-widest">ACT {act}</span>
           <span className="font-orbitron text-[10px] text-slate-600 tracking-widest ml-2">
             · {t.roguelike.actNames[(act as number) - 1] ?? ''}
           </span>
         </div>
-
         <div className="h-5 w-px bg-slate-700/60 mx-1" />
-
-        {/* Spacer — characters are now in left panel */}
         <div className="flex-1" />
-
-        {/* Gold */}
         <span className="font-orbitron text-sm font-bold text-yellow-400 shrink-0">💰 {gold}</span>
-
         <div className="h-5 w-px bg-slate-700/60 mx-1" />
-
-        {/* Deck count — clickable */}
         <button onClick={() => setShowDeck(true)}
           className="font-orbitron text-[10px] text-slate-400 hover:text-cyan-300 transition-colors shrink-0 border border-slate-700/40 hover:border-cyan-500/40 rounded px-2 py-1">
           🃏 {t.roguelike.deckCards.replace('{n}', String(deckCardIds.length))}
         </button>
-
-        {/* Abandon */}
         <button onClick={onAbandonRun}
           className="font-orbitron text-[9px] text-slate-500 hover:text-red-400 transition-colors tracking-widest border border-slate-700/40 hover:border-red-500/40 rounded px-3 py-1.5 shrink-0">
           {t.roguelike.abandonRun}
@@ -621,14 +719,10 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
         {/* ── Left Panel — Characters ── */}
         <div
           className="shrink-0 flex flex-col overflow-y-auto py-4 px-3 gap-3"
-          style={{
-            width: 280,
-            background: 'rgba(2,4,14,0.92)',
-            borderRight: '1px solid rgba(60,40,100,0.4)',
-          }}
+          style={{ width: 310, background: 'rgba(2,4,14,0.92)', borderRight: '1px solid rgba(60,40,100,0.4)' }}
         >
-          <p className="font-orbitron text-[9px] tracking-[0.45em] text-purple-500 px-1 mb-1">{t.roguelike.yourParty}</p>
-          {characters.map((c: CharacterRunState) => (
+          <p className="font-orbitron text-[8px] tracking-[0.5em] text-purple-500 px-1 mb-0.5 uppercase">{t.roguelike.yourParty}</p>
+          {(characters as CharacterRunState[]).map(c => (
             <LeftPanelCharCard
               key={c.id}
               char={c}
@@ -636,156 +730,276 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
               onClick={() => setDetailChar(c)}
             />
           ))}
-
-          {/* Legend at bottom of left panel */}
-          <div className="mt-auto pt-4 border-t border-slate-800/60">
-            <p className="font-orbitron text-[8px] tracking-[0.35em] text-slate-600 mb-2">{t.roguelike.nodeTypes}</p>
-            <div className="flex flex-col gap-1">
-              {Object.entries(NODE_META).map(([type, meta]) => (
-                <div key={type} className="flex items-center gap-2">
-                  <span className="text-[12px] w-5 text-center">{meta.icon}</span>
-                  <span className="text-[9px] font-orbitron" style={{ color: meta.color }}>{(t.roguelike.nodeLabels as Record<string, string>)[type] ?? meta.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* ── Right Panel — Map tree ── */}
+        {/* ── Right Panel — Map ── */}
         <div className="flex-1 flex flex-col pt-3 pb-2 px-4 overflow-hidden">
-          <p className="font-orbitron text-[9px] tracking-[0.55em] text-purple-400 mb-2 shrink-0 text-center">{t.roguelike.choosePath}</p>
 
-          {/* Map container — flex-1, no max-width restriction */}
+          {/* Act name as the map title — replaces "Choose Your Path" */}
+          <div className="shrink-0 text-center mb-2">
+            <p className="font-orbitron text-[9px] tracking-[0.5em] text-slate-500 uppercase">
+              ACT {act} · {t.roguelike.actNames[(act as number) - 1] ?? ''}
+            </p>
+          </div>
+
           <div className="relative flex-1 w-full rounded-2xl overflow-hidden border border-slate-700/40"
             style={{ background: 'rgba(5,3,18,0.88)' }}>
 
-            {/* Subtle grid texture */}
+            {/* Subtle dot grid */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
               style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
-            {/* SVG connection lines — percentage viewBox */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {/* Node type legend — bottom of map, inside the canvas */}
+            <div className="absolute bottom-2 left-3 right-3 pointer-events-none z-10 flex items-center gap-3 flex-wrap">
+              {Object.entries(NODE_META).map(([type, meta]) => (
+                <div key={type} className="flex items-center gap-1">
+                  <span className="text-[11px] leading-none">{meta.icon}</span>
+                  <span className="font-orbitron text-[7px] tracking-wide" style={{ color: meta.color + 'bb' }}>
+                    {(t.roguelike.nodeLabels as Record<string, string>)[type] ?? meta.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <svg
+              ref={svgRef}
+              className="w-full h-full"
+              viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+              preserveAspectRatio="xMidYMid meet"
+            >
               <defs>
-                <filter id="glow-line" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="0.6" result="blur" />
+                <filter id="map-line-glow" x="-60%" y="-200%" width="220%" height="500%">
+                  <feGaussianBlur stdDeviation="2.5" result="blur" />
                   <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
+                <filter id="map-line-glow-strong" x="-80%" y="-300%" width="260%" height="700%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <filter id="map-node-glow" x="-120%" y="-120%" width="340%" height="340%">
+                  <feGaussianBlur stdDeviation="6" />
+                </filter>
+                <style>{`
+                  @keyframes map-dash-flow {
+                    from { stroke-dashoffset: 26; }
+                    to   { stroke-dashoffset: 0; }
+                  }
+                  @keyframes map-active-pulse {
+                    0%, 100% { opacity: 0.92; filter: url(#map-line-glow); }
+                    50%       { opacity: 1.0;  filter: url(#map-line-glow-strong); }
+                  }
+                `}</style>
               </defs>
-              {lines.map(l => l && (
-                <line key={l.key}
-                  x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke={l.done ? 'rgba(34,211,238,0.95)' : 'rgba(180,130,255,0.80)'}
-                  strokeWidth={l.done ? 1.4 : 1.1}
-                  strokeDasharray={l.done ? '' : '4,2'}
-                  filter="url(#glow-line)"
-                  vectorEffect="non-scaling-stroke"
+
+              {/* ── LAYER 1: locked paths — clearly dashed but dim ── */}
+              {connPaths.filter(p => p?.state === 'locked').map(p => p && (
+                <path
+                  key={p.key}
+                  d={p.d}
+                  fill="none"
+                  stroke="rgba(130,85,195,0.55)"
+                  strokeWidth="2.5"
+                  strokeDasharray="7,6"
+                  strokeLinecap="round"
                 />
               ))}
+
+              {/* ── LAYER 2: active paths — pulsing glow ── */}
+              {connPaths.filter(p => p?.state === 'active').map(p => p && (
+                <path
+                  key={p.key}
+                  d={p.d}
+                  fill="none"
+                  stroke="rgba(192,130,255,0.92)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  filter="url(#map-line-glow)"
+                  style={{ animation: 'map-active-pulse 2.4s ease-in-out infinite' }}
+                />
+              ))}
+
+              {/* ── LAYER 3: done paths — flowing cyan dash (left→right) ── */}
+              {connPaths.filter(p => p?.state === 'done').map(p => p && (
+                <g key={p.key}>
+                  {/* Solid dim base */}
+                  <path
+                    d={p.d}
+                    fill="none"
+                    stroke="rgba(34,211,238,0.30)"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                  />
+                  {/* Animated flowing dash overlay */}
+                  <path
+                    d={p.d}
+                    fill="none"
+                    stroke="rgba(34,211,238,0.90)"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeDasharray="13,13"
+                    filter="url(#map-line-glow)"
+                    style={{ animation: 'map-dash-flow 1.4s linear infinite' }}
+                  />
+                </g>
+              ))}
+
+              {/* ── LAYER 4: Nodes ── */}
+              {(map as RunNode[]).map(node => {
+                const meta = NODE_META[node.type];
+                const isUnlocked = unlockedNodeIds.includes(node.id);
+                const isDone = completedNodeIds.includes(node.id);
+                const isBoss = node.type === 'boss';
+                const isHov = hoveredInfo?.node.id === node.id;
+                const cx = floorX(node.row);
+                const cy = trackY(node.col);
+                const r = isBoss ? BOSS_R : NODE_R;
+
+                // Three opacity tiers — locked nodes are clearly visible now
+                const opacity = isDone ? 0.50 : isUnlocked ? 1.0 : 0.58;
+
+                // Stroke: locked uses a visible muted purple instead of near-black
+                const strokeColor = isDone
+                  ? 'rgba(34,211,238,0.55)'
+                  : isUnlocked
+                    ? meta.color
+                    : 'rgba(120,85,170,0.70)';
+
+                const strokeW = isDone ? 2 : isUnlocked ? (isBoss ? 3.5 : 2.5) : 1.5;
+
+                const fillColor = isDone
+                  ? '#07021a'
+                  : isUnlocked ? (isBoss ? '#1a040e' : '#08041e') : '#060318';
+
+                return (
+                  <g
+                    key={node.id}
+                    style={{ cursor: isUnlocked && !isDone ? 'pointer' : 'default' }}
+                    opacity={opacity}
+                    onClick={() => isUnlocked && !isDone && onSelectNode(node.id)}
+                    onMouseEnter={() => {
+                      if (!svgRef.current || !isUnlocked || isDone) return;
+                      const { x, y } = svgToScreen(svgRef.current, cx, cy);
+                      setHoveredInfo({ node, sx: x, sy: y });
+                    }}
+                    onMouseLeave={() => setHoveredInfo(null)}
+                  >
+                    {/* Pulsing availability ring — only for unlocked (available to enter) nodes */}
+                    {isUnlocked && !isDone && (
+                      <>
+                        <circle
+                          cx={cx} cy={cy} r={r + 3}
+                          fill="none"
+                          stroke={meta.color}
+                          strokeWidth="1.5"
+                          opacity="0"
+                        >
+                          <animate attributeName="r" from={r + 3} to={r + 14} dur="2.2s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" from="0.55" to="0" dur="2.2s" repeatCount="indefinite" />
+                        </circle>
+                        <circle
+                          cx={cx} cy={cy} r={r + 3}
+                          fill="none"
+                          stroke={meta.color}
+                          strokeWidth="1"
+                          opacity="0"
+                        >
+                          <animate attributeName="r" from={r + 3} to={r + 14} dur="2.2s" begin="1.1s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" from="0.35" to="0" dur="2.2s" begin="1.1s" repeatCount="indefinite" />
+                        </circle>
+                      </>
+                    )}
+
+                    {/* Glow halo — unlocked only, tighter radius than before */}
+                    {isUnlocked && !isDone && (
+                      <circle
+                        cx={cx} cy={cy}
+                        r={r + (isHov ? 13 : 5)}
+                        fill={meta.glow}
+                        filter="url(#map-node-glow)"
+                        opacity={isHov ? 0.80 : 0.35}
+                      />
+                    )}
+
+                    {/* Boss: subtle dim glow even when locked so it's always findable */}
+                    {isBoss && !isUnlocked && !isDone && (
+                      <circle cx={cx} cy={cy} r={r + 10}
+                        fill="rgba(244,63,94,0.18)"
+                        filter="url(#map-node-glow)"
+                      />
+                    )}
+
+                    {/* Boss pulse rings (only when unlocked) */}
+                    {isBoss && isUnlocked && !isDone && (
+                      <>
+                        <circle cx={cx} cy={cy} r={r + 5} fill="none" stroke="rgba(244,63,94,0.60)" strokeWidth="2.5">
+                          <animate attributeName="r" from={r + 5} to={r + 22} dur="1.6s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" from="0.7" to="0" dur="1.6s" repeatCount="indefinite" />
+                        </circle>
+                        <circle cx={cx} cy={cy} r={r + 5} fill="none" stroke="rgba(244,63,94,0.30)" strokeWidth="1.5">
+                          <animate attributeName="r" from={r + 5} to={r + 34} dur="1.6s" begin="0.6s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" from="0.5" to="0" dur="1.6s" begin="0.6s" repeatCount="indefinite" />
+                        </circle>
+                      </>
+                    )}
+
+                    {/* Main circle */}
+                    <circle
+                      cx={cx} cy={cy} r={r}
+                      fill={fillColor}
+                      stroke={strokeColor}
+                      strokeWidth={strokeW}
+                    />
+
+                    {/* Icon */}
+                    <text
+                      x={cx} y={cy}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize={isDone ? (isBoss ? 26 : 15) : (isBoss ? 28 : 18)}
+                      style={{ userSelect: 'none', pointerEvents: 'none' }}
+                    >
+                      {isDone ? '✓' : meta.icon}
+                    </text>
+
+                    {/* FINAL BOSS label — always shown, dimmer when locked */}
+                    {isBoss && !isDone && (
+                      <text
+                        x={cx} y={cy - r - 13}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={9}
+                        fill={isUnlocked ? '#f43f5e' : 'rgba(180,40,60,0.55)'}
+                        fontFamily="monospace"
+                        letterSpacing="2.5"
+                        style={{ userSelect: 'none', pointerEvents: 'none' }}
+                      >
+                        FINAL BOSS
+                      </text>
+                    )}
+
+                    {/* Hover ring */}
+                    {isHov && isUnlocked && !isDone && (
+                      <circle
+                        cx={cx} cy={cy} r={r + 6}
+                        fill="none"
+                        stroke={meta.color}
+                        strokeWidth="2.5"
+                        opacity="0.75"
+                      />
+                    )}
+                  </g>
+                );
+              })}
             </svg>
 
-            {/* Nodes — positioned with percentages */}
-            {map.map(node => {
-              const { xPct, yPct } = getPos(node);
-              const meta = NODE_META[node.type];
-              const isUnlocked = unlockedNodeIds.includes(node.id);
-              const isDone = completedNodeIds.includes(node.id);
-              const isHov = hovered === node.id;
-              const isBoss = node.type === 'boss';
-              const size = isBoss ? 80 : 34;
-
-              const tooltipSide: 'left' | 'right' = xPct > 60 ? 'right' : 'left';
-
-              return (
-                <div
-                  key={node.id}
-                  className="absolute"
-                  style={{
-                    left: `${xPct}%`,
-                    top: `${yPct}%`,
-                    width: size,
-                    height: size,
-                    marginLeft: -size / 2,
-                    marginTop: -size / 2,
-                    transition: 'transform 0.12s ease',
-                    transform: isHov && isUnlocked && !isDone ? 'scale(1.18)' : 'scale(1)',
-                    zIndex: isHov ? 30 : isBoss ? 20 : 10,
-                  }}
-                  onMouseEnter={() => setHovered(node.id)}
-                  onMouseLeave={() => setHovered(null)}
-                  onClick={() => isUnlocked && !isDone && onSelectNode(node.id)}
-                >
-                  {isBoss ? (
-                    /* ── Special boss node ── */
-                    <div className="relative w-full h-full flex items-center justify-center select-none"
-                      style={{ cursor: isUnlocked && !isDone ? 'pointer' : 'default' }}>
-                      {/* Outer hex-ish shape via rotated squares */}
-                      {isUnlocked && !isDone && (<>
-                        <div className="absolute inset-0 rounded-full animate-ping"
-                          style={{ background: 'rgba(244,63,94,0.08)', border: '2px solid rgba(244,63,94,0.5)', animationDuration: '1.4s' }} />
-                        <div className="absolute inset-[-8px] rounded-full animate-pulse"
-                          style={{ border: '1.5px solid rgba(244,63,94,0.25)' }} />
-                      </>)}
-                      <div className="w-full h-full rounded-full flex flex-col items-center justify-center"
-                        style={{
-                          background: isDone
-                            ? 'radial-gradient(circle, rgba(20,10,40,0.95) 0%, rgba(8,4,24,0.90) 100%)'
-                            : isUnlocked
-                              ? 'radial-gradient(circle, rgba(80,10,30,0.98) 0%, rgba(20,4,16,0.98) 100%)'
-                              : 'rgba(4,2,12,0.70)',
-                          border: isDone
-                            ? '3px solid rgba(34,211,238,0.40)'
-                            : isUnlocked
-                              ? '3px solid #f43f5e'
-                              : '2px solid rgba(120,40,60,0.40)',
-                          boxShadow: isUnlocked && !isDone
-                            ? `0 0 ${isHov ? 40 : 24}px rgba(244,63,94,0.9), inset 0 0 20px rgba(244,63,94,0.15)`
-                            : 'none',
-                          opacity: isDone ? 0.50 : isUnlocked ? 1 : 0.35,
-                        }}>
-                        {isDone
-                          ? <span style={{ fontSize: '1.8rem' }}>✓</span>
-                          : <>
-                              <span style={{ fontSize: '2rem', lineHeight: 1 }}>💀</span>
-                              <span className="font-orbitron font-black tracking-wider mt-0.5"
-                                style={{ fontSize: '8px', color: '#f43f5e', letterSpacing: '0.15em' }}>
-                                BOSS
-                              </span>
-                            </>
-                        }
-                      </div>
-                    </div>
-                  ) : (
-                    /* ── Regular node ── */
-                    <div className="w-full h-full rounded-full flex items-center justify-center relative select-none"
-                      style={{
-                        background: isDone
-                          ? 'rgba(14,10,38,0.90)'
-                          : isUnlocked
-                            ? 'rgba(8,4,24,0.96)'
-                            : 'rgba(4,2,12,0.75)',
-                        border: isDone
-                          ? '2px solid rgba(34,211,238,0.35)'
-                          : isUnlocked
-                            ? `2px solid ${meta.color}`
-                            : '1.5px solid rgba(80,55,120,0.35)',
-                        boxShadow: isUnlocked && !isDone
-                          ? `0 0 ${isHov ? 20 : 9}px ${meta.glow}`
-                          : 'none',
-                        opacity: isDone ? 0.50 : isUnlocked ? 1 : 0.38,
-                        cursor: isUnlocked && !isDone ? 'pointer' : 'default',
-                        fontSize: '0.95rem',
-                      }}>
-                      {isDone ? '✓' : meta.icon}
-                    </div>
-                  )}
-
-                  {/* Hover tooltip */}
-                  {isHov && isUnlocked && !isDone && (
-                    <NodeTooltip node={node} side={tooltipSide} />
-                  )}
-                </div>
-              );
-            })}
+            {/* Portal tooltip for hovered node */}
+            {hoveredInfo && (
+              <NodeTooltipPortal
+                node={hoveredInfo.node}
+                sx={hoveredInfo.sx}
+                sy={hoveredInfo.sy}
+              />
+            )}
           </div>
         </div>
       </div>

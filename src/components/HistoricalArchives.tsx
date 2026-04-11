@@ -4,36 +4,38 @@ import ArenaBackground from "@/ui/ArenaBackground";
 import { useT } from "@/i18n";
 import { CARD_UPGRADES } from "@/data/cards";
 
-// ── Stat keyword colorizer for upgrade descriptions ──────────────────────────
-const COLORIZE_RULES: [RegExp, string][] = [
-  [/\b(ULTIMATE|EXHAUST)\b/g,                             '#f59e0b'],
-  [/\b(Might)\b/g,                                        '#f87171'],
-  [/\b(Power)\b/g,                                        '#60a5fa'],
-  [/\b(Defense|DEF)\b/gi,                                 '#fbbf24'],
-  [/\b(Armor Break)\b/gi,                                 '#fbbf24'],
-  [/\b(HP)\b/g,                                           '#4ade80'],
-  [/\b(Movement|Move)\b/g,                                '#34d399'],
-  [/\b(Stun|Demoralize|Bleed|Poison|Silence)\b/g,        '#fb923c'],
-];
+// ── Stat keyword colorizer ───────────────────────────────────────────────────
+const STAT_COLOR: Record<string, string> = {
+  might: '#f87171', power: '#60a5fa', defense: '#fbbf24', hp: '#4ade80',
+  mana: '#c084fc', movement: '#34d399', move: '#34d399',
+};
+
+function colorFor(word: string): string {
+  const lw = word.toLowerCase();
+  if (lw === 'ultimate' || lw === 'exhaust') return '#f59e0b';
+  if (lw === 'might') return '#f87171';
+  if (lw === 'power') return '#60a5fa';
+  if (lw === 'defense' || lw === 'def') return '#fbbf24';
+  if (lw === 'armor break') return '#fbbf24';
+  if (lw === 'hp') return '#4ade80';
+  if (lw === 'movement' || lw === 'move') return '#34d399';
+  return '#fb923c'; // Stun, Rooted, Blinded, Bleed, Poison, Silence, Curse
+}
+
+// Regex uses non-capturing group (?:) so split() won't double-print the keyword
+const COLORIZE_REGEX = /\b(?:ULTIMATE|EXHAUST|Armor Break|Might|Power|Defense|DEF|HP|Movement|Move|Stun|Rooted|Blinded|Bleed|Poison|Silence|Curse)\b/gi;
 
 function colorizeDesc(text: string): React.ReactNode {
-  const parts: React.ReactNode[] = [text];
-  for (const [regex, color] of COLORIZE_RULES) {
-    const next: React.ReactNode[] = [];
-    for (const part of parts) {
-      if (typeof part !== 'string') { next.push(part); continue; }
-      const segments = part.split(regex);
-      const matches = part.match(regex) ?? [];
-      segments.forEach((seg, i) => {
-        if (seg) next.push(seg);
-        if (matches[i]) next.push(
-          <span key={`${color}-${i}`} style={{ color, fontWeight: 600 }}>{matches[i]}</span>
-        );
-      });
-    }
-    parts.length = 0;
-    parts.push(...next);
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  const re = new RegExp(COLORIZE_REGEX.source, COLORIZE_REGEX.flags);
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<span key={m.index} style={{ color: colorFor(m[0]), fontWeight: 600 }}>{m[0]}</span>);
+    last = m.index + m[0].length;
   }
+  if (last < text.length) parts.push(text.slice(last));
   return <>{parts}</>;
 }
 
@@ -82,8 +84,8 @@ interface CharacterEntry {
   accentColor: string;
   ringColor: string;
   lore: string;
-  stats: { hp: number; might: number; power: number; defense: number; moveRange: number };
-  waterStats?: { hp: number; might: number; power: number; defense: number; moveRange: number };
+  stats: { hp: number; might: number; power: number; defense: number; moveRange: number; attackRange: number };
+  waterStats?: { hp: number; might: number; power: number; defense: number; moveRange: number; attackRange: number };
   abilities: Ability[];
 }
 
@@ -94,9 +96,9 @@ const CHARACTERS: CharacterEntry[] = [
     role: "DPS RANGED", portrait: "/art/napoleon_portrait.png",
     accentColor: "#d946ef", ringColor: "rgba(217,70,239,0.55)",
     lore: "Once the greatest military mind in Earth's history, Napoleon Bonaparte was resurrected as a battle-clone by the Empire of Znyxorga. Now fighting in their interdimensional arena, this pint-sized prodigy commands forces with tactical genius, turning every battlefield into a stage for her brilliance. Her sharp eyes miss nothing — and her artillery never misses twice.",
-    stats: { hp: 100, might: 70, power: 60, defense: 20, moveRange: 3 },
+    stats: { hp: 100, might: 65, power: 60, defense: 20, moveRange: 3, attackRange: 2 },
     abilities: [
-      { kind: "passive", icon: "🎯", name: "Vantage Point", cost: "Passive", desc: <>On a forest tile, basic attack range becomes 3. No <span style={{ color: "#fbbf24", fontWeight: 700 }}>Defense</span> bonus from forest — a calculated trade-off.</> },
+      { kind: "passive", icon: "🔫", name: "Mitraille", cost: "Passive", desc: <>At the start of Napoleon's turn, all enemies within range 2 take <span style={{ color: "#f87171", fontWeight: 700 }}>5 pure damage</span> (ignores Defense). Named after the grapeshot that made Napoleon famous — don't get close.</> },
       { kind: "ability", icon: "💥", name: "Artillery Barrage", cost: "2 Mana", desc: <>Unleash a devastating barrage dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>84</span> damage to a target at range 4.</> },
       { kind: "ability", icon: "⚔️", name: "Grande Armée", cost: "3 Mana", desc: <>Rally the troops! Grant +20% <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> AND <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power</span> to all allies for 2 turns.</> },
       { kind: "ultimate", icon: "⭐", name: "Final Salvo", cost: "3 Mana · Exhaust", desc: <>Fire 3 random artillery shots, each dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>42</span> to random enemies within range 4.</> },
@@ -108,12 +110,12 @@ const CHARACTERS: CharacterEntry[] = [
     role: "DPS MELEE", portrait: "/art/genghis_portrait.png",
     accentColor: "#ef4444", ringColor: "rgba(239,68,68,0.55)",
     lore: "The mightiest conqueror ever to ride across the steppes of Earth has been reborn as a ferocious battle-clone. Her bloodlust only grows with each fallen foe — every kill sharpens her blade and restores her focus. In the arena of Znyxorga, she builds a new empire one victory at a time, and no wall of steel or magic has ever stopped her charge.",
-    stats: { hp: 120, might: 50, power: 40, defense: 25, moveRange: 3 },
+    stats: { hp: 120, might: 50, power: 40, defense: 25, moveRange: 3, attackRange: 1 },
     abilities: [
-      { kind: "passive", icon: "🩸", name: "Bloodlust", cost: "Passive", desc: <>Each kill grants +15 <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> and restores 1 Mana. Stacks up to 3×.</> },
+      { kind: "passive", icon: "🩸", name: "Bloodlust", cost: "Passive", desc: <>Each kill grants +12 <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> and restores 1 Mana. Stacks up to 3×.</> },
       { kind: "ability", icon: "⚡", name: "Mongol Charge", cost: "2 Mana", desc: <>Strike a single target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>48 damage</span> at range 3, then apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>: <span style={{ color: "#f87171", fontWeight: 700 }}>16 HP per turn</span> for 2 turns.</> },
       { kind: "ability", icon: "🌀", name: "Horde Tactics", cost: "3 Mana", desc: <>Unleash the horde — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>20 damage per enemy</span> in range 2 to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL</span> enemies in range 2. (1 enemy = 20 dmg, 2 = 40, 3 = 60 each)</> },
-      { kind: "ultimate", icon: "⭐", name: "Rider's Fury", cost: "3 Mana · Exhaust", desc: <>Sweep the line for <span style={{ color: "#60a5fa", fontWeight: 700 }}>40 damage</span> to all enemies. <span style={{ color: "#f87171", fontWeight: 700 }}>Doubled to 80</span> against targets below 50% HP — finish them off.</> },
+      { kind: "ultimate", icon: "⭐", name: "Rider's Fury", cost: "3 Mana · Exhaust", desc: <>Sweep the line for <span style={{ color: "#60a5fa", fontWeight: 700 }}>40 damage</span> to all enemies. <span style={{ color: "#f87171", fontWeight: 700 }}>Doubled to 80</span> against targets below 40% HP — finish them off.</> },
     ],
   },
   {
@@ -122,7 +124,7 @@ const CHARACTERS: CharacterEntry[] = [
     role: "SUPPORT", portrait: "/art/davinci_portrait.png",
     accentColor: "#34d399", ringColor: "rgba(52,211,153,0.55)",
     lore: "Leonardo da Vinci painted the Mona Lisa, designed flying machines, and unlocked the secrets of human anatomy — often simultaneously. Now, as a battle-clone for the Empire of Znyxorga, she brings that boundless creativity to the arena. Her inventions heal the fallen, scout the skies, and protect her team from whatever the galaxy hurls at them.",
-    stats: { hp: 80, might: 35, power: 50, defense: 15, moveRange: 3 },
+    stats: { hp: 85, might: 35, power: 50, defense: 15, moveRange: 3, attackRange: 2 },
     abilities: [
       { kind: "passive", icon: "🔧", name: "Tinkerer", cost: "Passive", desc: "If no exclusive ability card was used last turn, draw +1 card at the start of your turn." },
       { kind: "ability", icon: "✈️", name: "Flying Machine", cost: "2 Mana", desc: <>Teleport to <span style={{ color: "#34d399", fontWeight: 700 }}>any unoccupied hex</span> on the board. No range limit. Bypasses terrain and obstacles.</> },
@@ -136,12 +138,12 @@ const CHARACTERS: CharacterEntry[] = [
     role: "TANK", portrait: "/art/leonidas_portrait.png",
     accentColor: "#f59e0b", ringColor: "rgba(245,158,11,0.55)",
     lore: "Three hundred Spartans. One narrow pass. An empire brought to its knees. Leonidas I held the Gates of Thermopylae against impossible odds, and her legend echoed across millennia — right into the cloning vats of Znyxorga. Reborn as a battle-clone in burnished bronze and blazing war-paint, Leonidas-chan turns every battlefield into a chokepoint. She does not retreat. She does not yield. She is the shield upon which enemy waves break and scatter.",
-    stats: { hp: 130, might: 40, power: 20, defense: 35, moveRange: 2 },
+    stats: { hp: 130, might: 40, power: 28, defense: 35, moveRange: 2, attackRange: 1 },
     abilities: [
-      { kind: "passive", icon: "🛡️", name: "Phalanx", cost: "Passive", desc: <>Each turn Leonidas ends adjacent to an ally, she gains +<span style={{ color: "#fbbf24", fontWeight: 700 }}>8 Defense</span> (stacks up to 3 turns, max +24). Stay close to teammates over multiple turns to build an iron wall.</> },
-      { kind: "ability", icon: "⚡", name: "Shield Bash", cost: "2 Mana", desc: <>Slam your shield into a target within range 1 for <span style={{ color: "#60a5fa", fontWeight: 700 }}>1.5× Power (30 dmg)</span> and apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−20% Defense for 2 turns).</> },
-      { kind: "ability", icon: "🏛️", name: "Spartan Wall", cost: "3 Mana", desc: <>Raise the phalanx — grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30% Defense</span> to Leonidas and all allies within range 2 for 2 turns.</> },
-      { kind: "ultimate", icon: "⭐", name: "THIS IS SPARTA!", cost: "3 Mana · Exhaust", desc: <>Charge up to 3 hexes and crash into a target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>2× Power (100 dmg)</span>. All enemies adjacent to the impact are <span style={{ color: "#f87171", fontWeight: 700 }}>Demoralized</span> for 1 turn (50% chance to skip movement and card plays).</> },
+      { kind: "passive", icon: "🛡️", name: "Phalanx", cost: "Passive", desc: <>Each turn Leonidas ends adjacent to an ally, she gains +<span style={{ color: "#fbbf24", fontWeight: 700 }}>10 Defense</span> (stacks up to 3 turns, max +30). Stay close to teammates over multiple turns to build an iron wall.</> },
+      { kind: "ability", icon: "⚡", name: "Shield Bash", cost: "2 Mana", desc: <>Slam your shield into a target within range 1 for <span style={{ color: "#60a5fa", fontWeight: 700 }}>1.8× Power (~50 dmg)</span> and apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense for 2 turns). Also grants Leonidas <span style={{ color: "#34d399", fontWeight: 700 }}>+20 Defense</span> this turn (counter-stance).</> },
+      { kind: "ability", icon: "🏛️", name: "Spartan Wall", cost: "3 Mana", desc: <>Raise the phalanx — grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+20 Defense</span> to Leonidas and all allies within range 2.</> },
+      { kind: "ultimate", icon: "⭐", name: "THIS IS SPARTA!", cost: "3 Mana · Exhaust", desc: <>Charge up to 3 hexes and crash into a target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>2.5× Power (~125 dmg)</span>. All enemies adjacent to the impact are <span style={{ color: "#fb923c", fontWeight: 700 }}>Rooted</span> for 2 turns — cannot move but can still attack and use cards.</> },
     ],
   },
   {
@@ -150,18 +152,18 @@ const CHARACTERS: CharacterEntry[] = [
     role: "HYBRID", portrait: "/art/sunsin_portrait.png",
     accentColor: "#38bdf8", ringColor: "rgba(56,189,248,0.55)",
     lore: "Yi Sun-sin repelled an entire Japanese armada with a handful of ironclad turtle ships and an unshakeable will. The Empire of Znyxorga found her genetic echo preserved in the sea-salt timber of the Joseon docks and grew her in the deep-blue vats of their naval division. On dry land she fights with disciplined efficiency. But put ocean tiles between her and an enemy — and the turtle ship awakens. Cannons fire. Hulls hold. Admirals do not retreat.",
-    stats: { hp: 100, might: 65, power: 60, defense: 25, moveRange: 3 },
-    waterStats: { hp: 100, might: 91, power: 36, defense: 32, moveRange: 1 },
+    stats: { hp: 100, might: 65, power: 60, defense: 25, moveRange: 3, attackRange: 1 },
+    waterStats: { hp: 100, might: 88, power: 36, defense: 33, moveRange: 1, attackRange: 3 },
     abilities: [
       { kind: "passive", icon: "🐢", name: "Turtle Ship", cost: "Passive",
-        desc: <>Can move onto water tiles. On land: balanced stats, Range 1 basic attacks.</>,
-        waterDesc: <>ON WATER: <span style={{ color: "#f87171", fontWeight: 700 }}>+40% Might</span> (65→91), <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30% Defense</span> (25→32), <span style={{ color: "#60a5fa", fontWeight: 700 }}>−40% Power</span> (60→36). Movement capped at 1. Range 3 basic attacks.</> },
+        desc: <>Can move onto lake tiles and ignore extra movement cost on river tiles. On land: balanced stats, Range 1 basic attacks.</>,
+        waterDesc: <>ON WATER (lake or river): <span style={{ color: "#f87171", fontWeight: 700 }}>+35% Might</span> (65→88), <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30% Defense</span> (25→33), <span style={{ color: "#60a5fa", fontWeight: 700 }}>−40% Power</span> (60→36). Movement capped at 1. Range 3 basic attacks.</> },
       { kind: "ability", icon: "🔥", name: "Hwajeon", cost: "2 Mana",
         desc: <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~72 damage</span> at range 3. Pushes target back 1 hex.</>,
         waterName: "Ramming Speed",
         waterDesc: <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~72 damage</span> at range 1. Pushes target back 1 hex. (Power reduced on water)</> },
       { kind: "ability", icon: "🚢", name: "Naval Repairs", cost: "3 Mana",
-        desc: <>Select a target area. All allies within range 2 heal <span style={{ color: "#4ade80", fontWeight: 700 }}>10 HP now</span> and <span style={{ color: "#4ade80", fontWeight: 700 }}>10 HP next turn</span>.</>,
+        desc: <>Select a target area. All allies within range 2 heal <span style={{ color: "#4ade80", fontWeight: 700 }}>15 HP now</span> and <span style={{ color: "#4ade80", fontWeight: 700 }}>15 HP next turn</span>.</>,
         waterName: "Broadside",
         waterDesc: <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~25 damage</span> to all enemies in range 3.</> },
       { kind: "ultimate", icon: "⭐", name: "Chongtong Barrage", cost: "3 Mana · Exhaust",
@@ -175,9 +177,9 @@ const CHARACTERS: CharacterEntry[] = [
     role: "CONTROLLER", portrait: "/art/beethoven_portrait.png",
     accentColor: "#22d3ee", ringColor: "rgba(34,211,238,0.55)",
     lore: "Ludwig van Beethoven composed some of Earth's most transcendent music while completely deaf — a testament to a will that refused to bow to fate. The Empire of Znyxorga cloned her from the resonant frequencies preserved in old concert hall stone. In the arena, Beethoven-chan wields sound itself as a weapon: sonic waves that hurl enemies across the field, melodies that energise her allies, and a final crescendo — the Götterfunken — that silences every foe in range. She cannot hear the chaos she creates. She only feels the thunder.",
-    stats: { hp: 90, might: 35, power: 65, defense: 25, moveRange: 2 },
+    stats: { hp: 90, might: 35, power: 65, defense: 25, moveRange: 2, attackRange: 2 },
     abilities: [
-      { kind: "passive", icon: "🎵", name: "Crescendo", cost: "Passive", desc: <>Each exclusive ability card played grants <span style={{ color: "#22d3ee", fontWeight: 700 }}>+3 Power</span> permanently. Stacks up to <span style={{ color: "#fbbf24", fontWeight: 700 }}>8 times (+24 max)</span>. Her power grows with every note.</> },
+      { kind: "passive", icon: "🎵", name: "Crescendo", cost: "Passive", desc: <>Each exclusive ability card played grants <span style={{ color: "#22d3ee", fontWeight: 700 }}>+3 Power</span> permanently. Stacks up to <span style={{ color: "#fbbf24", fontWeight: 700 }}>7 times (+21 max)</span>. Her power grows with every note.</> },
       { kind: "ability", icon: "🌊", name: "Schallwelle", cost: "2 Mana", desc: <>Fire a directional sonic wave — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>33 damage</span> to all enemies in a line up to range 3 and <span style={{ color: "#22d3ee", fontWeight: 700 }}>push each 2 tiles back</span> along the wave direction.</> },
       { kind: "ability", icon: "🎶", name: "Freudenspur", cost: "3 Mana", desc: <>Target a tile within range 3 — <span style={{ color: "#22d3ee", fontWeight: 700 }}>that tile and all 6 adjacent tiles</span> become a resonance zone. Allies passing through zone tiles gain <span style={{ color: "#34d399", fontWeight: 700 }}>+2 Movement</span>. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
       { kind: "ultimate", icon: "⭐", name: "Götterfunken", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Unleash the full Sternensturm. Deal <span style={{ color: "#f87171", fontWeight: 700 }}>46 damage</span> and <span style={{ color: "#f87171", fontWeight: 700 }}>stun all enemies within range 3 for 1 turn</span> — no movement, no cards, no actions.</> },
@@ -189,7 +191,7 @@ const CHARACTERS: CharacterEntry[] = [
     role: "CONTROLLER", portrait: "/art/huang_portrait.png",
     accentColor: "#b45309", ringColor: "rgba(180,83,9,0.55)",
     lore: "Qin Shi Huang unified China under a single dynasty, built the Great Wall, and commissioned an army of 8,000 terracotta warriors to guard him in death. The Empire of Znyxorga extracted her genetic echo from clay dust sifted out of the mausoleum soil. Reborn as Huang-chan, she commands her terracotta legions once more — archers, footsoldiers, and cavalry that rise from the arena floor at her command. She does not strike enemies herself. She buries them under sheer numbers.",
-    stats: { hp: 90, might: 30, power: 55, defense: 25, moveRange: 2 },
+    stats: { hp: 90, might: 30, power: 55, defense: 25, moveRange: 2, attackRange: 1 },
     abilities: [
       { kind: "passive", icon: "🏺", name: "Imperial Command", cost: "Passive", desc: <>Huang-chan <span style={{ color: "#f87171", fontWeight: 700 }}>cannot play Basic Attack cards</span>. At least <span style={{ color: "#fbbf24", fontWeight: 700 }}>1 Basic Attack card</span> is guaranteed in hand each turn — for her Terracotta units to use. Terracotta units may <span style={{ color: "#fbbf24", fontWeight: 700 }}>only</span> use Basic Attack cards.</> },
       { kind: "ability", icon: "⚔️", name: "Terracotta Legion", cost: "2 Mana", desc: <>Select any empty hex within range 3. Summon a random warrior — <span style={{ color: "#fbbf24", fontWeight: 700 }}>50/50</span>: <span style={{ color: "#60a5fa", fontWeight: 700 }}>Archer</span> (HP <span style={{ color: "#60a5fa", fontWeight: 700 }}>40</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>45</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 2, Move 2) or <span style={{ color: "#f87171", fontWeight: 700 }}>Warrior</span> (HP <span style={{ color: "#60a5fa", fontWeight: 700 }}>40</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>30</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 1, Move 2). Both have Power 0 — deal pure Might damage. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
@@ -199,6 +201,39 @@ const CHARACTERS: CharacterEntry[] = [
   },
 ];
 
+// ── Upgraded ability descriptions (same copy as base, updated stats only) ─────
+// Key format: `${char.id}_${ab.name}`
+const UPGRADE_DESCS: Record<string, React.ReactNode> = {
+  // Napoleon
+  'napoleon_Artillery Barrage': <>Unleash a devastating barrage dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>~96</span> damage to a target at range 4.</>,
+  'napoleon_Grande Armée': <>Rally the troops! Grant +30% <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> AND <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power</span> to all allies for 2 turns.</>,
+  'napoleon_Final Salvo': <>Fire 5 random artillery shots, each dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>~42</span> damage to random enemies within range 4.</>,
+  // Genghis
+  'genghis_Mongol Charge': <>Strike a single target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~48 damage</span> at range 3, then apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>: <span style={{ color: "#f87171", fontWeight: 700 }}>~24 HP per turn</span> for 2 turns.</>,
+  'genghis_Horde Tactics': <>Unleash the horde — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~20 damage per enemy</span> in range 3 to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL</span> enemies in range 3. (1 enemy = 20 dmg, 2 = 40, 3 = 60 each)</>,
+  "genghis_Rider's Fury": <>Sweep the line for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~60 damage</span> to all enemies. <span style={{ color: "#f87171", fontWeight: 700 }}>Doubled to ~120</span> against targets below 40% HP — finish them off.</>,
+  // Da Vinci
+  'davinci_Flying Machine': <>Teleport to <span style={{ color: "#34d399", fontWeight: 700 }}>any unoccupied hex</span> on the board. On arrival: draw 1 card and gain <span style={{ color: "#fbbf24", fontWeight: 700 }}>+20 Defense</span> until your next turn. Costs 1 mana.</>,
+  'davinci_Masterpiece': <>Restore <span style={{ color: "#4ade80", fontWeight: 700 }}>~75 HP</span> to an ally within range 3. Also removes the Poison debuff.</>,
+  'davinci_Vitruvian Guardian': <>Summon a combat drone: <span style={{ color: "#4ade80", fontWeight: 700 }}>HP 90</span>, <span style={{ color: "#f87171", fontWeight: 700 }}>Might 55</span>, <span style={{ color: "#fbbf24", fontWeight: 700 }}>Defense 40</span>. Lasts until defeated. (Scales with Power)</>,
+  // Leonidas
+  'leonidas_Shield Bash': <>Slam your shield into a target within range 1 for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~56 damage</span> and apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense for 3 turns). Grants Leonidas <span style={{ color: "#34d399", fontWeight: 700 }}>+20 Defense</span> this turn (counter-stance).</>,
+  'leonidas_Spartan Wall': <>Raise the phalanx — grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+20–30 Defense</span> to Leonidas and all allies within range 2.</>,
+  'leonidas_THIS IS SPARTA!': <>Charge up to 3 hexes and crash into a target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~175 damage (2.5× Power)</span>. All enemies adjacent to the impact are <span style={{ color: "#fb923c", fontWeight: 700 }}>Rooted</span> for 2 turns — cannot move but can still attack and use cards.</>,
+  // Beethoven
+  'beethoven_Schallwelle': <>Fire a directional sonic wave — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~46 damage</span> to all enemies in a line up to range 3 and <span style={{ color: "#22d3ee", fontWeight: 700 }}>push each 3 tiles back</span> along the wave direction.</>,
+  'beethoven_Freudenspur': <>Target a tile within range 3 — <span style={{ color: "#22d3ee", fontWeight: 700 }}>that tile and all 6 adjacent tiles</span> become a resonance zone. Allies passing through zone tiles gain <span style={{ color: "#34d399", fontWeight: 700 }}>+3 Movement</span>. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>.</>,
+  'beethoven_Götterfunken': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Unleash the full Sternensturm. Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~46 damage</span> and <span style={{ color: "#f87171", fontWeight: 700 }}>stun all enemies within range 3 for 2 turns</span> — no movement, no cards, no actions.</>,
+  // Yi Sun-sin
+  'sunsin_Hwajeon': <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~90 damage</span> at range 3. Pushes target back 2 hexes.</>,
+  'sunsin_Naval Repairs': <>Select a target area. All allies within range 2 heal <span style={{ color: "#4ade80", fontWeight: 700 }}>20 HP now</span> and <span style={{ color: "#4ade80", fontWeight: 700 }}>20 HP next turn</span>.</>,
+  'sunsin_Chongtong Barrage': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Charge 3 hexes, deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~143 damage</span> to enemies in path. Each hit enemy is <span style={{ color: "#38bdf8", fontWeight: 700 }}>pushed sideways</span>. Sun-sin ends at the last hex.</>,
+  // Huang-chan
+  'huang_Terracotta Legion': <>Select any empty hex within range 3. Summon a random warrior — <span style={{ color: "#fbbf24", fontWeight: 700 }}>50/50</span>: <span style={{ color: "#60a5fa", fontWeight: 700 }}>Archer</span> (HP <span style={{ color: "#4ade80", fontWeight: 700 }}>60</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>45</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 2, Move 2) or <span style={{ color: "#f87171", fontWeight: 700 }}>Warrior</span> (HP <span style={{ color: "#4ade80", fontWeight: 700 }}>60</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>30</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 1, Move 2). Both have Power 0 — deal pure Might damage. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</>,
+  "huang_First Emperor's Command": <>Summon a <span style={{ color: "#b45309", fontWeight: 700 }}>Terracotta Cavalry</span> on an adjacent hex: HP <span style={{ color: "#4ade80", fontWeight: 700 }}>80</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>45</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>38</span>, Power <span style={{ color: "#60a5fa", fontWeight: 700 }}>55</span>, Move 3. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>. Immediately adds a <span style={{ color: "#f59e0b", fontWeight: 700 }}>FREE Cavalry Charge</span> card to your hand — deals <span style={{ color: "#60a5fa", fontWeight: 700 }}>82 dmg</span> at range 3.</>,
+  'huang_Eternal Army': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>Take control</span> of a non-boss enemy within range 3 for <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>. The unit auto-attacks the nearest enemy — same hit mechanics as when they attacked you. No abilities. You cannot attack the controlled unit. Cannot target bosses or mini-bosses.</>,
+};
+
 const ROLE_STYLE: Record<string, { text: string; border: string; bg: string }> = {
   "DPS RANGED":  { text: "text-fuchsia-300", border: "border-fuchsia-500/50", bg: "bg-fuchsia-900/30" },
   "DPS MELEE":   { text: "text-rose-300",    border: "border-rose-500/50",    bg: "bg-rose-900/30" },
@@ -207,7 +242,7 @@ const ROLE_STYLE: Record<string, { text: string; border: string; bg: string }> =
   "HYBRID":      { text: "text-teal-300",    border: "border-teal-500/50",    bg: "bg-teal-900/30" },
   "CONTROLLER":  { text: "text-cyan-300",    border: "border-cyan-500/50",    bg: "bg-cyan-900/30" },
 };
-const STAT_MAX = { hp: 180, might: 100, power: 100, defense: 50, moveRange: 4 };
+const STAT_MAX = { hp: 180, might: 100, power: 100, defense: 50, moveRange: 4, attackRange: 3 };
 
 // ── Tile Data ─────────────────────────────────────────────────────────────────
 
@@ -229,11 +264,10 @@ const TILES: TileEntry[] = [
     type: 'forest', icon: '🔮', name: 'Crystal Spires', color: '#a855f7',
     image: '/art/tiles/Forest_180.png',
     effects: [
-      { label: '+Defense', detail: 'Units on a forest tile gain a Defense bonus against incoming attacks.' },
+      { label: '+40% Defense', detail: 'Units on a forest tile gain +40% Defense against all incoming attacks. Normal movement cost.' },
       { label: 'Stealth', detail: 'Reduces enemy targeting priority.' },
-      { label: 'Napoleon Passive', detail: "Napoleon-chan's basic attack range extends to 3 from forest, but she loses the Defense bonus." },
     ],
-    tip: 'Great for ranged units and defensive positioning.',
+    tip: 'Great for tanky units and defensive positioning. Forests cost normal movement now — easy to duck into for cover.',
   },
   {
     type: 'mountain', icon: '⛰️', name: 'Mountain', color: '#78716c',
@@ -245,13 +279,87 @@ const TILES: TileEntry[] = [
     tip: 'Use mountains as natural barriers and cover. Position around them, not through them.',
   },
   {
-    type: 'river', icon: '🌊', name: 'River', color: '#38bdf8',
-    image: '/art/tiles/River_180.png',
+    type: 'river', icon: '🌊', name: 'Lake', color: '#38bdf8',
+    image: '/art/tiles/Lake_180.png',
     effects: [
-      { label: 'Impassable', detail: 'Units cannot enter river tiles voluntarily — movement is blocked.' },
-      { label: 'Lethal Displacement', detail: 'If knocked onto a river tile by an ability (e.g. charge, push), the unit is instantly killed.' },
+      { label: 'Impassable', detail: 'Units cannot enter lake tiles voluntarily — movement is blocked.' },
+      { label: 'Lethal Displacement', detail: 'If knocked onto a lake tile by an ability (e.g. charge, push), the unit is instantly killed.' },
+      { label: 'Yi Sun-sin Exception', detail: "Sun-sin's Turtle Ship passive allows her to move onto lake tiles and gain her water bonuses." },
     ],
-    tip: 'Rivers are hard walls — route around them or use them to funnel enemies into a killing zone.',
+    tip: 'Lakes are hard walls — route around them or funnel enemies into a killing zone.',
+  },
+  {
+    type: 'ford_river', icon: '〰️', name: 'River', color: '#7dd3fc',
+    image: '/art/tiles/River_180_new.png',
+    effects: [
+      { label: 'Passable (costly)', detail: 'Units can cross river hexes but each step costs 2 movement instead of 1.' },
+      { label: 'No Displacement Kill', detail: 'Being pushed into a river does not kill the unit — they simply stop and take the movement cost.' },
+      { label: 'Yi Sun-sin Bonus', detail: 'Sun-sin counts as "on water" while crossing a river and gains her full Turtle Ship bonus stats.' },
+    ],
+    tip: 'Control the river crossings. Forcing enemies to ford slows them down — ideal for your ranged characters to punish.',
+  },
+  {
+    type: 'ruins', icon: '🏛️', name: 'Ruins', color: '#a78bfa',
+    image: '/art/tiles/Plains_180.png',
+    effects: [
+      { label: '+25 Defense', detail: 'Units standing on a Ruins tile gain +25 Defense against all incoming attacks.' },
+      { label: 'Strategic Placement', detail: 'Ruins appear in 1–2 locations per map at key chokepoints or flanking routes.' },
+    ],
+    tip: 'Ruins are powerful defensive anchors. Park your tank or a low-defense support here to make them much harder to kill.',
+  },
+  {
+    type: 'desert', icon: '🏜️', name: 'Desert', color: '#d97706',
+    image: '/art/tiles/Desert_180_new.png',
+    effects: [
+      { label: 'Act 2+ Only', detail: 'Desert tiles only appear from Act 2 onward — the arena evolves.' },
+      { label: 'Scorching Heat', detail: 'Units on desert tiles take 5 pure damage at turn end from the heat.' },
+    ],
+    tip: 'Avoid sitting on desert tiles longer than needed. Pass through quickly or use them to zone out enemies.',
+  },
+  {
+    type: 'snow', icon: '❄️', name: 'Snow', color: '#bae6fd',
+    image: '/art/tiles/Snow_180_new.png',
+    effects: [
+      { label: 'Blizzard', detail: 'Units on snow tiles at the start of their turn lose 10 Might and 10 Power until the end of that turn. Affects all units.' },
+    ],
+    tip: 'Move through snow tiles quickly. Avoid committing to fights on snow — both sides are weakened, but your power-based characters suffer most.',
+  },
+  {
+    type: 'ice', icon: '🧊', name: 'Ice', color: '#93c5fd',
+    image: '/art/tiles/Ice_180_new.png',
+    effects: [
+      { label: 'Slide', detail: 'When a unit moves onto an ice tile, they continue sliding 1 extra hex in the same direction automatically.' },
+      { label: 'Collision', detail: "If the slide would go off the board or into an obstacle, the unit stops there and takes 5 damage and is Stunned for 1 turn." },
+    ],
+    tip: 'Use ice tiles to reposition enemies — abilities that push (Schallwelle, Hwajeon) can chain into ice slides. Avoid sliding your own units into walls.',
+  },
+  {
+    type: 'mud', icon: '🪣', name: 'Mud', color: '#92400e',
+    image: '/art/tiles/Mud_180_new.png',
+    effects: [
+      { label: '−1 Movement', detail: 'Units entering or standing on mud tiles lose 1 movement range while on the tile.' },
+      { label: 'Temporary Creation', detail: 'The Mud Throw card creates a temporary Mud tile at the target location for 1 turn.' },
+    ],
+    tip: 'Throw Mud at a chokepoint to slow enemy movement. Combine with Rooted effects to lock down melee enemies entirely.',
+  },
+  {
+    type: 'ash', icon: '🪨', name: 'Ash', color: '#78716c',
+    image: '/art/tiles/Plains_180.png',
+    effects: [
+      { label: 'Burned Forest', detail: 'Ash tiles are what remain after a Forest tile burns down. They have no bonuses.' },
+      { label: 'No Defense Bonus', detail: 'Unlike living forest, ash provides no defense benefit — the tile is dead terrain.' },
+    ],
+    tip: 'Once forest burns to ash, that cover is gone permanently. Defend your forest tiles or accept losing them to fire.',
+  },
+  {
+    type: 'fog_of_war', icon: '🌫️', name: 'Fog of War', color: '#64748b',
+    image: '/art/tiles/Plains_180.png',
+    effects: [
+      { label: 'Event-Only Tile', detail: 'Fog of War tiles only appear during specific arena events. They cannot appear on a normal map setup.' },
+      { label: 'Hidden Units', detail: 'Units inside a Fog of War tile cannot be directly targeted by ranged attacks or abilities unless the attacker is adjacent.' },
+      { label: 'Clears on Entry', detail: 'Moving a unit into a fog tile reveals that tile for the rest of the turn.' },
+    ],
+    tip: 'Fog of War events reward aggressive scouting. Move into fog to reveal threats before committing to attack — but be ready for surprises.',
   },
   {
     type: 'mana_crystal', icon: '💎', name: 'Mana Crystal', color: '#c084fc',
@@ -280,15 +388,17 @@ const ITEMS: ItemEntry[] = [
   { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+10 Power for this run.',                                   statBonus: { power: 10 } },
   // Uncommon
   { id: 'battle_drum',      name: 'Battle Drum',       icon: '🥁', tier: 'uncommon', description: 'After killing an enemy, draw 2 cards.' },
-  { id: 'arena_medkit',     name: 'Arena Medkit',      icon: '💊', tier: 'uncommon', description: 'Heal 20 HP at the start of your turn if below 40% HP.' },
-  { id: 'void_shard',       name: 'Void Shard',        icon: '🔥', tier: 'uncommon', description: 'Basic attacks deal +10 bonus damage.',                     statBonus: { might: 10 } },
+  { id: 'arena_medkit',     name: 'Arena Medkit',      icon: '💊', tier: 'uncommon', description: 'Heal 25 HP at the start of your turn if below 40% HP.' },
+  { id: 'battle_drill',    name: 'Battle Drill',       icon: '⚔️', tier: 'uncommon', description: 'At the start of each turn, add a free Basic Attack card to your hand.' },
+  { id: 'void_shard',       name: 'Void Shard',        icon: '🔥', tier: 'uncommon', description: '+10 Might. Basic attacks deal bonus damage.',              statBonus: { might: 10 } },
   { id: 'card_satchel',     name: 'Card Satchel',      icon: '🎒', tier: 'uncommon', description: '+1 starting hand size for this run.' },
   { id: 'quick_boots',      name: 'Quick Boots',       icon: '👟', tier: 'uncommon', description: '+1 movement range permanently.' },
   { id: 'soul_ember',       name: 'Soul Ember',        icon: '🕯️', tier: 'uncommon', description: 'On kill, restore 15 HP to this character.' },
   { id: 'war_trophy',       name: 'War Trophy',        icon: '💀', tier: 'uncommon', description: 'On kill, permanently gain +3 Might and +3 Power for the rest of the run.' },
   // Rare — General
   { id: 'strategists_case', name: "Strategist's Case", icon: '💼', tier: 'rare',     description: '+2 starting hand size for this run.' },
-  { id: 'alien_core',       name: 'Alien Core',        icon: '🧬', tier: 'rare',     description: '+20 Power for this run.',                                   statBonus: { power: 20 } },
+  { id: 'alien_core',       name: 'Alien Core',        icon: '🧬', tier: 'rare',     description: 'All ability damage dealt by this character is increased by 25%.' },
+  { id: 'mana_crystal',    name: 'Mana Crystal',       icon: '🔷', tier: 'rare',     description: 'Gain +1 Mana at the start of each turn.' },
   { id: 'gladiator_brand',  name: "Gladiator's Brand", icon: '⚡', tier: 'rare',     description: 'First ability each fight costs 0 Mana.' },
   { id: 'diamond_shell',    name: 'Diamond Shell',     icon: '💎', tier: 'rare',     description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).' },
   // Rare — Napoleon
@@ -316,7 +426,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'After defeating an enemy, your next 2 cards cost 0 Mana.' },
   { id: 'void_armor',       name: 'Void Armor',        icon: '🛡️', tier: 'legendary', description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.' },
   { id: 'arena_champion',   name: 'Arena Champion',    icon: '🏆', tier: 'legendary', description: 'All stats +10 while this character is alive.',              statBonus: { hp: 10, might: 10, power: 10, defense: 10 } },
-  { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary', description: 'Permanently draw 3 additional cards at the start of each turn for the rest of the run.' },
+  { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary', description: 'On turns 2 and 3 of each fight, draw +2 cards and gain +2 Mana.' },
 ];
 
 const CHAR_LABEL: Record<string, { name: string; color: string }> = {
@@ -336,6 +446,7 @@ interface CardEntry {
   manaCost: number; type: string; rarity: string;
   description: string; exclusiveTo?: string;
   terrain?: 'land' | 'water'; // Sun-sin terrain-specific abilities
+  isCurse?: boolean;
 }
 
 const CARDS: CardEntry[] = [
@@ -347,29 +458,37 @@ const CARDS: CardEntry[] = [
   { definitionId: 'shared_battle_cry',    name: 'Battle Cry',     icon: '📣', manaCost: 1, type: 'buff',     rarity: 'common', description: '+10 Might this turn.' },
   { definitionId: 'shared_gamble',        name: 'Gamble',         icon: '🎲', manaCost: 1, type: 'buff',     rarity: 'common', description: 'Discard 2 random cards. Draw 2 new ones.' },
   { definitionId: 'shared_mud_throw',     name: 'Mud Throw',      icon: '🪣', manaCost: 1, type: 'debuff',   rarity: 'common', description: 'Enemy loses 1 movement for 2 turns. Range 3.' },
-  { definitionId: 'shared_demoralize',    name: 'Demoralize',     icon: '😰', manaCost: 3, type: 'debuff',   rarity: 'common', description: '50% chance per turn to skip movement & cards. Lasts 2 turns. Range 2.' },
+  { definitionId: 'shared_entangle',      name: 'Entangle',       icon: '🌿', manaCost: 2, type: 'debuff',   rarity: 'common', description: 'Target enemy is ROOTED — cannot move for 2 turns. Can still attack and use cards. Range 2.' },
   { definitionId: 'shared_armor_break',   name: 'Armor Break',    icon: '💥', manaCost: 2, type: 'debuff',   rarity: 'common', description: 'Enemy loses 25% Defense for 2 turns. Range 2.' },
-  { definitionId: 'shared_silence',       name: 'Silence',        icon: '🔇', manaCost: 3, type: 'debuff',   rarity: 'common', description: 'Enemy Power drops to 0 for 1 turn. Range 1.' },
+  { definitionId: 'shared_silence',       name: 'Silence',        icon: '🔇', manaCost: 3, type: 'debuff',   rarity: 'common', description: 'Target cannot use abilities for 2 turns. Range 2.' },
   { definitionId: 'shared_poison_dart',   name: 'Poison Dart',    icon: '☠️', manaCost: 3, type: 'debuff',   rarity: 'common', description: 'Enemy loses 5 Might and 5 Defense each turn. Removed on heal. Range 2.' },
+  // Shared — New
+  { definitionId: 'shared_jump',            name: 'Jump',              icon: '🦘', manaCost: 1, type: 'movement', rarity: 'common', description: 'Leap over 1 tile — bypasses rivers and blocking units. Range 2.' },
+  { definitionId: 'shared_flash_bang',      name: 'Flash Bang',        icon: '💥', manaCost: 1, type: 'debuff',   rarity: 'common', description: 'Throw a Flash Bang at range 3 — Blinds the target for 2 turns (attack and ability range reduced to 1).' },
+  { definitionId: 'shared_suppressive_fire',name: 'Suppressive Fire',  icon: '🔫', manaCost: 2, type: 'attack',   rarity: 'common', description: 'Might×0.3 cone attack (3 wide, range 3). Slows hit enemies −1 move for 1 turn.' },
+  { definitionId: 'shared_fortify',         name: 'Fortify',           icon: '🏰', manaCost: 2, type: 'defense',  rarity: 'common', description: 'Cannot move this turn. Gain +25 Defense and +15 Might until the end of your next turn.' },
+  { definitionId: 'shared_taunt',           name: 'Taunt',             icon: '📢', manaCost: 2, type: 'debuff',   rarity: 'common', description: 'Force a nearby enemy to target this unit for 2 turns. This unit gains +15 Defense while Taunting.' },
+  { definitionId: 'shared_decoy',           name: 'Decoy',             icon: '🪆', manaCost: 2, type: 'buff',     rarity: 'common', description: 'Place a 30 HP Decoy within range 3. When it is destroyed, it explodes for 20 damage to all enemies in range 2.' },
+  { definitionId: 'shared_blood_price',     name: 'Blood Price',       icon: '🩸', manaCost: 3, type: 'buff',     rarity: 'rare',   description: 'Sacrifice 20% of your HP. All allies gain +15 Might and +15 Power until end of turn.' },
   // Napoleon
-  { definitionId: 'napoleon_artillery_barrage', name: 'Artillery Barrage', icon: '💥', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.4 damage to a target at range 4.',                  exclusiveTo: 'Napoleon' },
+  { definitionId: 'napoleon_artillery_barrage', name: 'Artillery Barrage', icon: '💥', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.3 damage to a target at range 4.',                  exclusiveTo: 'Napoleon' },
   { definitionId: 'napoleon_grande_armee',      name: 'Grande Armée',      icon: '⚔️', manaCost: 3, type: 'buff',    rarity: 'rare',    description: '+20% Might AND Power to all allies for 2 turns.',            exclusiveTo: 'Napoleon' },
   { definitionId: 'napoleon_final_salvo',       name: 'Final Salvo',       icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — 3 random Power×0.7 hits on enemies within range 4.', exclusiveTo: 'Napoleon' },
   // Genghis
   { definitionId: 'genghis_mongol_charge',  name: 'Mongol Charge', icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '48 damage at range 3. Applies Bleed: 16 HP/turn for 2 turns.',           exclusiveTo: 'Genghis' },
   { definitionId: 'genghis_horde_tactics',  name: 'Horde Tactics', icon: '🌀', manaCost: 3, type: 'attack',  rarity: 'rare',    description: '20 dmg per enemy in range 2 to ALL enemies in range 2. (Scales with count)', exclusiveTo: 'Genghis' },
-  { definitionId: 'genghis_riders_fury',    name: "Rider's Fury",  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — 40 damage to all enemies on a line. Doubled (80) if target below 50% HP.", exclusiveTo: 'Genghis' },
+  { definitionId: 'genghis_riders_fury',    name: "Rider's Fury",  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — 40 damage to all enemies on a line. Doubled (80) if target below 40% HP.", exclusiveTo: 'Genghis' },
   // Leonidas
-  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.5 damage at range 1. Applies Armor Break (−25% Defense for 2 turns).',    exclusiveTo: 'Leonidas' },
+  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.8 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_spartan_wall',  name: 'Spartan Wall',   icon: '🏛️', manaCost: 3, type: 'defense', rarity: 'rare',    description: '+20 Defense to Leonidas and all allies within range 2.',     exclusiveTo: 'Leonidas' },
-  { definitionId: 'leonidas_this_is_sparta',name: 'THIS IS SPARTA!',icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — 100 dmg (Power×2) to target + Demoralize adjacent enemies (1t).', exclusiveTo: 'Leonidas' },
+  { definitionId: 'leonidas_this_is_sparta',name: 'THIS IS SPARTA!',icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~125 dmg (Power×2.5) to target + Root all adjacent enemies for 2 turns (cannot move).', exclusiveTo: 'Leonidas' },
   // Da Vinci
   { definitionId: 'davinci_flying_machine',     name: 'Flying Machine',     icon: '✈️', manaCost: 2, type: 'movement', rarity: 'rare',    description: 'Teleport to any unoccupied hex on the board. No range limit.',              exclusiveTo: 'Da Vinci' },
   { definitionId: 'davinci_masterpiece',        name: 'Masterpiece',        icon: '💚', manaCost: 3, type: 'defense',  rarity: 'rare',    description: 'Heal an ally within range 3 for 50 HP.',                  exclusiveTo: 'Da Vinci' },
   { definitionId: 'davinci_vitruvian_guardian', name: 'Vitruvian Guardian', icon: '⭐', manaCost: 3, type: 'ultimate',  rarity: 'ultimate', description: 'EXHAUST — Summon drone: HP 75, Might 50, Defense 30. Lasts until defeated. (Scales with Power)', exclusiveTo: 'Da Vinci' },
   // Sun-sin — Land forms
   { definitionId: 'sunsin_hwajeon_land',        name: 'Hwajeon',           icon: '🔥', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~72 dmg at range 3. Pushes target back 1 hex.',                                          exclusiveTo: 'Sun-sin', terrain: 'land' },
-  { definitionId: 'sunsin_naval_repairs_land',  name: 'Naval Repairs',     icon: '🚢', manaCost: 3, type: 'defense',  rarity: 'rare',    description: 'Target an area — allies within range 2 heal 10 HP now and 10 HP next turn.',              exclusiveTo: 'Sun-sin', terrain: 'land' },
+  { definitionId: 'sunsin_naval_repairs_land',  name: 'Naval Repairs',     icon: '🚢', manaCost: 3, type: 'defense',  rarity: 'rare',    description: 'Target an area — allies within range 2 heal 15 HP now and 15 HP next turn.',              exclusiveTo: 'Sun-sin', terrain: 'land' },
   { definitionId: 'sunsin_chongtong_land',      name: 'Chongtong Barrage', icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Charge 3 hexes. ~60 dmg to enemies in path, pushed sideways. Sun-sin ends at last hex.', exclusiveTo: 'Sun-sin', terrain: 'land' },
   // Sun-sin — Water forms
   { definitionId: 'sunsin_ramming_speed_water', name: 'Ramming Speed',     icon: '🚢', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~72 dmg at range 1. Pushes target back 1 hex. (Power reduced on water)',                  exclusiveTo: 'Sun-sin', terrain: 'water' },
@@ -382,8 +501,15 @@ const CARDS: CardEntry[] = [
   // Huang-chan
   { definitionId: 'huang_terracotta_summon', name: 'Terracotta Legion',         icon: '🗿', manaCost: 2, type: 'buff',     rarity: 'rare',    description: 'Summon Terracotta Archer (Might×1.5, range 2) or Warrior (Might×1, range 1) on hex within range 3. HP 40, scales with your stats. Lasts 1 turn.', exclusiveTo: 'Huang-chan' },
   { definitionId: 'huang_first_emperor',     name: "First Emperor's Command",   icon: '🐴', manaCost: 3, type: 'buff',     rarity: 'rare',    description: 'Summon Terracotta Cavalry (Might×1.5, Def×1.5, Power×1, Move 3) on adjacent hex. HP 60, scales with your stats. Lasts 2 turns. Gain FREE Cavalry Charge card.', exclusiveTo: 'Huang-chan' },
-  { definitionId: 'huang_cavalry_charge',    name: 'Cavalry Charge',            icon: '⚡', manaCost: 0, type: 'attack',   rarity: 'rare',    description: 'FREE — Cavalry charges a target at range 3 for Power×1.5 damage. Only appears after First Emperor\'s Command.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_cavalry_charge',    name: 'Cavalry Charge',            icon: '⚡', manaCost: 0, type: 'attack',   rarity: 'rare',    description: 'FREE — Cavalry charges a target at range 3 for Power×1.2 damage. Only appears after First Emperor\'s Command.', exclusiveTo: 'Huang-chan' },
   { definitionId: 'huang_eternal_army',      name: 'Eternal Army',              icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Control a non-boss enemy within range 3 for 2 turns. They auto-attack nearest foe (same mechanics as attacking you). Cannot target bosses or mini-bosses.', exclusiveTo: 'Huang-chan' },
+  // ── Curses ──────────────────────────────────────────────────────────────────
+  // Curse cards are added to your deck by negative roguelike events. They do nothing useful — they waste mana and card plays.
+  { definitionId: 'curse_burden',     name: 'Dead Weight',         icon: '💀', manaCost: 1, type: 'buff', rarity: 'common', description: 'A burden that drags on your soul. Costs 1 Mana — does nothing.', isCurse: true },
+  { definitionId: 'curse_malaise',    name: 'Malaise',             icon: '💀', manaCost: 2, type: 'buff', rarity: 'common', description: 'Crushing lethargy seeps into your clones. Wastes 2 Mana — does nothing.', isCurse: true },
+  { definitionId: 'curse_void_echo',  name: 'Void Echo',           icon: '💀', manaCost: 0, type: 'buff', rarity: 'common', description: 'A hollow resonance of dark energy. Wastes a card play — does nothing.', isCurse: true },
+  { definitionId: 'curse_dread',      name: 'Dread',               icon: '💀', manaCost: 3, type: 'buff', rarity: 'common', description: 'An overwhelming sense of doom. Wastes 3 Mana — does nothing.', isCurse: true },
+  { definitionId: 'curse_chains',     name: 'Chains of Znyxorga',  icon: '💀', manaCost: 1, type: 'buff', rarity: 'common', description: 'Invisible chains bind your clones. Must be played (costs 1 Mana) to discard — does nothing.', isCurse: true },
 ];
 
 const EXCL_COLOR: Record<string, string> = {
@@ -419,12 +545,12 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '⚡', name: 'Plasma Shot', desc: 'Fires a concentrated plasma bolt dealing ~36 damage to the closest enemy within range 3. (Every 3 turns)' },
     ],
   },
-  { id: 'vron_crawler',      name: 'Vron Crawler',         icon: '🦀', act: 1, rank: 'Minion', ai: 'defensive',  portrait: '/art/enemies/vron_crawler_portrait.png',    stats: { hp: 85,  might: 28, power: 20, defense: 22, moveRange: 2, attackRange: 1 }, description: "A living fortress on six legs. Its layered shell makes frontal assaults nearly pointless — wait for it to expose its soft underbelly, or don't attack at all.",
+  { id: 'vron_crawler',      name: 'Vron Crawler',         icon: '🦀', act: 1, rank: 'Minion', ai: 'defensive',  portrait: '/art/enemies/vron_crawler_portrait.png',    stats: { hp: 85,  might: 28, power: 20, defense: 16, moveRange: 2, attackRange: 1 }, description: "A living fortress on six legs. Its layered shell makes frontal assaults nearly pointless — wait for it to expose its soft underbelly, or don't attack at all.",
     abilities: [
       { icon: '🐚', name: 'Shell Harden', desc: 'Retracts into armored shell — gains +18 Defense for 2 turns. (Every 4 turns)' },
     ],
   },
-  { id: 'krath_champion',    name: 'Krath Champion',       icon: '⚔️', act: 1, rank: 'Elite',  ai: 'berserker',  portrait: '/art/enemies/krath_champion_portrait.png',  stats: { hp: 120, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 }, description: "A seasoned Krath arena veteran decorated with the skulls of past opponents. Fights dirty, hard, and with a grin that says it's already killed better than you.",
+  { id: 'krath_champion',    name: 'Krath Champion',       icon: '⚔️', act: 1, rank: 'Elite',  ai: 'berserker',  portrait: '/art/enemies/krath_champion_portrait.png',  stats: { hp: 105, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 }, description: "A seasoned Krath arena veteran decorated with the skulls of past opponents. Fights dirty, hard, and with a grin that says it's already killed better than you.",
     abilities: [
       { icon: '🔥', name: 'Battle Rage', desc: 'Gains +25 Might and +10 Defense for 2 turns. (Every 3 turns)' },
       { icon: '⚔️', name: "Champion's Strike", desc: 'Deals 1× Might damage to the nearest enemy in range 2. (Every 2 turns)' },
@@ -443,14 +569,14 @@ const ENEMIES: EnemyEntry[] = [
   },
   { id: 'iron_wall',         name: 'Iron Wall',            icon: '🤖', act: 1, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/iron_wall_portrait.png',       stats: { hp: 200, might: 60, power: 50, defense: 35, moveRange: 2, attackRange: 1 }, description: 'The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered.',
     abilities: [
-      { icon: '💚', name: 'Shield Array', desc: 'Heals self for 70 HP. Triggers ONCE when below 50% HP.' },
-      { icon: '⚡', name: 'EMP Blast', desc: 'Deals 40 damage to all enemies within range 2. (Every 3 turns)' },
+      { icon: '💚', name: 'Shield Array', desc: 'Heals self for 50 HP. Triggers ONCE when below 50% HP.' },
+      { icon: '⚡', name: 'EMP Blast', desc: 'Deals 40 damage to all enemies within range 1. (Every 3 turns)' },
       { icon: '🤖', name: 'Turret Mode', desc: 'Gains +40 Defense for 2 turns. (Every 4 turns)' },
     ],
   },
   { id: 'mog_toxin',         name: 'Mog Toxin',            icon: '☣️', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/mog_toxin_portrait.png',     stats: { hp: 75,  might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 }, description: 'A long-range biological hazard unit. Deals poison-type damage from across the field.',
     abilities: [
-      { icon: '🧪', name: 'Acid Spray', desc: 'Launches a corrosive burst — applies Armor Break (−20% DEF) to all enemies within range 2 for 3 turns. (Every 3 turns)' },
+      { icon: '🧪', name: 'Acid Spray', desc: 'Launches a corrosive burst — applies Armor Break (−20% DEF) to all enemies within range 1 for 2 turns. (Every 3 turns)' },
     ],
   },
   { id: 'qrix_hunter',       name: 'Qrix Hunter',          icon: '🏹', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/qrix_hunter_portrait.png',     stats: { hp: 70,  might: 25, power: 50, defense: 8,  moveRange: 3, attackRange: 3 }, description: 'A precision marksman deployed by arena sponsors. Has the longest attack range of any common enemy.',
@@ -469,30 +595,61 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '🦘', name: 'Savage Leap', desc: 'Teleports adjacent to the closest enemy and deals ~90 damage (DEF applies). (Every 2 turns)' },
     ],
   },
-  { id: 'phasewarden',       name: 'Phasewarden',          icon: '🔮', act: 2, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/phasewarden_portrait.png',     stats: { hp: 110, might: 55, power: 65, defense: 20, moveRange: 5, attackRange: 2 }, description: "A guardian from between dimensions. Its crystalline armor flickers between planes of existence — it blinks away, strips your defenses, then closes in when you're most exposed.",
+  { id: 'phasewarden',       name: 'Phasewarden',          icon: '🔮', act: 2, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/phasewarden_portrait.png',     stats: { hp: 110, might: 55, power: 65, defense: 20, moveRange: 4, attackRange: 2 }, description: "A guardian from between dimensions. Its crystalline armor flickers between planes of existence — it blinks away, strips your defenses, then closes in when you're most exposed.",
     abilities: [
-      { icon: '🔮', name: 'Dimensional Drain', desc: 'Applies Armor Break to all enemies within range 3 for 2 turns. (Every 3 turns)' },
+      { icon: '🔮', name: 'Dimensional Drain', desc: 'Applies Armor Break to all enemies within range 2 for 2 turns. (Every 3 turns)' },
       { icon: '✨', name: 'Phase Blink', desc: 'Teleports adjacent to the closest enemy and deals ~66 damage (DEF applies). (Every 2 turns)' },
     ],
   },
   { id: 'twin_terror_a',     name: 'Terror Alpha',         icon: '🗡️', act: 2, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/terror_alpha_portrait.png',   stats: { hp: 160, might: 70, power: 55, defense: 20, moveRange: 4, attackRange: 1 }, description: 'The aggressive half of the Twin Terror. Built for raw speed and kinetic impact — charges at full sprint and hits like a missile. Kill it first or it will never stop coming.',
     abilities: [
-      { icon: '🗡️', name: 'Alpha Rush', desc: 'Charges 4 hexes and deals ~154 damage on impact (DEF applies). (Every 2 turns)' },
+      { icon: '🗡️', name: 'Alpha Rush', desc: 'Charges 4 hexes and deals ~126 damage on impact (DEF applies). (Every 2 turns)' },
       { icon: '🔥', name: 'Twin Fury', desc: 'Gains +30 Might for 2 turns. (Every 3 turns)' },
     ],
   },
   { id: 'twin_terror_b',     name: 'Terror Beta',          icon: '🛡️', act: 2, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/terror_beta_portrait.png',    stats: { hp: 160, might: 50, power: 65, defense: 30, moveRange: 3, attackRange: 2 }, description: 'The defensive half of the Twin Terror. Absorbs punishment while Alpha creates chaos, then heals itself when nearly dead. Ignore it and Beta becomes unkillable.',
     abilities: [
-      { icon: '💚', name: 'Aegis Heal', desc: 'Heals self for 90 HP. Triggers ONCE when below 40% HP.' },
-      { icon: '🛡️', name: 'Mirror Aegis', desc: 'Gains +50 Defense for 2 turns. (Every 3 turns)' },
+      { icon: '💚', name: 'Aegis Heal', desc: 'Heals self for 65 HP. Triggers ONCE when below 40% HP.' },
+      { icon: '🛡️', name: 'Mirror Aegis', desc: 'Gains +35 Defense for 2 turns. (Every 3 turns)' },
     ],
   },
-  { id: 'znyxorga_champion', name: "Znyxorga's Champion",  icon: '👑', act: 3, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/znyxorgas_champion_portrait.png', stats: { hp: 500, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 }, description: "Znyxorga's ultimate weapon — four arms, six eyes, 500 HP, and the patience of a god. Annihilates your whole team simultaneously and grows stronger the closer it gets to death.",
+  { id: 'znyxorga_champion', name: "Znyxorga's Champion",  icon: '👑', act: 3, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/znyxorgas_champion_portrait.png', stats: { hp: 450, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 }, description: "Znyxorga's ultimate weapon — four arms, six eyes, 450 HP, and the patience of a god. Annihilates your whole team simultaneously and grows stronger the closer it gets to death.",
     abilities: [
       { icon: '👑', name: 'Arena Collapse', desc: 'The arena becomes a weapon — deals 55 damage to ALL player characters simultaneously. (Every 3 turns)' },
-      { icon: '🛡️', name: 'Phase Shift', desc: 'INVINCIBLE for 2 turns and gains +25 Might/Power/Defense permanently. Triggers ONCE when below 50% HP — prepare for a power spike!' },
-      { icon: '⭐', name: "Champion's Will", desc: "Driven by Znyxorga's will — gains +35 Might/Power/Defense permanently. Triggers ONCE when below 30% HP. Finish it fast!" },
-      { icon: '💥', name: 'Tyrant Strike', desc: 'Channels overwhelming power — deals ~128 damage to all enemies within range 2. (Every 2 turns)' },
+      { icon: '🛡️', name: 'Phase Shift', desc: 'INVINCIBLE for 2 turns and gains +15 Might/Power/Defense permanently. Triggers ONCE when below 50% HP — prepare for a power spike!' },
+      { icon: '⭐', name: "Champion's Will", desc: "Driven by Znyxorga's will — gains +20 Might/Power/Defense permanently. Triggers ONCE when below 30% HP. Finish it fast!" },
+      { icon: '💥', name: 'Tyrant Strike', desc: 'Channels overwhelming power — deals ~104 damage to all enemies within range 2. (Every 2 turns)' },
+    ],
+  },
+  // ── New Enemies ────────────────────────────────────────────────────────────
+  { id: 'naxion_shieldbearer', name: 'Naxion Shieldbearer', icon: '🛡️', act: 1, rank: 'Elite', ai: 'defensive', portrait: '/art/enemies/naxion_shieldbearer_portrait.png', stats: { hp: 115, might: 45, power: 30, defense: 35, moveRange: 2, attackRange: 1 }, description: "A walking fortress in the shape of a soldier. The Naxion Shieldbearer absorbs everything you throw at it and hits back twice as hard — and if you think its allies are safe, you're wrong.",
+    abilities: [
+      { icon: '🛡️', name: 'Shield Slam', desc: 'Crashes its shield into a target — deals 1.4× Might damage and Roots the target for 1 turn. (Every 2 turns)' },
+      { icon: '📣', name: 'Rally Cry', desc: 'Braces for impact — gains +25 Defense for 2 turns. (Every 3 turns)' },
+    ],
+  },
+  { id: 'grox_magnetar', name: 'Grox Magnetar', icon: '🧲', act: 2, rank: 'Elite', ai: 'ranged', portrait: '/art/enemies/grox_magnetar_portrait.png', stats: { hp: 130, might: 50, power: 70, defense: 25, moveRange: 3, attackRange: 3 }, description: "A living electromagnetic anomaly — the Grox Magnetar bends metal, reroutes energy, and silences technology with a thought. It doesn't fight in straight lines; it reshapes the battlefield to make sure nothing else does either.",
+    abilities: [
+      { icon: '🧲', name: 'Magnetic Pull', desc: 'Yanks a target 2 hexes closer then deals Power×0.8 damage. Range 3. (Every 2 turns)' },
+      { icon: '⚡', name: 'EMP Surge', desc: 'Releases an electromagnetic pulse — Silences all enemies within range 1 for 1 turn (Power reduced to 0). (Every 3 turns)' },
+    ],
+  },
+  { id: 'vrex_mimic', name: 'Vrex Mimic', icon: '🎭', act: 2, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vrex_mimic_portrait.png', stats: { hp: 90, might: 40, power: 40, defense: 15, moveRange: 4, attackRange: 1 }, description: "Nobody knows what a Vrex Mimic actually looks like — it never stops wearing someone else's face. Adapts its form mid-fight, copying the threat in front of it with unnerving precision.",
+    abilities: [
+      { icon: '🎭', name: 'Imitate', desc: 'Mimics the closest enemy — gains their Might and Power values until end of turn, then strikes for 1.2× Might. (Every 2 turns)' },
+      { icon: '🌀', name: 'Disorienting Shift', desc: 'Shifts form erratically — Roots the target for 1 turn. Range 2. (Every 3 turns)' },
+    ],
+  },
+  { id: 'crystalline_hive', name: 'Crystalline Hive', icon: '💎', act: 3, rank: 'Minion', ai: 'ranged', portrait: '/art/enemies/crystalline_hive_portrait.png', stats: { hp: 85, might: 35, power: 60, defense: 20, moveRange: 2, attackRange: 3 }, description: "A collective organism grown from shattered crystal — the Hive doesn't think so much as resonate. Its shards fragment in every direction and the longer it stays alive, the more the air itself cuts you.",
+    abilities: [
+      { icon: '💎', name: 'Crystal Burst', desc: 'Erupts in razor shards — deals Power×1.2 to all enemies within range 2. (Every 2 turns)' },
+      { icon: '🔶', name: 'Resonance Field', desc: 'Harmonic vibrations weaken armor — applies Armor Break (−15% DEF) to all enemies within range 2 for 2 turns. (Every 3 turns)' },
+    ],
+  },
+  { id: 'enemy_base', name: 'Znyxorga Fortress', icon: '🏰', act: 0, rank: 'Boss', ai: 'static', portrait: '/art/enemies/enemy_base_portrait.png', stats: { hp: 150, might: 0, power: 0, defense: 0, moveRange: 0, attackRange: 3 }, description: 'A hardened enemy stronghold that can appear in any Act. Cannot move — instead it fires every single turn and bombards with heavy artillery every 3 turns. Destroy it before its relentless fire wears you down.',
+    abilities: [
+      { icon: '🏰', name: 'Base Turret', desc: 'Fires at ALL player characters within range 3 for 50 damage every player turn.' },
+      { icon: '💥', name: 'Siege Bombardment', desc: 'Rains fire on ALL player characters with line-of-sight for ~40 damage (Defense applies). (Every 3 turns)' },
     ],
   },
 ];
@@ -832,7 +989,10 @@ function ItemsTab() {
               {item.statBonus && (
                 <div className="flex gap-2 flex-wrap mt-3">
                   {Object.entries(item.statBonus).map(([k, v]) => v ? (
-                    <span key={k} className="text-[10px] font-orbitron text-green-400">+{v} {k.toUpperCase()}</span>
+                    <span key={k} className="text-[10px] font-orbitron font-bold"
+                      style={{ color: STAT_COLOR[k] ?? '#4ade80' }}>
+                      +{v} {k.toUpperCase()}
+                    </span>
                   ) : null)}
                 </div>
               )}
@@ -861,16 +1021,48 @@ function CardsTab() {
     { value: 'Sun-sin',    label: 'Sun-sin' },
     { value: 'Beethoven',  label: 'Beethoven' },
     { value: 'Huang-chan', label: 'Huang-chan' },
+    { value: 'curses',     label: '💀 Curses' },
   ];
   const filtered = CARDS.filter(c => {
+    if (filter === 'curses') return !!c.isCurse;
     if (filter === 'all') return true;
-    if (filter === 'shared') return !c.exclusiveTo;
+    if (filter === 'shared') return !c.exclusiveTo && !c.isCurse;
     return c.exclusiveTo === filter;
   });
   const activeColor = filter === 'all' || filter === 'shared' ? '#22d3ee' : EXCL_COLOR[filter] ?? '#22d3ee';
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
+
+      {/* Upgrade sources info */}
+      <div className="rounded-xl border border-emerald-900/40 p-4 mb-8 flex flex-col gap-2"
+        style={{ background: 'rgba(6,18,12,0.85)' }}>
+        <p className="font-orbitron font-bold text-[11px] tracking-widest text-emerald-400 mb-1">HOW UPGRADES WORK</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[10px] text-slate-400">
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">🔥</span>
+            <div>
+              <p className="font-orbitron font-bold text-white mb-0.5">Campfire — Shared Cards</p>
+              <p>At a campfire, choose "Upgrade a Shared Card" to permanently upgrade one shared card (e.g. Jump, Fortify, Taunt). Affects ALL copies in your deck. One upgrade per campfire rest.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">⬆️</span>
+            <div>
+              <p className="font-orbitron font-bold text-white mb-0.5">Level Up — Character Abilities</p>
+              <p>Characters gain upgrade tokens at levels 2 and 4. Each token lets you upgrade one of their non-ultimate ability cards. Applies to all copies of that card in the deck.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">⭐</span>
+            <div>
+              <p className="font-orbitron font-bold text-white mb-0.5">Level 6 — Ultimate Upgrade</p>
+              <p>At level 6, a character earns one ultimate upgrade token to power up their ultimate ability. The upgrade is permanent for the rest of the run.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
         <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500">CARDS — {filtered.length}/{CARDS.length} TOTAL</p>
         <div className="relative">
@@ -897,7 +1089,8 @@ function CardsTab() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filtered.map(card => {
-          const tc = CARD_TYPE_COLOR[card.type] ?? '#94a3b8';
+          const isCurse = !!card.isCurse;
+          const tc = isCurse ? '#c084fc' : (CARD_TYPE_COLOR[card.type] ?? '#94a3b8');
           const ec = card.exclusiveTo ? EXCL_COLOR[card.exclusiveTo] : null;
           const cardT = (t.cards as Record<string, { name: string; description: string }>)[card.definitionId];
           const upgrade = CARD_UPGRADES[card.definitionId] ?? null;
@@ -905,8 +1098,8 @@ function CardsTab() {
           return (
             <div key={card.definitionId} className="rounded-xl border p-4 flex gap-3 items-start transition-colors"
               style={{
-                background: isShowingUpgrade ? 'rgba(6,20,12,0.95)' : 'rgba(8,5,25,0.9)',
-                borderColor: isShowingUpgrade ? 'rgba(52,211,153,0.4)' : tc + '35',
+                background: isCurse ? 'rgba(30,5,35,0.95)' : isShowingUpgrade ? 'rgba(6,20,12,0.95)' : 'rgba(8,5,25,0.9)',
+                borderColor: isCurse ? 'rgba(192,132,252,0.35)' : isShowingUpgrade ? 'rgba(52,211,153,0.4)' : tc + '35',
               }}>
               <span className="text-3xl shrink-0 pt-0.5">{card.icon}</span>
               <div className="flex-1 min-w-0">
@@ -918,6 +1111,12 @@ function CardsTab() {
                     style={{ color: tc, background: tc + '18', border: `1px solid ${tc}40` }}>
                     {card.type.toUpperCase()}
                   </span>
+                  {isCurse && (
+                    <span className="font-orbitron text-[9px] px-1.5 py-0.5 rounded"
+                      style={{ color: '#c084fc', background: 'rgba(192,132,252,0.12)', border: '1px solid rgba(192,132,252,0.4)' }}>
+                      💀 CURSE
+                    </span>
+                  )}
                   {ec && (
                     <span className="font-orbitron text-[9px] px-1.5 py-0.5 rounded"
                       style={{ color: ec, background: ec + '18', border: `1px solid ${ec}40` }}>
@@ -945,9 +1144,9 @@ function CardsTab() {
                   <p className="font-orbitron text-[9px] text-emerald-400 mb-1.5">✦ {upgrade!.descriptionUpgrade}</p>
                 )}
                 <p className="text-slate-400 text-[11px] leading-relaxed">
-                  {isShowingUpgrade
-                    ? colorizeDesc(upgrade!.patch.description ?? cardT?.description ?? card.description)
-                    : (cardT?.description ?? card.description)}
+                  {colorizeDesc(isShowingUpgrade
+                    ? (upgrade!.patch.description ?? cardT?.description ?? card.description)
+                    : (cardT?.description ?? card.description))}
                 </p>
                 {upgrade && (
                   <button
@@ -1087,20 +1286,28 @@ const STATUS_EFFECTS = [
     counterplay: 'Stay out of range 2. Leonidas with Phalanx stacks can partially absorb the Defense loss.',
   },
   {
-    id: 'demoralize', name: 'Demoralize', icon: '😰', color: '#a78bfa',
-    source: 'Cards & Abilities',
+    id: 'rooted', name: 'Rooted', icon: '🌿', color: '#86efac',
+    source: 'Cards & Abilities (Entangle, THIS IS SPARTA!)',
+    duration: '1–2 turns',
+    mechanics: 'The Rooted unit cannot move for the duration. They can still attack, use cards, and trigger abilities normally — only their movement is blocked.',
+    tip: 'Root fast melee enemies to keep them at range. Combine with Armor Break for devastating burst turns while they cannot reposition.',
+    counterplay: 'Rooted units can still attack and use cards, so they remain dangerous. Do not stand adjacent to a Rooted enemy — they can still hit you. Prioritise killing Rooted targets.',
+  },
+  {
+    id: 'blinded', name: 'Blinded', icon: '💥', color: '#fde047',
+    source: 'Cards (Flash Bang)',
     duration: '2 turns',
-    mechanics: 'At the start of each turn, the debuffed unit rolls a 50% chance. On failure, they skip both their movement and card plays for the entire turn — effectively wasting it.',
-    tip: 'Apply to enemy elites or bosses right before their turn. A wasted turn from a boss can swing the whole fight.',
-    counterplay: 'No direct counter — pray for lucky rolls. Spreading your characters reduces the chance of being hit by AoE Demoralize abilities.',
+    mechanics: 'The Blinded unit\'s attack range and ability range are both reduced to 1 for the duration. Basic attacks and all abilities that require a target are affected.',
+    tip: 'Flash Bang a long-range enemy (Napoleon, Qrix Hunter) before their turn to shut down their damage output entirely.',
+    counterplay: 'Move your Blinded unit adjacent to the threat so they can still attack. Heal or wait out the 2-turn duration.',
   },
   {
     id: 'silence', name: 'Silence', icon: '🔇', color: '#60a5fa',
     source: 'Cards & Enemy Abilities',
-    duration: '1–2 turns',
-    mechanics: 'Target\'s Power drops to 0. All Power-scaling abilities (Artillery Barrage, Masterpiece, Shield Bash, etc.) deal 0 damage. Basic Might-based attacks are unaffected.',
-    tip: 'Silence Da Vinci before she can heal, or Napoleon before an Artillery Barrage turn.',
-    counterplay: 'Keep power-heavy characters out of Silence range. Spread the team to reduce AoE Silence exposure from enemy abilities.',
+    duration: '2–3 turns',
+    mechanics: 'Target cannot use character ability cards (exclusive cards) for the duration. Shared cards like Basic Attack, Mend, and Shields Up are unaffected. Enemy AI units fall back to basic attacks while Silenced.',
+    tip: 'Silence a boss before its key turn to prevent a devastating ability. Upgrade to Silence+ for Range 3 and 3-turn duration.',
+    counterplay: 'Silenced characters can still use shared cards and move normally. Position them to basic attack while waiting out the debuff.',
   },
   {
     id: 'poison', name: 'Poison', icon: '☠️', color: '#4ade80',
@@ -1122,7 +1329,7 @@ const STATUS_EFFECTS = [
     id: 'stun', name: 'Stun', icon: '⚡', color: '#facc15',
     source: 'Abilities',
     duration: '1 turn',
-    mechanics: 'The stunned unit is completely frozen for their next turn — no movement, no card plays, no abilities. Unlike Demoralize, there is no roll: Stun is a guaranteed full skip.',
+    mechanics: 'The stunned unit is completely frozen for their next turn — no movement, no card plays, no abilities. Unlike Rooted (which only blocks movement), Stun is a complete guaranteed freeze.',
     tip: 'Stun is the hardest single-turn control in the game. Use it on the turn before a boss ability fires to waste it entirely.',
     counterplay: 'Stun only lasts 1 turn. Spread your characters to avoid being chain-stunned in a single turn.',
   },
@@ -1133,6 +1340,38 @@ const STATUS_EFFECTS = [
     mechanics: 'Each turn-end, the bleeding unit loses HP equal to the bleed magnitude (~16 HP at base). Unlike Poison, Bleed bypasses Defense entirely — it is raw HP damage. Reapplying Bleed refreshes the duration rather than stacking.',
     tip: 'Apply Bleed then immediately pressure the enemy — they have 2 turns before it fades. Combine with Bloodlust kills for a mana-positive loop.',
     counterplay: 'Bleed does not reduce stats, only HP. Heal it before the second tick if possible. Unlike Poison, it is not removed by healing — it must run its course.',
+  },
+  {
+    id: 'burning', name: 'Burning', icon: '🔥', color: '#f97316',
+    source: 'Arena Events (Forest Fire)',
+    duration: 'Until the burning tile is vacated',
+    mechanics: 'Units standing on a burning forest tile take 30 pure damage at the start of each turn. The fire can spread to adjacent forest tiles. Moving off a burning tile removes the Burning status immediately.',
+    tip: 'The moment you see a Forest Fire warning, vacate all forest tiles. 30 pure damage per turn kills even the tankiest character within a few turns.',
+    counterplay: 'Move off the tile immediately. Burning damage ignores Defense — there is no mitigation. If you have a unit forced to stay in range, keep them healed.',
+  },
+  {
+    id: 'shielded', name: 'Shielded', icon: '🛡️', color: '#38bdf8',
+    source: 'Abilities & Items',
+    duration: '1–2 turns',
+    mechanics: 'The Shielded unit absorbs incoming damage up to the shield\'s value before HP is affected. Once the shield depletes, it is removed. Multiple shield applications stack.',
+    tip: 'Apply Shielded before charging into a dangerous position. Combine with Fortify for maximum defensive burst on a tank.',
+    counterplay: 'Multi-hit attacks (Artillery Barrage, Crystal Burst) deplete shields faster. Focus fire to break the shield in one activation, then follow up.',
+  },
+  {
+    id: 'inspired', name: 'Inspired', icon: '✨', color: '#a78bfa',
+    source: 'Abilities & Items',
+    duration: '1–2 turns',
+    mechanics: 'The Inspired unit gains a bonus to Might and/or Power for the duration. The magnitude varies by source — typically +10–20 to one or both stats.',
+    tip: 'Inspired is a force multiplier. Stack it on your highest-damage character right before a big combo turn.',
+    counterplay: 'Silence an Inspired unit to negate their Power bonus. Stun them to waste the inspired turn entirely.',
+  },
+  {
+    id: 'curse', name: 'Curse', icon: '💜', color: '#c084fc',
+    source: 'Enemy Abilities',
+    duration: '2 turns (varies)',
+    mechanics: 'Curses have variable effects depending on the source — they may reduce stat gain, reverse healing, or cause other negative effects beyond standard debuffs. Each Curse specifies its exact mechanic on application.',
+    tip: 'Enemies that apply Curse are high-priority targets. Letting a Curse tick on your healer or carry can snowball quickly.',
+    counterplay: 'Cleanse effects (Masterpiece removes Poison; similar effects may be added for Curse). Otherwise, prioritise killing the enemy applying the Curse before the next application.',
   },
 ];
 
@@ -1156,7 +1395,7 @@ function EffectsTab() {
               <span className="text-2xl">{e.icon}</span>
               <div>
                 <div className="font-orbitron font-bold text-sm text-white">{e.name}</div>
-                <div className="text-[11px]" style={{ color: e.color }}>{e.source} · {e.duration}</div>
+                <div className="text-[11px]" style={{ color: e.color }}>{e.duration}</div>
               </div>
             </div>
             {selected === e.id && (
@@ -1206,7 +1445,7 @@ const ARENA_EVENTS = [
     duration: 'Permanent once ignited',
     duration2: 'Spreads 50% chance per adjacent forest tile each turn',
     effect: 'A random forest tile catches fire after 2 turns of warning. Units on burning tiles take 30 pure damage at turn start. The fire spreads to adjacent forest tiles each turn.',
-    strategy: 'Vacate forest tiles the moment the warning appears. Napoleon loses her Vantage Point range bonus on burning tiles on top of the damage — reposition her immediately.',
+    strategy: 'Vacate forest tiles the moment the warning appears. Units on burning tiles take 30 pure damage at turn start — get out fast.',
   },
   {
     id: 'laser_grid', name: 'Laser Grid', icon: '⚡', color: '#ef4444',
@@ -1219,8 +1458,8 @@ const ARENA_EVENTS = [
     id: 'alien_tide', name: 'Alien Tide', icon: '🌊', color: '#38bdf8',
     trigger: 'Random · 2-turn warning',
     duration: 'Permanent once activated',
-    duration2: 'Spreads 50% chance per adjacent river tile each turn',
-    effect: 'The arena floods after 2 turns of warning. Each subsequent turn, every hex adjacent to a River tile has a 50% chance of also flooding and becoming impassable.',
+    duration2: 'Spreads 33% chance per adjacent lake tile each turn',
+    effect: 'The arena floods after 2 turns of warning. Each subsequent turn, every hex adjacent to a Lake tile has a 33% chance of also flooding and becoming impassable.',
     strategy: 'Cross rivers and claim flanks before flood lanes close. Long-range characters like Napoleon gain value as movement corridors shrink.',
   },
   {
@@ -1236,6 +1475,34 @@ const ARENA_EVENTS = [
     duration: 'Instant',
     effect: "A gravity well forms at the arena's center. Every living unit is pulled 2 hexes toward the center hex. Units dragged into River tiles are instantly killed.",
     strategy: "Check every character's river proximity before acting. Two hexes toward center can send someone straight into a river. Deadly for the enemy if they're already near water.",
+  },
+  {
+    id: 'merchants_gamble', name: "The Merchant's Gamble", icon: '🎰', color: '#f59e0b',
+    trigger: 'Random · Shop Event',
+    duration: 'Instant (choice)',
+    effect: 'A shadowy merchant appears and offers to upgrade one random card in your deck for free — but also removes a random card permanently. You cannot see which card will be removed until after you accept.',
+    strategy: "High risk, high reward. If you're deep in a run with many good cards, be careful — losing a key card can be devastating. Accept if your deck is average and the upgrade target is powerful.",
+  },
+  {
+    id: 'ancient_inscription', name: 'Ancient Inscription', icon: '🔮', color: '#818cf8',
+    trigger: 'Random · Ruin Event',
+    duration: 'Permanent (run-wide)',
+    effect: 'Activate an ancient rune at the cost of 1 permanent Mana from your max mana pool. Grants a powerful permanent passive buff — such as +15 Defense to all characters, +1 card draw each turn, or similar major boons.',
+    strategy: "−1 permanent mana is severe. Only take this if the offered buff dramatically changes your win condition for the rest of the run. Pass if you're already low on mana.",
+  },
+  {
+    id: 'field_surgery', name: 'Field Surgery', icon: '🏥', color: '#4ade80',
+    trigger: 'Random · Rest Event',
+    duration: 'Instant',
+    effect: "Choose one character to receive emergency field surgery — restore 60% of their missing HP. The procedure is rough: that character cannot use abilities for the next 1 fight.",
+    strategy: 'Use on a critically wounded carry before a tough fight. The ability lockout hurts, but surviving into the next encounter is more important than one fight\'s ability usage.',
+  },
+  {
+    id: 'mimic_chest', name: 'The Mimic Chest', icon: '📦', color: '#ef4444',
+    trigger: 'Random · Treasure Room',
+    duration: 'Encounter',
+    effect: "What appears to be an item chest is actually a Mimic — a shapeshifting creature with 120 HP, Might 45, Power 50, Defense 20, and Move 3. It attacks on sight. If defeated, it drops TWO item rewards instead of one.",
+    strategy: 'Always fight the Mimic if your team is healthy. Double item drops are enormous value. Skip only if a character is already near death — the Mimic hits hard enough to finish them off.',
   },
 ];
 
@@ -1412,7 +1679,8 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
               { key: 'might',     label: t.archives.statLabels.might.toUpperCase(),   icon: <Zap className="w-3 h-3" />,                color: '#f87171' },
               { key: 'power',     label: t.archives.statLabels.power.toUpperCase(),   icon: <Star className="w-3 h-3" />,               color: '#60a5fa' },
               { key: 'defense',   label: t.archives.statLabels.defense.toUpperCase(), icon: <Shield className="w-3 h-3" />,             color: '#fbbf24' },
-              { key: 'moveRange', label: t.archives.statLabels.move.toUpperCase(),    icon: <span className="text-[10px]">🏃</span>,    color: '#a78bfa' },
+              { key: 'moveRange',   label: t.archives.statLabels.move.toUpperCase(),    icon: <span className="text-[10px]">🏃</span>,    color: '#a78bfa' },
+              { key: 'attackRange', label: 'RANGE',                                     icon: <span className="text-[10px]">🎯</span>,    color: '#fb923c' },
             ] as const).map(({ key, label, icon, color }) => {
               const val = displayStats[key as keyof typeof displayStats];
               const base = char.stats[key as keyof typeof char.stats];
@@ -1521,7 +1789,7 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
                       {upgrade && <p className="text-[10px] text-slate-500 font-orbitron mb-1">{ab.cost}</p>}
                       <p className="text-slate-400 text-[12px] leading-relaxed">
                         {isShowingUpgrade
-                          ? colorizeDesc(upgrade!.patch.description ?? (typeof displayDesc === 'string' ? displayDesc : ''))
+                          ? (UPGRADE_DESCS[upgKey] ?? colorizeDesc(upgrade!.patch.description ?? (typeof displayDesc === 'string' ? displayDesc : '')))
                           : displayDesc}
                       </p>
                     </div>

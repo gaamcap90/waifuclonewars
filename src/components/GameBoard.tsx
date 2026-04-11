@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from "react";
 import HexTile from "./HexTile";
 import AIIntentBadge from "./AIIntentBadge";
 import AnimationLayer from "./AnimationLayer";
@@ -9,6 +9,7 @@ import { calcEffectiveStats } from "@/combat/buffs";
 import { useT } from "@/i18n";
 import { getCharacterPortrait } from "@/utils/portraits";
 import { AnimEvent } from "@/hooks/useAnimations";
+import { tileKey, reachableWithCosts } from "@/utils/movement";
 
 /** Snap any offset to the nearest axial hex-line and return the line hexes up to `range`. */
 function snapToLineHexes(from: Coordinates, to: Coordinates, range: number): Coordinates[] {
@@ -42,30 +43,68 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const hexWidth = hexSize * 2;                // 100px
   const hexHeight = Math.sqrt(3) * hexSize;     // ~86.6px
 
-  // 2) Pan & zoom + hover state
+  // 2) Pan + hover state (zoom is fixed — no scroll zoom)
+  const FIXED_ZOOM = 1.3;
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1.4);
   const [hoveredCoords, setHoveredCoords] = useState<Coordinates | null>(null);
   const [hoveredIntentRange, setHoveredIntentRange] = useState<{ iconId: string; range: number } | null>(null);
+  const [showCoordOverlay, setShowCoordOverlay] = useState(false);
+  const [inspectedEnemyId, setInspectedEnemyId] = useState<string | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  // Center board on mount
+  // Dev overlay — Ctrl+D toggles (q,r) coordinate labels on every hex
+  // Escape — clears enemy inspect mode
   useEffect(() => {
-    if (!boardRef.current) return;
-    const W = boardRef.current.clientWidth;
-    const H = boardRef.current.clientHeight;
-    const oX = (W - hexWidth) / 2;
-    const oY = (H - hexHeight) / 2;
-    setPanOffset({ x: -oX, y: -oY });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'd') { e.preventDefault(); setShowCoordOverlay(v => !v); }
+      if (e.key === 'Escape') setInspectedEnemyId(null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
-  // 3) Container size & centering math
-  const containerWidth = boardRef.current?.clientWidth ?? 800;
-  const containerHeight = boardRef.current?.clientHeight ?? 600;
-  const offsetX = (containerWidth - hexWidth) / 2;
-  const offsetY = (containerHeight - hexHeight) / 2;
+  // Clear inspect when player enters any targeting mode
+  useEffect(() => {
+    if (gameState.targetingMode || (gameState as any).cardTargetingMode) setInspectedEnemyId(null);
+  }, [Boolean(gameState.targetingMode), Boolean((gameState as any).cardTargetingMode)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Board bounding box — recomputed whenever the board layout changes
+  const boardBounds = useMemo(() => {
+    const hexToPixel = (q: number, r: number) => ({
+      x: hexSize * (3 / 2 * q),
+      y: hexSize * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
+    });
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const tile of gameState.board) {
+      const { x, y } = hexToPixel(tile.coordinates.q, tile.coordinates.r);
+      if (x          < minX) minX = x;
+      if (y          < minY) minY = y;
+      if (x + hexWidth  > maxX) maxX = x + hexWidth;
+      if (y + hexHeight > maxY) maxY = y + hexHeight;
+    }
+    return { minX, minY, maxX, maxY,
+      cx: (minX + maxX) / 2,
+      cy: (minY + maxY) / 2,
+    };
+  }, [gameState.board, hexSize, hexWidth, hexHeight]);
+
+  // offsetX/Y place the board center at local origin (0,0).
+  // panOffset then translates that origin to the screen center.
+  const offsetX = -boardBounds.cx;
+  const offsetY = -boardBounds.cy;
+
+  // Center board on mount/phase-change.
+  // The inner content div is flex-centered, so its top-left is already at (W/2, H/2).
+  // Board center is at element-local (0,0) (offsetX = -boardBounds.cx).
+  // After translate(tx,ty) scale(s) from origin (0,0):
+  //   screen_x = W/2 + 0*s + tx  → centering requires tx = 0
+  // So panOffset={0,0} is the centered position — just reset it on phase change.
+  useLayoutEffect(() => {
+    if (!gameState.board.length) return;
+    setPanOffset({ x: 0, y: 0 });
+  }, [gameState.board.length, gameState.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 4) Compute ranges for highlighting
   const extState = gameState as any;
@@ -80,26 +119,38 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     .flatMap(p => p.icons)
     .find(i => i.id === selectedIconId);
 
+  // When targeting mode is active, calculate ranges from the caster (targetingMode.iconId),
+  // not from the UI-selected icon — these can differ with multi-char card plays.
+  const rangeIconId = gameState.targetingMode?.iconId ?? selectedIconId;
+
   const { movementRange, attackRange, abilityRange } = useRangeCalculation(
     gameState,
-    selectedIconId,
+    rangeIconId,
     !gameState.targetingMode && !!selectedIcon && selectedIcon.isAlive,
     gameState.targetingMode?.abilityId === 'basic_attack',
     Boolean(gameState.targetingMode && gameState.targetingMode.abilityId !== 'basic_attack'),
     gameState.targetingMode?.range
   );
 
-  // 5) Card hover range preview — highlights tiles within hoverPreviewRange of the active executor
+  // 5) Card hover range preview — highlights tiles within range of the active executor.
+  // Also covers the card-targeting-mode case: once a card is clicked and targeting begins,
+  // hoverPreviewRange goes null (mouse left the card) but we still want to show the range.
   const hoverPreviewSet = useMemo((): Set<string> => {
-    if (!hoverPreviewRange || hoverPreviewRange <= 0 || !selectedIcon) return new Set();
+    const cardTargetingModeLocal = (gameState as any).cardTargetingMode as { card: any; executorId: string } | undefined;
+    const range = hoverPreviewRange ?? cardTargetingModeLocal?.card?.effect?.range ?? null;
+    if (!range || range <= 0) return new Set();
+    const executor = cardTargetingModeLocal
+      ? gameState.players.flatMap(p => p.icons).find(i => i.id === cardTargetingModeLocal.executorId)
+      : selectedIcon;
+    if (!executor) return new Set();
     const set = new Set<string>();
     for (const tile of gameState.board) {
       const { q, r } = tile.coordinates;
-      const d = (Math.abs(q - selectedIcon.position.q) + Math.abs(r - selectedIcon.position.r) + Math.abs((q + r) - (selectedIcon.position.q + selectedIcon.position.r))) / 2;
-      if (d > 0 && d <= hoverPreviewRange) set.add(`${q},${r}`);
+      const d = (Math.abs(q - executor.position.q) + Math.abs(r - executor.position.r) + Math.abs((q + r) - (executor.position.q + executor.position.r))) / 2;
+      if (d > 0 && d <= range) set.add(`${q},${r}`);
     }
     return set;
-  }, [hoverPreviewRange, selectedIcon, gameState.board]);
+  }, [hoverPreviewRange, selectedIcon, gameState.board, gameState.players, (gameState as any).cardTargetingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 5b) Hover damage preview when a damage card is selected
   const cardTargetingMode = (gameState as any).cardTargetingMode as { card: any; executorId: string } | undefined;
@@ -264,6 +315,45 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     return set;
   }, [hoveredIntentRange, externalIntentRange, gameState]);
 
+  // 5e) Enemy inspect — movement & attack range for a clicked enemy icon
+  const { inspectedMoveSet, inspectedAttackSet } = useMemo(() => {
+    const empty = { inspectedMoveSet: new Set<string>(), inspectedAttackSet: new Set<string>() };
+    if (!inspectedEnemyId) return empty;
+    const enemy = gameState.players.flatMap(p => p.icons).find(ic => ic.id === inspectedEnemyId && ic.isAlive);
+    if (!enemy) return empty;
+
+    const budget = enemy.stats.moveRange;
+    const blockedKeys = new Set(
+      gameState.players.flatMap(p => p.icons)
+        .filter(ic => ic.isAlive && ic.id !== enemy.id && ic.playerId !== enemy.playerId)
+        .map(ic => tileKey(ic.position.q, ic.position.r))
+    );
+    const allyKeys = new Set(
+      gameState.players.flatMap(p => p.icons)
+        .filter(ic => ic.isAlive && ic.id !== enemy.id && ic.playerId === enemy.playerId)
+        .map(ic => tileKey(ic.position.q, ic.position.r))
+    );
+    const allowRiver = enemy.name.includes("Sun-sin");
+    const costMap = reachableWithCosts(gameState.board, enemy.position, budget, blockedKeys, allowRiver, allyKeys);
+    const inspectedMoveSet = new Set<string>(costMap.keys());
+
+    const atkRange = enemy.stats.attackRange ?? 1;
+    const inspectedAttackSet = new Set<string>();
+    // Danger zone: attack threat from current position + all reachable positions
+    const allAttackOrigins: Array<{q: number, r: number}> = [
+      enemy.position,
+      ...[...costMap.keys()].map(k => { const [sq, sr] = k.split(','); return { q: parseInt(sq, 10), r: parseInt(sr, 10) }; }),
+    ];
+    for (const pos of allAttackOrigins) {
+      for (const tile of gameState.board) {
+        const { q, r } = tile.coordinates;
+        const d = (Math.abs(q - pos.q) + Math.abs(r - pos.r) + Math.abs((q + r) - (pos.q + pos.r))) / 2;
+        if (d > 0 && d <= atkRange) inspectedAttackSet.add(tileKey(q, r));
+      }
+    }
+    return { inspectedMoveSet, inspectedAttackSet };
+  }, [inspectedEnemyId, gameState.players, gameState.board]);
+
   // 6) Memoized board rendering
   const renderBoard = useMemo(() => {
     const hexToPixel = (q: number, r: number) => ({
@@ -304,8 +394,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           .find(i => i.id === gameState.respawnPlacement);
         if (!respawning) return false;
         const validZone = respawning.playerId === 0
-          ? (q >= -6 && q <= -4 && r >= 3 && r <= 5)
-          : (q >= 4 && q <= 6 && r >= -5 && r <= -3);
+          ? (q >= -5 && q <= -3 && r >= 3 && r <= 5)
+          : (q >= 3 && q <= 5 && r >= -5 && r <= -3);
         const occupied = gameState.players
           .flatMap(p => p.icons)
           .some(i => i.position.q === q && i.position.r === r && i.isAlive);
@@ -317,6 +407,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       const isOnLine = lineHexSet.has(tKey);
       const isIntentRange = intentRangeHighlight.has(tKey);
       const isHoverPreview = hoverPreviewSet.has(tKey);
+      const isInspectedUnit = icon?.id === inspectedEnemyId;
+      const isInspectedMove = inspectedMoveSet.has(tKey) && !isInspectedUnit;
+      const isInspectedAttack = inspectedAttackSet.has(tKey) && !isInspectedMove && !isInspectedUnit;
       const laserGridStruckIds: string[] = (gameState as any).laserGridStruckIds ?? [];
       const isLaserStruck = icon ? laserGridStruckIds.includes(icon.id) : false;
       const burningForestTiles: string[] = (gameState as any).burningForestTiles ?? [];
@@ -331,9 +424,40 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         return dist <= z.radius;
       });
 
+      // Stun indicator — show on unit's hex if stunned
+      const isStunned = icon?.isAlive && icon?.debuffs?.some(d => d.type === 'stun');
+
+      // Active debuffs on this tile's unit (for board badge strip)
+      const DEBUFF_BADGE: Record<string, { emoji: string; bg: string }> = {
+        stun:        { emoji: '⚡', bg: 'rgba(34,211,238,0.88)' },
+        poison:      { emoji: '☠', bg: 'rgba(34,197,94,0.88)' },
+        silence:     { emoji: '🤫', bg: 'rgba(139,92,246,0.88)' },
+        armor_break: { emoji: '🔩', bg: 'rgba(249,115,22,0.88)' },
+        rooted:      { emoji: '🌿', bg: 'rgba(134,239,172,0.88)' },
+        blinded:     { emoji: '💥', bg: 'rgba(253,224,71,0.88)' },
+        mud_throw:   { emoji: '🐾', bg: 'rgba(161,120,38,0.88)' },
+        taunted:     { emoji: '📢', bg: 'rgba(234,179,8,0.88)' },
+      };
+      const activeBoardDebuffs = icon?.isAlive
+        ? (icon.debuffs ?? []).filter(d => DEBUFF_BADGE[d.type])
+        : [];
+
+      // Respawn preview — soft blue glow on valid spawn tiles when a friendly
+      // icon is about to respawn next turn (respawnTurns === 1)
+      const hasImmientRespawn = gameState.players[0].icons.some(ic => !ic.isAlive && ic.respawnTurns === 1);
+      const isRespawnPreview = hasImmientRespawn &&
+        !gameState.respawnPlacement && // not already in active respawn mode
+        (q >= -5 && q <= -3 && r >= 3 && r <= 5) &&
+        !gameState.players.flatMap(p => p.icons).some(i => i.isAlive && i.position.q === q && i.position.r === r);
+
       // All AI intents for this tile's icon (shown during player's turn)
       const aiIntents: AIIntent[] = (gameState as any).aiIntents ?? [];
       const tileIntents = icon && icon.playerId === 1 ? aiIntents.filter(i => i.iconId === icon.id) : [];
+
+      // Base intents — shown on the enemy base tile during player's turn
+      const baseIntents: AIIntent[] = (gameState as any).baseIntents ?? [];
+      const isBaseTile = q === 5 && r === -4 && (gameState as any).encounterObjective === 'destroy_base';
+      const tileBaseIntents = isBaseTile ? baseIntents : [];
 
       return (
         <div
@@ -352,7 +476,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         >
           <HexTile
             tile={tile}
-            onClick={() => onTileClick(tile.coordinates)}
+            onClick={() => {
+              const isEnemy = icon && icon.playerId !== gameState.activePlayerId;
+              if (isEnemy && !gameState.targetingMode && !(gameState as any).cardTargetingMode) {
+                setInspectedEnemyId(id => id === icon.id ? null : icon.id);
+              } else {
+                setInspectedEnemyId(null);
+                onTileClick(tile.coordinates);
+              }
+            }}
             onTerrainClick={() => { }}
             icon={icon ? (icon.name === "Combat Drone" ? "⚙" : icon.name.charAt(0)) : undefined}
             iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
@@ -371,6 +503,27 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             isHealPreview={hpPreview && icon && hpPreview.iconId === icon.id ? !hpPreview.isDamage : false}
           />
 
+          {/* Dev overlay — Ctrl+D: show axial (q,r) on every hex */}
+          {showCoordOverlay && (
+            <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center"
+              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+              <span style={{
+                fontFamily: 'monospace', fontSize: 9, color: 'rgba(255,255,255,0.85)',
+                textShadow: '0 0 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.9)',
+                letterSpacing: 0, lineHeight: 1,
+              }}>{q},{r}</span>
+            </div>
+          )}
+
+          {/* Respawn preview — soft blue tint on valid spawn hexes when respawn is imminent */}
+          {isRespawnPreview && (
+            <div className="absolute inset-0 pointer-events-none z-10" style={{
+              background: "rgba(96,165,250,0.18)",
+              clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+              animation: "pulse 2s ease-in-out infinite",
+            }} />
+          )}
+
           {/* Line-targeting hover highlight */}
           {isOnLine && (
             <div className="absolute inset-0 pointer-events-none z-20" style={{
@@ -379,8 +532,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             }} />
           )}
 
-          {/* Card hover range preview — soft cyan tint showing ability reach */}
-          {isHoverPreview && !gameState.targetingMode && (
+          {/* Card hover range preview — soft cyan tint showing ability reach.
+              Stays visible during cardTargetingMode (clicked card, waiting for target).
+              Suppressed during pure ability targeting (targetingMode only, no card). */}
+          {isHoverPreview && (!gameState.targetingMode || !!(gameState as any).cardTargetingMode) && !isInspectedAttack && !isInspectedMove && (
             <div className="absolute inset-0 pointer-events-none z-14" style={{
               background: "rgba(34,211,238,0.18)",
               clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
@@ -405,6 +560,43 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
                 />
               </svg>
             </>
+          )}
+
+          {/* Enemy inspect — movement range (orange tint) — z-11 so intent-range overlay (z-15) wins */}
+          {isInspectedMove && (
+            <div className="absolute inset-0 pointer-events-none z-11" style={{
+              background: "rgba(251,146,60,0.28)",
+              clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+            }} />
+          )}
+          {/* Enemy inspect — attack/danger zone (red tint) — z-11 so intent-range overlay (z-15) wins */}
+          {isInspectedAttack && (
+            <>
+              <div className="absolute inset-0 pointer-events-none z-11" style={{
+                background: "rgba(239,68,68,0.22)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+              }} />
+              <svg className="absolute inset-0 pointer-events-none z-12" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
+                <polygon
+                  points={[
+                    `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
+                    `${hexWidth/4},${hexHeight}`,`0,${hexHeight/2}`,`${hexWidth/4},0`,
+                  ].join(' ')}
+                  fill="none" stroke="rgba(239,68,68,0.55)" strokeWidth="2"
+                />
+              </svg>
+            </>
+          )}
+          {/* Enemy inspect — INSPECT badge above the enemy */}
+          {isInspectedUnit && (
+            <div className="absolute pointer-events-none z-50"
+              style={{ top: -20, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
+              <span style={{
+                fontFamily: 'Orbitron, monospace', fontSize: 8, color: '#fb923c', letterSpacing: 1,
+                background: 'rgba(0,0,0,0.85)', borderRadius: 4, padding: '1px 5px',
+                border: '1px solid rgba(251,146,60,0.65)',
+              }}>INSPECT</span>
+            </div>
           )}
 
           {/* Laser Grid struck indicator */}
@@ -503,6 +695,51 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           )}
 
 
+          {/* Stun hex overlay — pulsing tint fills the whole tile */}
+          {isStunned && (
+            <div className="absolute inset-0 pointer-events-none z-[26]"
+              style={{
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+                background: "rgba(34,211,238,0.18)",
+                animation: "pulse 1s ease-in-out infinite",
+              }} />
+          )}
+
+          {/* Debuff badge strip — shown below the unit portrait, above the pedestal */}
+          {activeBoardDebuffs.length > 0 && (
+            <div className="absolute pointer-events-none z-[27]"
+              style={{ bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 2 }}>
+              {activeBoardDebuffs.map((d, i) => {
+                const meta = DEBUFF_BADGE[d.type]!;
+                return (
+                  <div key={i} title={`${d.type} (${d.turnsRemaining}t)`} style={{
+                    width: 16, height: 16,
+                    borderRadius: 3,
+                    background: meta.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9,
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.7)',
+                    border: '1px solid rgba(255,255,255,0.22)',
+                    color: 'white',
+                    fontWeight: 700,
+                  }}>
+                    {meta.emoji}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Base intent badges — shown above the enemy base tile during player's turn */}
+          {tileBaseIntents.length > 0 && (
+            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 z-40">
+              <AIIntentBadge
+                intents={tileBaseIntents}
+                onHoverRange={() => {}}
+              />
+            </div>
+          )}
+
           {/* AI Intent badges (Slay the Spire style) — shown above AI characters during player's turn */}
           {tileIntents.length > 0 && (
             <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 z-40">
@@ -541,9 +778,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       hpPreview,
       lineHexSet,
       intentRangeHighlight,
+      inspectedEnemyId,
+      inspectedMoveSet,
+      inspectedAttackSet,
       (gameState as any).aiIntents,
       offsetX,
-      offsetY
+      offsetY,
+      // Arena event visual state — must be deps or board won't rerender when they change
+      (gameState as any).burningForestTiles,
+      (gameState as any).pendingFireStartTile,
+      (gameState as any).pendingLaserTiles,
+      (gameState as any).laserGridStruckIds,
+      (gameState as any).activeZones,
     ]);
 
   // 6) Pan & zoom handlers
@@ -557,10 +803,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     }
   };
   const handleMouseUp = () => setIsDragging(false);
-  const handleWheel = (e: React.WheelEvent) => {
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(z => Math.min(Math.max(z * delta, 1.0), 2.5));
-  };
 
   return (
     <div
@@ -571,7 +813,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onWheel={handleWheel}
       onClick={e => {
         if (e.target === e.currentTarget) {
           window.dispatchEvent(new CustomEvent('closeCharacterPopup'));
@@ -595,9 +836,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         borderRadius: "50%",
         boxShadow: "0 0 0 2px rgba(80,220,255,0.12), 0 0 0 12px rgba(40,100,180,0.18), 0 0 80px rgba(20,80,160,0.25)",
       }} />
-      {/* 4. Dark void outside the arena — alien crowd stands */}
+      {/* 4. Dark void outside the arena — softened so crowd panels show through */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{
-        background: "radial-gradient(ellipse 560px 520px at 50% 52%, transparent 52%, rgba(8,2,28,0.65) 70%, rgba(4,1,16,0.92) 84%, rgba(1,0,8,0.99) 96%)",
+        background: "radial-gradient(ellipse 560px 520px at 50% 52%, transparent 52%, rgba(8,2,28,0.30) 70%, rgba(4,1,16,0.55) 84%, rgba(1,0,8,0.75) 96%)",
       }} />
       {/* 5. Purple-magenta upper atmosphere — alien sky suggestion */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{
@@ -614,22 +855,146 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       <div className="absolute inset-y-0 right-0 w-24 pointer-events-none z-0" style={{
         background: "linear-gradient(to left, rgba(80,20,200,0.20) 0%, transparent 100%)",
       }} />
-      {/* 8. Fine hex-grid overlay on the floor — animated alien tech pattern */}
-      <div className="absolute inset-0 pointer-events-none z-0" style={{
-        backgroundImage: "repeating-linear-gradient(0deg, rgba(100,220,255,1) 0px, rgba(100,220,255,1) 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, rgba(100,220,255,1) 0px, rgba(100,220,255,1) 1px, transparent 1px, transparent 10px)",
-        animation: "arena-pulse 4s ease-in-out infinite",
-      }} />
+      {/* 8. (removed — square grid conflicted with crowd panels) */}
       {/* 9. Energy drift layer — slow-moving glow streak across floor */}
       <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.06]" style={{
         background: "radial-gradient(ellipse 300px 120px at 50% 52%, rgba(80,220,255,0.8) 0%, transparent 70%)",
         animation: "arena-energy-drift 8s ease-in-out infinite",
       }} />
 
-<div className="relative w-full h-full flex items-center justify-center z-10">
+      {/* ── CSS ARENA SURROUND ────────────────────────────────────────────────
+           Option A: CSS-built colosseum rings — no image assets needed.
+           Option D: Warm sand/stone floor beneath the battle pit.
+           Wall diameter: 640px. Bleacher rings: 640→950px. Outer blackout: 950px+.
+           To slot real art in later: replace the bleacher div with image panels
+           and keep the wall ring + floor gradient intact.
+      ─────────────────────────────────────────────────────────────────── */}
+
+      {/* D: Sandy battle floor — warm golden oval behind the board */}
+      <div className="absolute inset-0 pointer-events-none z-[1]" style={{
+        background: 'radial-gradient(ellipse 560px 530px at 50% 50%, rgba(218,182,100,0.18) 0%, rgba(178,142,65,0.12) 42%, rgba(128,96,40,0.07) 68%, transparent 88%)',
+      }} />
+
+      {/* A: Bleacher rings — concentric stands via stacked outer box-shadow.
+           Pairs alternate: dark seat row → lighter step-edge catchlight. */}
+      <div className="absolute pointer-events-none z-[3]" style={{
+        width: 640, height: 640,
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '50%',
+        boxShadow: [
+          '0 0 0  28px rgba(14, 8,32,0.84)',  // tier 1 seats
+          '0 0 0  42px rgba(30,18,56,0.38)',  // step catchlight 1
+          '0 0 0  68px rgba(16,10,36,0.84)',  // tier 2 seats
+          '0 0 0  82px rgba(32,20,60,0.36)',  // step catchlight 2
+          '0 0 0 110px rgba(14, 8,30,0.86)',  // tier 3 seats
+          '0 0 0 124px rgba(28,16,52,0.38)',  // step catchlight 3
+          '0 0 0 158px rgba(12, 6,26,0.88)',  // tier 4 seats
+          '0 0 0 172px rgba(24,14,48,0.40)',  // step catchlight 4
+          '0 0 0 215px rgba(10, 4,22,0.92)',  // tier 5 seats
+          '0 0 0 320px rgba( 4, 1,12,0.98)',  // outer blackout
+        ].join(', '),
+      }} />
+
+      {/* A: Fan section tints — colour the stands to suggest crowd zones */}
+      <div className="absolute inset-0 pointer-events-none z-[4]" style={{
+        background: [
+          'radial-gradient(ellipse 60% 20% at 50%  2%, rgba(70,22,155,0.38) 0%, transparent 70%)',
+          'radial-gradient(ellipse 20% 50% at  2% 50%, rgba(22,70,210,0.30) 0%, transparent 70%)',
+          'radial-gradient(ellipse 20% 50% at 98% 50%, rgba(210,22,65,0.30) 0%, transparent 70%)',
+          'radial-gradient(ellipse 60% 20% at 50% 98%, rgba(22,65,190,0.30) 0%, transparent 70%)',
+        ].join(', '),
+      }} />
+
+      {/* A: Arena pit wall — glowing stone/gold ring separating pit from stands */}
+      <div className="absolute pointer-events-none z-[5]" style={{
+        width: 640, height: 640,
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '50%',
+        border: '3px solid rgba(172,136,68,0.74)',
+        boxShadow: [
+          '0 0 0 1px rgba(232,196,108,0.28)',
+          '0 0 14px rgba(196,156,65,0.68)',
+          '0 0 40px rgba(152,118,48,0.36)',
+          'inset 0 0 0 2px rgba(98,74,28,0.30)',
+          'inset 0 0 60px rgba(0,0,0,0.32)',
+        ].join(', '),
+      }} />
+
+      {/* A: Crowd lights — torches, glowsticks, holo-screens scattered in stands */}
+      {([
+        [ 7, 38, 0], [ 7, 50, 1], [ 7, 62, 2],   // left stands
+        [93, 38, 1], [93, 50, 2], [93, 62, 0],   // right stands
+        [35,  6, 2], [50,  4, 0], [65,  6, 1],   // top stands
+        [35, 94, 0], [50, 96, 1], [65, 94, 2],   // bottom stands
+        [20, 18, 1], [80, 18, 0], [20, 82, 2], [80, 82, 1], // corners
+        [14, 34, 0], [86, 34, 2], [14, 66, 1], [86, 66, 0], // side fill
+      ] as [number, number, number][]).map(([l, t, type], i) => {
+        const p = [
+          { bg: 'rgba(255,200,80,0.95)',  sh: '0 0 7px rgba(255,178,55,0.92), 0 0 22px rgba(255,148,35,0.52)' },
+          { bg: 'rgba(80,182,255,0.92)',  sh: '0 0 7px rgba(60,162,255,0.92), 0 0 22px rgba(38,118,255,0.52)' },
+          { bg: 'rgba(255,85,168,0.92)',  sh: '0 0 7px rgba(255,62,145,0.92), 0 0 22px rgba(220,38,120,0.52)' },
+        ][type];
+        return (
+          <div key={i} className="absolute pointer-events-none z-[6]" style={{
+            left: `${l}%`, top: `${t}%`,
+            width: 5, height: 5,
+            borderRadius: '50%',
+            background: p.bg,
+            boxShadow: p.sh,
+          }} />
+        );
+      })}
+
+      {/* ── Full arena image — single piece, parallaxes with board drag ── */}
+      <div className="absolute pointer-events-none z-[5]" style={{
+        inset: '-8%',
+        backgroundImage: "url('/art/arena/arena.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center',
+        transform: `translate(${panOffset.x * 0.28}px, ${panOffset.y * 0.28}px)`,
+      }} />
+
+      {/* ── Vignette — dark oval frame blending art edges into bg ── */}
+      <div className="absolute inset-0 pointer-events-none z-[6]" style={{
+        background: [
+          'radial-gradient(ellipse 62% 58% at 50% 50%, transparent 48%, rgba(4,1,15,0.35) 62%, rgba(4,1,15,0.75) 80%, rgba(4,1,15,0.97) 100%)',
+          'linear-gradient(to bottom, rgba(4,1,15,0.60) 0%, transparent 10%, transparent 84%, rgba(4,1,15,0.65) 100%)',
+        ].join(', '),
+      }} />
+      {/* ── END ARENA SURROUND ── */}
+
+      {/* Enemy inspect legend — shown when an enemy is being inspected */}
+      {inspectedEnemyId && (
+        <div className="absolute bottom-4 right-4 z-50 pointer-events-none flex flex-col gap-1"
+          style={{ background: 'rgba(4,2,18,0.90)', border: '1px solid rgba(251,146,60,0.45)', borderRadius: 8, padding: '6px 10px' }}>
+          <div className="font-orbitron text-[9px] tracking-widest text-orange-400 mb-0.5">ENEMY INSPECT</div>
+          <div className="flex items-center gap-1.5">
+            <div style={{ width: 12, height: 12, background: 'rgba(251,146,60,0.55)', borderRadius: 2 }} />
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>Movement range</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div style={{ width: 12, height: 12, background: 'rgba(239,68,68,0.45)', borderRadius: 2, border: '1px solid rgba(239,68,68,0.55)' }} />
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>Attack range</span>
+          </div>
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Click enemy or press Esc to exit</div>
+        </div>
+      )}
+
+      {/* Hint shown when not inspecting and not in targeting mode */}
+      {!inspectedEnemyId && !gameState.targetingMode && !(gameState as any).cardTargetingMode && gameState.phase === 'combat' && (
+        <div className="absolute bottom-4 right-4 z-50 pointer-events-none"
+          style={{ background: 'rgba(4,2,18,0.75)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '4px 8px' }}>
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', fontFamily: 'monospace' }}>Click enemy to inspect range</span>
+        </div>
+      )}
+
+      <div className="relative w-full h-full flex items-center justify-center z-10">
         <div
           className="relative"
           style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${FIXED_ZOOM})`,
             transformOrigin: "0 0",
           }}
         >

@@ -18,6 +18,13 @@ const TIER_BG: Record<string, string> = {
   common: 'rgba(100,116,139,0.15)', uncommon: 'rgba(34,197,94,0.12)',
   rare: 'rgba(96,165,250,0.12)', legendary: 'rgba(245,158,11,0.15)',
 };
+
+const CARD_RARITY_COLOR: Record<string, string> = {
+  common: '#94a3b8', uncommon: '#22c55e', rare: '#60a5fa', ultimate: '#f59e0b',
+};
+const CARD_RARITY_LABEL: Record<string, string> = {
+  common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', ultimate: '✦ ULTIMATE',
+};
 const EXCLUSIVE_COLOR: Record<string, string> = {
   Napoleon: '#d946ef', Genghis: '#ef4444', 'Da Vinci': '#34d399', Leonidas: '#f59e0b',
 };
@@ -266,6 +273,12 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
                     <p className="text-slate-400 text-[11px] leading-relaxed flex-1">{card.description}</p>
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-[10px] text-cyan-300 font-orbitron">{card.manaCost} Mana</span>
+                      {card.rarity && (
+                        <span className="font-orbitron text-[8px] font-bold px-1.5 py-0.5 rounded"
+                          style={{ color: CARD_RARITY_COLOR[card.rarity] ?? '#94a3b8', background: (CARD_RARITY_COLOR[card.rarity] ?? '#94a3b8') + '18' }}>
+                          {CARD_RARITY_LABEL[card.rarity] ?? card.rarity.toUpperCase()}
+                        </span>
+                      )}
                       {selected && <span className="text-[10px] font-bold text-cyan-400 font-orbitron">✓ SELECTED</span>}
                     </div>
                   </button>

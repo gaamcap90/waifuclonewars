@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from "react";
 import { RunState, RunItem, CharacterId, CardReward } from "@/types/roguelike";
 import { CARD_REWARD_POOL, pickCardRewards, pickItemReward } from "@/data/roguelikeData";
-import { CARD_DEFS } from "@/data/cards";
+import { CARD_DEFS, CARD_UPGRADES } from "@/data/cards";
 import ArenaBackground from "@/ui/ArenaBackground";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -54,13 +54,48 @@ export interface CampfireScreenProps {
   runState: RunState;
   onHealAll: () => void;
   onRemoveCard: (cardId: string) => void;
+  onUpgradeSharedCard: (defId: string) => void;
   onLeave: () => void;
 }
 
-type CampfirePhase = 'choose' | 'remove_card';
+type CampfirePhase = 'choose' | 'remove_card' | 'upgrade_shared';
 
-export function CampfireScreen({ runState, onHealAll, onRemoveCard, onLeave }: CampfireScreenProps) {
+export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSharedCard, onLeave }: CampfireScreenProps) {
   const [phase, setPhase] = useState<CampfirePhase>('choose');
+
+  // Shared cards in deck that can still be upgraded at campfire — each copy shown separately
+  const upgradeableShared = useMemo(() => {
+    const result: { id: string; name: string; icon: string; manaCost: number; upgradeLabel: string; copyIndex: number; totalUpgradeable: number }[] = [];
+    // Count total copies of each defId in deck
+    const totalCopies = new Map<string, number>();
+    for (const id of runState.deckCardIds) {
+      totalCopies.set(id, (totalCopies.get(id) ?? 0) + 1);
+    }
+    // Count already-upgraded copies of each defId
+    const upgradedCopies = new Map<string, number>();
+    for (const id of runState.upgradedCardDefIds) {
+      upgradedCopies.set(id, (upgradedCopies.get(id) ?? 0) + 1);
+    }
+    // For each unique defId, emit one entry per upgradeable copy
+    const seenIds = new Set<string>();
+    for (const id of runState.deckCardIds) {
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      const def = CARD_DEFS.find(d => d.definitionId === id);
+      if (!def || def.exclusiveTo !== null) continue;    // shared only
+      const up = CARD_UPGRADES[id];
+      if (!up) continue;                                  // must have upgrade
+      const total = totalCopies.get(id) ?? 0;
+      const upgraded = upgradedCopies.get(id) ?? 0;
+      const upgradeable = total - upgraded;
+      if (upgradeable <= 0) continue;
+      const icon = def.type === 'attack' ? '⚔️' : def.type === 'defense' ? '🛡️' : def.type === 'movement' ? '💨' : def.type === 'debuff' ? '☠️' : '⬆️';
+      for (let i = 0; i < upgradeable; i++) {
+        result.push({ id, name: def.name, icon, manaCost: def.manaCost, upgradeLabel: up.descriptionUpgrade, copyIndex: i + 1, totalUpgradeable: upgradeable });
+      }
+    }
+    return result;
+  }, [runState.deckCardIds, runState.upgradedCardDefIds]);
 
   // Build grouped deck list: definitionId → { name, manaCost, count }
   const deckList = useMemo(() => {
@@ -88,6 +123,11 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onLeave }: C
 
   const handleRemoveCard = (cardId: string) => {
     onRemoveCard(cardId);
+    onLeave();
+  };
+
+  const handleUpgradeShared = (defId: string) => {
+    onUpgradeSharedCard(defId);
     onLeave();
   };
 
@@ -159,6 +199,34 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onLeave }: C
                 <p className="text-slate-400 text-[11px]">Permanently remove one card from your deck.</p>
               </div>
             </button>
+
+            {/* Upgrade Shared Card */}
+            {(() => {
+              const canUpgrade = upgradeableShared.length > 0;
+              return (
+                <button
+                  onClick={() => setPhase('upgrade_shared')}
+                  disabled={!canUpgrade}
+                  className="rounded-xl border p-4 text-left transition-all hover:scale-[1.02] flex items-center gap-4"
+                  style={{
+                    background: 'rgba(8,5,25,0.85)',
+                    borderColor: !canUpgrade ? 'rgba(80,80,100,0.25)' : 'rgba(52,211,153,0.55)',
+                    cursor: !canUpgrade ? 'not-allowed' : 'pointer',
+                    opacity: !canUpgrade ? 0.55 : 1,
+                  }}
+                >
+                  <span className="text-2xl">✦</span>
+                  <div>
+                    <p className="font-orbitron font-bold text-[13px] text-emerald-400">Upgrade a Shared Card</p>
+                    <p className="text-slate-400 text-[11px]">
+                      {canUpgrade
+                        ? `${upgradeableShared.length} card${upgradeableShared.length > 1 ? 's' : ''} eligible — permanently upgrade one.`
+                        : 'No upgradeable shared cards in your deck.'}
+                    </p>
+                  </div>
+                </button>
+              );
+            })()}
           </div>
 
           <button
@@ -232,6 +300,61 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onLeave }: C
     );
   }
 
+  // ── Phase: upgrade_shared ──
+  if (phase === 'upgrade_shared') {
+    return (
+      <ScreenWrapper>
+        <div className="rounded-2xl p-8" style={PANEL_STYLE}>
+          <div className="text-center mb-6">
+            <div className="text-4xl mb-3">✦</div>
+            <h1 className="font-orbitron font-black text-2xl text-white mb-1">UPGRADE A SHARED CARD</h1>
+            <p className="text-slate-400 text-sm">Choose one copy to upgrade — other copies remain unchanged</p>
+          </div>
+
+          <div className="flex flex-col gap-3 mb-6 max-h-96 overflow-y-auto pr-1">
+            {upgradeableShared.map((entry, idx) => {
+              const up = CARD_UPGRADES[entry.id]!;
+              return (
+                <button
+                  key={`${entry.id}-${idx}`}
+                  onClick={() => handleUpgradeShared(entry.id)}
+                  className="rounded-xl border p-4 text-left transition-all hover:scale-[1.01] flex items-start gap-4"
+                  style={{
+                    background: 'rgba(6,18,12,0.95)',
+                    borderColor: 'rgba(52,211,153,0.35)',
+                  }}
+                >
+                  <span className="text-2xl shrink-0 pt-0.5">{entry.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-orbitron font-bold text-[13px] text-white">{entry.name}</span>
+                      {entry.totalUpgradeable > 1 && (
+                        <span className="font-orbitron text-[10px] text-slate-500">copy {entry.copyIndex}/{entry.totalUpgradeable}</span>
+                      )}
+                      <span className="font-orbitron font-bold text-[11px]" style={{ color: '#34d399' }}>→ {up.upgradedName}</span>
+                      <span className="ml-auto font-orbitron text-[10px] text-slate-500 shrink-0">{entry.manaCost} Mana</span>
+                    </div>
+                    <p className="font-orbitron text-[9px] font-bold mb-1" style={{ color: '#34d399' }}>✦ {up.descriptionUpgrade}</p>
+                    <p className="text-slate-400 text-[10px] leading-relaxed">{up.patch.description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              onClick={() => setPhase('choose')}
+              className="font-orbitron text-[11px] text-slate-500 hover:text-slate-300 underline transition-colors"
+            >
+              ← Back
+            </button>
+          </div>
+        </div>
+      </ScreenWrapper>
+    );
+  }
+
   // Fallthrough (shouldn't happen)
   return null;
 }
@@ -243,6 +366,7 @@ export interface MerchantScreenProps {
   onBuyCard: (cardId: string, cost: number) => void;
   onBuyHeal: (cost: number) => void;
   onDuplicateItem: (item: RunItem, characterId: CharacterId, slotIndex: number, cost: number) => void;
+  onSellItem: (item: RunItem, characterId: CharacterId, slotIndex: number, goldGained: number) => void;
   onMysteryBox: (cost: number) => 'item' | 'gold' | 'damage';
   onLeave: () => void;
 }
@@ -252,19 +376,24 @@ const MYSTERY_BOX_COST = 60;
 const DUPLICATE_ITEM_BASE_COST: Record<string, number> = {
   common: 30, uncommon: 50, rare: 80, legendary: 120,
 };
+const SELL_ITEM_PRICE: Record<string, number> = {
+  common: 15, uncommon: 25, rare: 40, legendary: 60,
+};
 
-export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem, onMysteryBox, onLeave }: MerchantScreenProps) {
+export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem, onSellItem, onMysteryBox, onLeave }: MerchantScreenProps) {
   const [purchased, setPurchased] = useState<Set<string>>(new Set());
   const [duplicatedIds, setDuplicatedIds] = useState<Set<string>>(new Set());
+  const [soldSlots, setSoldSlots] = useState<Set<string>>(new Set()); // "charId:slotIdx"
   const [healPurchased, setHealPurchased] = useState(false);
-  const [mysteryResult, setMysteryResult] = useState<'item' | 'gold' | 'damage' | null>(null);
+  const [mysteryResult, setMysteryResult] = useState<'item' | 'gold' | 'damage' | 'curse' | null>(null);
   const [pendingDuplicate, setPendingDuplicate] = useState<RunItem | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<{ item: RunItem; x: number; y: number } | null>(null);
 
   // 3 random cards priced 50–80 gold, stable on mount
   const shopCards = useMemo<{ card: CardReward; price: number }[]>(() => {
     const rng = () => Math.random();
     const runCharIds = runState.characters.map(c => c.id);
-    const picks = pickCardRewards(runState.deckCardIds, rng, runCharIds);
+    const picks = pickCardRewards(runState.deckCardIds, rng, runCharIds, 'merchant');
     return picks.map(card => ({
       card,
       price: 50 + Math.floor(Math.random() * 31), // 50–80
@@ -319,38 +448,83 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
         {/* Cards for sale */}
         <div className="mb-5">
           <p className="font-orbitron text-[10px] tracking-[0.4em] text-cyan-400 mb-3">CARDS FOR SALE</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {shopCards.map(({ card, price }) => {
               const bought = purchased.has(card.definitionId);
               const canAfford = runState.gold >= price && !bought;
-              const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : null;
+              const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : '#4b5563';
+              // Map card type to art image
+              const artMap: Record<string, string> = {
+                attack: '/art/cards/attack.png', defense: '/art/cards/defense.png',
+                movement: '/art/cards/movement.png', ultimate: '/art/cards/ultimate.png',
+                buff: '/art/cards/battle_cry.png', debuff: '/art/cards/poison_dart.png',
+              };
+              const artSrc = artMap[card.type ?? 'attack'] ?? '/art/cards/attack.png';
               return (
-                <div key={card.definitionId} className="rounded-xl border border-slate-700/40 p-3 flex flex-col"
-                  style={{ background: 'rgba(6,3,22,0.85)', opacity: bought ? 0.55 : 1 }}>
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-2xl">{card.icon}</span>
-                    {card.exclusiveTo && exColor && (
-                      <span className="text-[8px] font-orbitron font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ color: exColor, background: exColor + '20', border: `1px solid ${exColor}50` }}>
-                        {card.exclusiveTo}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-orbitron font-bold text-[11px] text-white mb-1">{card.name}</p>
-                  <p className="text-slate-400 text-[10px] leading-relaxed flex-1 mb-3">{card.description}</p>
-                  <button
-                    onClick={() => handleBuyCard(card.definitionId, price)}
-                    disabled={!canAfford}
-                    className="font-orbitron text-[10px] font-bold py-1.5 rounded-lg border transition-all w-full"
+                <div key={card.definitionId} className="flex flex-col items-center"
+                  style={{ opacity: bought ? 0.6 : 1 }}>
+                  {/* Card frame */}
+                  <div className="relative rounded-xl overflow-hidden flex flex-col w-full"
                     style={{
-                      background: bought ? 'transparent' : canAfford ? 'rgba(34,211,238,0.10)' : 'rgba(20,15,35,0.6)',
-                      borderColor: bought ? '#475569' : canAfford ? 'rgba(34,211,238,0.55)' : 'rgba(60,50,80,0.4)',
-                      color: bought ? '#475569' : canAfford ? '#22d3ee' : '#64748b',
-                      cursor: canAfford ? 'pointer' : 'not-allowed',
-                    }}
-                  >
-                    {bought ? '✓ BOUGHT' : `💰 ${price} gold`}
-                  </button>
+                      background: `linear-gradient(160deg, #0f1118 0%, #060810 100%)`,
+                      border: `2px solid ${exColor}55`,
+                      boxShadow: canAfford ? `0 0 14px ${exColor}30, 0 4px 16px rgba(0,0,0,0.7)` : '0 2px 8px rgba(0,0,0,0.5)',
+                      minHeight: 180,
+                    }}>
+                    {/* Art */}
+                    <div className="relative w-full" style={{ height: 90, overflow: 'hidden' }}>
+                      <img src={artSrc} alt="" className="w-full h-full object-cover"
+                        style={{ opacity: 0.52, filter: 'brightness(0.9)' }} />
+                      <div className="absolute inset-0" style={{
+                        background: `linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 40%, rgba(6,3,22,0.92) 100%)`
+                      }} />
+                      <div className="absolute inset-0" style={{
+                        background: `linear-gradient(to top, ${exColor}30 0%, transparent 50%)`,
+                      }} />
+                      {/* Character ribbon */}
+                      <div className="absolute top-0 left-0 right-0 px-2 py-1 flex items-center justify-between"
+                        style={{ background: `linear-gradient(90deg, ${exColor}cc 0%, ${exColor}55 100%)` }}>
+                        <span className="font-orbitron text-[8px] font-bold text-white/90 truncate">
+                          {card.exclusiveTo ?? 'SHARED'}
+                        </span>
+                        <span className="text-[10px]">{card.icon}</span>
+                      </div>
+                      {/* Inner frame */}
+                      <div className="absolute inset-[3px] rounded-lg pointer-events-none"
+                        style={{ border: `1px solid ${exColor}30` }} />
+                    </div>
+                    {/* Text body */}
+                    <div className="px-2.5 pt-1.5 pb-2 flex flex-col flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-orbitron font-bold text-[11px] text-white leading-tight">{card.name}</p>
+                        {card.rarity && (() => {
+                          const rc: Record<string,string> = { common:'#94a3b8', uncommon:'#22c55e', rare:'#60a5fa', ultimate:'#f59e0b' };
+                          const cl = rc[card.rarity] ?? '#94a3b8';
+                          return (
+                            <span className="font-orbitron text-[7px] font-bold px-1 py-0.5 rounded ml-1 shrink-0"
+                              style={{ color: cl, background: cl + '18' }}>
+                              {card.rarity.toUpperCase()}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <p className="text-slate-400 text-[10px] leading-snug flex-1 mb-2.5">{card.description}</p>
+                      <button
+                        onClick={() => handleBuyCard(card.definitionId, price)}
+                        disabled={!canAfford}
+                        className="font-orbitron text-[10px] font-bold py-1.5 rounded-lg border transition-all w-full hover:scale-[1.02] active:scale-95"
+                        style={{
+                          background: bought ? 'transparent' : canAfford ? `${exColor}18` : 'rgba(20,15,35,0.6)',
+                          borderColor: bought ? '#475569' : canAfford ? `${exColor}70` : 'rgba(60,50,80,0.4)',
+                          color: bought ? '#475569' : canAfford ? exColor : '#64748b',
+                          cursor: canAfford ? 'pointer' : 'not-allowed',
+                          boxShadow: canAfford && !bought ? `0 0 8px ${exColor}25` : 'none',
+                        }}
+                      >
+                        {bought ? '✓ BOUGHT' : `💰 ${price} gold`}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -391,9 +565,12 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
                 <p className="text-slate-400 text-[11px]">Unknown contents — could be great, could be terrible</p>
                 {mysteryResult && (
                   <p className="text-[10px] font-orbitron mt-1" style={{
-                    color: mysteryResult === 'gold' ? '#fbbf24' : mysteryResult === 'item' ? '#60a5fa' : '#f87171'
+                    color: mysteryResult === 'gold' ? '#fbbf24' : mysteryResult === 'item' ? '#60a5fa' : mysteryResult === 'curse' ? '#f87171' : '#f87171'
                   }}>
-                    {mysteryResult === 'gold' ? '✓ +80 gold!' : mysteryResult === 'item' ? '✓ Item acquired!' : '✗ Backfired! −20 HP all'}
+                    {mysteryResult === 'gold' ? '✓ +80 gold!'
+                      : mysteryResult === 'item' ? '✓ Item acquired!'
+                      : mysteryResult === 'curse' ? '☠ Cursed! A curse card enters your deck'
+                      : '✗ Backfired! −20 HP all'}
                   </p>
                 )}
               </div>
@@ -412,6 +589,52 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
               </button>
             </div>
 
+            {/* Sell Item */}
+            {partyItems.length > 0 && (
+              <div className="rounded-xl border border-slate-700/40 p-4"
+                style={{ background: 'rgba(6,3,22,0.85)' }}>
+                <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">💸 Sell an Item</p>
+                <p className="text-slate-400 text-[11px] mb-3">Sell for half price — frees the slot for something better</p>
+                <div className="flex flex-wrap gap-2">
+                  {runState.characters.map(char =>
+                    char.items.map((slotItem, idx) => {
+                      if (!slotItem) return null;
+                      const slotKey = `${char.id}:${idx}`;
+                      const sold = soldSlots.has(slotKey);
+                      const price = SELL_ITEM_PRICE[slotItem.tier] ?? 15;
+                      return (
+                        <button
+                          key={slotKey}
+                          disabled={sold}
+                          onClick={() => {
+                            if (sold) return;
+                            onSellItem(slotItem, char.id as CharacterId, idx, price);
+                            setSoldSlots(prev => new Set([...prev, slotKey]));
+                          }}
+                          onMouseEnter={e => setHoveredItem({ item: slotItem, x: e.clientX, y: e.clientY })}
+                          onMouseLeave={() => setHoveredItem(null)}
+                          className="rounded-lg border px-3 py-1.5 text-left transition-all hover:scale-105"
+                          style={{
+                            background: sold ? 'rgba(20,15,35,0.5)' : 'rgba(234,179,8,0.08)',
+                            borderColor: sold ? 'rgba(60,50,80,0.3)' : 'rgba(234,179,8,0.40)',
+                            cursor: sold ? 'not-allowed' : 'pointer',
+                            opacity: sold ? 0.55 : 1,
+                          }}
+                        >
+                          <span className="mr-1">{slotItem.icon}</span>
+                          <span className="font-orbitron text-[10px]" style={{ color: sold ? '#475569' : '#fbbf24' }}>
+                            {sold ? `✓ Sold` : slotItem.name}
+                          </span>
+                          {!sold && <span className="ml-1.5 font-orbitron text-[9px] text-yellow-600">+💰{price}</span>}
+                          <span className="ml-1 text-[8px] text-slate-600">({char.displayName.replace('-chan', '')})</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Duplicate Item */}
             {partyItems.length > 0 && (
               <div className="rounded-xl border border-slate-700/40 p-4"
@@ -428,6 +651,8 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
                         key={idx}
                         onClick={() => canAfford && setPendingDuplicate(item)}
                         disabled={!canAfford}
+                        onMouseEnter={e => setHoveredItem({ item, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredItem(null)}
                         className="rounded-lg border px-3 py-1.5 text-left transition-all hover:scale-105"
                         style={{
                           background: alreadyDuped ? 'rgba(20,15,35,0.5)' : canAfford ? TIER_COLOR[item.tier] + '12' : 'rgba(20,15,35,0.5)',
@@ -466,6 +691,27 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
           </button>
         </div>
       </div>
+
+      {/* Item hover tooltip */}
+      {hoveredItem && (
+        <div
+          className="fixed z-[200] pointer-events-none"
+          style={{ left: hoveredItem.x + 12, top: hoveredItem.y - 8, maxWidth: 220 }}
+        >
+          <div className="rounded-xl px-3 py-2.5 shadow-2xl"
+            style={{ background: 'rgba(4,2,18,0.97)', border: `1px solid ${TIER_COLOR[hoveredItem.item.tier] ?? '#475569'}55` }}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">{hoveredItem.item.icon}</span>
+              <span className="font-orbitron font-bold text-[11px] text-white">{hoveredItem.item.name}</span>
+              <span className="font-orbitron text-[8px] px-1 rounded ml-auto"
+                style={{ color: TIER_COLOR[hoveredItem.item.tier] ?? '#94a3b8', background: (TIER_COLOR[hoveredItem.item.tier] ?? '#94a3b8') + '18' }}>
+                {hoveredItem.item.tier.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-slate-400 text-[10px] leading-snug">{hoveredItem.item.description}</p>
+          </div>
+        </div>
+      )}
 
       {/* Duplicate item — choose who equips it */}
       {pendingDuplicate && (
@@ -539,7 +785,7 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
   const { tCard, tItem } = useMemo(() => {
     const rng = () => Math.random();
     const runCharIds = runState.characters.map(c => c.id);
-    const [card] = pickCardRewards(runState.deckCardIds, rng, runCharIds);
+    const [card] = pickCardRewards(runState.deckCardIds, rng, runCharIds, 'merchant');
     const deadIds = (runState.permanentlyDeadIds ?? []) as string[];
     let item = pickItemReward('uncommon', rng);
     // Re-roll up to 8× if the item is exclusive to a dead character
@@ -615,7 +861,9 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
               {tItem.statBonus && (
                 <div className="flex gap-2 flex-wrap mb-4">
                   {Object.entries(tItem.statBonus).map(([k, v]) => v ? (
-                    <span key={k} className="text-[10px] text-green-400">+{v} {k}</span>
+                    <span key={k} className="text-[10px] font-orbitron font-bold" style={{
+                      color: k === 'might' ? '#f87171' : k === 'power' ? '#60a5fa' : k === 'defense' ? '#fbbf24' : k === 'hp' ? '#4ade80' : '#c084fc',
+                    }}>+{v} {k.toUpperCase()}</span>
                   ) : null)}
                 </div>
               )}
@@ -664,19 +912,22 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
                     <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    {char.items.map((slotItem, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => { onTakeItem(pendingItem, char.id as CharacterId, idx); setPendingItem(null); }}
-                        className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
-                        style={slotItem
-                          ? { background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.4)', color: '#ef4444' }
-                          : { background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }
-                        }
-                      >
-                        {slotItem ? `🔁 ${slotItem.name}` : `+ Slot ${idx + 1}`}
-                      </button>
-                    ))}
+                    {char.items.map((slotItem, idx) => {
+                      if (slotItem) return null;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => { onTakeItem(pendingItem, char.id as CharacterId, idx); setPendingItem(null); }}
+                          className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
+                          style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
+                        >
+                          + Slot {idx + 1}
+                        </button>
+                      );
+                    })}
+                    {char.items.every(s => s !== null) && (
+                      <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -695,7 +946,7 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
 
 // ── UnknownScreen ─────────────────────────────────────────────────────────────
 
-export type UnknownResult = 'gold' | 'card' | 'damage' | 'heal' | 'skip' | 'item' | 'item_gamble' | 'curse' | 'gold_curse' | 'card_or_damage' | 'heal_or_damage';
+export type UnknownResult = 'gold' | 'card' | 'damage' | 'heal' | 'skip' | 'item' | 'item_gamble' | 'curse' | 'gold_curse' | 'card_or_damage' | 'heal_or_damage' | 'item_curse' | 'upgrade_curse';
 
 export interface UnknownScreenProps {
   runState: RunState;
@@ -708,6 +959,7 @@ interface EventDef {
   flavor: string;
   choiceA: { label: string; detail: string; result: UnknownResult };
   choiceB: { label: string; detail: string; result: UnknownResult };
+  condition?: (runState: RunState) => boolean;
 }
 
 const EVENTS: EventDef[] = [
@@ -792,7 +1044,7 @@ const EVENTS: EventDef[] = [
     flavor: 'Alien vials pulse with an eerie green glow. The effects are... unpredictable.',
     choiceA: {
       label: 'Inject your team',
-      detail: 'Heal 20 HP to all — but a Curse card is added to your deck',
+      detail: 'Heal 20 HP to all — Malaise enters your deck',
       result: 'curse',
     },
     choiceB: {
@@ -837,7 +1089,7 @@ const EVENTS: EventDef[] = [
     flavor: 'Alien spores drift through the air. Breathing them in feels... invigorating and terrible.',
     choiceA: {
       label: 'Breathe them in',
-      detail: 'Gain 40 gold — but a Curse card is added to your deck',
+      detail: 'Gain 60 gold — but a Curse card is added to your deck',
       result: 'gold_curse',
     },
     choiceB: {
@@ -861,12 +1113,51 @@ const EVENTS: EventDef[] = [
       result: 'skip',
     },
   },
+  {
+    title: 'Void Peddler',
+    icon: '🕯️',
+    flavor: 'A hooded figure offers a glowing relic — but the price is a piece of your fate.',
+    choiceA: {
+      label: 'Accept the deal',
+      detail: 'Gain a random item — but a Curse card enters your deck',
+      result: 'item_curse',
+    },
+    choiceB: {
+      label: 'Refuse the offer',
+      detail: 'Walk away from the temptation',
+      result: 'skip',
+    },
+    condition: (rs: RunState) => rs.characters.some(c => c.items.some(s => s !== null)),
+  },
+  {
+    title: 'The Corruptor',
+    icon: '📖',
+    flavor: 'A tome of forbidden knowledge can upgrade one of your cards — at a price.',
+    choiceA: {
+      label: 'Read the tome',
+      detail: 'Upgrade a random card in your deck — Chains of Znyxorga enters your deck',
+      result: 'upgrade_curse',
+    },
+    choiceB: {
+      label: 'Burn the tome',
+      detail: 'Knowledge is power, but not at this price',
+      result: 'skip',
+    },
+    condition: (rs: RunState) =>
+      rs.deckCardIds.length >= 10 &&
+      rs.deckCardIds.some(id => {
+        const def = CARD_DEFS.find(d => d.definitionId === id);
+        return def && def.exclusiveTo === null && CARD_UPGRADES[id] && !rs.upgradedCardDefIds.includes(id);
+      }),
+  },
 ];
 
 export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
-  // Pick event once on mount
-  const [eventIdx] = useState<number>(() => (Math.random() * EVENTS.length) | 0);
-  const event = EVENTS[eventIdx] ?? EVENTS[0];
+  // Pick event once on mount, filtered by conditions
+  const [event] = useState<EventDef>(() => {
+    const eligible = EVENTS.filter(e => !e.condition || e.condition(runState));
+    return eligible[(Math.random() * eligible.length) | 0] ?? EVENTS[0];
+  });
 
   return (
     <ScreenWrapper>

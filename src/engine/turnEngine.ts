@@ -33,8 +33,8 @@ export function countAlliesAdjacentToCrystal(state: GameState, playerId: number)
 export function findFreeSpawnTile(board: HexTile[], state: GameState, playerId: number): Coordinates | undefined {
   const inSpawn = (q: number, r: number) => (
     playerId === 0
-      ? (q >= -6 && q <= -4 && r >= 3 && r <= 5)
-      : (q >= 4 && q <= 6 && r >= -5 && r <= -3)
+      ? (q >= -5 && q <= -3 && r >= 3 && r <= 5)
+      : (q >= 3 && q <= 5 && r >= -5 && r <= -3)
   );
 
   const occupied = new Set(

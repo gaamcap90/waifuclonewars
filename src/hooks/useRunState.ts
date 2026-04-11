@@ -117,8 +117,9 @@ export function useRunState() {
         !newDeadIds.some(deadId => cardId.startsWith(deadId + '_'))
       );
 
-      // Card choices — only include cards for living characters after this battle
-      const cardChoices = result.won ? pickCardRewards(deckAfterDeaths, rng, livingCharIds) : [];
+      // Card choices — tier gated by encounter type (ultimates only from elite/boss)
+      const encounterKind = node.type === 'boss' ? 'boss' : node.type === 'elite' ? 'elite' : 'enemy';
+      const cardChoices = result.won ? pickCardRewards(deckAfterDeaths, rng, livingCharIds, encounterKind) : [];
 
       const pending: PendingRewards = {
         gold: goldEarned,
@@ -133,9 +134,12 @@ export function useRunState() {
         const newHp = result.finalHps[c.id] ?? c.currentHp;
         if (newHp <= 0) {
           // Strip all items from dead characters
-          return { ...c, currentHp: 0, items: [null, null, null, null, null] };
+          return { ...c, currentHp: 0, items: [null, null, null, null, null], passiveStacks: undefined };
         }
-        return { ...c, currentHp: newHp };
+        // Persist passive stacks for characters with the bloodlust_persist item (Genghis)
+        const hasPersist = c.items.some(item => item?.passiveTag === 'genghis_bloodlust_persist');
+        const persistedStacks = hasPersist ? (result.finalPassiveStacks?.[c.id] ?? 0) : undefined;
+        return { ...c, currentHp: newHp, passiveStacks: persistedStacks };
       });
 
       return {
@@ -386,6 +390,15 @@ export function useRunState() {
     });
   }, []);
 
+  // Upgrade a shared card at campfire — adds defId to upgradedCardDefIds (no character token needed)
+  const upgradeSharedCard = useCallback((defId: string) => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      if (prev.upgradedCardDefIds.includes(defId)) return prev;
+      return { ...prev, upgradedCardDefIds: [...prev.upgradedCardDefIds, defId] };
+    });
+  }, []);
+
   // Remove one copy of a card from the deck (campfire remove-card option)
   const removeCardFromDeck = useCallback((cardId: string) => {
     setRunState(prev => {
@@ -414,6 +427,22 @@ export function useRunState() {
     });
   }, []);
 
+  // Remove an item from a character's slot (selling)
+  const removeItemFromCharacter = useCallback((characterId: CharacterId, slotIndex: number) => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        characters: prev.characters.map(c => {
+          if (c.id !== characterId) return c;
+          const items = [...c.items] as typeof c.items;
+          items[slotIndex] = null;
+          return { ...c, items };
+        }),
+      };
+    });
+  }, []);
+
   return {
     runState,
     startRun,
@@ -432,7 +461,9 @@ export function useRunState() {
     hurtAllCharacters,
     healAtCampfire,
     healAllAtCampfire,
+    upgradeSharedCard,
     removeCardFromDeck,
     addItemToCharacter,
+    removeItemFromCharacter,
   };
 }

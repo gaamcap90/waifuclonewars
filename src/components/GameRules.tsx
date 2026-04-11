@@ -10,6 +10,15 @@ export default function GameRules({ onBack }: GameRulesProps) {
   const { t } = useT();
   const entries = t.settings.rules.entries;
 
+  // Group entries by category, preserving insertion order
+  const categories: string[] = [];
+  const grouped: Record<string, typeof entries> = {};
+  for (const entry of entries) {
+    const cat = (entry as any).category as string ?? '';
+    if (!grouped[cat]) { grouped[cat] = []; categories.push(cat); }
+    grouped[cat].push(entry);
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
       <ArenaBackground />
@@ -34,19 +43,33 @@ export default function GameRules({ onBack }: GameRulesProps) {
           </div>
         </div>
 
-        {/* Rules grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-8">
-          {entries.map((entry, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-slate-700/40 p-5"
-              style={{ background: 'rgba(2,4,14,0.80)' }}
-            >
-              <h3 className="font-orbitron font-bold text-white text-sm mb-2"
-                style={{ textShadow: '0 0 12px rgba(167,139,250,0.4)' }}>
-                {entry.title}
-              </h3>
-              <p className="text-slate-300 text-[12px] leading-relaxed">{entry.text}</p>
+        {/* Rules by category */}
+        <div className="pb-8 space-y-8">
+          {categories.map(cat => (
+            <div key={cat}>
+              {cat && (
+                <h2
+                  className="font-orbitron font-bold text-purple-300 text-xs tracking-[0.35em] uppercase mb-4 pb-2 border-b border-purple-500/20"
+                  style={{ textShadow: '0 0 12px rgba(167,139,250,0.35)' }}
+                >
+                  {cat}
+                </h2>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {grouped[cat].map((entry, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-slate-700/40 p-5"
+                    style={{ background: 'rgba(2,4,14,0.80)' }}
+                  >
+                    <h3 className="font-orbitron font-bold text-white text-sm mb-2"
+                      style={{ textShadow: '0 0 12px rgba(167,139,250,0.4)' }}>
+                      {entry.title}
+                    </h3>
+                    <p className="text-slate-300 text-[12px] leading-relaxed">{entry.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

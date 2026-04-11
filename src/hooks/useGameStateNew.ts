@@ -5,6 +5,10 @@ import { buildDeckForTeam, drawCards, buildDeckFromIds, CARD_DEFS, instantiateCa
 import { toast } from "sonner";
 import { getT } from "@/i18n";
 import { seededRng as rngFromSeed } from "@/utils/rng";
+import {
+  tileKey, neighborsAxial, movementCostForTile, reachableWithCosts,
+  type Qr,
+} from "@/utils/movement";
 
 // TURN/COMBAT HELPERS (external)
 import {
@@ -27,11 +31,10 @@ const AI_END_TURN_MS = 450; // delay before ending AI turn after acting
    Small helpers
    ========================= */
 
-type Qr = { q: number; r: number };
-type MoveStep = { from: Coordinates; to: Coordinates; cost: number };
+type MoveStep = { from: Coordinates; to: Coordinates; cost: number; movementBefore: number };
 type LogEntry = { id: string; turn: number; text: string; playerId: 0 | 1 };
 
-const tileKey = (q: number, r: number) => `${q},${r}`;
+// tileKey, neighborsAxial, movementCostForTile, reachableWithCosts imported from @/utils/movement
 
 /**
  * Given a caster origin and a target hex, determine the axial hex-line direction
@@ -107,70 +110,6 @@ function pushLog(state: any, text: string, playerId: number) {
   state.combatLog = next.slice(-max);
 }
 
-function movementCostForTile(tile: HexTile, allowRiver?: boolean): number {
-  if (tile.terrain.effects.movementModifier === -999) {
-    if (allowRiver && tile.terrain.type === 'river') return 1; // Turtle Ship
-    return Infinity;
-  }
-  if (tile.terrain.type === "forest") return 2; // ALWAYS 2
-  return 1;
-}
-function neighborsAxial({ q, r }: Qr): Qr[] {
-  return [
-    { q: q + 1, r: r },
-    { q: q + 1, r: r - 1 },
-    { q: q, r: r - 1 },
-    { q: q - 1, r: r },
-    { q: q - 1, r: r + 1 },
-    { q: q, r: r + 1 },
-  ];
-}
-/** Dijkstra (costs: plain=1, forest=2). Blocks impassables and occupied hexes. */
-function reachableWithCosts(
-  board: HexTile[],
-  start: Qr,
-  maxBudget: number,
-  occupiedKeys: Set<string>,
-  allowRiver?: boolean,
-): Map<string, number> {
-  const byKey = new Map(board.map((t) => [tileKey(t.coordinates.q, t.coordinates.r), t]));
-  const dist = new Map<string, number>();
-  const pq: Array<{ key: string; cost: number }> = [];
-
-  const startKey = tileKey(start.q, start.r);
-  dist.set(startKey, 0);
-  pq.push({ key: startKey, cost: 0 });
-
-  while (pq.length) {
-    let minI = 0;
-    for (let i = 1; i < pq.length; i++) if (pq[i].cost < pq[minI].cost) minI = i;
-    const { key, cost } = pq.splice(minI, 1)[0];
-    if (cost > (dist.get(key) ?? Infinity)) continue;
-
-    const [qStr, rStr] = key.split(",");
-    const pos = { q: parseInt(qStr, 10), r: parseInt(rStr, 10) };
-
-    for (const nb of neighborsAxial(pos)) {
-      const nbKey = tileKey(nb.q, nb.r);
-      const nbTile = byKey.get(nbKey);
-      if (!nbTile) continue;
-
-      if (nbKey !== startKey && occupiedKeys.has(nbKey)) continue;
-      const step = movementCostForTile(nbTile, allowRiver);
-      if (!isFinite(step)) continue;
-
-      const newCost = cost + step;
-      if (newCost > maxBudget) continue;
-
-      if (newCost < (dist.get(nbKey) ?? Infinity)) {
-        dist.set(nbKey, newCost);
-        pq.push({ key: nbKey, cost: newCost });
-      }
-    }
-  }
-  dist.delete(startKey);
-  return dist;
-}
 
 /** Normalize a speedQueue into an array of string icon IDs. */
 function normalizeSpeedQueue(q: any, icons: Icon[]): string[] {
@@ -190,47 +129,39 @@ function normalizeSpeedQueue(q: any, icons: Icon[]): string[] {
 
 const getTerrainForPosition = (q: number, r: number): TerrainType => {
   if (q === 0 && r === 0) return { type: "mana_crystal", effects: { movementModifier: -999 } };
-  if ((q === -6 && r === 5) || (q === 6 && r === -5)) return { type: "base", effects: { movementModifier: -999 } };
+  if ((q === -5 && r === 4) || (q === 5 && r === -4)) return { type: "base", effects: { movementModifier: -999 } };
   if (
-    (q >= -6 && q <= -4 && r >= 3 && r <= 5) ||
-    (q >= 4 && q <= 6 && r >= -5 && r <= -3)
+    (q >= -5 && q <= -3 && r >= 3 && r <= 5) ||
+    (q >= 3 && q <= 5 && r >= -5 && r <= -3)
   )
     return { type: "spawn", effects: {} };
-  // Mountains — pushed to flanks and outer edges (distance ≥ 4 from center)
+  // Mountains — flanks and boundary only; (-4,3)/(4,-3) removed to keep
+  // spawn-approach corridors clear for both sides.
   const mtn = new Set([
-    // Near-center boulders for variety (distance 4)
+    // Near-center boulders (radius 4)
     '-1,-3','1,3',
-    // Flank clusters (distance 4)
-    '-4,2','-4,3','4,-2','4,-3',
+    // Flank obstacles (radius 4)
+    '-4,2','4,-2',
+    // Edge mountains (radius 5), away from spawn-approach corridors
     '-5,1','-5,2','5,-1','5,-2',
-    // Top/bottom edge caps
-    '0,-6','-1,-6','1,-6','0,6','1,6','-1,6',
-    // Side edge caps
-    '-6,2','-6,3','6,-2','6,-3',
-    // Diagonal edge corners
-    '2,-5','3,-5','-2,5','-3,5',
-    // Far edges
-    '-7,2','-7,3','-7,4','7,-2','7,-3','7,-4',
-    // Scatter (distance 5+)
-    '-5,-1','5,1',
-    '-1,-5','1,5',
+    // Diagonal flanks (radius 5)
     '-4,-1','4,1',
+    '2,-5','-2,5',
   ]);
   const key = `${q},${r}`;
   if (mtn.has(key))
     return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
 
-  // Rivers — middle ring (distance 3) + 2 scenic center tiles
-  // Removed (2,-2),(2,-1),(-2,2),(-2,1) — distance-2 tiles that blocked main center corridors
-  const river = new Set([
+  // Lakes — impassable deep water (Yi Sun-sin can cross; passable "river" only on random maps)
+  const lake = new Set([
     '1,-3','3,-2',          // right-side (distance 3)
     '-1,3','-3,2',          // left-side (distance 3)
     '-1,-2','-2,-1',        // upper-left trickle (distance 3)
     '1,2','2,1',            // lower-right trickle (distance 3)
-    '0,-2','0,2',           // scenic water above/below crystal (non-blocking)
+    '0,-2','0,2',           // scenic water above/below crystal
   ]);
-  if (river.has(key))
-    return { type: "river", effects: { movementModifier: -999 } as any };
+  if (lake.has(key))
+    return { type: "lake", effects: { movementModifier: -999 } as any };
 
   // Forest — traversable cover throughout center
   const forest = new Set([
@@ -249,9 +180,9 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
 
 const createInitialBoard = (): HexTile[] => {
   const board: HexTile[] = [];
-  for (let q = -7; q <= 7; q++) {
-    const r1 = Math.max(-7, -q - 7);
-    const r2 = Math.min(7, -q + 7);
+  for (let q = -5; q <= 5; q++) {
+    const r1 = Math.max(-5, -q - 5);
+    const r2 = Math.min(5, -q + 5);
     for (let r = r1; r <= r2; r++) {
       board.push({
         coordinates: { q, r },
@@ -266,59 +197,87 @@ const createInitialBoard = (): HexTile[] => {
 
 // ── Random map generator ──────────────────────────────────────────────────────
 
-function getRandomTerrainForPosition(q: number, r: number, forestSet: Set<string>, riverSet: Set<string>, mountainSet: Set<string>): TerrainType {
+function getRandomTerrainForPosition(
+  q: number, r: number,
+  forestSet: Set<string>, riverSet: Set<string>, mountainSet: Set<string>,
+  desertSet: Set<string>, snowSet: Set<string>, iceSet: Set<string>,
+  lakeSet: Set<string>, ruinsSet: Set<string>,
+): TerrainType {
   const key = `${q},${r}`;
   if (q === 0 && r === 0)              return { type: "mana_crystal", effects: { movementModifier: -999 } };
-  if ((q === -6 && r === 5) || (q === 6 && r === -5)) return { type: "base", effects: { movementModifier: -999 } };
-  if ((q >= -6 && q <= -4 && r >= 3 && r <= 5) || (q >= 4 && q <= 6 && r >= -5 && r <= -3))
+  if ((q === -5 && r === 4) || (q === 5 && r === -4)) return { type: "base", effects: { movementModifier: -999 } };
+  if ((q >= -5 && q <= -3 && r >= 3 && r <= 5) || (q >= 3 && q <= 5 && r >= -5 && r <= -3))
     return { type: "spawn", effects: {} };
+  // Strategic ruins — check before other cover terrain so they always appear
+  if (ruinsSet.has(key))   return { type: "ruins",    effects: { rangeBonus: true } };
   if (mountainSet.has(key)) return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
-  if (riverSet.has(key)) return { type: "river", effects: { movementModifier: -999 } as any };
-  if (forestSet.has(key)) return { type: "forest", effects: { dodgeBonus: true, stealthBonus: true } };
+  if (lakeSet.has(key))    return { type: "lake",     effects: { movementModifier: -999 } as any };
+  if (riverSet.has(key))   return { type: "river",    effects: {} };           // passable shallow water — costs 2 (1 for Sun-sin)
+  if (iceSet.has(key))     return { type: "ice",      effects: {} };           // passable, cost 1
+  if (desertSet.has(key))  return { type: "desert",   effects: {} };           // cost 2 (handled in movementCostForTile)
+  if (snowSet.has(key))    return { type: "snow",     effects: {} };           // cost 2
+  if (forestSet.has(key))  return { type: "forest",   effects: { dodgeBonus: true, stealthBonus: true } };
   return { type: "plain", effects: {} };
 }
 
-function generateRandomBattleBoard(seed: number): HexTile[] {
+function generateRandomBattleBoard(seed: number, act: 1 | 2 | 3 = 1): HexTile[] {
   const rng = rngFromSeed(seed);
-  const FOREST_PATTERNS: [number,number][][] = [
+
+  // Shared cover-terrain patterns / anchors (forest in Act 1, desert in Act 2, snow in Act 3)
+  const TERRAIN_PATTERNS: [number,number][][] = [
     [[0,0],[1,0],[0,1],[1,-1]], [[0,0],[0,1],[1,-1],[-1,1]],
     [[0,0],[1,0],[1,-1],[0,-1]], [[0,0],[-1,1],[0,1],[1,0]],
     [[0,0],[1,0],[0,1]], [[0,0],[-1,1],[0,-1]],
   ];
-  const FOREST_ANCHORS: {q:number,r:number}[] = [
+  const TERRAIN_ANCHORS: {q:number,r:number}[] = [
     {q:-3,r:1},{q:-2,r:1},{q:-3,r:2},{q:3,r:-1},{q:2,r:-1},{q:3,r:-2},
     {q:-1,r:-2},{q:0,r:-2},{q:1,r:-2},{q:-1,r:2},{q:0,r:2},{q:1,r:2},
     {q:-4,r:1},{q:4,r:-1},{q:-1,r:3},{q:1,r:-3},{q:-2,r:-1},{q:2,r:1},
     {q:-3,r:0},{q:3,r:0},{q:0,r:3},{q:0,r:-3},
   ];
-  const RIVER_OPTIONS: {q:number,r:number}[][] = [
-    // Replaced center-zone river options (distance ≤ 2) with distance-3+ options
+
+  // Act 1: Naturalistic watershed pairs — rivers (passable, cost 2) flow into adjacent lakes (impassable).
+  // Choosing a watershed means both its lake tiles AND its river tiles are added to the map.
+  const ACT1_WATERSHEDS: { lake: {q:number,r:number}[]; river: {q:number,r:number}[] }[] = [
+    // W1–W2: West / East midboard lake, river flows inward from it
+    { lake: [{q:-4,r:2}],           river: [{q:-3,r:2},{q:-3,r:1},{q:-2,r:1}] },
+    { lake: [{q:4,r:-2}],           river: [{q:3,r:-2},{q:3,r:-1},{q:2,r:-1}] },
+    // W3–W4: South / North two-hex lake, river from center
+    { lake: [{q:-1,r:4},{q:0,r:4}], river: [{q:-1,r:3},{q:0,r:3},{q:0,r:2}] },
+    { lake: [{q:1,r:-4},{q:0,r:-4}],river: [{q:1,r:-3},{q:0,r:-3},{q:0,r:-2}] },
+    // W5–W6: Southwest / Northeast diagonal lake + tributary
+    { lake: [{q:-2,r:4},{q:-1,r:4}],river: [{q:-2,r:3},{q:-1,r:3},{q:-1,r:2}] },
+    { lake: [{q:2,r:-4},{q:1,r:-4}],river: [{q:2,r:-3},{q:1,r:-3},{q:1,r:-2}] },
+    // W7–W8: Far edge single-hex lake, winding river toward mid
+    { lake: [{q:-5,r:2}],           river: [{q:-4,r:2},{q:-4,r:1},{q:-3,r:1}] },
+    { lake: [{q:5,r:-2}],           river: [{q:4,r:-2},{q:4,r:-1},{q:3,r:-1}] },
+    // W9–W10: Upper-left / Lower-right compact lake cluster
+    { lake: [{q:-4,r:0},{q:-4,r:1}],river: [{q:-3,r:0},{q:-3,r:1},{q:-2,r:1}] },
+    { lake: [{q:4,r:0},{q:4,r:-1}], river: [{q:3,r:0},{q:3,r:-1},{q:2,r:-1}] },
+  ];
+
+  // Act 2 lake positions: isolated desert oases, no rivers
+  const ACT2_OASES: {q:number,r:number}[][] = [
+    [{q:-4,r:2},{q:-4,r:1}], [{q:4,r:-2},{q:4,r:-1}],
+    [{q:-1,r:4},{q:0,r:4}],  [{q:1,r:-4},{q:0,r:-4}],
+    [{q:-3,r:0}],            [{q:3,r:0}],
+    [{q:-2,r:3}],            [{q:2,r:-3}],
+    [{q:-5,r:2}],            [{q:5,r:-2}],
+  ];
+
+  // Act 3 lake positions: frozen lakes amid the snowfield (rivers are frozen = ice, passable)
+  const ACT3_LAKES: {q:number,r:number}[][] = [
+    [{q:-4,r:2}], [{q:4,r:-2}], [{q:-1,r:4}], [{q:1,r:-4}],
+    [{q:-5,r:2}], [{q:5,r:-2}], [{q:-4,r:0}], [{q:4,r:0}],
+  ];
+  // Ice tiles (frozen rivers) — the old RIVER_OPTIONS positions, now passable cost-1 terrain
+  const ICE_OPTIONS: {q:number,r:number}[][] = [
     [{q:2,r:-3},{q:1,r:-3}],[{q:-2,r:3},{q:-1,r:3}],
     [{q:3,r:-3},{q:3,r:-2}],[{q:-3,r:3},{q:-3,r:2}],
     [{q:-2,r:-1},{q:-3,r:-1}],[{q:2,r:1},{q:3,r:1}],
     [{q:-1,r:-2},{q:0,r:-3}],[{q:1,r:2},{q:0,r:3}],
   ];
-
-  const numClusters = 6 + Math.floor(rng() * 4); // 6–9 forest clusters
-  const shuffledAnchors = [...FOREST_ANCHORS].sort(() => rng() - 0.5);
-  const forestSet = new Set<string>();
-  for (let c = 0; c < numClusters && c < shuffledAnchors.length; c++) {
-    const a = shuffledAnchors[c];
-    const pat = FOREST_PATTERNS[Math.floor(rng() * FOREST_PATTERNS.length)];
-    for (const [dq, dr] of pat) {
-      const fq = a.q + dq, fr = a.r + dr;
-      forestSet.add(`${fq},${fr}`);
-    }
-  }
-
-  const numRivers = 4 + Math.floor(rng() * 4); // 4–7 river segments
-  const shuffledRivers = [...RIVER_OPTIONS].sort(() => rng() - 0.5);
-  const riverSet = new Set<string>();
-  for (let rv = 0; rv < numRivers; rv++) {
-    for (const pos of shuffledRivers[rv]) riverSet.add(`${pos.q},${pos.r}`);
-  }
-
-  // Mountain clusters — pushed to flanks (distance ≥ 4 from center)
+  // Mountain clusters — flanks only (distance ≥ 3 from center)
   const MOUNTAIN_ANCHORS: {q:number,r:number}[] = [
     {q:4,r:-1},{q:-4,r:1},{q:4,r:-2},{q:-4,r:2},
     {q:2,r:2},{q:-2,r:-2},{q:2,r:-4},{q:-2,r:4},
@@ -327,13 +286,18 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
     {q:0,r:-4},{q:0,r:4},
   ];
   const MOUNTAIN_PATTERNS: [number,number][][] = [
-    [[0,0]],                     // single boulder
-    [[0,0],[1,0]],               // 2-hex row
-    [[0,0],[0,1]],               // 2-hex col
-    [[0,0],[1,-1]],              // 2-hex diagonal
-    [[0,0],[1,0],[0,1]],         // 3-hex L
+    [[0,0]], [[0,0],[1,0]], [[0,0],[0,1]], [[0,0],[1,-1]], [[0,0],[1,0],[0,1]],
   ];
-  const numMountains = 7 + Math.floor(rng() * 4); // 7–10 clusters (more since no border ring)
+  // Ruins pairs — opposite sides of the central area, always 2 tiles
+  const RUINS_PAIRS: {q:number,r:number}[][] = [
+    [{q:-2,r:1},{q:2,r:-1}],
+    [{q:-1,r:2},{q:1,r:-2}],
+    [{q:-2,r:-1},{q:2,r:1}],
+    [{q:-3,r:2},{q:3,r:-2}],
+  ];
+
+  // ── Mountains (same for all acts) ──────────────────────────────────────────
+  const numMountains = 7 + Math.floor(rng() * 4);
   const shuffledMtnAnchors = [...MOUNTAIN_ANCHORS].sort(() => rng() - 0.5);
   const mountainSet = new Set<string>();
   for (let m = 0; m < numMountains && m < shuffledMtnAnchors.length; m++) {
@@ -341,20 +305,87 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
     const pat = MOUNTAIN_PATTERNS[Math.floor(rng() * MOUNTAIN_PATTERNS.length)];
     for (const [dq, dr] of pat) {
       const hq = a.q + dq, hr = a.r + dr;
-      // Don't place on crystal, bases, or spawn zones
       const onCrystal = hq === 0 && hr === 0;
-      const onBase = (hq === -6 && hr === 5) || (hq === 6 && hr === -5);
-      const onSpawn = (hq >= -6 && hq <= -4 && hr >= 3 && hr <= 5) || (hq >= 4 && hq <= 6 && hr >= -5 && hr <= -3);
+      const onBase = (hq === -5 && hr === 4) || (hq === 5 && hr === -4);
+      const onSpawn = (hq >= -5 && hq <= -3 && hr >= 3 && hr <= 5) || (hq >= 3 && hq <= 5 && hr >= -5 && hr <= -3);
       if (!onCrystal && !onBase && !onSpawn) mountainSet.add(`${hq},${hr}`);
     }
   }
 
+  // ── Biome sets (populated per act) ─────────────────────────────────────────
+  const forestSet  = new Set<string>();
+  const riverSet   = new Set<string>();
+  const desertSet  = new Set<string>();
+  const snowSet    = new Set<string>();
+  const iceSet     = new Set<string>();
+  const lakeSet    = new Set<string>();
+
+  const numClusters = 6 + Math.floor(rng() * 4); // 6–9 clusters
+  const shuffledAnchors = [...TERRAIN_ANCHORS].sort(() => rng() - 0.5);
+
+  function fillClusters(target: Set<string>) {
+    for (let c = 0; c < numClusters && c < shuffledAnchors.length; c++) {
+      const a = shuffledAnchors[c];
+      const pat = TERRAIN_PATTERNS[Math.floor(rng() * TERRAIN_PATTERNS.length)];
+      for (const [dq, dr] of pat) target.add(`${a.q + dq},${a.r + dr}`);
+    }
+  }
+
+  if (act === 1) {
+    // ── Act 1: Forest + naturalistic river-lake watersheds ────────────────
+    // Watersheds: rivers (passable, cost 2) flow into lakes (impassable)
+    fillClusters(forestSet);
+    const numWatersheds = 2 + Math.floor(rng() * 3); // 2–4 watersheds per map
+    const shuffledWS = [...ACT1_WATERSHEDS].sort(() => rng() - 0.5);
+    for (let w = 0; w < numWatersheds && w < shuffledWS.length; w++) {
+      const ws = shuffledWS[w];
+      for (const pos of ws.lake) lakeSet.add(`${pos.q},${pos.r}`);
+      for (const pos of ws.river) riverSet.add(`${pos.q},${pos.r}`);
+    }
+    // Rivers can't override lakes (priority handled in getRandomTerrainForPosition)
+
+  } else if (act === 2) {
+    // ── Act 2: Desert dominant + isolated lake oases, no rivers ──────────
+    fillClusters(desertSet);
+    const numOases = 2 + Math.floor(rng() * 2); // 2–3 oases
+    const shuffledOases = [...ACT2_OASES].sort(() => rng() - 0.5);
+    for (let o = 0; o < numOases && o < shuffledOases.length; o++)
+      for (const pos of shuffledOases[o]) lakeSet.add(`${pos.q},${pos.r}`);
+
+  } else {
+    // ── Act 3: Snow + frozen lakes + ice patches (frozen river crossings) ─
+    fillClusters(snowSet);
+    const numLakes = 1 + Math.floor(rng() * 2); // 1–2 frozen lakes
+    const numIce   = 4 + Math.floor(rng() * 4); // 4–7 ice (frozen river) patches
+    const shuffledLakes = [...ACT3_LAKES].sort(() => rng() - 0.5);
+    const shuffledIce   = [...ICE_OPTIONS].sort(()  => rng() - 0.5);
+    for (let lk = 0; lk < numLakes && lk < shuffledLakes.length; lk++)
+      for (const pos of shuffledLakes[lk]) lakeSet.add(`${pos.q},${pos.r}`);
+    for (let ic = 0; ic < numIce && ic < shuffledIce.length; ic++)
+      for (const pos of shuffledIce[ic]) iceSet.add(`${pos.q},${pos.r}`);
+  }
+
+  // ── Ruins — always 1 pair in strategic center-flanking positions ────────────
+  const ruinsSet  = new Set<string>();
+  const ruinsPair = RUINS_PAIRS[Math.floor(rng() * RUINS_PAIRS.length)];
+  for (const pos of ruinsPair) {
+    const k = `${pos.q},${pos.r}`;
+    // Ruins can't overwrite fixed tiles or impassable water/mountains
+    if (!mountainSet.has(k) && !riverSet.has(k) && !lakeSet.has(k) && !iceSet.has(k))
+      ruinsSet.add(k);
+  }
+
+  // ── Build board ─────────────────────────────────────────────────────────────
   const board: HexTile[] = [];
-  for (let q = -7; q <= 7; q++) {
-    const r1 = Math.max(-7, -q - 7);
-    const r2 = Math.min(7, -q + 7);
+  for (let q = -5; q <= 5; q++) {
+    const r1 = Math.max(-5, -q - 5);
+    const r2 = Math.min(5, -q + 5);
     for (let r = r1; r <= r2; r++) {
-      board.push({ coordinates: { q, r }, terrain: getRandomTerrainForPosition(q, r, forestSet, riverSet, mountainSet), highlighted: false, selectable: false });
+      board.push({
+        coordinates: { q, r },
+        terrain: getRandomTerrainForPosition(q, r, forestSet, riverSet, mountainSet, desertSet, snowSet, iceSet, lakeSet, ruinsSet),
+        highlighted: false, selectable: false,
+      });
     }
   }
   return board;
@@ -365,7 +396,7 @@ function generateRandomBattleBoard(seed: number): HexTile[] {
 function buildEnemyIconsFromEncounter(encounter: EncounterDef, scaleFactor = 1.0): Icon[] {
   const p2Spawns = [
     { q: 4, r: -3 }, { q: 5, r: -3 }, { q: 4, r: -4 },
-    { q: 5, r: -4 }, { q: 6, r: -3 }, { q: 6, r: -4 },
+    { q: 5, r: -4 }, { q: 3, r: -3 }, { q: 3, r: -4 },
     { q: 4, r: -5 }, { q: 5, r: -5 },
   ];
   const icons: Icon[] = [];
@@ -413,7 +444,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Napoleon-chan",
       role: "dps_ranged" as const,
-      stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 70, power: 60, defense: 15, movement: 2 },
+      stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 65, power: 60, defense: 15, movement: 2 },
       abilities: [
         { id: "1", name: "Artillery Barrage", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 0 },
         { id: "2", name: "Grande Armée", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
@@ -435,7 +466,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Da Vinci-chan",
       role: "support" as const,
-      stats: { hp: 80, maxHp: 80, moveRange: 2, speed: 4, might: 35, power: 50, defense: 20, movement: 2 },
+      stats: { hp: 85, maxHp: 85, moveRange: 2, speed: 4, might: 35, power: 50, defense: 20, movement: 2 },
       abilities: [
         {
           id: "1",
@@ -531,12 +562,12 @@ function consumeCardFromHand(state: ExtState, card: Card, playerId: number): Ext
 function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]): Icon[] {
   const p1Spawns = [
     { q: -4, r: 3 }, { q: -5, r: 3 }, { q: -4, r: 4 },
-    { q: -5, r: 4 }, { q: -6, r: 3 }, { q: -6, r: 4 },
+    { q: -5, r: 4 }, { q: -3, r: 3 }, { q: -3, r: 4 },
     { q: -4, r: 5 }, { q: -5, r: 5 },
   ];
   const p2Spawns = [
     { q: 4, r: -3 }, { q: 5, r: -3 }, { q: 4, r: -4 },
-    { q: 5, r: -4 }, { q: 6, r: -3 }, { q: 6, r: -4 },
+    { q: 5, r: -4 }, { q: 3, r: -3 }, { q: 3, r: -4 },
     { q: 4, r: -5 }, { q: 5, r: -5 },
   ];
 
@@ -601,6 +632,8 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       voidArmorUsed:    false,
       firstHitNegated:  false,
       firstAbilityUsed: false,
+      // Restore persisted passive stacks (e.g. Genghis Bloodlust with Eternal Hunger)
+      passiveStacks: itemPassiveTags.includes('genghis_bloodlust_persist') ? (runChar?.passiveStacks ?? 0) : 0,
     };
   };
 
@@ -629,9 +662,9 @@ function getAbilitiesForCharacter(name: string) {
     { id: "ultimate", name: "Vitruvian Guardian", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Summons attack drone", damage: 0 },
   ];
   if (name.includes("Leonidas")) return [
-    { id: "1", name: "Shield Bash", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "Power×1.5 damage + Armor Break.", damage: 0, powerMult: 1.5 },
+    { id: "1", name: "Shield Bash", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "Power×1.8 damage + Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).", damage: 0, powerMult: 1.8 },
     { id: "2", name: "Spartan Wall", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "+20 Defense to all nearby allies.", damage: 0, teamDefBuff: 20 },
-    { id: "ultimate", name: "THIS IS SPARTA!", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×2 damage + Demoralize nearby.", damage: 0, powerMult: 2.0 },
+    { id: "ultimate", name: "THIS IS SPARTA!", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×2.5 damage + Root adjacent enemies 2t.", damage: 0, powerMult: 2.5 },
   ];
   if (name.includes("Beethoven")) return [
     { id: "1", name: "Schallwelle",  manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Sonic wave — Power×0.5 dmg on a line, pushes each enemy 2 tiles back.", damage: 0, powerMult: 0.5 },
@@ -657,11 +690,11 @@ function getAbilitiesForCharacter(name: string) {
 }
 
 function getPassiveForCharacter(name: string) {
-  if (name.includes("Napoleon")) return "Vantage Point: On a forest tile, basic attack range becomes 3";
-  if (name.includes("Genghis")) return "Bloodlust: Each kill grants +15 Might and restores 1 Mana (up to 3×)";
+  if (name.includes("Napoleon")) return "Mitraille: At the start of Napoleon's turn, all enemies within range 2 take 5 pure damage (ignores Defense)";
+  if (name.includes("Genghis")) return "Bloodlust: Each kill grants +12 Might and restores 1 Mana (up to 3×)";
   if (name.includes("Da Vinci")) return "Tinkerer: Draw +1 card at turn start if no exclusive ability was used last turn";
   if (name.includes("Leonidas")) return "Phalanx: Each turn adjacent to an ally, gain +8 Defense (stacks up to 3 turns)";
-  if (name.includes("Sun-sin")) return "Turtle Ship: Can enter water tiles. On water: +40% Might, +30% DEF, −40% Power, Move 1, Range 3";
+  if (name.includes("Sun-sin")) return "Turtle Ship: Can enter lake tiles. On lake: +40% Might, +30% DEF, −40% Power, Move 1, Range 3";
   if (name.includes("Beethoven")) return "Taubheit: Cannot be pushed or displaced while playing an ability card";
   if (name.includes("Huang"))    return "Imperial Command: Cannot play Basic Attack cards. Guaranteed at least 1 Basic Attack card is drawn each turn (for Terracotta units to use). Terracotta units may only use Basic Attack cards.";
   return "";
@@ -682,7 +715,7 @@ function computeAIIntents(state: ExtState): AIIntent[] {
   const enemies = state.players[0].icons.filter(i => i.isAlive);
 
   for (const ai of state.players[1].icons.filter(i => i.isAlive)) {
-    const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") ? 2 : 1;
+    const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") || ai.name.includes("Beethoven") ? 2 : 1;
     let mainIntentSet = false;
 
     // --- 1. Try a damaging ability ---
@@ -732,7 +765,7 @@ function computeAIIntents(state: ExtState): AIIntent[] {
 
     // --- 3. Player base attack if no enemies in range (beast camps are allied — AI ignores them) ---
     if (!mainIntentSet) {
-      const playerBase: Qr = { q: -6, r: 5 };
+      const playerBase: Qr = { q: -5, r: 4 };
       if (hexDistance(ai.position, playerBase) <= basicRange && state.baseHealth[0] > 0) {
         const dmg = Math.max(1, ai.stats.might);
         intents.push({ iconId: ai.id, type: 'attack', abilityName: 'Attack Base',
@@ -984,19 +1017,27 @@ function executeAITurn(state: ExtState): ExtState {
   const intents: AIIntent[] = (s as any).aiIntents ?? [];
 
   for (const aiOrig of state.players[1].icons.filter(i => i.isAlive)) {
+    // Stun: skip all actions for this enemy this turn
+    const preStunCheck = s.players[1].icons.find(i => i.id === aiOrig.id);
+    if (preStunCheck?.debuffs?.some(d => d.type === 'stun')) {
+      pushLog(s, `${aiOrig.name} is STUNNED — cannot act!`, 1);
+      continue;
+    }
+    // Silence: skip ability execution but allow basic attack
+    const isSilenced = preStunCheck?.debuffs?.some(d => d.type === 'silence') ?? false;
     // Execute boss/elite abilities at the start of each enemy's turn
-    s = executeEnemyAbilities(s, aiOrig.id);
+    if (!isSilenced) s = executeEnemyAbilities(s, aiOrig.id);
     let ai = s.players[1].icons.find(i => i.id === aiOrig.id);
     if (!ai || !ai.isAlive) continue;
 
-    const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") ? 2 : 1;
+    const basicRange = ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") || ai.name.includes("Beethoven") ? 2 : 1;
     const enemies = () => s.players[0].icons.filter(i => i.isAlive);
     const iconIntents = intents.filter(i => i.iconId === aiOrig.id);
 
     // --- Main action intent (skip buff/upcoming intents) ---
     const mainIntent = iconIntents.find(i => i.type !== 'buff' && i.type !== 'upcoming_ability');
 
-    if (mainIntent?.type === 'ability' || mainIntent?.type === 'heal') {
+    if ((mainIntent?.type === 'ability' || mainIntent?.type === 'heal') && !isSilenced) {
       ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
       const ab = (ai.abilities as any[]).find(a => a.name === mainIntent.abilityName);
       if (ab && !(ab.id === "ultimate" && ai.ultimateUsed)) {
@@ -1028,11 +1069,12 @@ function executeAITurn(state: ExtState): ExtState {
           }
         }
       }
-    } else if (mainIntent?.type === 'attack') {
+    } else if (mainIntent?.type === 'attack' || (isSilenced && mainIntent?.type !== 'attack')) {
+      // Silenced enemies fall back to basic attack even if intent was ability
       ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
       if (!ai.cardUsedThisTurn) {
         if (mainIntent.abilityName === 'Attack Base') {
-          const PLAYER_BASE_INTENT: Qr = { q: -6, r: 5 };
+          const PLAYER_BASE_INTENT: Qr = { q: -5, r: 4 };
           if (hexDistance(ai.position, PLAYER_BASE_INTENT) <= basicRange && s.baseHealth[0] > 0) {
             const dmg = Math.max(0.1, calcEffectiveStats(s, ai).might);
             const newBases = [...s.baseHealth];
@@ -1042,8 +1084,12 @@ function executeAITurn(state: ExtState): ExtState {
             pushLog(s, `${ai.name} attacked player base for ${dmg.toFixed(0)} dmg`, 1);
           }
         } else {
-          // Basic attack on enemy
-          const target = enemies().find(e =>
+          // Basic attack on enemy — prefer taunter if unit is taunted
+          const preMoveAiTaunt = ai.debuffs?.find(d => d.type === 'taunted');
+          const preMoveAiTaunter = preMoveAiTaunt?.sourceIconId
+            ? s.players[0].icons.find(ic => ic.id === preMoveAiTaunt.sourceIconId && ic.isAlive && hexDistance(ai!.position, ic.position) <= basicRange && !hasLineMountain(s.board, ai!.position, ic.position))
+            : null;
+          const target = preMoveAiTaunter ?? enemies().find(e =>
             hexDistance(ai!.position, e.position) <= basicRange &&
             !hasLineMountain(s.board, ai!.position, e.position)
           );
@@ -1057,6 +1103,21 @@ function executeAITurn(state: ExtState): ExtState {
             }));
             s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
             pushLog(s, `${ai.name} basic-attacked ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
+            // Decoy explosion: if target is a decoy and just died, explode
+            if (newHp <= 0 && target.isDecoy && (target.decoyExplosionDmg ?? 0) > 0) {
+              const explosionDmg = target.decoyExplosionDmg!;
+              const explosionRange = target.decoyExplosionRange ?? 2;
+              const nearbyEnemies = s.players.flatMap(p => p.icons).filter(
+                ic => ic.isAlive && ic.playerId !== target.playerId && hexDistance(ic.position, target.position) <= explosionRange
+              );
+              for (const enemy of nearbyEnemies) {
+                const eHp = Math.max(0, enemy.stats.hp - explosionDmg);
+                s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+                  ...ic, stats: { ...ic.stats, hp: eHp }, isAlive: eHp > 0, respawnTurns: eHp > 0 ? ic.respawnTurns : 4,
+                }) }));
+              }
+              if (nearbyEnemies.length > 0) pushLog(s, `Decoy EXPLODES for ${explosionDmg} dmg (${nearbyEnemies.length} enemies hit)!`, target.playerId);
+            }
           }
         }
       }
@@ -1064,25 +1125,38 @@ function executeAITurn(state: ExtState): ExtState {
 
     // --- Movement for every AI icon ---
     ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
-    if (!ai || !ai.isAlive || ai.movedThisTurn || ai.stats.movement <= 0) continue;
+    if (!ai || !ai.isAlive || ai.movedThisTurn || ai.stats.movement <= 0 || ai.debuffs?.some(d => d.type === 'rooted')) continue;
 
     // Targets: enemies > beast camps > player base
-    const PLAYER_BASE: Qr = { q: -6, r: 5 };
-    const allTargets: { position: Qr }[] = [
-      ...enemies().map(e => ({ position: e.position })),
-      // Beast camps are on the AI's side — skip them as movement targets
-      { position: PLAYER_BASE },
-    ];
+    // If this AI unit is taunted, it must move toward the taunter only
+    const PLAYER_BASE: Qr = { q: -5, r: 4 };
+    const tauntDebuff = ai.debuffs?.find(d => d.type === 'taunted');
+    const tauntSource = tauntDebuff?.sourceIconId
+      ? s.players[0].icons.find(ic => ic.id === tauntDebuff.sourceIconId && ic.isAlive)
+      : null;
+    const allTargets: { position: Qr }[] = tauntSource
+      ? [{ position: tauntSource.position }]
+      : [
+          ...enemies().map(e => ({ position: e.position })),
+          // Beast camps are on the AI's side — skip them as movement targets
+          { position: PLAYER_BASE },
+        ];
     if (!allTargets.length) continue;
 
     const budget = Math.min(ai.stats.movement, ai.stats.moveRange);
-    const occupied = new Set(
-      s.players.flatMap(p => p.icons)
+    // Enemy allies (other AI icons) are passable transit tiles; player icons are hard blocks
+    const aiEnemyKeys = new Set(
+      s.players[0].icons
+        .filter(ic => ic.isAlive)
+        .map(ic => tileKey(ic.position.q, ic.position.r))
+    );
+    const aiAllyKeys = new Set(
+      s.players[1].icons
         .filter(ic => ic.isAlive && ic.id !== ai!.id)
         .map(ic => tileKey(ic.position.q, ic.position.r))
     );
-    const allowRiver = ai.name.includes("Sun-sin");
-    const costMap = reachableWithCosts(s.board, ai.position, budget, occupied, allowRiver);
+    const allowLakeAI = ai.name.includes("Sun-sin");
+    const costMap = reachableWithCosts(s.board, ai.position, budget, aiEnemyKeys, allowLakeAI, aiAllyKeys);
     if (!costMap.size) continue;
 
     let best: { coord: Coordinates; score: number } | null = null;
@@ -1105,10 +1179,14 @@ function executeAITurn(state: ExtState): ExtState {
         } : ic),
       }));
 
-      // Post-move attack: enemies > base
+      // Post-move attack: enemies > base (taunted units must target the taunter)
       ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
       if (!ai.cardUsedThisTurn) {
-        const target = enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
+        const postMoveTaunt = ai.debuffs?.find(d => d.type === 'taunted');
+        const postMoveTaunter = postMoveTaunt?.sourceIconId
+          ? s.players[0].icons.find(ic => ic.id === postMoveTaunt.sourceIconId && ic.isAlive && hexDistance(ai!.position, ic.position) <= basicRange)
+          : null;
+        const target = postMoveTaunter ?? enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
         if (target) {
           const dmg = resolveBasicAttackDamage(s, ai, target);
           const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
@@ -1142,8 +1220,10 @@ function executeAITurn(state: ExtState): ExtState {
     // Move toward nearest enemy
     if (!ctrlUnit.movedThisTurn && ctrlUnit.stats.movement > 0) {
       const budget = Math.min(ctrlUnit.stats.movement, ctrlUnit.stats.moveRange);
-      const ctrlOccupied = new Set(s.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.id !== ctrlUnit.id).map(ic => tileKey(ic.position.q, ic.position.r)));
-      const ctrlCosts = reachableWithCosts(s.board, ctrlUnit.position, budget, ctrlOccupied, false);
+      // Controlled units treat enemy (p1) icons as hard blocks; other p0 icons as transit
+      const ctrlBlockedKeys = new Set(s.players[1].icons.filter(ic => ic.isAlive).map(ic => tileKey(ic.position.q, ic.position.r)));
+      const ctrlAllyKeys = new Set(s.players[0].icons.filter(ic => ic.isAlive && ic.id !== ctrlUnit.id).map(ic => tileKey(ic.position.q, ic.position.r)));
+      const ctrlCosts = reachableWithCosts(s.board, ctrlUnit.position, budget, ctrlBlockedKeys, false, ctrlAllyKeys);
       if (ctrlCosts.size) {
         let ctrlBest: { coord: Coordinates; score: number } | null = null;
         for (const [key] of ctrlCosts.entries()) {
@@ -1190,7 +1270,7 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
   const killer = s.players.flatMap(p => p.icons).find(i => i.id === killerId);
   if (!killer) return s;
 
-  // Genghis Bloodlust: +15 Might stack, +1 mana (up to 3 stacks)
+  // Genghis Bloodlust: +12 Might stack, +1 mana (up to 3 stacks)
   if (killer.name.includes("Genghis")) {
     const stacks = killer.passiveStacks ?? 0;
     if (stacks < 3) {
@@ -1202,7 +1282,7 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
       const newMana = [...s.globalMana] as [number, number];
       newMana[killer.playerId] = Math.min(5, newMana[killer.playerId] + 1);
       s.globalMana = newMana;
-      pushLog(s, `${killer.name} Bloodlust! ${newStacks}/3 stacks (+15 Might, +1 Mana)`, killer.playerId);
+      pushLog(s, `${killer.name} Bloodlust! ${newStacks}/3 stacks (+12 Might, +1 Mana)`, killer.playerId);
     }
   }
 
@@ -1471,28 +1551,50 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   }, [gameState.activePlayerId, gameState.gameMode]);
 
   /* =========================
-     Immediate victory check — fires after any state change that kills a unit
-     Doesn't wait for End Turn — victory triggers the moment the last enemy falls.
+     Immediate victory check — fires the moment the last enemy (or last ally) dies.
+     Uses alive-count numbers as deps so React's Object.is() reliably catches 1→0.
+     Killing all enemies wins regardless of objective type.
      ========================= */
   useEffect(() => {
-    if (gameState.phase !== 'playing') return;
+    if (gameState.phase !== 'combat') return;
     const ext = gameState as unknown as ExtState;
     const p0Alive = gameState.players[0].icons.some(ic => ic.isAlive);
     const p1Alive = gameState.players[1].icons.some(ic => ic.isAlive);
     if (!p0Alive) {
-      setGameState(prev => prev.phase === 'playing' ? { ...prev, phase: 'defeat' as any, winner: 1 } : prev);
+      setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'defeat' as any, winner: 1 } : prev);
     } else if (!p1Alive && ext.encounterObjective !== 'destroy_base') {
-      setGameState(prev => prev.phase === 'playing' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
+      // destroy_base: killing all enemies does NOT end the fight — you must destroy the base
+      setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
     }
-  }, [gameState.players]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    gameState.players[0].icons.filter(ic => ic.isAlive).length,
+    gameState.players[1].icons.filter(ic => ic.isAlive).length,
+  ]);
+
+  /* Immediate destroy_base victory — fires the moment base health hits 0 mid-turn,
+     no End Turn press required.
+     Use individual number deps (not array ref) so React's Object.is() reliably
+     detects the 150 → 0 transition on every render. */
+  useEffect(() => {
+    if (gameState.phase !== 'combat') return;
+    const bh = gameState.baseHealth;
+    if (!bh || bh.length < 2) return;
+    if (bh[1] <= 0) {
+      setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
+    } else if (bh[0] <= 0) {
+      setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'defeat' as any, winner: 1 } : prev);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.baseHealth[0], gameState.baseHealth[1]]);
 
   /* Immediate survive victory — fires as soon as currentTurn exceeds the target */
   useEffect(() => {
-    if (gameState.phase !== 'playing') return;
+    if (gameState.phase !== 'combat') return;
     const ext = gameState as unknown as ExtState;
     if (ext.encounterObjective === 'survive' && ext.survivalTurnsTarget > 0) {
       if (gameState.currentTurn > ext.survivalTurnsTarget && gameState.players[0].icons.some(ic => ic.isAlive)) {
-        setGameState(prev => prev.phase === 'playing' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
+        setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
       }
     }
   }, [gameState.currentTurn]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1576,6 +1678,59 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
 
+        // ── Decoy placement ───────────────────────────────────────────────────
+        if (card.effect.placeDecoy) {
+          const occupied = updated.players.flatMap(p => p.icons).some(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          const tile = updated.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (occupied || !tile || tile.terrain.effects.movementModifier === -999) {
+            toast.error(getT().messages.tileOccupied);
+            return prev;
+          }
+          const decoyHp = card.effect.decoyHp ?? 30;
+          const decoyUnit: Icon = {
+            id: `decoy_${makeId()}`,
+            name: "Decoy",
+            role: "tank",
+            stats: {
+              hp: decoyHp, maxHp: decoyHp,
+              moveRange: 0, speed: 1,
+              might: 0, power: 0, defense: 0,
+              movement: 0, mana: 0, maxMana: 0,
+            },
+            abilities: [],
+            passive: "Decoy",
+            position: coordinates,
+            playerId: executor.playerId,
+            isAlive: true,
+            respawnTurns: 0,
+            cardUsedThisTurn: true,
+            movedThisTurn: true,
+            hasUltimate: false,
+            ultimateUsed: true,
+            isDecoy: true,
+            decoyExplosionDmg: card.effect.decoyExplosion ?? 20,
+            decoyExplosionRange: card.effect.decoyRange ?? 2,
+          };
+          updated.players = updated.players.map(p =>
+            p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, decoyUnit] }
+          );
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid] = Math.max(0, newMana[pid] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }),
+          }));
+          pushLog(updated, `${executor.name} placed a Decoy (${decoyHp} HP)!`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
         // ── Flying Machine card teleport ──────────────────────────────────────
         if (card.effect.teleport) {
           const tile = state.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
@@ -1606,6 +1761,38 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
 
+        // ── Jump card — teleport to target tile, consuming 1 movement ────────
+        if (card.effect.jump) {
+          const occupied = updated.players.flatMap(p => p.icons).some(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
+          const tile = state.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+              ...ic,
+              position: coordinates,
+              movedThisTurn: true,
+              stats: { ...ic.stats, movement: Math.max(0, ic.stats.movement - 1) },
+            }),
+          }));
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const newMana = [...updated.globalMana] as [number, number];
+            newMana[pid] = Math.max(0, newMana[pid] - card.manaCost);
+            updated.globalMana = newMana;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }),
+          }));
+          pushLog(updated, `${executor.name} jumped to (${coordinates.q},${coordinates.r})!`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
         // ── Huang-chan: Terracotta Summon ─────────────────────────────────────
         if (card.effect.summonTerracotta) {
           const occupied = updated.players.flatMap(p => p.icons).some(
@@ -1616,14 +1803,16 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
           const isArcher = Math.random() < 0.5;
           const exStats = calcEffectiveStats(updated, executor);
+          const terraKilnBonus = executor.itemPassiveTags?.includes('huang_terra_buff');
           const terracottaUnit: Icon = {
             id: `terracotta_${makeId()}`,
             name: isArcher ? "Terracotta Archer" : "Terracotta Warrior",
             role: isArcher ? "dps_ranged" : "dps_melee",
             stats: {
-              hp: 40 + (card.effect.summonHpBonus ?? 0), maxHp: 40 + (card.effect.summonHpBonus ?? 0),
+              hp: 40 + (card.effect.summonHpBonus ?? 0) + (terraKilnBonus ? 20 : 0),
+              maxHp: 40 + (card.effect.summonHpBonus ?? 0) + (terraKilnBonus ? 20 : 0),
               moveRange: 2, speed: 4,
-              might: isArcher ? Math.round(exStats.might * 1.5) : exStats.might,
+              might: (isArcher ? Math.round(exStats.might * 1.5) : exStats.might) + (terraKilnBonus ? 10 : 0),
               power: 0,
               defense: exStats.defense,
               movement: 2, mana: 0, maxMana: 0,
@@ -1632,7 +1821,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             abilities: [], passive: "Terracotta",
             position: coordinates, playerId: executor.playerId,
             isAlive: true, respawnTurns: 0,
-            cardUsedThisTurn: false, movedThisTurn: false,
+            cardUsedThisTurn: false, movedThisTurn: true,  // cannot move on summon turn
             hasUltimate: false, ultimateUsed: true,
             droneExpiresTurn: state.currentTurn + 2,
           };
@@ -1674,14 +1863,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           const tile = state.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
           if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
           const cavStats = calcEffectiveStats(updated, executor);
+          const cavKilnBonus = executor.itemPassiveTags?.includes('huang_terra_buff');
           const cavalryUnit: Icon = {
             id: `terracotta_cav_${makeId()}`,
             name: "Terracotta Cavalry",
             role: "dps_melee",
             stats: {
-              hp: 60, maxHp: 60,
+              hp: 60 + (cavKilnBonus ? 20 : 0), maxHp: 60 + (cavKilnBonus ? 20 : 0),
               moveRange: 3, speed: 7,
-              might: Math.round(cavStats.might * 1.5) + (card.effect.cavalryMightBonus ?? 0),
+              might: Math.round(cavStats.might * 1.5) + (card.effect.cavalryMightBonus ?? 0) + (cavKilnBonus ? 10 : 0),
               power: cavStats.power,
               defense: Math.round(cavStats.defense * 1.5),
               movement: 3, mana: 0, maxMana: 0,
@@ -1690,7 +1880,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             abilities: [], passive: "Terracotta",
             position: coordinates, playerId: executor.playerId,
             isAlive: true, respawnTurns: 0,
-            cardUsedThisTurn: false, movedThisTurn: false,
+            cardUsedThisTurn: false, movedThisTurn: true,  // cannot move on summon turn
             hasUltimate: false, ultimateUsed: true,
             droneExpiresTurn: state.currentTurn + 2,
           };
@@ -1743,7 +1933,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             toast.error("This unit is already controlled!");
             return prev;
           }
-          const controlDuration = card.effect.controlDuration ?? 2;
+          const controlDuration = (card.effect.controlDuration ?? 2) + (executor.itemPassiveTags?.includes('huang_control_extend') ? 1 : 0);
           // Move the target icon to the player's team (change playerId)
           const originalPlayerId = targetIcon.playerId;
           updated.players = updated.players.map(p => ({
@@ -1804,7 +1994,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const pushBlocked = !pushTile || pushTile.terrain.effects.movementModifier === -999 ||
               updated.players.flatMap(p => p.icons).some(ic => ic.isAlive && ic.position.q === pushPos.q && ic.position.r === pushPos.r);
             if (!pushBlocked) {
-              const drowned = pushTile?.terrain.type === 'river';
+              const drowned = pushTile?.terrain.type === 'lake';
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
@@ -1848,11 +2038,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             updated.players = updated.players.map(p => ({
               ...p,
               icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-                ...ic, passiveStacks: Math.min(8, (ic.passiveStacks ?? 0) + 1),
+                ...ic, passiveStacks: Math.min(7, (ic.passiveStacks ?? 0) + 1),
               }),
             }));
-            const stacks = Math.min(8, (executor.passiveStacks ?? 0) + 1);
-            pushLog(updated, `${executor.name} Crescendo: ${stacks}/8 (+${stacks * 3} Power)`, executor.playerId);
+            const stacks = Math.min(7, (executor.passiveStacks ?? 0) + 1);
+            pushLog(updated, `${executor.name} Crescendo: ${stacks}/7 (+${stacks * 3} Power)`, executor.playerId);
           }
           updated.players = updated.players.map(p => ({
             ...p,
@@ -1891,6 +2081,17 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             }),
           }));
           pushLog(updated, `${executor.name} Naval Repairs healed ${alliesInRange.length} unit(s) for ${healNow} HP (+${healNow} next turn)`, executor.playerId);
+          // Admiral's Banner (sunsin_naval_def_aura): also grants +30 DEF to healed allies
+          if (executor.itemPassiveTags?.includes('sunsin_naval_def_aura')) {
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => {
+                if (!alliesInRange.find(a => a.id === ic.id)) return ic;
+                return { ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + 30 };
+              }),
+            }));
+            pushLog(updated, `Admiral's Banner: allies in area gain +30 DEF this turn!`, executor.playerId);
+          }
           if (card.manaCost > 0) {
             const pid = executor.playerId as 0 | 1;
             const nm = [...updated.globalMana] as [number, number];
@@ -1952,7 +2153,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   if (ic.id !== enemyAtNext.id) return ic;
                   if (pushPos) {
                     const pushTile = updated.board.find(t => t.coordinates.q === pushPos.q && t.coordinates.r === pushPos.r);
-                    const drowned = pushTile?.terrain.type === 'river';
+                    const drowned = pushTile?.terrain.type === 'lake';
                     return {
                       ...ic,
                       position: drowned ? ic.position : pushPos,
@@ -2025,6 +2226,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               type: card.effect.debuffType,
               magnitude: card.effect.debuffMagnitude ?? 0,
               turnsRemaining: card.effect.debuffDuration ?? 2,
+              ...(card.effect.debuffType === 'taunted' ? { sourceIconId: executorId } : {}),
             };
             updated.players = updated.players.map(p => ({
               ...p,
@@ -2033,6 +2235,28 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               }),
             }));
             pushLog(updated, `${executor.name} applied ${debuff.type} to ${targetIcon.name}`, executor.playerId);
+
+            // Taunt: grant executor a defense bonus while taunting
+            if (card.effect.debuffType === 'taunted' && card.effect.tauntDefBonus) {
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+                  ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + card.effect.tauntDefBonus!,
+                }),
+              }));
+              pushLog(updated, `${executor.name} taunts! +${card.effect.tauntDefBonus} DEF while taunting`, executor.playerId);
+            }
+
+            // Shield Bash counter-stance: grants Leonidas +15 DEF until his next turn
+            if (card.definitionId === 'leonidas_shield_bash') {
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+                  ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + 20,
+                }),
+              }));
+              pushLog(updated, `${executor.name} counter-stance: +20 DEF this turn`, executor.playerId);
+            }
 
             // Spartan Shield item passive: also push + stun target for 1 turn
             if (executor.itemPassiveTags?.includes('leonidas_bash_push_stun')) {
@@ -2046,7 +2270,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 const dest = { q: pushed.position.q + dir.q, r: pushed.position.r + dir.r };
                 const destTile = updated.board.find(t => t.coordinates.q === dest.q && t.coordinates.r === dest.r);
                 const occupied = updated.players.flatMap(p => p.icons).some(ic => ic.id !== pushed.id && ic.isAlive && ic.position.q === dest.q && ic.position.r === dest.r);
-                if (destTile && !occupied && destTile.terrain.effects.movementModifier !== -999 && destTile.terrain.type !== 'river') {
+                if (destTile && !occupied && destTile.terrain.effects.movementModifier !== -999) {
                   updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== pushed.id ? ic : { ...ic, position: dest }) }));
                   pushLog(updated, `${pushed.name} was knocked back by Spartan Shield!`, executor.playerId);
                 }
@@ -2082,7 +2306,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           const executorTile = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r);
           const terrainMult = 1 + (executorTile ? (card.terrainBonus?.[executorTile.terrain.type] ?? 0) : 0);
           if (card.effect.damageType === 'atk') {
-            return resolveBasicAttackDamage(updated, executor, tgt ?? null);
+            if (card.effect.mightMult !== undefined) {
+              const atkStats = calcEffectiveStats(updated, executor);
+              const defStats = tgt ? calcEffectiveStats(updated, tgt) : { defense: 0 };
+              return Math.max(0.1, atkStats.might * card.effect.mightMult * terrainMult - (defStats.defense ?? 0));
+            }
+            const baseAtk = resolveBasicAttackDamage(updated, executor, tgt ?? null);
+            return baseAtk + (executor.itemPassiveTags?.includes('atk_bonus_10') ? 10 : 0);
           }
           if (card.effect.powerMult !== undefined) {
             const atkStats = calcEffectiveStats(updated, executor);
@@ -2093,10 +2323,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           return Math.max(0.1, (card.effect.damage ?? 1) * terrainMult);
         };
 
-        if (card.effect.damage !== undefined || card.effect.powerMult !== undefined) {
+        if (card.effect.damage !== undefined || card.effect.powerMult !== undefined || card.effect.mightMult !== undefined) {
           const isOwnBase =
-            (executor.playerId === 0 && coordinates.q === -6 && coordinates.r === 5) ||
-            (executor.playerId === 1 && coordinates.q === 6 && coordinates.r === -5);
+            (executor.playerId === 0 && coordinates.q === -5 && coordinates.r === 4) ||
+            (executor.playerId === 1 && coordinates.q === 5 && coordinates.r === -4);
 
           // Multi-target: allEnemiesInRange
           if (card.effect.allEnemiesInRange) {
@@ -2132,6 +2362,48 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             return { ...updated, baseHealth: updatedBaseHealth, objectives: updatedObjectives, cardTargetingMode: undefined, targetingMode: undefined };
           }
 
+          // Cone target (Suppressive Fire): hits all enemies in a cone toward clicked hex
+          if (card.effect.coneTarget) {
+            const range = card.effect.range ?? 3;
+            const dq = coordinates.q - executor.position.q;
+            const dr = coordinates.r - executor.position.r;
+            const len = Math.max(1, Math.sqrt(dq * dq + dq * dr + dr * dr)); // hex magnitude
+            // A hex (rq, rr) relative to executor is in cone if: forward projection > 0, cross ≤ projection
+            const isInCone = (rq: number, rr: number) => {
+              const proj = (rq * dq + rr * dr + (rq * dr + rr * dq) / 2);
+              const cross = Math.abs(rq * dr - rr * dq);
+              return proj > 0 && proj <= range * len && cross <= Math.ceil(proj / len);
+            };
+            const atkStats = calcEffectiveStats(updated, executor);
+            const coneEnemies = updated.players.flatMap(p => p.icons).filter(ic => {
+              if (!ic.isAlive || ic.playerId === executor.playerId) return false;
+              if (hexDistance(executor.position, ic.position) > range) return false;
+              return isInCone(ic.position.q - executor.position.q, ic.position.r - executor.position.r);
+            });
+            if (coneEnemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+            for (const enemy of coneEnemies) {
+              const defStats = calcEffectiveStats(updated, enemy);
+              const dmg = Math.max(1, Math.round(atkStats.might * (card.effect.mightMult ?? 0.3) - defStats.defense));
+              const newHp = Math.max(0, enemy.stats.hp - dmg);
+              updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== enemy.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 }) }));
+              updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0);
+              if (card.effect.debuffType && newHp > 0) {
+                const debuff: Debuff = { type: card.effect.debuffType, magnitude: card.effect.debuffMagnitude ?? 1, turnsRemaining: card.effect.debuffDuration ?? 1 };
+                updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== enemy.id ? ic : { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== debuff.type), debuff] }) }));
+              }
+              pushLog(updated, `${executor.name} Suppressive Fire hit ${enemy.name} for ${dmg} dmg`, executor.playerId);
+            }
+            if (card.manaCost > 0) {
+              const pid = executor.playerId as 0 | 1;
+              const nm = [...updated.globalMana] as [number, number];
+              nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+              updated.globalMana = nm;
+            }
+            updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }) }));
+            updated = consumeCardFromHand(updated, card, executor.playerId);
+            return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+          }
+
           // Line target: player clicked a direction hex — hit all enemies on that line
           if (card.effect.lineTarget) {
             const range = card.effect.range ?? 4;
@@ -2144,7 +2416,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             for (const enemy of enemies) {
               let dmg = computeCardDamage(enemy);
               // executeDouble: double damage if target is below 50% HP
-              if (card.effect.executeDouble && enemy.stats.hp < enemy.stats.maxHp * 0.5) {
+              if (card.effect.executeDouble && enemy.stats.hp < enemy.stats.maxHp * 0.4) {
                 dmg = dmg * 2;
               }
               const newEnemyHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
@@ -2157,7 +2429,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   respawnTurns: newEnemyHp > 0 ? ic.respawnTurns : 4,
                 }),
               }));
-              const executeLabel = card.effect.executeDouble && enemy.stats.hp < enemy.stats.maxHp * 0.5 ? " (EXECUTE×2)" : "";
+              const executeLabel = card.effect.executeDouble && enemy.stats.hp < enemy.stats.maxHp * 0.4 ? " (EXECUTE×2)" : "";
               pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg${executeLabel}`, executor.playerId);
               // Khan's Seal: stun each hit enemy for 1 turn
               if (newEnemyHp > 0 && executor.itemPassiveTags?.includes('genghis_fury_stun')) {
@@ -2199,11 +2471,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-                  ...ic, passiveStacks: Math.min(8, (ic.passiveStacks ?? 0) + 1),
+                  ...ic, passiveStacks: Math.min(7, (ic.passiveStacks ?? 0) + 1),
                 }),
               }));
-              const stacks = Math.min(8, (executor.passiveStacks ?? 0) + 1);
-              pushLog(updated, `${executor.name} Crescendo: ${stacks}/8 (+${stacks * 3} Power)`, executor.playerId);
+              const stacks = Math.min(7, (executor.passiveStacks ?? 0) + 1);
+              pushLog(updated, `${executor.name} Crescendo: ${stacks}/7 (+${stacks * 3} Power)`, executor.playerId);
             }
             updated.players = updated.players.map(p => ({
               ...p,
@@ -2255,6 +2527,22 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const hitLabel = multiHit > 1 ? `${multiHit}×${(totalDmg/multiHit).toFixed(0)}` : totalDmg.toFixed(0);
             pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${hitLabel} dmg`, executor.playerId);
 
+            // Decoy explosion: if target was a decoy and just died, explode
+            if (newHp <= 0 && targetIcon.isDecoy && (targetIcon.decoyExplosionDmg ?? 0) > 0) {
+              const explosionDmg = targetIcon.decoyExplosionDmg!;
+              const explosionRange = targetIcon.decoyExplosionRange ?? 2;
+              const nearbyEnemies = updated.players.flatMap(p => p.icons).filter(
+                ic => ic.isAlive && ic.playerId !== targetIcon.playerId && hexDistance(ic.position, targetIcon.position) <= explosionRange
+              );
+              for (const enemy of nearbyEnemies) {
+                const eHp = Math.max(0, enemy.stats.hp - explosionDmg);
+                updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+                  ...ic, stats: { ...ic.stats, hp: eHp }, isAlive: eHp > 0, respawnTurns: eHp > 0 ? ic.respawnTurns : 4,
+                }) }));
+              }
+              if (nearbyEnemies.length > 0) pushLog(updated, `Decoy EXPLODES for ${explosionDmg} dmg (${nearbyEnemies.length} enemies hit)!`, targetIcon.playerId);
+            }
+
             // Pushback: knock target away from executor
             if (card.effect.pushback && newHp > 0) {
               const DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
@@ -2272,7 +2560,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   ic => ic.id !== pushed.id && ic.isAlive && ic.position.q === dest.q && ic.position.r === dest.r
                 );
                 if (!destTile || isOccupied) break;
-                if (destTile.terrain.type === 'river') {
+                if (destTile.terrain.type === 'lake') {
                   updated.players = updated.players.map(p => ({
                     ...p,
                     icons: p.icons.map(ic => ic.id !== pushed.id ? ic : {
@@ -2303,25 +2591,38 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               }));
               pushLog(updated, `${targetIcon.name} is Bleeding — ${bleedDmg} HP/turn for ${card.effect.debuffDuration ?? 2} turns`, executor.playerId);
             }
-            // aoeDemoralize: apply Demoralize to all enemies adjacent to the primary target (THIS IS SPARTA!)
-            if (card.effect.aoeDemoralize) {
+            // Grand Strategy (napoleon_barrage_splash): hit one additional adjacent enemy for 50% damage
+            if (executor.itemPassiveTags?.includes('napoleon_barrage_splash') && card.definitionId?.includes('artillery_barrage')) {
+              const splashTarget = updated.players.flatMap(p => p.icons)
+                .find(ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 1);
+              if (splashTarget) {
+                const splashDmg = Math.round(finalDmg * 0.5);
+                const splashHp = Math.max(0, splashTarget.stats.hp - splashDmg);
+                updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== splashTarget.id ? ic : { ...ic, stats: { ...ic.stats, hp: splashHp }, isAlive: splashHp > 0, respawnTurns: splashHp > 0 ? ic.respawnTurns : 4 }) }));
+                updated = applyKillPassives(updated, executorId, splashTarget.isAlive, splashHp <= 0);
+                pushLog(updated, `Grand Strategy: Artillery splash hit ${splashTarget.name} for ${splashDmg} dmg`, executor.playerId);
+              }
+            }
+
+            // aoeRooted: apply Rooted to all enemies adjacent to the primary target (THIS IS SPARTA!)
+            if (card.effect.aoeRooted) {
               const adjacentEnemies = updated.players
                 .flatMap(p => p.icons)
                 .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 1);
-              const demoDebuff: Debuff = { type: 'demoralize', magnitude: 50, turnsRemaining: 1 };
+              const rootDebuff: Debuff = { type: 'rooted', magnitude: 0, turnsRemaining: 2 };
               for (const adj of adjacentEnemies) {
                 updated.players = updated.players.map(p => ({
                   ...p,
                   icons: p.icons.map(ic => ic.id !== adj.id ? ic : {
-                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'demoralize'), demoDebuff],
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'rooted'), rootDebuff],
                   }),
                 }));
-                pushLog(updated, `${adj.name} is Demoralized by THIS IS SPARTA! (1 turn)`, executor.playerId);
+                pushLog(updated, `${adj.name} is ROOTED by THIS IS SPARTA! (2 turns)`, executor.playerId);
               }
             }
           } else {
             if (isOwnBase) { toast.error(getT().messages.cantAttackOwnBase); return prev; }
-            const isBase = (coordinates.q === -6 && coordinates.r === 5) || (coordinates.q === 6 && coordinates.r === -5);
+            const isBase = (coordinates.q === -5 && coordinates.r === 4) || (coordinates.q === 5 && coordinates.r === -4);
             if (isBase) {
               const enemyId = executor.playerId === 0 ? 1 : 0;
               updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - finalDmg);
@@ -2358,9 +2659,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             toast.error(getT().messages.healingAlliesOnly);
             return prev;
           }
-          const healAmount = card.effect.healingMult !== undefined
+          const healBase = card.effect.healingMult !== undefined
             ? Math.round(calcEffectiveStats(updated, executor).power * card.effect.healingMult)
             : (card.effect.healing ?? 0);
+          const healAmount = healBase + (executor.itemPassiveTags?.includes('davinci_masterpiece_plus25') && card.definitionId?.includes('masterpiece') ? 25 : 0);
           const newHp = Math.min(targetIcon.stats.maxHp, targetIcon.stats.hp + healAmount);
           // Poison is removed on heal
           const newDebuffs = (targetIcon.debuffs ?? []).filter(d => d.type !== 'poison');
@@ -2422,8 +2724,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         let updatedObjectives = { ...state.objectives };
 
         const isOwnBase =
-          (caster.playerId === 0 && coordinates.q === -6 && coordinates.r === 5) ||
-          (caster.playerId === 1 && coordinates.q === 6 && coordinates.r === -5);
+          (caster.playerId === 0 && coordinates.q === -5 && coordinates.r === 4) ||
+          (caster.playerId === 1 && coordinates.q === 5 && coordinates.r === -4);
 
         // Lookup ability (if any)
         const ability = caster.abilities.find((a) => a.id === abilityId);
@@ -2472,7 +2774,17 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               toast.error(getT().messages.cantAttackOwn2);
               return prev;
             }
-            const dmg = resolveBasicAttackDamage(updated, caster, targetIcon);
+            // Basic Attack+ has mightMult in its effect — use it if present
+            const pendingCardEffect = (state.targetingMode as any)?.cardRefund?.card?.effect;
+            const cardMightMult = pendingCardEffect?.mightMult as number | undefined;
+            let dmg: number;
+            if (cardMightMult !== undefined) {
+              const atkStats = calcEffectiveStats(updated, caster);
+              const defStats = calcEffectiveStats(updated, targetIcon);
+              dmg = Math.max(0.1, atkStats.might * cardMightMult - (defStats.defense ?? 0));
+            } else {
+              dmg = resolveBasicAttackDamage(updated, caster, targetIcon);
+            }
             pushLog(updated, `${caster.name} basic-attacked ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, caster.playerId);
 
             const wasAlive = targetIcon.isAlive;
@@ -2494,8 +2806,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const envDamage = Math.max(0.1, calcEffectiveStats(updated, caster).might);
 
             const isBase =
-              (coordinates.q === -6 && coordinates.r === 5) ||
-              (coordinates.q === 6 && coordinates.r === -5);
+              (coordinates.q === -5 && coordinates.r === 4) ||
+              (coordinates.q === 5 && coordinates.r === -4);
             if (isBase) {
               const enemyId = caster.playerId === 0 ? 1 : 0;
               updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - envDamage);
@@ -2622,7 +2934,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               isAlive: true,
               respawnTurns: 0,
               cardUsedThisTurn: false,
-              movedThisTurn: false,
+              movedThisTurn: true,  // cannot move on summon turn
               hasUltimate: false,
               ultimateUsed: true,
               droneExpiresTurn: updated.currentTurn + 2,
@@ -2671,7 +2983,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               isAlive: true,
               respawnTurns: 0,
               cardUsedThisTurn: false,
-              movedThisTurn: false,
+              movedThisTurn: true,  // cannot move on summon turn
               hasUltimate: false,
               ultimateUsed: true,
               droneExpiresTurn: updated.currentTurn + 2,
@@ -2732,9 +3044,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             if (targetIcon) {
               let dmg = (ability as any).damage > 0 ? (ability as any).damage : resolveAbilityDamage(updated, caster, targetIcon, (ability as any).powerMult ?? 1.0);
               // Rider's Fury execute: double damage if target below 50% HP
-              if ((ability as any).executeDouble && targetIcon.stats.hp < targetIcon.stats.maxHp * 0.5) {
+              if ((ability as any).executeDouble && targetIcon.stats.hp < targetIcon.stats.maxHp * 0.4) {
                 dmg *= 2;
-                pushLog(updated, `EXECUTE! ${targetIcon.name} below 50% HP — Rider's Fury damage doubled!`, caster.playerId);
+                pushLog(updated, `EXECUTE! ${targetIcon.name} below 40% HP — Rider's Fury damage doubled!`, caster.playerId);
               }
               updated.players = updated.players.map((player) => ({
                 ...player,
@@ -2773,8 +3085,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               const envDamage = Math.max(0.1, calcEffectiveStats(updated, caster).power);
 
               const isBase =
-                (coordinates.q === -6 && coordinates.r === 5) ||
-                (coordinates.q === 6 && coordinates.r === -5);
+                (coordinates.q === -5 && coordinates.r === 4) ||
+                (coordinates.q === 5 && coordinates.r === -4);
               if (isBase) {
                 const enemyId = caster.playerId === 0 ? 1 : 0;
                 updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - envDamage);
@@ -2854,8 +3166,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const dest = state.board.find((t) => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
       if (!dest) return prev;
       if (dest.terrain.effects.movementModifier === -999) {
-        // Sun-sin (Turtle Ship passive) can enter river tiles
-        if (me.name.includes("Sun-sin") && dest.terrain.type === 'river') {
+        // Sun-sin (Turtle Ship passive) can enter lake tiles — the impassable deep water
+        if (me.name.includes("Sun-sin") && dest.terrain.type === 'lake') {
           // allow — don't return
         } else {
           return prev;
@@ -2868,31 +3180,46 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       );
       if (occupied) return prev;
 
-      // Sun-sin already on a river: cap movement budget to 1 (Turtle Ship passive)
-      const alreadyOnRiver = me.name.includes("Sun-sin") &&
-        state.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type === 'river';
-      const effectiveMovement = alreadyOnRiver ? Math.min(1, me.stats.movement) : me.stats.movement;
-      const budget = Math.min(effectiveMovement, me.stats.moveRange);
-      const occupiedKeys = new Set(
+      // Sun-sin already on water (lake or river): cap movement budget to 1 (Turtle Ship passive — anchored in water)
+      const alreadyOnWater = me.name.includes("Sun-sin") && ['lake', 'river'].includes(
+        state.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type ?? '');
+      const effectiveMovement = alreadyOnWater ? Math.min(1, me.stats.movement) : me.stats.movement;
+      const budget = effectiveMovement; // use remaining movement directly — no moveRange cap (Quick Move can exceed it)
+      // Friendly icons are passable transit tiles; enemy icons are hard blocks
+      const myPlayerId = me.playerId;
+      const playerBlockedKeys = new Set(
         state.players.flatMap((p) => p.icons)
-          // Only alive icons block movement; dead units free their tile immediately
-          .filter((ic) => ic.id !== me.id && ic.isAlive)
+          .filter((ic) => ic.id !== me.id && ic.isAlive && ic.playerId !== myPlayerId)
           .map((ic) => tileKey(ic.position.q, ic.position.r))
       );
-      const allowRiver = me.name.includes("Sun-sin");
-      const costMap = reachableWithCosts(state.board, me.position, budget, occupiedKeys, allowRiver);
+      const playerAllyKeys = new Set(
+        state.players.flatMap((p) => p.icons)
+          .filter((ic) => ic.id !== me.id && ic.isAlive && ic.playerId === myPlayerId)
+          .map((ic) => tileKey(ic.position.q, ic.position.r))
+      );
+      const allowLake = me.name.includes("Sun-sin");
+      const costMap = reachableWithCosts(state.board, me.position, budget, playerBlockedKeys, allowLake, playerAllyKeys);
       const destKey = tileKey(coordinates.q, coordinates.r);
       const moveCost = costMap.get(destKey);
       if (moveCost === undefined) return prev;
 
       const from = { ...me.position };
+      const movementBefore = me.stats.movement;
       const movementStack = { ...(state.movementStack ?? {}) };
       const stack = movementStack[me.id] ?? [];
-      stack.push({ from, to: coordinates, cost: moveCost });
+      stack.push({ from, to: coordinates, cost: moveCost, movementBefore });
       movementStack[me.id] = stack;
       if (me.justRespawned) return prev; // Can't move on turn they spawn
-      const landingOnRiver = me.name.includes("Sun-sin") && dest.terrain.type === 'river';
-      const landingOnLand  = me.name.includes("Sun-sin") && dest.terrain.type !== 'river';
+      if (me.movedThisTurn) return prev; // Already moved this turn (also blocks freshly-summoned units)
+      if (me.debuffs?.some(d => d.type === 'stun')) {
+        toast.error(`${me.name} is STUNNED and cannot move!`);
+        return prev;
+      }
+      if (me.debuffs?.some(d => d.type === 'rooted')) {
+        toast.error(`${me.name} is ROOTED and cannot move!`);
+        return prev;
+      }
+      const landingOnWater = me.name.includes("Sun-sin") && ['lake', 'river'].includes(dest.terrain.type);
       state.players = state.players.map((p) => ({
         ...p,
         icons: p.icons.map((ic) =>
@@ -2903,15 +3230,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               movedThisTurn: true,
               stats: {
                 ...ic.stats,
-                // Sun-sin: cap remaining movement to 1 when stepping onto river, restore to moveRange when leaving
-                movement: (() => {
-                  const zoneBonus = (state.activeZones ?? []).find(
-                    z => z.ownerId === me.playerId && hexDistance(coordinates, z.center) <= z.radius
-                  )?.magnitude ?? 0;
-                  return landingOnRiver
-                    ? Math.min(1, Math.max(0, ic.stats.movement - moveCost))
-                    : Math.max(0, ic.stats.movement - moveCost + zoneBonus);
-                })(),
+                // Sun-sin: cap remaining movement to 1 when stepping onto water (lake or river)
+                movement: landingOnWater
+                  ? Math.min(1, Math.max(0, ic.stats.movement - moveCost))
+                  : Math.max(0, ic.stats.movement - moveCost),
               },
             }
             : ic
@@ -2963,12 +3285,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         return { ...prev, targetingMode: undefined };
       }
 
-      // Napoleon Vantage Point passive: basic attack range 3 on forest (no DEF bonus trade-off)
-      const onForest = prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type === "forest";
-      const onRiver = prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type === "river";
-      const isRanged = me.name.includes("Napoleon") || me.name.includes("Da Vinci");
-      const range = me.name.includes("Napoleon") && onForest ? 3
-        : me.name.includes("Sun-sin") && onRiver ? 3
+      const onWater = ['lake', 'river'].includes(prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type ?? '');
+      const isRanged = me.name.includes("Napoleon") || me.name.includes("Da Vinci") || me.name.includes("Beethoven");
+      const range = me.name.includes("Sun-sin") && onWater ? 3
         : isRanged ? 2
         : (me.stats.attackRange ?? 1);
       return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
@@ -2981,6 +3300,21 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
   const endTurn = useCallback(() => {
     setGameState((prev) => {
       const nextPlayer: 0 | 1 = prev.activePlayerId === 0 ? 1 : 0;
+
+      // ── Objective already met? Declare victory immediately, skipping all
+      //    end-of-turn damage so the winning player can't die after winning. ──
+      {
+        const _p1Alive = prev.players[1].icons.some(ic => ic.isAlive);
+        if (prev.baseHealth[1] <= 0) {
+          return { ...prev, phase: 'victory' as any, winner: 0 };
+        }
+        if (prev.baseHealth[0] <= 0) {
+          return { ...prev, phase: 'defeat' as any, winner: 1 };
+        }
+        if (!_p1Alive && (prev as any).encounterObjective !== 'destroy_base') {
+          return { ...prev, phase: 'victory' as any, winner: 0 };
+        }
+      }
 
       // Crystal adjacency helper
       const crystalTile = prev.board.find(t => t.terrain.type === "mana_crystal");
@@ -3007,25 +3341,25 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             // Starting player: clear buffs, reset movement (account for mud_throw debuff)
             const mudThrow = ic.debuffs?.find(d => d.type === 'mud_throw');
             const moveReduction = mudThrow ? mudThrow.magnitude : 0;
-            // Demoralize: 50% chance to freeze unit (no movement, no card plays)
-            const isDemoralized = ic.isAlive && ic.debuffs?.some(d => d.type === 'demoralize');
-            const demoSkip = isDemoralized && Math.random() < 0.5;
-            if (demoSkip) pushLog(prev as any, `${ic.name} is Demoralized — frozen this turn! (cannot move or play cards)`, nextPlayer);
+            // Rooted: blocks movement only (enforced in selectTile) — no turn skip
+            const isRooted = ic.isAlive && ic.debuffs?.some(d => d.type === 'rooted');
+            if (isRooted) pushLog(prev as any, `${ic.name} is ROOTED — cannot move this turn!`, nextPlayer);
             // Stun: guaranteed full freeze (no movement, no cards, no actions)
             const isStunned = ic.isAlive && ic.debuffs?.some(d => d.type === 'stun');
             if (isStunned) pushLog(prev as any, `${ic.name} is STUNNED — cannot act this turn!`, nextPlayer);
-            // Sun-sin Turtle Ship: on river tile, movement capped at 1
+            const demoSkip = false;
+            // Sun-sin Turtle Ship: on water tile (lake or river), movement capped at 1
             const sunsinOnRiver = ic.name.includes("Sun-sin") && ic.isAlive &&
-              prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r)?.terrain.type === 'river';
+              ['lake', 'river'].includes(prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r)?.terrain.type ?? '');
             const frozen = demoSkip || isStunned;
-            // Freudenspur zone bonus at turn start (lifts water cap for Sun-sin when in zone)
-            const sunsinZoneBonus = (sunsinOnRiver && !frozen)
-              ? (prev.activeZones ?? []).reduce((sum, z) => {
+            // Freudenspur zone bonus at turn start — capped at +2 total, applies once to all chars in zone
+            const zoneBonus = !frozen
+              ? Math.min(2, (prev.activeZones ?? []).reduce((sum, z) => {
                   if (z.ownerId === nextPlayer && ic.isAlive && hexDistance(ic.position, z.center) <= z.radius) {
                     return sum + z.magnitude;
                   }
                   return sum;
-                }, 0)
+                }, 0))
               : 0;
             const baseMove = frozen ? 0 : Math.max(0, ic.stats.moveRange - moveReduction);
             const finalMove = baseMove;
@@ -3033,9 +3367,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               ...ic,
               cardBuffAtk: 0,
               cardBuffDef: 0,
+              cardBuffPow: 0,
               cardsUsedThisTurn: frozen ? 3 : 0,
               movedThisTurn: frozen ? true : false,
-              stats: { ...ic.stats, movement: sunsinOnRiver ? Math.min(1 + sunsinZoneBonus, finalMove + sunsinZoneBonus) : finalMove },
+              stats: { ...ic.stats, movement: sunsinOnRiver ? Math.min(1 + zoneBonus, finalMove + zoneBonus) : finalMove + zoneBonus },
             };
           }
           return ic;
@@ -3053,6 +3388,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       mana[nextPlayer] = nextMana;
       const maxMana = [...(prev.globalMaxMana ?? [5, 5])] as [number, number];
       maxMana[nextPlayer] = nextMana;
+
+      // Mana Crystal item (mana_plus_1_per_turn): +1 mana per holder on turn start
+      const manaCrystalCount = nextPlayerIcons.filter(ic => ic.itemPassiveTags?.includes('mana_plus_1_per_turn')).length;
+      if (manaCrystalCount > 0) {
+        mana[nextPlayer] += manaCrystalCount;
+        maxMana[nextPlayer] += manaCrystalCount;
+      }
 
       // Respawn tick (once per full round, when player 0's turn starts)
       let playersAfter = resetPlayers;
@@ -3073,8 +3415,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             if (!ic.isAlive && ic.respawnTurns === 0) {
               // In roguelike runs: player 0 characters never respawn (permadeath)
               if ((prev as ExtState).isRoguelikeRun && player.id === 0) return ic;
-              // Enemies only respawn in destroy_base objective
-              if (player.id === 1 && (prev as ExtState).encounterObjective !== 'destroy_base') return ic;
+              // In roguelike runs: enemies never respawn
+              if ((prev as ExtState).isRoguelikeRun && player.id === 1) return ic;
               const baseAlive = (prev.baseHealth[player.id] ?? 0) > 0;
               if (!baseAlive) return ic;
               const free = findFreeSpawnTile(
@@ -3114,19 +3456,30 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         icons: p.icons.map(ic => {
           if (!ic.isAlive) return ic;
           const tile = boardAfter.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r);
-          if (tile?.terrain.type === 'river' && !ic.name.includes("Sun-sin")) {
-            pushLog({ ...prev, players: playersAfter } as any, `${ic.name} drowned in the river!`, ic.playerId);
+          if (tile?.terrain.type === 'lake' && !ic.name.includes("Sun-sin")) {
+            pushLog({ ...prev, players: playersAfter } as any, `${ic.name} drowned in the lake!`, ic.playerId);
             return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
+          }
+          // Scorching Heat: desert tiles deal 5 pure damage at turn end
+          if (tile?.terrain.type === 'desert') {
+            const newHp = Math.max(0, ic.stats.hp - 5);
+            pushLog({ ...prev, players: playersAfter } as any, `🌡 ${ic.name} takes 5 scorching heat damage!`, ic.playerId);
+            return newHp <= 0
+              ? { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 }
+              : { ...ic, stats: { ...ic.stats, hp: newHp } };
           }
           return ic;
         }),
       }));
 
-      // Remove expired drones / terracotta warriors (droneExpiresTurn used for both)
+      // Remove expired drones / terracotta warriors (droneExpiresTurn used for both), and dead decoys
       const newCurrentTurn = nextPlayer === 0 ? prev.currentTurn + 1 : prev.currentTurn;
       playersAfter = playersAfter.map(p => ({
         ...p,
-        icons: p.icons.filter(ic => !ic.droneExpiresTurn || ic.droneExpiresTurn > newCurrentTurn),
+        icons: p.icons.filter(ic =>
+          (!ic.droneExpiresTurn || ic.droneExpiresTurn > newCurrentTurn) &&
+          !(ic.isDecoy && !ic.isAlive)
+        ),
       }));
 
       // Expire controlled enemy units (Eternal Army) — return them to enemy team
@@ -3223,7 +3576,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             { id: 'mana_surge',    name: 'Mana Surge',     icon: '💎', description: 'Mana wells overflow! Both teams gain +2 bonus mana.' },
             { id: 'forest_fire',   name: 'Forest Fire',    icon: '🔥', description: '⚠ INCOMING in 2 turns — a forest tile will ignite and spread 50%/turn. Units on burning forest take 30 pure damage. Permanent!' },
             { id: 'laser_grid',    name: 'Laser Grid',     icon: '⚡', description: 'Znyxorga targets 10 random tiles — marked in gold. NEXT TURN those tiles fire 40 pure damage. Move your units now!' },
-            { id: 'alien_tide',    name: 'Alien Tide',     icon: '🌊', description: '⚠ INCOMING in 2 turns — river tiles will spread 50%/turn. Move off low ground. Permanent!' },
+            { id: 'alien_tide',    name: 'Alien Tide',     icon: '🌊', description: '⚠ INCOMING in 2 turns — lake tiles will spread 33%/turn. Move off low ground. Permanent!' },
             { id: 'gravity_well',  name: 'Gravity Well',   icon: '⬇️', description: 'A gravity well forms at the center! All units are pulled 2 hexes toward the arena\'s heart.' },
             { id: 'gravity_crush', name: 'Gravity Crush',  icon: '🪨', description: 'Intense gravity crushes the arena! All unit movement is halved this round.' },
           ];
@@ -3231,6 +3584,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           const eligibleEvents = ALL_EVENTS.filter(e => {
             if (e.id === 'alien_tide' && (floodIsActive || pendingFloodCountdown !== undefined)) return false;
             if (e.id === 'forest_fire' && (forestFireIsActive || pendingFireCountdown !== undefined)) return false;
+            if (e.id === 'forest_fire' && boardAfter.filter(t => t.terrain.type === 'forest').length === 0) return false;
             return true;
           });
           if (eligibleEvents.length === 0) { /* all permanent events already active */ }
@@ -3310,9 +3664,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   if (impassable) return ic;
                   const blockedBy = occupiedPos.get(destKey);
                   if (blockedBy && blockedBy !== ic.id) return ic;
-                  // River → drown
-                  if (destTile.terrain.type === 'river') {
-                    pushLog(prev as any, `${ic.name} is pulled into the river by the Gravity Well!`, ic.playerId);
+                  // Lake → drown
+                  if (destTile.terrain.type === 'lake') {
+                    pushLog(prev as any, `${ic.name} is pulled into the lake by the Gravity Well!`, ic.playerId);
                     return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
                   }
                   occupiedPos.set(destKey, ic.id);
@@ -3345,7 +3699,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         if (newCurrentTurn % extPrev.spawnInterval === 0) {
           const p2Spawns = [
             { q: 4, r: -3 }, { q: 5, r: -3 }, { q: 4, r: -4 },
-            { q: 5, r: -4 }, { q: 6, r: -3 }, { q: 6, r: -4 },
+            { q: 5, r: -4 }, { q: 3, r: -3 }, { q: 3, r: -4 },
             { q: 4, r: -5 }, { q: 5, r: -5 },
           ];
           const freeSpawn = p2Spawns.find(pos =>
@@ -3371,7 +3725,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
       // destroy_base: enemy base fires at ALL player characters with LoS every 3 turns
       if (extPrev.encounterObjective === 'destroy_base' && nextPlayer === 0 && newCurrentTurn % 3 === 0) {
-        const BASE_Q = 6, BASE_R = -5;
+        const BASE_Q = 5, BASE_R = -4;
         // Hex LoS: cast line from base to target; mountain in between = blocked
         const hasLoS = (tq: number, tr: number): boolean => {
           const dist = Math.max(Math.abs(tq - BASE_Q), Math.abs(tr - BASE_R), Math.abs((tq + tr) - (BASE_Q + BASE_R)));
@@ -3407,22 +3761,48 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }
       }
 
-      // Alien Tide flood spreading — every turn flood is active, adjacent tiles have 50% to become river
+      // destroy_base: base turrets fire at ALL player characters within range 3 every turn
+      if (extPrev.encounterObjective === 'destroy_base' && nextPlayer === 0) {
+        const TURRET_Q = 5, TURRET_R = -4;
+        const turretHits: string[] = [];
+        playersAfter = playersAfter.map(p => {
+          if (p.id !== 0) return p;
+          return {
+            ...p,
+            icons: p.icons.map(ic => {
+              if (!ic.isAlive) return ic;
+              const dist = hexDistance(ic.position, { q: TURRET_Q, r: TURRET_R });
+              if (dist > 3) return ic;
+              const totalDef = (ic.stats.defense ?? 0) + (ic.cardBuffDef ?? 0);
+              const turretDmg = Math.max(1, 50 - totalDef);
+              const newHp = Math.round(Math.max(0, ic.stats.hp - turretDmg));
+              turretHits.push(`${ic.name} (−${turretDmg})`);
+              pushLog(prev as any, `🏰 Base Turret fires at ${ic.name} for ${turretDmg} damage!`, 1);
+              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 };
+            }),
+          };
+        });
+        if (turretHits.length > 0) {
+          toast.error(`🏰 Base Turrets fire! ${turretHits.join(', ')}`);
+        }
+      }
+
+      // Alien Tide flood spreading — every turn flood is active, adjacent tiles have 33% to become lake (impassable)
       if (floodIsActive && nextPlayer === 0) {
         const HEX_DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
         const PROTECTED = new Set(['base','mana_crystal','spawn','beast_camp']);
-        const riverKeys = new Set(boardAfter.filter(t => t.terrain.type === 'river').map(t => `${t.coordinates.q},${t.coordinates.r}`));
+        const lakeFloodKeys = new Set(boardAfter.filter(t => t.terrain.type === 'lake').map(t => `${t.coordinates.q},${t.coordinates.r}`));
         const newRiverKeys = new Set<string>();
         for (const tile of boardAfter) {
           const k = `${tile.coordinates.q},${tile.coordinates.r}`;
-          if (riverKeys.has(k) || PROTECTED.has(tile.terrain.type)) continue;
-          const adjacentToRiver = HEX_DIRS.some(d => riverKeys.has(`${tile.coordinates.q + d.q},${tile.coordinates.r + d.r}`));
-          if (adjacentToRiver && Math.random() < 0.5) newRiverKeys.add(k);
+          if (lakeFloodKeys.has(k) || PROTECTED.has(tile.terrain.type)) continue;
+          const adjacentToLake = HEX_DIRS.some(d => lakeFloodKeys.has(`${tile.coordinates.q + d.q},${tile.coordinates.r + d.r}`));
+          if (adjacentToLake && Math.random() < 0.33) newRiverKeys.add(k);
         }
         if (newRiverKeys.size > 0) {
           boardAfter = boardAfter.map(t =>
             newRiverKeys.has(`${t.coordinates.q},${t.coordinates.r}`)
-              ? { ...t, terrain: { type: 'river' as const, effects: { movementModifier: -999 } } }
+              ? { ...t, terrain: { type: 'lake' as const, effects: { movementModifier: -999 } as any } }
               : t
           );
           // Drown units caught on newly flooded tiles (Sun-sin immune)
@@ -3564,11 +3944,34 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           const currentStacks = ic.passiveStacks ?? 0;
           const newStacks = isAdjacentToAlly ? Math.min(3, currentStacks + 1) : 0;
           if (newStacks !== currentStacks) {
-            pushLog(prev as any, `${ic.name} Phalanx: ${newStacks} stack(s) (+${newStacks * 8} DEF)`, nextPlayer);
+            pushLog(prev as any, `${ic.name} Phalanx: ${newStacks} stack(s) (+${newStacks * 10} DEF)`, nextPlayer);
           }
           return { ...ic, passiveStacks: newStacks };
         }),
       }));
+
+      // Napoleon Mitraille passive: at the start of Napoleon's turn, deal 5 pure damage to all enemies within range 2
+      const napoleonIcon = playersAfter.find(p => p.id === nextPlayer)?.icons.find(ic => ic.name.includes("Napoleon") && ic.isAlive);
+      if (napoleonIcon) {
+        const mitrailleHits: string[] = [];
+        playersAfter = playersAfter.map(p => {
+          if (p.id === napoleonIcon.playerId) return p;
+          return {
+            ...p,
+            icons: p.icons.map(ic => {
+              if (!ic.isAlive) return ic;
+              if (hexDistance(ic.position, napoleonIcon.position) > 2) return ic;
+              const newHp = Math.max(0, ic.stats.hp - 5);
+              mitrailleHits.push(ic.name);
+              pushLog(prev as any, `🔫 ${napoleonIcon.name} Mitraille — ${ic.name} takes 5 damage!`, napoleonIcon.playerId);
+              return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 };
+            }),
+          };
+        });
+        if (mitrailleHits.length > 0) {
+          toast.error(`🔫 Mitraille! ${mitrailleHits.join(', ')} take 5 damage!`);
+        }
+      }
 
       // Cards: discard ending player's hand, draw fresh hand for next player
       const prevState = prev as ExtState;
@@ -3576,9 +3979,62 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       let decks = prevState.decks ? [...prevState.decks] as [Deck, Deck] : undefined;
       if (hands && decks) {
         const endPid = prev.activePlayerId;
-        // Discard ending player's remaining hand
         const endHand = hands[endPid];
         const endDeck = decks[endPid];
+
+        // ── End-of-turn curse passive penalties ──────────────────────────────
+        // Applied before discarding hand, while unplayed curses are still visible
+        const cursesInHand = endHand.cards.filter(c => c.definitionId.startsWith('curse_'));
+        for (const curse of cursesInHand) {
+          if (curse.definitionId === 'curse_malaise') {
+            const unplayedCount = endHand.cards.length; // includes Malaise itself
+            playersAfter = playersAfter.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => {
+                if (!ic.isAlive || ic.playerId !== endPid) return ic;
+                const newHp = Math.max(0, ic.stats.hp - unplayedCount);
+                pushLog(prev as any, `☠ Malaise: ${ic.name} takes ${unplayedCount} dmg (${unplayedCount} unplayed cards in hand)!`, endPid);
+                return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 };
+              }),
+            }));
+          } else if (curse.definitionId === 'curse_dread') {
+            playersAfter = playersAfter.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => {
+                if (!ic.isAlive || ic.playerId !== endPid) return ic;
+                if (Math.random() < 0.10) {
+                  const stunDebuff: Debuff = { type: 'stun', magnitude: 1, turnsRemaining: 1 };
+                  pushLog(prev as any, `☠ Dread: ${ic.name} is STUNNED next turn!`, endPid);
+                  return { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), stunDebuff] };
+                }
+                return ic;
+              }),
+            }));
+          } else if (curse.definitionId === 'curse_chains') {
+            playersAfter = playersAfter.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => {
+                if (ic.playerId !== endPid) return ic;
+                return {
+                  ...ic,
+                  stats: {
+                    ...ic.stats,
+                    might: Math.max(1, ic.stats.might - 1),
+                    power: Math.max(0, ic.stats.power - 1),
+                    defense: Math.max(0, ic.stats.defense - 1),
+                    maxHp: Math.max(1, ic.stats.maxHp - 1),
+                    hp: Math.min(ic.stats.hp, Math.max(1, ic.stats.maxHp - 1)),
+                  },
+                };
+              }),
+            }));
+            pushLog(prev as any, `☠ Chains of Znyxorga: all characters permanently lose 1 to all stats!`, endPid);
+          }
+          // curse_burden: no end-of-turn penalty — pure deck pollution
+          // curse_void_echo: handled below at NEXT player's turn-start (after hand draw)
+        }
+
+        // Discard ending player's remaining hand
         hands[endPid] = { ...endHand, cards: [] };
         decks[endPid] = { ...endDeck, discardPile: [...endDeck.discardPile, ...endHand.cards] };
 
@@ -3586,10 +4042,16 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         const daVinciNextPlayer = playersAfter[nextPlayer]?.icons.find(
           ic => ic.isAlive && ic.name.includes("Da Vinci") && !ic.abilityUsedThisTurn
         );
-        // Warlord's Grimoire: any alive icon on the next team has draw_plus_3
-        const grimoireBonus = playersAfter[nextPlayer]?.icons.some(
-          ic => ic.isAlive && ic.itemPassiveTags?.includes('draw_plus_3')
-        ) ? 3 : 0;
+        // Warlord's Grimoire (grimoire_early_surge): +2 draw and +2 mana on turns 2 and 3 only
+        const hasGrimoire = playersAfter[nextPlayer]?.icons.some(
+          ic => ic.isAlive && (ic.itemPassiveTags?.includes('grimoire_early_surge') || ic.itemPassiveTags?.includes('draw_plus_3'))
+        );
+        const grimoireActive = hasGrimoire && newCurrentTurn >= 2 && newCurrentTurn <= 3;
+        const grimoireBonus = grimoireActive ? 2 : 0;
+        if (grimoireActive) {
+          mana[nextPlayer] = Math.min(maxMana[nextPlayer] + 2, mana[nextPlayer] + 2);
+          maxMana[nextPlayer] = Math.max(maxMana[nextPlayer], mana[nextPlayer]);
+        }
         const extraDraw = (daVinciNextPlayer ? 1 : 0) + grimoireBonus;
 
         // Reset abilityUsedThisTurn for the next player AFTER Da Vinci check
@@ -3648,6 +4110,38 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }
         hands[nextPlayer] = { ...startHand, cards: finalDrawn };
         decks[nextPlayer] = { drawPile: finalDraw, discardPile: finalDiscard };
+
+        // Battle Drill (free_basic_each_turn): inject a free Basic Attack into hand at turn start
+        const hasBattleDrill = playersAfter[nextPlayer]?.icons.some(ic => ic.isAlive && ic.itemPassiveTags?.includes('free_basic_each_turn'));
+        if (hasBattleDrill) {
+          const baDef = CARD_DEFS.find((d: any) => d.definitionId === 'shared_basic_attack');
+          if (baDef) {
+            const freeBA = { ...instantiateCard(baDef as any), manaCost: 0 };
+            hands[nextPlayer] = { ...hands[nextPlayer], cards: [...hands[nextPlayer].cards, freeBA] };
+          }
+        }
+
+        // Void Echo curse: −1 mana for each copy in the newly drawn hand
+        const voidEchoCount = hands[nextPlayer].cards.filter(c => c.definitionId === 'curse_void_echo').length;
+        if (voidEchoCount > 0) {
+          mana[nextPlayer] = Math.max(0, mana[nextPlayer] - voidEchoCount);
+          maxMana[nextPlayer] = Math.max(0, maxMana[nextPlayer] - voidEchoCount);
+          pushLog(prev as any, `☠ Void Echo: −${voidEchoCount} mana this turn!`, nextPlayer);
+        }
+      }
+
+      // Base intents — shown as intent badges on the base hex during player's turn
+      const baseIntents: AIIntent[] = [];
+      if (extPrev.encounterObjective === 'destroy_base' && nextPlayer === 0) {
+        baseIntents.push({
+          iconId: 'base', type: 'attack', abilityName: 'Base Turret',
+          label: '50', damage: 50, range: 3,
+        });
+        const turnsUntilBombardment = ((3 - (newCurrentTurn % 3)) % 3) || 3;
+        baseIntents.push({
+          iconId: 'base', type: 'upcoming_ability', abilityName: 'Siege Bombardment',
+          label: '', damage: 40, range: 999, turnsUntilReady: turnsUntilBombardment,
+        });
       }
 
       return {
@@ -3677,6 +4171,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         pendingFireCountdown,
         pendingFireStartTile,
         activeZones: updatedActiveZones,
+        baseIntents,
         ...(hands && { hands }),
         ...(decks && { decks }),
       } as ExtState;
@@ -3725,6 +4220,14 @@ const playCard = useCallback((card: Card, executorId: string) => {
     if (state.gameMode === "singleplayer" && executor.playerId === 1) return prev;
     if (executor.justRespawned) {
       toast.error(getT().messages.justRespawned);
+      return prev;
+    }
+    if (executor.debuffs?.some(d => d.type === 'stun')) {
+      toast.error(`${executor.name} is STUNNED and cannot act!`);
+      return prev;
+    }
+    if (executor.debuffs?.some(d => d.type === 'silence') && card.exclusiveTo !== null) {
+      toast.error(`${executor.name} is SILENCED and cannot use abilities!`);
       return prev;
     }
     if ((executor.cardsUsedThisTurn ?? 0) >= 3) {
@@ -3791,6 +4294,15 @@ const playCard = useCallback((card: Card, executorId: string) => {
       };
     }
 
+    // Decoy card → enter hex-targeting mode so player picks a tile to place the decoy
+    if (card.effect.placeDecoy) {
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: "place_decoy", iconId: executorId, range: card.effect.range ?? 3 },
+      };
+    }
+
     // Flying Machine card → teleport targeting (unlimited range)
     if (card.effect.teleport) {
       const range = card.effect.range ?? 999;
@@ -3803,7 +4315,8 @@ const playCard = useCallback((card: Card, executorId: string) => {
 
     // ── Sun-sin dual-form card overrides ─────────────────────────────────────
     const executorTileType = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r)?.terrain.type;
-    const sunsinOnRiver = executor.name.includes("Sun-sin") && executorTileType === 'river';
+    const sunsinOnWater = executor.name.includes("Sun-sin") && (executorTileType === 'river' || executorTileType === 'lake');
+    const sunsinOnRiver = sunsinOnWater; // alias — water means turtle-ship form (lake or river)
 
     // Hwajeon water variant: Power×2.0 at range 1 (instead of 1.2 at range 3)
     if (card.definitionId === "sunsin_hwajeon" && sunsinOnRiver) {
@@ -3885,7 +4398,11 @@ const playCard = useCallback((card: Card, executorId: string) => {
       }
       updated.players = updated.players.map(p => ({
         ...p,
-        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+          ...ic,
+          cardUsedThisTurn: true,
+          cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1,
+        }),
       }));
       updated = consumeCardFromHand(updated, card, executor.playerId);
       return { ...updated };
@@ -3900,18 +4417,25 @@ const playCard = useCallback((card: Card, executorId: string) => {
       };
     }
 
+    // Jump — enter targeting mode: player picks a destination tile to jump to
+    if (card.effect.jump) {
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: "jump", iconId: executorId, range: card.effect.range ?? 2 },
+      };
+    }
+
     // Damage / healing / single-target powerMult → enter targeting mode
     const needsTarget =
       card.effect.damage !== undefined ||
       ((card.effect.healing !== undefined || card.effect.healingMult !== undefined) && !card.effect.selfCast) ||
-      (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget && !card.effect.randomTargets) ||
+      (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget && !card.effect.randomTargets && !card.effect.coneTarget) ||
       (card.effect.debuffType !== undefined && !card.effect.allEnemiesInRange);
 
     if (needsTarget) {
       const isBasicAttack = card.definitionId === "shared_basic_attack";
-      const napoleonOnForest = executor.name.includes("Napoleon") && executorTileType === 'forest';
-      const attackRange = napoleonOnForest ? 3
-        : executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") ? 2
+      const attackRange = executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") || executor.name.includes("Beethoven") ? 2
         : (sunsinOnRiver) ? 3
         : (executor.stats.attackRange ?? 1);
       const cardRange = card.effect.range ?? (isBasicAttack ? attackRange : 3);
@@ -3945,10 +4469,27 @@ const playCard = useCallback((card: Card, executorId: string) => {
         ...p,
         icons: p.icons.map(ic => ic.id !== executorId ? ic : {
           ...ic,
+          movedThisTurn: false, // allow movement after playing Quick Move even if already moved
           stats: { ...ic.stats, movement: ic.stats.movement + card.effect.moveBonus! },
         }),
       }));
       pushLog(updated, `${executor.name} played ${card.name} (+${card.effect.moveBonus} MOV)`, executor.playerId);
+    } else if (card.effect.fortify) {
+      // Fortify: can only be used before moving (requires full movement points); locks movement
+      if (executor.stats.movement < executor.stats.moveRange) {
+        toast.error(getT().messages.fortifyRequiresFullMovement ?? "Fortify requires full movement — use before moving!");
+        return prev;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+          ...ic,
+          cardBuffAtk: (ic.cardBuffAtk ?? 0) + (card.effect.atkBonus ?? 0),
+          cardBuffDef: (ic.cardBuffDef ?? 0) + (card.effect.defBonus ?? 0),
+          stats: { ...ic.stats, movement: 0 }, // lock movement for this turn
+        }),
+      }));
+      pushLog(updated, `${executor.name} fortifies! +${card.effect.defBonus} DEF, +${card.effect.atkBonus} ATK — cannot move this turn.`, executor.playerId);
     } else if (card.effect.atkBonus || card.effect.defBonus) {
       updated.players = updated.players.map(p => ({
         ...p,
@@ -3960,19 +4501,21 @@ const playCard = useCallback((card: Card, executorId: string) => {
       }));
       pushLog(updated, `${executor.name} played ${card.name}`, executor.playerId);
     } else if (card.effect.teamDefBuff) {
-      const buffVal = card.effect.teamDefBuff;
+      const wallPlus = executor.itemPassiveTags?.includes('leonidas_wall_plus');
+      const buffVal = card.effect.teamDefBuff + (wallPlus ? 10 : 0);
+      const effectiveRange = (card.effect.range ?? 2) + (wallPlus ? 1 : 0);
       updated.players = updated.players.map((p, pid) => {
         if (pid !== executor.playerId) return p;
         return {
           ...p,
           icons: p.icons.map(ic => {
             if (!ic.isAlive) return ic;
-            if (ic.id !== executorId && hexDistance(executor.position, ic.position) > (card.effect.range ?? 2)) return ic;
+            if (ic.id !== executorId && hexDistance(executor.position, ic.position) > effectiveRange) return ic;
             return { ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + buffVal };
           }),
         };
       });
-      pushLog(updated, `${executor.name} played ${card.name} — +${buffVal} DEF to nearby allies!`, executor.playerId);
+      pushLog(updated, `${executor.name} played ${card.name} — +${buffVal} DEF to allies within range ${effectiveRange}!`, executor.playerId);
     } else if (card.effect.teamDmgPct) {
       const pid = executor.playerId;
       const nm = [...updated.teamBuffs.mightBonus];
@@ -3981,6 +4524,14 @@ const playCard = useCallback((card: Card, executorId: string) => {
       np[pid] = Math.min((np[pid] ?? 0) + card.effect.teamDmgPct, 60);
       updated.teamBuffs = { ...updated.teamBuffs, mightBonus: nm, powerBonus: np };
       pushLog(updated, `${executor.name} played ${card.name} (+${card.effect.teamDmgPct}% team dmg)`, executor.playerId);
+      // Emperor's Coat (napoleon_armee_mana): Grande Armée also restores 1 mana per buffed ally
+      if (executor.itemPassiveTags?.includes('napoleon_armee_mana') && card.definitionId?.includes('grande_armee')) {
+        const aliveTeam = updated.players[pid]?.icons.filter(ic => ic.isAlive).length ?? 0;
+        const nm2 = [...updated.globalMana] as [number, number];
+        nm2[pid] = Math.min(nm2[pid] + aliveTeam, (updated.globalMaxMana ?? [5, 5])[pid] + aliveTeam);
+        updated.globalMana = nm2;
+        pushLog(updated, `Emperor's Coat: Grande Armée restored ${aliveTeam} mana!`, executor.playerId);
+      }
     } else if (card.effect.powerMult && card.effect.allEnemiesInRange && !card.effect.debuffType) {
       // AoE: fires immediately (no directional target needed)
       const range = card.effect.range ?? 2;
@@ -4033,6 +4584,14 @@ const playCard = useCallback((card: Card, executorId: string) => {
         updated = applyKillPassives(updated, executorId, enemy.isAlive, enemy.stats.hp - dmg <= 0);
       }
       // falls through to mana deduction + consumeCard below
+    } else if (card.effect.coneTarget) {
+      // Cone target: player clicks a direction, hits cone of enemies
+      const cardRange = card.effect.range ?? 3;
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: card.definitionId, iconId: executorId, range: cardRange },
+      };
     } else if (card.effect.powerMult && card.effect.lineTarget) {
       // Line target: requires player to click a direction hex — enter targeting mode
       const cardRange = card.effect.range ?? 5;
@@ -4048,10 +4607,12 @@ const playCard = useCallback((card: Card, executorId: string) => {
         ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
       );
       if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+      const stunDuration = (card.effect.debuffDuration ?? 1)
+        + (executor.itemPassiveTags?.includes('beethoven_gotterfunken_stun2') ? 1 : 0);
       const aoeDebuff: Debuff = {
         type: card.effect.debuffType,
         magnitude: card.effect.debuffMagnitude ?? 0,
-        turnsRemaining: card.effect.debuffDuration ?? 1,
+        turnsRemaining: stunDuration,
       };
       for (const enemy of enemies) {
         if (card.effect.powerMult) {
@@ -4082,11 +4643,11 @@ const playCard = useCallback((card: Card, executorId: string) => {
         updated.players = updated.players.map(p => ({
           ...p,
           icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-            ...ic, passiveStacks: Math.min(8, (ic.passiveStacks ?? 0) + 1),
+            ...ic, passiveStacks: Math.min(7, (ic.passiveStacks ?? 0) + 1),
           }),
         }));
-        const stacks = Math.min(8, (executor.passiveStacks ?? 0) + 1);
-        pushLog(updated, `${executor.name} Crescendo: ${stacks}/8 (+${stacks * 3} Power)`, executor.playerId);
+        const stacks = Math.min(7, (executor.passiveStacks ?? 0) + 1);
+        pushLog(updated, `${executor.name} Crescendo: ${stacks}/7 (+${stacks * 3} Power)`, executor.playerId);
       }
       // falls through to mana deduction + consumeCard below
     } else if (card.effect.randomTargets && card.effect.powerMult) {
@@ -4154,6 +4715,26 @@ const playCard = useCallback((card: Card, executorId: string) => {
       }));
       return { ...updated };
     }
+    else if (card.effect.selfHpCostPct !== undefined) {
+      // Blood Price: sacrifice HP, buff all alive allies with flat Might + Power
+      const hpCost = Math.floor(executor.stats.hp * card.effect.selfHpCostPct);
+      const newExecutorHp = Math.max(1, executor.stats.hp - hpCost); // cannot kill self
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive) return ic;
+          if (ic.id === executorId) return { ...ic, stats: { ...ic.stats, hp: newExecutorHp } };
+          if (ic.playerId !== executor.playerId) return ic;
+          return {
+            ...ic,
+            cardBuffAtk: (ic.cardBuffAtk ?? 0) + (card.effect.teamDmgFlat ?? 0),
+            cardBuffPow: (ic.cardBuffPow ?? 0) + (card.effect.teamPowerFlat ?? 0),
+          };
+        }),
+      }));
+      pushLog(updated, `${executor.name} Blood Price — sacrificed ${hpCost} HP, team gains +${card.effect.teamDmgFlat} Might & +${card.effect.teamPowerFlat} Power!`, executor.playerId);
+      // falls through to mana deduction + consumeCard below
+    }
 
     // Deduct mana from global pool — check for free-card passives first
     const isExclusiveAbility = card.exclusiveTo !== null && card.type !== "buff" && card.type !== "movement";
@@ -4215,7 +4796,7 @@ const undoMovement = useCallback(() => {
             ...ic,
             position: last.from,
             movedThisTurn: stack.length > 0,
-            stats: { ...ic.stats, movement: Math.min(ic.stats.moveRange, ic.stats.movement + last.cost) },
+            stats: { ...ic.stats, movement: last.movementBefore },
           }
           : ic
       ),
@@ -4253,6 +4834,7 @@ const startBattle = useCallback((
   isRoguelikeRun?: boolean,
   battleCount?: number,
   upgradedCardDefIds?: string[],
+  act?: 1 | 2 | 3,
 ) => {
   const sel = selectedCharactersRef.current;
   if (!sel || sel.length === 0) return;
@@ -4276,9 +4858,8 @@ const startBattle = useCallback((
     const speedQueue    = normalizeSpeedQueue(speedQueueRaw, allIcons);
     const p0Names = p0Icons.map(i => i.name);
     const p1Names = p1Icons.map(i => i.name);
-    const upgradedSet = upgradedCardDefIds ? new Set(upgradedCardDefIds) : undefined;
     const buildHand = (names: string[], ids?: string[]): [Hand, Deck] => {
-      const allCards = ids ? buildDeckFromIds(ids, upgradedSet) : buildDeckForTeam(names);
+      const allCards = ids ? buildDeckFromIds(ids, upgradedCardDefIds) : buildDeckForTeam(names);
       const handSizeBonus = (runChars ?? []).reduce((sum, c) => {
         return sum + c.items.filter(Boolean).reduce((s, item) => {
           if (item?.passiveTag === 'hand_size_plus_1') return s + 1;
@@ -4292,15 +4873,18 @@ const startBattle = useCallback((
     };
     const [hand0, deck0] = buildHand(p0Names, deckCardIds);
     const [hand1, deck1] = buildHand(p1Names);
-    // Use random map for first battle (when mapSeed provided), else standard map
-    const rawBoard = mapSeed != null ? generateRandomBattleBoard(mapSeed) : createInitialBoard();
+    // Use random map for roguelike battles; act determines biome theme (1=forest, 2=desert, 3=snow/ice)
+    const rawBoard = mapSeed != null ? generateRandomBattleBoard(mapSeed, act ?? 1) : createInitialBoard();
     const rogueObjective = (encounter?.objective ?? 'defeat_all') as FightObjective;
     // In roguelike: spawn tiles are always plain (no respawn zones). Base tiles are plain too,
-    // unless the objective is destroy_base (where the base is the actual combat target).
+    // unless the objective is destroy_base (where only the ENEMY base is a combat target;
+    // the player has no base of their own in that mode).
     const board = isRoguelikeRun
       ? rawBoard.map(tile => {
           if (tile.terrain.type === 'spawn') return { ...tile, terrain: { type: 'plain' as const, effects: {} } };
           if (tile.terrain.type === 'base' && rogueObjective !== 'destroy_base') return { ...tile, terrain: { type: 'plain' as const, effects: {} } };
+          // destroy_base: convert player's own base (q=-5,r=4) to plain — only enemy base remains
+          if (tile.terrain.type === 'base' && rogueObjective === 'destroy_base' && tile.coordinates.q === -5 && tile.coordinates.r === 4) return { ...tile, terrain: { type: 'plain' as const, effects: {} } };
           return tile;
         })
       : rawBoard;

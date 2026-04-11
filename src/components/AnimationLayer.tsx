@@ -152,21 +152,41 @@ function CastBurst({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }
 
 function DeathEffect({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
   const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
+  // Hex shape clip for full-tile flash
+  const clipHex = "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)";
   return (
-    <div
-      style={{
-        position: 'absolute',
-        left: c.x,
-        top: c.y,
-        fontSize: '2rem',
-        animation: 'anim-death-skull 1.3s ease-out forwards',
-        pointerEvents: 'none',
-        zIndex: 200,
-        filter: 'drop-shadow(0 0 8px rgba(255,30,30,0.9))',
-      }}
-    >
-      💀
-    </div>
+    <>
+      {/* Full hex red flash/dissolve */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x - HEX_W / 2,
+          top: c.y - HEX_H / 2,
+          width: HEX_W,
+          height: HEX_H,
+          clipPath: clipHex,
+          background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.95) 0%, rgba(255,60,20,0.90) 40%, rgba(200,10,10,0.70) 100%)',
+          animation: 'anim-hex-death-flash 1.1s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 199,
+        }}
+      />
+      {/* Rising skull */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x,
+          top: c.y,
+          fontSize: '1.8rem',
+          animation: 'anim-death-skull 1.3s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 200,
+          filter: 'drop-shadow(0 0 10px rgba(255,30,30,0.95))',
+        }}
+      >
+        💀
+      </div>
+    </>
   );
 }
 

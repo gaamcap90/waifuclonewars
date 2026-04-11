@@ -102,6 +102,20 @@ Check each box before considering the feature "done". All new content must be lo
 
 ---
 
+## Updating Game Rules
+
+Update `src/i18n/en.ts` → `settings.rules.entries` (and all 4 other language files) whenever:
+
+- [ ] A new game mode or objective type is added
+- [ ] A new mechanic is introduced (terrain type, event, status effect category)
+- [ ] An existing mechanic changes significantly (e.g. respawn rules, mana rules)
+- [ ] A feature is removed (remove or update the relevant entry)
+
+The `GameRules.tsx` component renders entries grouped by `category`. Entries have three fields: `category`, `title`, `text`.
+Categories currently used: `'Roguelike Run'`, `'Basics'`, `'Gameplay'` (and translated equivalents in each language file).
+
+---
+
 ## Quick Reference — File Map
 
 | What | Where |

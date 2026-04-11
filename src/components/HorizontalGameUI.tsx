@@ -138,7 +138,9 @@ const HorizontalGameUI = ({
   /* ── Debuff pill meta ── */
   const DEBUFF_META: Record<string, { icon: string; color: string }> = {
     mud_throw:   { icon: "🐾", color: "bg-yellow-900/80 border-yellow-600/60 text-yellow-200" },
-    demoralize:  { icon: "💔", color: "bg-rose-900/80 border-rose-600/60 text-rose-200" },
+    rooted:      { icon: "🌿", color: "bg-green-900/80 border-green-600/60 text-green-200" },
+    blinded:     { icon: "💥", color: "bg-yellow-900/80 border-yellow-600/60 text-yellow-100" },
+    taunted:     { icon: "📢", color: "bg-red-900/80 border-red-600/60 text-red-200" },
     armor_break: { icon: "🔩", color: "bg-orange-900/80 border-orange-600/60 text-orange-200" },
     silence:     { icon: "🤫", color: "bg-purple-900/80 border-purple-600/60 text-purple-200" },
     poison:      { icon: "☠️", color: "bg-green-900/80 border-green-600/60 text-green-200" },
@@ -174,8 +176,8 @@ const HorizontalGameUI = ({
       if (icon.name === "Combat Drone")     return t.game.hud.combatDronePassive;
       if (icon.name === "Terracotta Archer" || icon.name === "Terracotta Warrior" || icon.name === "Terracotta Cavalry") return "Terracotta unit — expires after 3 turns.";
       if (icon.name.includes("Sun-sin")) {
-        const onRiver = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type === 'river';
-        return onRiver ? t.characters.sunsin.passive.waterDesc : t.characters.sunsin.passive.desc;
+        const terrainType = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type;
+        return (terrainType === 'lake' || terrainType === 'river') ? t.characters.sunsin.passive.waterDesc : t.characters.sunsin.passive.desc;
       }
       return icon.passive ?? "";
     })();
@@ -272,8 +274,8 @@ const HorizontalGameUI = ({
             if (icon.name.includes("Leonidas") && (icon.passiveStacks ?? 0) > 0)
               pills.push(<span key="phalanx" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-amber-900/70 border-amber-600/60 text-amber-200">🛡×{icon.passiveStacks}</span>);
             if (icon.name.includes("Sun-sin")) {
-              const onRiver = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type === 'river';
-              if (onRiver) pills.push(<span key="turtle" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-cyan-900/80 border-cyan-600/60 text-cyan-200">{t.game.turtle}</span>);
+              const terrainType = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type;
+              if (terrainType === 'lake' || terrainType === 'river') pills.push(<span key="turtle" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-cyan-900/80 border-cyan-600/60 text-cyan-200">{t.game.turtle}</span>);
             }
             for (const d of icon.debuffs ?? []) {
               const meta = DEBUFF_META[d.type] ?? { icon: "❓", color: "bg-gray-800 border-gray-600 text-gray-300" };
@@ -381,7 +383,12 @@ const HorizontalGameUI = ({
   const TERRAIN_INFO: Record<string, { emoji: string; label: string; bg: string; border: string; lines: string[] }> = {
     forest:       { emoji: "🔮", bg: "rgba(30,10,50,0.92)",  border: "rgba(130,40,200,0.60)", label: t.terrain.forest.label,       lines: [...t.terrain.forest.lines] },
     mountain:     { emoji: "🌋", bg: "rgba(20,18,18,0.92)",  border: "rgba(80,70,70,0.60)",   label: t.terrain.mountain.label,     lines: [...t.terrain.mountain.lines] },
-    river:        { emoji: "🌊", bg: "rgba(5,15,40,0.92)",   border: "rgba(30,60,140,0.60)",  label: t.terrain.river.label,        lines: [...t.terrain.river.lines] },
+    river:        { emoji: "🏞", bg: "rgba(5,22,55,0.92)",   border: "rgba(40,80,160,0.60)",  label: t.terrain.river.label,        lines: [...t.terrain.river.lines] },
+    lake:         { emoji: "🌊", bg: "rgba(3,12,45,0.92)",   border: "rgba(20,50,130,0.60)",  label: t.terrain.lake.label,         lines: [...t.terrain.lake.lines] },
+    desert:       { emoji: "🏜", bg: "rgba(45,30,5,0.92)",   border: "rgba(160,100,20,0.60)", label: t.terrain.desert.label,       lines: [...t.terrain.desert.lines] },
+    snow:         { emoji: "❄",  bg: "rgba(15,22,38,0.92)",  border: "rgba(140,190,230,0.55)", label: t.terrain.snow.label,        lines: [...t.terrain.snow.lines] },
+    ice:          { emoji: "🧊", bg: "rgba(10,25,50,0.92)",  border: "rgba(80,160,210,0.60)", label: t.terrain.ice.label,          lines: [...t.terrain.ice.lines] },
+    ruins:        { emoji: "🏚", bg: "rgba(20,18,28,0.92)",  border: "rgba(90,70,120,0.60)",  label: t.terrain.ruins.label,        lines: [...t.terrain.ruins.lines] },
     mana_crystal: { emoji: "💎", bg: "rgba(20,5,40,0.92)",   border: "rgba(100,40,180,0.60)", label: t.terrain.mana_crystal.label, lines: [...t.terrain.mana_crystal.lines] },
     base: { emoji: "🏰", bg: "rgba(25,20,5,0.92)", border: "rgba(160,120,20,0.60)", label: t.terrain.base.label, lines: [...t.terrain.base.lines] },
   };
@@ -787,8 +794,9 @@ const HorizontalGameUI = ({
         const isWarn = cd === 1;
         const activeDebuffs = icon.debuffs ?? [];
         const DEBUFF_NAMES: Record<string, string> = {
-          mud_throw: "Slowed", demoralize: "Demoralized", armor_break: "Armor Break",
+          mud_throw: "Slowed", rooted: "Rooted", armor_break: "Armor Break",
           silence: "Silenced", poison: "Poisoned", stun: "Stunned", bleed: "Bleeding",
+          blinded: "Blinded", taunted: "Taunted",
         };
 
         const top = Math.min(rect.bottom + 6, window.innerHeight - 200);

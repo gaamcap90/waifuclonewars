@@ -104,14 +104,14 @@ const CARD_DEFS: CardDef[] = [
     effect: { range: 3, debuffType: 'mud_throw', debuffMagnitude: 1, debuffDuration: 2 },
   },
   {
-    definitionId: "shared_demoralize",
-    name: "Demoralize",
-    manaCost: 3,
+    definitionId: "shared_entangle",
+    name: "Entangle",
+    manaCost: 2,
     type: "debuff",
     rarity: "common",
-    description: "Target enemy: 50% chance each turn to skip movement & cards. Lasts 2 turns. Range 2.",
+    description: "Target enemy is ROOTED — cannot move for 2 turns. Can still attack and use cards. Range 2.",
     exclusiveTo: null,
-    effect: { range: 2, debuffType: 'demoralize', debuffMagnitude: 0, debuffDuration: 2 },
+    effect: { range: 2, debuffType: 'rooted', debuffMagnitude: 0, debuffDuration: 2 },
   },
   {
     definitionId: "shared_armor_break",
@@ -129,9 +129,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "debuff",
     rarity: "common",
-    description: "Enemy Power drops to 0 for 1 turn. Range 1.",
+    description: "Target cannot use abilities for 2 turns. Range 2.",
     exclusiveTo: null,
-    effect: { range: 1, debuffType: 'silence', debuffMagnitude: 0, debuffDuration: 2 },
+    effect: { range: 2, debuffType: 'silence', debuffMagnitude: 0, debuffDuration: 2 },
   },
   {
     definitionId: "shared_poison_dart",
@@ -151,9 +151,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.4 damage at range 4.",
+    description: "Power×1.3 damage at range 4.",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { powerMult: 1.4, range: 4 },
+    effect: { powerMult: 1.3, range: 4 },
   },
   {
     definitionId: "napoleon_grande_armee",
@@ -193,9 +193,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "attack",
     rarity: "rare",
-    description: "Power×0.5 per enemy in range — damage multiplies by the number of enemies hit. Range 2.",
+    description: "Power×0.6 per enemy in range — damage multiplies by the number of enemies hit. Range 2.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { scalingAoE: true, perEnemyMult: 0.5, range: 2 },
+    effect: { scalingAoE: true, perEnemyMult: 0.6, range: 2 },
   },
   {
     definitionId: "genghis_riders_fury",
@@ -203,7 +203,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×1.0 to ALL enemies on a line, range 5. Doubled if target <50% HP.",
+    description: "ULTIMATE (Exhaust) — Power×1.0 to ALL enemies on a line, range 5. Doubled if target <40% HP.",
     exclusiveTo: CHARACTER_IDS.genghis,
     effect: { powerMult: 1.0, lineTarget: true, range: 5, executeDouble: true },
   },
@@ -215,9 +215,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.5 damage at range 1. Applies Armor Break (−25% Defense for 2 turns).",
+    description: "Power×1.8 damage at range 1. Applies Armor Break (−25% Defense for 2 turns). Grants Leonidas +20 Defense this turn (counter-stance).",
     exclusiveTo: CHARACTER_IDS.leonidas,
-    effect: { powerMult: 1.5, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
+    effect: { powerMult: 1.8, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
   },
   {
     definitionId: "leonidas_spartan_wall",
@@ -235,9 +235,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×2 damage to target + Demoralize all adjacent enemies (1t).",
+    description: "ULTIMATE (Exhaust) — Power×2 damage to target + Root all adjacent enemies for 2 turns.",
     exclusiveTo: CHARACTER_IDS.leonidas,
-    effect: { powerMult: 2.0, range: 3, aoeDemoralize: true },
+    effect: { powerMult: 2.0, range: 3, aoeRooted: true },
   },
 
   // ── Da Vinci ─────────────────────────────────────────────────────────────────
@@ -257,9 +257,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "defense",
     rarity: "rare",
-    description: "Heal an ally within range 3 for Power×1.0 HP.",
+    description: "Heal an ally within range 3 for Power×1.2 HP.",
     exclusiveTo: CHARACTER_IDS.daVinci,
-    effect: { healingMult: 1.0, range: 3 },
+    effect: { healingMult: 1.2, range: 3 },
   },
   {
     definitionId: "davinci_vitruvian_guardian",
@@ -279,9 +279,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Sonic wave — Power×0.5 dmg to all enemies in a line up to range 3, pushes each 2 tiles back.",
+    description: "Sonic wave — Power×0.6 dmg to all enemies in a line up to range 3, pushes each 2 tiles back.",
     exclusiveTo: CHARACTER_IDS.beethoven,
-    effect: { powerMult: 0.5, range: 3, lineTarget: true, pushback: 2 },
+    effect: { powerMult: 0.6, range: 3, lineTarget: true, pushback: 2 },
   },
   {
     definitionId: "beethoven_freudenspur",
@@ -321,9 +321,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "defense",
     rarity: "rare",
-    description: "Land: Target an area — allies within range 2 heal 10 HP now and 10 HP next turn. Water: ~25 dmg to all enemies in range 3.",
+    description: "Land: Target an area — allies within range 2 heal 15 HP now and 15 HP next turn. Water: ~25 dmg to all enemies in range 3.",
     exclusiveTo: CHARACTER_IDS.sunsin,
-    effect: { healZone: true, healPerTurn: 10, healDuration: 2, range: 2 },
+    effect: { healZone: true, healPerTurn: 15, healDuration: 2, range: 2 },
   },
   {
     definitionId: "sunsin_chongtong",
@@ -363,9 +363,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "attack",
     rarity: "rare",
-    description: "FREE — Cavalry charges a target at range 3 for Power×1.5 damage. (Appears after First Emperor's Command only.)",
+    description: "FREE — Cavalry charges a target at range 3 for Power×1.2 damage. (Appears after First Emperor's Command only.)",
     exclusiveTo: CHARACTER_IDS.huang,
-    effect: { powerMult: 1.5, range: 3 },
+    effect: { powerMult: 1.2, range: 3 },
   },
   {
     definitionId: "huang_eternal_army",
@@ -378,24 +378,98 @@ const CARD_DEFS: CardDef[] = [
     effect: { controlEnemy: true, range: 3, controlDuration: 2 },
   },
 
-  // ── Curses (negative cards added to deck by bad events) ────────────────────
+  // ── New Shared Cards ─────────────────────────────────────────────────────────
+  {
+    definitionId: "shared_jump",
+    name: "Jump",
+    manaCost: 1,
+    type: "movement",
+    rarity: "common",
+    description: "Jump over one tile in a straight line, ignoring rivers and blocking units. Costs 1 movement. Cannot land on occupied tiles.",
+    exclusiveTo: null,
+    effect: { jump: true, range: 2 },
+  },
+  {
+    definitionId: "shared_flash_bang",
+    name: "Flash Bang",
+    manaCost: 1,
+    type: "debuff",
+    rarity: "common",
+    description: "Blind a target at range 3 — attack range reduced to 1 for 2 turns (basic attacks and abilities).",
+    exclusiveTo: null,
+    effect: { range: 3, debuffType: 'blinded', debuffMagnitude: 0, debuffDuration: 2 },
+  },
+  {
+    definitionId: "shared_suppressive_fire",
+    name: "Suppressive Fire",
+    manaCost: 2,
+    type: "attack",
+    rarity: "common",
+    description: "Deal Might×0.3 to all enemies in a cone (3 wide, range 3) and apply Slow (−1 movement) for 1 turn.",
+    exclusiveTo: null,
+    effect: { coneTarget: true, mightMult: 0.3, range: 3, debuffType: 'mud_throw', debuffMagnitude: 1, debuffDuration: 1 },
+  },
+  {
+    definitionId: "shared_fortify",
+    name: "Fortify",
+    manaCost: 2,
+    type: "defense",
+    rarity: "common",
+    description: "Cannot move this turn. Gain +25 Defense and +15 Might until end of your next turn.",
+    exclusiveTo: null,
+    effect: { fortify: true, defBonus: 25, atkBonus: 15, lockMovement: true },
+  },
+  {
+    definitionId: "shared_taunt",
+    name: "Taunt",
+    manaCost: 2,
+    type: "debuff",
+    rarity: "common",
+    description: "Target enemy within range 3 is Taunted — their AI prioritizes this unit for 2 turns. This unit gains +15 Defense while Taunting.",
+    exclusiveTo: null,
+    effect: { range: 3, debuffType: 'taunted', debuffMagnitude: 0, debuffDuration: 2, tauntDefBonus: 15 },
+  },
+  {
+    definitionId: "shared_decoy",
+    name: "Decoy",
+    manaCost: 2,
+    type: "buff",
+    rarity: "common",
+    description: "Place a Decoy (30 HP) on a tile within range 3. Enemy AI treats it as a valid target. When destroyed, it explodes for 20 damage to all enemies within range 2.",
+    exclusiveTo: null,
+    effect: { placeDecoy: true, decoyHp: 30, decoyExplosion: 20, decoyRange: 2, range: 3 },
+  },
+  {
+    definitionId: "shared_blood_price",
+    name: "Blood Price",
+    manaCost: 3,
+    type: "buff",
+    rarity: "common",
+    description: "This unit loses 20% of current HP. All allied units gain +15 Might and +15 Power until end of turn.",
+    exclusiveTo: null,
+    effect: { selfHpCostPct: 0.2, teamDmgFlat: 15, teamPowerFlat: 15 },
+  },
+
+  // ── Curses (passive penalties — added to deck by events, not drafted) ────────
+  // Curses sit in your deck and hand. Playing one (free) removes it from hand.
+  // If left in hand at end of turn, each curse triggers its passive penalty.
   {
     definitionId: "curse_burden",
     name: "Dead Weight",
-    manaCost: 1,
-    type: "buff",
+    manaCost: 0,
+    type: "curse",
     rarity: "common",
-    description: "A burden that drags on your soul. Costs 1 mana — does nothing.",
+    description: "Pollutes your deck. Play it to discard (wastes a card action). No end-of-turn penalty — just dead space.",
     exclusiveTo: null,
     effect: {},
   },
   {
     definitionId: "curse_malaise",
     name: "Malaise",
-    manaCost: 2,
-    type: "buff",
+    manaCost: 0,
+    type: "curse",
     rarity: "common",
-    description: "Crushing lethargy seeps into your clones. Wastes 2 mana.",
+    description: "End of turn: each character takes 1 damage per unplayed card remaining in hand (including this). Play it to avoid.",
     exclusiveTo: null,
     effect: {},
   },
@@ -403,29 +477,29 @@ const CARD_DEFS: CardDef[] = [
     definitionId: "curse_void_echo",
     name: "Void Echo",
     manaCost: 0,
-    type: "buff",
+    type: "curse",
     rarity: "common",
-    description: "A hollow resonance of dark energy. Wastes a card play.",
+    description: "If in hand at start of turn: −1 mana this turn. Play it to avoid losing that mana.",
     exclusiveTo: null,
     effect: {},
   },
   {
     definitionId: "curse_dread",
     name: "Dread",
-    manaCost: 3,
-    type: "buff",
+    manaCost: 0,
+    type: "curse",
     rarity: "common",
-    description: "An overwhelming sense of doom. Wastes 3 mana.",
+    description: "End of turn: each character has a 10% chance to be Stunned next turn. Play it to avoid.",
     exclusiveTo: null,
     effect: {},
   },
   {
     definitionId: "curse_chains",
     name: "Chains of Znyxorga",
-    manaCost: 1,
-    type: "buff",
+    manaCost: 0,
+    type: "curse",
     rarity: "common",
-    description: "Invisible chains bind your clones. Costs 1 mana to discard — does nothing.",
+    description: "End of turn: all characters permanently lose 1 to all stats. Play it immediately — every turn it stays costs you.",
     exclusiveTo: null,
     effect: {},
   },
@@ -486,8 +560,8 @@ export const CARD_UPGRADES: Record<string, {
   // Napoleon
   napoleon_artillery_barrage: {
     upgradedName: 'Artillery Barrage+',
-    descriptionUpgrade: 'Power×1.4 → 1.7',
-    patch: { description: '~68 damage to a target at range 4. (Scales with Power)', effect: { powerMult: 1.7, range: 4 } },
+    descriptionUpgrade: 'Power×1.3 → 1.6',
+    patch: { description: '~78 damage to a target at range 4. (Scales with Power)', effect: { powerMult: 1.6, range: 4 } },
   },
   napoleon_grande_armee: {
     upgradedName: 'Grande Armée+',
@@ -508,7 +582,7 @@ export const CARD_UPGRADES: Record<string, {
   genghis_horde_tactics: {
     upgradedName: 'Horde Tactics+',
     descriptionUpgrade: 'Range 2 → 3',
-    patch: { description: '~20 damage per enemy in range 3 — multiplies by enemy count. (Scales with Power)', effect: { scalingAoE: true, perEnemyMult: 0.5, range: 3 } },
+    patch: { description: '~24 damage per enemy in range 3 — multiplies by enemy count. (Scales with Power)', effect: { scalingAoE: true, perEnemyMult: 0.6, range: 3 } },
   },
   genghis_riders_fury: {
     upgradedName: "Rider's Fury+",
@@ -519,7 +593,7 @@ export const CARD_UPGRADES: Record<string, {
   leonidas_shield_bash: {
     upgradedName: 'Shield Bash+',
     descriptionUpgrade: 'Armor Break 2t → 3t',
-    patch: { description: '~30 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). (Scales with Power)', effect: { powerMult: 1.5, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
+    patch: { description: '~50 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). Grants Leonidas +20 Defense this turn. (Scales with Power)', effect: { powerMult: 1.8, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
   },
   leonidas_spartan_wall: {
     upgradedName: 'Spartan Wall+',
@@ -528,30 +602,30 @@ export const CARD_UPGRADES: Record<string, {
   },
   leonidas_this_is_sparta: {
     upgradedName: 'THIS IS SPARTA!+',
-    descriptionUpgrade: 'Power×2 → 3',
-    patch: { description: 'ULTIMATE (Exhaust) — ~60 damage to target + Demoralize all adjacent enemies (1t). (Scales with Power)', effect: { powerMult: 3.0, range: 3, aoeDemoralize: true } },
+    descriptionUpgrade: 'Power×2 → 2.5',
+    patch: { description: 'ULTIMATE (Exhaust) — Power×2.5 damage to target + Root all adjacent enemies for 2 turns. (Scales with Power)', effect: { powerMult: 2.5, range: 3, aoeRooted: true } },
   },
   // Da Vinci
   davinci_flying_machine: {
     upgradedName: 'Flying Machine+',
-    descriptionUpgrade: 'Cost 2 → 1 mana',
-    patch: { description: 'Teleport to any unoccupied hex on the board. Costs 1 mana.', manaCost: 1, effect: { teleport: true, range: 999 } },
+    descriptionUpgrade: 'After landing: draw 1 card and gain +20 Defense until end of turn',
+    patch: { description: 'Teleport to any unoccupied hex on the board. On arrival, draw 1 card and gain +20 Defense until end of turn.', effect: { teleport: true, range: 999, onArrivalDraw: 1, onArrivalDef: 20 } },
   },
   davinci_masterpiece: {
     upgradedName: 'Masterpiece+',
-    descriptionUpgrade: 'Heal Power×1.0 → 1.5',
-    patch: { description: 'Heal an ally within range 3 for ~75 HP. (Scales with Power)', effect: { healingMult: 1.5, range: 3 } },
+    descriptionUpgrade: 'Heal Power×1.2 → 1.8',
+    patch: { description: 'Heal an ally within range 3 for ~90 HP. (Scales with Power)', effect: { healingMult: 1.8, range: 3 } },
   },
   davinci_vitruvian_guardian: {
     upgradedName: 'Vitruvian Guardian+',
-    descriptionUpgrade: 'Drone: 50HP→80HP, 15Might→20Might',
-    patch: { description: 'ULTIMATE (Exhaust) — Summon a combat drone: 80 HP, 20 Might, 40 Defense. Lasts until defeated.', effect: {} },
+    descriptionUpgrade: 'Drone: HP 75→90, Might 50→55, Defense 30→40',
+    patch: { description: 'ULTIMATE (Exhaust) — Summon a combat drone: 90 HP, 55 Might, 40 Defense. Lasts until defeated. Stats scale with Power.', effect: { droneHpBonus: 15, droneMightBonus: 5, droneDefBonus: 10 } },
   },
   // Beethoven
   beethoven_schallwelle: {
     upgradedName: 'Schallwelle+',
-    descriptionUpgrade: 'Power×0.5→0.7, pushes 3 tiles',
-    patch: { description: 'Sonic wave — ~45 damage to all enemies in a line up to range 3, pushes each 3 tiles back. (Scales with Power)', effect: { powerMult: 0.7, range: 3, lineTarget: true, pushback: 3 } },
+    descriptionUpgrade: 'Power×0.6→0.9, pushes 3 tiles',
+    patch: { description: 'Sonic wave — Power×0.9 damage to all enemies in a line up to range 3, pushes each 3 tiles back. (Scales with Power)', effect: { powerMult: 0.9, range: 3, lineTarget: true, pushback: 3 } },
   },
   beethoven_freudenspur: {
     upgradedName: 'Freudenspur+',
@@ -571,13 +645,105 @@ export const CARD_UPGRADES: Record<string, {
   },
   sunsin_naval_command: {
     upgradedName: 'Naval Repairs+',
-    descriptionUpgrade: '10 HP/turn → 15 HP/turn',
-    patch: { description: 'Land: Allies within range 2 heal 15 HP now and 15 HP next turn. Water: ~35 dmg to all enemies in range 3.', effect: { healZone: true, healPerTurn: 15, healDuration: 2, range: 2 } },
+    descriptionUpgrade: '15 HP/turn → 20 HP/turn',
+    patch: { description: 'Land: Allies within range 2 heal 20 HP now and 20 HP next turn. Water: ~35 dmg to all enemies in range 3.', effect: { healZone: true, healPerTurn: 20, healDuration: 2, range: 2 } },
   },
   sunsin_chongtong: {
     upgradedName: 'Chongtong Barrage+',
-    descriptionUpgrade: 'Power×2.0 → 2.5',
-    patch: { description: 'ULTIMATE (Exhaust) — Land: charge 3 hexes, ~75 dmg in path, push sideways. Water: ~113 dmg main target, ~54 dmg adjacents in range 5.', effect: { powerMult: 2.5, range: 5, allEnemiesInRange: true, lineCharge: true, chargeDist: 3, pushSide: true } },
+    descriptionUpgrade: 'Power×2.0 → 2.2',
+    patch: { description: 'ULTIMATE (Exhaust) — Land: charge 3 hexes, ~66 dmg in path, push sideways. Water: ~99 dmg main target, ~48 dmg adjacents in range 5.', effect: { powerMult: 2.2, range: 5, allEnemiesInRange: true, lineCharge: true, chargeDist: 3, pushSide: true } },
+  },
+  // New shared cards
+  shared_jump: {
+    upgradedName: 'Jump+',
+    descriptionUpgrade: 'After landing, move 1 additional step freely',
+    patch: { description: 'Jump over one tile in a straight line, ignoring rivers and blocking units. After landing, take 1 free movement step.', effect: { jump: true, jumpRange: 2, jumpBonusMove: 1 } },
+  },
+  shared_suppressive_fire: {
+    upgradedName: 'Suppressive Fire+',
+    descriptionUpgrade: 'Slow duration 1t → 2t',
+    patch: { description: 'Deal Might×0.3 to all enemies in a cone (3 wide, range 3) and apply Slow (−1 movement) for 2 turns.', effect: { coneTarget: true, mightMult: 0.3, range: 3, debuffType: 'mud_throw', debuffMagnitude: 1, debuffDuration: 2 } },
+  },
+  shared_fortify: {
+    upgradedName: 'Fortify+',
+    descriptionUpgrade: 'Bonus lasts 2 turns',
+    patch: { description: 'Cannot move this turn. Gain +25 Defense and +15 Might until end of your second next turn (2 turns total).', effect: { fortify: true, defBonus: 25, atkBonus: 15, lockMovement: true, fortifyDuration: 2 } },
+  },
+  shared_taunt: {
+    upgradedName: 'Taunt+',
+    descriptionUpgrade: '+25 Defense while taunting, target takes +20% damage',
+    patch: { description: 'Target enemy is Taunted for 2 turns. This unit gains +25 Defense while Taunting. Taunted enemy takes +20% damage from all sources.', effect: { range: 3, debuffType: 'taunted', debuffMagnitude: 20, debuffDuration: 2, tauntDefBonus: 25 } },
+  },
+  shared_decoy: {
+    upgradedName: 'Decoy+',
+    descriptionUpgrade: 'Decoy 30 HP → 60 HP',
+    patch: { description: 'Place a Decoy (60 HP) on a tile within range 3. Enemy AI treats it as a valid target. When destroyed, explodes for 20 damage to all enemies within range 2.', effect: { placeDecoy: true, decoyHp: 60, decoyExplosion: 20, decoyRange: 2, range: 3 } },
+  },
+  shared_blood_price: {
+    upgradedName: 'Blood Price+',
+    descriptionUpgrade: 'Cost 3 → 2 mana',
+    patch: { description: 'This unit loses 20% of current HP. All allied units gain +15 Might and +15 Power until end of turn.', manaCost: 2, effect: { selfHpCostPct: 0.2, teamDmgFlat: 15, teamPowerFlat: 15 } },
+  },
+  // Shared card upgrades
+  shared_basic_attack: {
+    upgradedName: 'Basic Attack+',
+    descriptionUpgrade: 'Damage ×1.2 Might',
+    patch: { description: 'Deal Might×1.2 − Defense damage to a target at range 1.', effect: { damageType: 'atk', mightMult: 1.2, range: 1 } },
+  },
+  shared_shield: {
+    upgradedName: 'Shields Up+',
+    descriptionUpgrade: '+10 → +15 Defense',
+    patch: { description: 'Gain +15 Defense until the start of your next turn.', effect: { defBonus: 15 } },
+  },
+  shared_quick_move: {
+    upgradedName: 'Quick Move+',
+    descriptionUpgrade: '+2 → +3 Movement',
+    patch: { description: 'Gain +3 Movement this turn.', effect: { moveBonus: 3 } },
+  },
+  shared_mend: {
+    upgradedName: 'Mend+',
+    descriptionUpgrade: 'Heal 20 → 30 HP',
+    patch: { description: 'Restore 30 HP to this unit.', effect: { healing: 30, selfCast: true } },
+  },
+  shared_battle_cry: {
+    upgradedName: 'Battle Cry+',
+    descriptionUpgrade: '+10 → +15 Might',
+    patch: { description: 'Grant +15 Might to all allies for 2 turns.', effect: { atkBonus: 15, turns: 2 } },
+  },
+  shared_gamble: {
+    upgradedName: 'Gamble+',
+    descriptionUpgrade: 'Cost 1 → 0 Mana',
+    patch: { manaCost: 0, description: 'Discard 2 random cards from your hand. Draw 2 new ones. Free.', effect: { swapCount: 2 } },
+  },
+  shared_mud_throw: {
+    upgradedName: 'Mud Throw+',
+    descriptionUpgrade: 'Range 3 → 4, Slow −2 Movement',
+    patch: { description: 'Slow target by −2 movement for 2 turns. Range 4.', effect: { range: 4, debuffType: 'mud_throw', debuffMagnitude: 2, debuffDuration: 2 } },
+  },
+  shared_entangle: {
+    upgradedName: 'Entangle+',
+    descriptionUpgrade: 'Root 2 → 3 turns',
+    patch: { description: 'Root target in place for 3 turns. Range 3.', effect: { range: 3, debuffType: 'rooted', debuffMagnitude: 0, debuffDuration: 3 } },
+  },
+  shared_armor_break: {
+    upgradedName: 'Armor Break+',
+    descriptionUpgrade: '−25% → −35% DEF, 2 → 3 turns',
+    patch: { description: 'Reduce target Defense by 35% for 3 turns. Range 3.', effect: { range: 3, debuffType: 'armor_break', debuffMagnitude: 35, debuffDuration: 3 } },
+  },
+  shared_silence: {
+    upgradedName: 'Silence+',
+    descriptionUpgrade: 'Range 2 → 3, 2 → 3 turns',
+    patch: { description: 'Target cannot use abilities for 3 turns. Range 3.', effect: { range: 3, debuffType: 'silence', debuffMagnitude: 0, debuffDuration: 3 } },
+  },
+  shared_poison_dart: {
+    upgradedName: 'Poison Dart+',
+    descriptionUpgrade: '5 → 8 Might/DEF lost per turn',
+    patch: { description: 'Apply Poison to target: −8 Might and −8 Defense per turn for 3 turns. Range 3.', effect: { range: 3, debuffType: 'poison', debuffMagnitude: 8, debuffDuration: 3 } },
+  },
+  shared_flash_bang: {
+    upgradedName: 'Flash Bang+',
+    descriptionUpgrade: '2 → 3 turns Blinded',
+    patch: { description: 'Blind target for 3 turns (−50% Might, range 0). Range 3.', effect: { range: 3, debuffType: 'blinded', debuffMagnitude: 50, debuffDuration: 3 } },
   },
   // Huang-chan
   huang_terracotta_summon: {
@@ -598,17 +764,28 @@ export const CARD_UPGRADES: Record<string, {
 };
 
 /** Build a deck from a list of definition IDs (duplicates allowed). Used by roguelike.
- *  Pass upgradedDefIds to apply run upgrades to matching cards. */
-export function buildDeckFromIds(cardIds: string[], upgradedDefIds?: Set<string>): Card[] {
+ *  upgradedDefIds may contain duplicate entries — each entry upgrades exactly one copy of that card. */
+export function buildDeckFromIds(cardIds: string[], upgradedDefIds?: string[]): Card[] {
   const deck: Card[] = [];
+  // Count how many copies of each defId are upgraded
+  const upgradeRemaining = new Map<string, number>();
+  for (const id of (upgradedDefIds ?? [])) {
+    upgradeRemaining.set(id, (upgradeRemaining.get(id) ?? 0) + 1);
+  }
   for (const id of cardIds) {
     let def = CARD_DEFS.find(d => d.definitionId === id);
     if (!def) continue;
-    if (upgradedDefIds?.has(id)) {
+    const remaining = upgradeRemaining.get(id) ?? 0;
+    if (remaining > 0) {
       const upgrade = CARD_UPGRADES[id];
       if (upgrade) {
-        def = { ...def, name: upgrade.upgradedName, ...upgrade.patch } as CardDef;
+        // Deep-merge effect so base fields (e.g. damage:1) aren't wiped by the patch
+        const mergedEffect = upgrade.patch.effect
+          ? { ...def.effect, ...(upgrade.patch.effect as object) }
+          : def.effect;
+        def = { ...def, name: upgrade.upgradedName, ...upgrade.patch, effect: mergedEffect } as CardDef;
       }
+      upgradeRemaining.set(id, remaining - 1);
     }
     deck.push(instantiateCard(def));
   }
