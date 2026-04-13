@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { preloadPortraits } from "@/utils/portraits";
 import { LanguageProvider, useT } from "@/i18n";
 import GameBoard from "@/components/GameBoard";
 import VictoryScreen from "@/components/VictoryScreen";
@@ -30,16 +31,24 @@ import { getCharacterPortrait } from "@/utils/portraits";
 const Index = () => {
   const [gameMode, setGameMode] = useState<'loading' | 'menu' | 'archives' | 'settings' | 'rules' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated' | 'runVictory'>('loading');
   const handleLoadingComplete = useCallback(() => setGameMode('menu'), []);
+
+  // Kick off portrait preloads once on mount so images are cached before first battle
+  useEffect(() => { preloadPortraits(); }, []);
   const [pendingMode, setPendingMode] = useState<'singleplayer' | 'multiplayer'>('singleplayer');
   const [selectedCharacters, setSelectedCharacters] = useState<any[]>([]);
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
   const [prevModeBeforeRules, setPrevModeBeforeRules] = useState<string | null>(null);
+  const [settingsReturnMode, setSettingsReturnMode] = useState<string>('menu');
   const [hoveredTile, setHoveredTile] = useState<any>(null);
   const [hoveredCardRange, setHoveredCardRange] = useState<number | null>(null);
+  const [hoveredCardExecutorId, setHoveredCardExecutorId] = useState<string | null>(null);
   const [hoveredEnemyAbilityRange, setHoveredEnemyAbilityRange] = useState<{ iconId: string; range: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const { runState, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, upgradeSharedCard, removeCardFromDeck, addItemToCharacter, removeItemFromCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility } = useRunState();
   const [pendingEventItem, setPendingEventItem] = useState<import('@/types/roguelike').RunItem | null>(null);
+  const [pendingEventItemSource, setPendingEventItemSource] = useState<'event' | 'merchant'>('event');
+  // Shown after events that add a curse — display the curse card before going back to map
+  const [pendingCurseAdded, setPendingCurseAdded] = useState<{ curseId: string; nodeId: string } | null>(null);
   const { gameState, selectTile, endTurn, basicAttack, useAbility, playCard, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, startBattle, resetGame, cancelTargeting } = useGameState(
     (gameMode === 'singleplayer' || gameMode === 'multiplayer') ? gameMode : 'singleplayer',
     selectedCharacters
@@ -53,6 +62,8 @@ const Index = () => {
   const [hideUI, setHideUI] = useState(false);
   const [shakeActive, setShakeActive] = useState(false);
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [redVignette, setRedVignette] = useState(false);
+  const vignetteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [phaseBanner, setPhaseBanner] = useState<{ enemyName: string; abilityName: string; icon: string } | null>(null);
   const prevPhaseBannerRef = useRef<string | null>(null);
   const [battleTransition, setBattleTransition] = useState<{ label: string; icon: string } | null>(null);
@@ -64,6 +75,22 @@ const Index = () => {
   useEffect(() => {
     const allIcons = gameState.players.flatMap(p => p.icons);
     const snap = prevIconSnapshotRef.current;
+
+    // Detect despawned summoned units (terracotta / drone) — they disappear from the icons array
+    snap.forEach((prevData, iconId) => {
+      if (!allIcons.find(ic => ic.id === iconId)) {
+        // Unit was removed. Fire despawn VFX if it was a summoned unit (ID starts with known prefixes)
+        const isSummoned = iconId.startsWith('terracotta_') || iconId.startsWith('drone_') || iconId.startsWith('decoy_');
+        if (isSummoned) {
+          addAnimation({
+            id: nextAnimId('despawn'),
+            type: 'despawn',
+            position: { q: prevData.q, r: prevData.r },
+          });
+        }
+        snap.delete(iconId);
+      }
+    });
 
     allIcons.forEach(icon => {
       const prev = snap.get(icon.id);
@@ -86,6 +113,12 @@ const Index = () => {
             if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
             setShakeActive(true);
             shakeTimerRef.current = setTimeout(() => setShakeActive(false), 200);
+          }
+          // Red vignette when player team takes damage
+          if (icon.playerId === 0) {
+            if (vignetteTimerRef.current) clearTimeout(vignetteTimerRef.current);
+            setRedVignette(true);
+            vignetteTimerRef.current = setTimeout(() => setRedVignette(false), 650);
           }
           addAnimation({
             id: nextAnimId('impact'),
@@ -118,6 +151,12 @@ const Index = () => {
             position: icon.position,
             color: 'rgba(80,255,140,0.85)',
           });
+          addAnimation({
+            id: nextAnimId('heal_ring'),
+            type: 'heal_ring',
+            position: icon.position,
+            color: 'rgba(80,255,140,0.85)',
+          });
         }
       }
 
@@ -138,6 +177,26 @@ const Index = () => {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.players]);
+
+  // ── Base HP change → fire impact + damage number at base tile ──────────────
+  const prevBaseHealthRef = useRef<number[]>([100, 100]);
+  useEffect(() => {
+    const current: number[] = (gameState as any).baseHealth ?? [100, 100];
+    const prev = prevBaseHealthRef.current;
+    const BASE_POSITIONS = [{ q: -5, r: 4 }, { q: 5, r: -4 }]; // player 0 base, player 1 base
+    current.forEach((hp, pid) => {
+      const delta = hp - (prev[pid] ?? hp);
+      if (delta < -0.5) {
+        const pos = BASE_POSITIONS[pid];
+        const dmg = Math.round(-delta);
+        addAnimation({ id: nextAnimId('dmg'), type: 'damage', position: pos, value: dmg });
+        addAnimation({ id: nextAnimId('impact'), type: 'impact', position: pos, color: 'rgba(255,60,20,0.90)' });
+        addAnimation({ id: nextAnimId('aoe'), type: 'aoe', position: pos, value: 2, color: 'rgba(255,80,20,0.80)' });
+      }
+    });
+    prevBaseHealthRef.current = current;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(gameState as any).baseHealth]);
 
   // ── Turn flash + enemy banner when active player changes ─────────────────────
   const prevActivePlayerRef = useRef<number>(gameState.activePlayerId);
@@ -322,20 +381,37 @@ const Index = () => {
 
         if (dist <= range) {
           const name = executor.name;
-          const color = name.includes('Napoleon')  ? 'rgba(255,220,60,0.95)'
-            : name.includes('Sun-sin')             ? 'rgba(100,200,255,0.95)'
-            : name.includes('Da Vinci')            ? 'rgba(180,120,255,0.95)'
-            : name.includes('Genghis')             ? 'rgba(255,140,40,0.95)'
-            : name.includes('Leonidas')            ? 'rgba(200,180,60,0.95)'
-            :                                        'rgba(255,100,100,0.95)';
+          const isRanged = name.includes('Napoleon') || name.includes('Sun-sin')
+            || name.includes('Da Vinci') || name.includes('Beethoven');
 
-          addAnimation({
-            id: nextAnimId('proj'),
-            type: 'projectile',
-            position: targetIcon.position,
-            fromPosition: executor.position,
-            color,
-          });
+          const slashColor = name.includes('Genghis')  ? 'rgba(255,120,30,0.95)'
+            : name.includes('Leonidas')                ? 'rgba(220,190,50,0.95)'
+            : name.includes('Sun-sin')                 ? 'rgba(100,210,255,0.95)'
+            :                                            'rgba(255,220,60,0.95)';
+
+          const projColor = name.includes('Napoleon')  ? 'rgba(255,220,60,0.95)'
+            : name.includes('Sun-sin')                 ? 'rgba(100,200,255,0.95)'
+            : name.includes('Da Vinci')                ? 'rgba(180,120,255,0.95)'
+            :                                            'rgba(255,100,100,0.95)';
+
+          if (!isRanged && dist === 1) {
+            // Melee — slash at target
+            addAnimation({
+              id: nextAnimId('slash'),
+              type: 'slash',
+              position: targetIcon.position,
+              color: slashColor,
+            });
+          } else {
+            // Ranged / ability — projectile
+            addAnimation({
+              id: nextAnimId('proj'),
+              type: 'projectile',
+              position: targetIcon.position,
+              fromPosition: executor.position,
+              color: projColor,
+            });
+          }
         }
       }
     }
@@ -436,7 +512,7 @@ const Index = () => {
   }
 
   if (gameMode === 'settings') {
-    return <GameSettings onBack={() => setGameMode('menu')} />;
+    return <GameSettings onBack={() => setGameMode(settingsReturnMode as any)} />;
   }
 
   if (gameMode === 'rules') {
@@ -472,6 +548,7 @@ const Index = () => {
         runState={runState}
         onSelectNode={handleNodeSelect}
         onAbandonRun={() => { abandonRun(); setGameMode('menu'); }}
+        onSettings={() => { setSettingsReturnMode('roguelikeMap'); setGameMode('settings'); }}
         onAllocateStat={allocateStatPoint}
         onUpgradeAbility={upgradeAbility}
       />
@@ -508,7 +585,7 @@ const Index = () => {
     );
   }
 
-  if (gameMode === 'merchant' && runState) {
+  if (gameMode === 'merchant' && runState && !pendingEventItem) {
     return (
       <MerchantScreen
         runState={runState}
@@ -529,12 +606,7 @@ const Index = () => {
           const CURSE_IDS = ['curse_burden', 'curse_malaise', 'curse_void_echo', 'curse_dread', 'curse_chains'];
           const giveItem = (tier: 'common' | 'uncommon' | 'rare' | 'legendary') => {
             const item = pickItemReward(tier, Math.random, charIds);
-            const target = runState.characters.find(c => c.currentHp > 0 && c.items.some(s => s === null))
-              ?? runState.characters.find(c => c.currentHp > 0);
-            if (target && item) {
-              const slotIdx = target.items.findIndex(s => s === null);
-              addItemToCharacter(item, target.id as CharacterId, slotIdx >= 0 ? slotIdx : 0);
-            }
+            if (item) { setPendingEventItemSource('merchant'); setPendingEventItem(item); }
           };
           // 15% damage | 15% curse | 20% common | 35% uncommon | 10% rare | 5% legendary
           if (roll < 0.15) {
@@ -546,7 +618,7 @@ const Index = () => {
             return 'curse';
           } else if (roll < 0.50) {
             giveItem('common');
-            return 'item';
+            return 'item'; // giveItem now sets pendingEventItem — player assigns on next render
           } else if (roll < 0.85) {
             giveItem('uncommon');
             return 'item';
@@ -583,17 +655,24 @@ const Index = () => {
     );
   }
 
-  if (gameMode === 'unknown' && runState) {
+  if (gameMode === 'unknown' && runState && !pendingEventItem) {
     return (
       <UnknownScreen
         runState={runState}
         onChoice={(result) => {
           const rng = () => Math.random();
           const charIds = runState.characters.map(c => c.id);
+          const nodeId = activeNodeId!;
 
           const randomCurse = () => {
             const CURSE_IDS = ['curse_burden', 'curse_malaise', 'curse_void_echo', 'curse_dread', 'curse_chains'];
             return CURSE_IDS[(Math.random() * CURSE_IDS.length) | 0];
+          };
+
+          // Helper: add curse + show notification before completing the node
+          const addCurseAndNotify = (curseId: string) => {
+            addCardToDeck(curseId);
+            setPendingCurseAdded({ curseId, nodeId });
           };
 
           if (result === 'gold') {
@@ -604,7 +683,7 @@ const Index = () => {
             // Altar pray or Abandoned Medkit — restore 30% HP to all
             healAllAtCampfire();
           } else if (result === 'card') {
-            // Altar offer (pay 30 HP) or Spectral Merchant (pay 50 gold)
+            // Mysterious Altar A: pay 30 HP all → random card
             hurtAllCharacters(30);
             const [card] = pickCardRewards(runState.deckCardIds, rng, charIds);
             if (card) addCardToDeck(card.definitionId);
@@ -631,13 +710,15 @@ const Index = () => {
               hurtAllCharacters(35);
             }
           } else if (result === 'curse') {
-            // Experimental Serum: flat 20 HP to all + Malaise (fitting: lethargy from alien injection)
-            hurtAllCharacters(-20); // negative = heal; reuse hurtAll with negative for flat heal
-            addCardToDeck('curse_malaise');
+            // Experimental Serum: flat 20 HP to all + Malaise
+            hurtAllCharacters(-20);
+            addCurseAndNotify('curse_malaise');
+            return;
           } else if (result === 'gold_curse') {
             // Toxic Bloom: +60 gold + random curse
             addGold(60);
-            addCardToDeck(randomCurse());
+            addCurseAndNotify(randomCurse());
+            return;
           } else if (result === 'heal_or_damage') {
             // Reality Fracture: 50/50 heal or damage
             if (rng() < 0.5) {
@@ -647,11 +728,14 @@ const Index = () => {
             }
           } else if (result === 'item_curse') {
             // Void Peddler: gain uncommon item + random curse
+            const curseId = randomCurse();
+            addCardToDeck(curseId);
+            setPendingCurseAdded({ curseId, nodeId });
             const item = pickItemReward('uncommon', rng, charIds);
-            if (item) { addCardToDeck(randomCurse()); setPendingEventItem(item); return; }
-            addCardToDeck(randomCurse());
+            if (item) { setPendingEventItem(item); return; }
+            return; // curse modal handles navigation
           } else if (result === 'upgrade_curse') {
-            // The Corruptor: upgrade a random existing shared card in deck + Chains of Znyxorga
+            // The Corruptor A: upgrade a random existing shared card in deck + Chains of Znyxorga
             const upgradeableIds = runState.deckCardIds.filter(id => {
               const def = CARD_DEFS.find((d: any) => d.definitionId === id);
               return def && def.exclusiveTo === null && CARD_UPGRADES[id] && !runState.upgradedCardDefIds.includes(id);
@@ -660,7 +744,76 @@ const Index = () => {
               const pick = upgradeableIds[(Math.random() * upgradeableIds.length) | 0];
               upgradeSharedCard(pick);
             }
-            addCardToDeck('curse_chains');
+            addCurseAndNotify('curse_chains');
+            return;
+
+          // ── New choice-B (and Spectral Merchant A) results ──────────────────
+          } else if (result === 'card_free') {
+            // Supply Crate B / Reality Fracture B: free card, no cost
+            const [card] = pickCardRewards(runState.deckCardIds, rng, charIds);
+            if (card) addCardToDeck(card.definitionId);
+          } else if (result === 'discard_for_gold') {
+            // Wounded Clone B: sacrifice 1 random non-curse card → +45 gold
+            const discardable = runState.deckCardIds.filter(id => !id.startsWith('curse_'));
+            if (discardable.length > 0) {
+              const pick = discardable[(Math.random() * discardable.length) | 0];
+              removeCardFromDeck(pick);
+            }
+            addGold(45);
+          } else if (result === 'gold_rift') {
+            // Unstable Rift B: safe harvest → +40 gold
+            addGold(40);
+          } else if (result === 'upgrade_hurt') {
+            // Abandoned Medkit B: upgrade 1 random card, −15 HP all
+            const upgradeableIds2 = runState.deckCardIds.filter(id => {
+              const def = CARD_DEFS.find((d: any) => d.definitionId === id);
+              return def && def.exclusiveTo === null && CARD_UPGRADES[id] && !runState.upgradedCardDefIds.includes(id);
+            });
+            if (upgradeableIds2.length > 0) {
+              const pick = upgradeableIds2[(Math.random() * upgradeableIds2.length) | 0];
+              upgradeSharedCard(pick);
+            }
+            hurtAllCharacters(15);
+          } else if (result === 'gold_serum') {
+            // Experimental Serum B: sell the vials → +55 gold, no curse
+            addGold(55);
+          } else if (result === 'item_hurt') {
+            // Spectral Merchant A: pay 30 HP all → uncommon item
+            hurtAllCharacters(30);
+            const item = pickItemReward('uncommon', rng, charIds);
+            if (item) { setPendingEventItem(item); return; }
+          } else if (result === 'card_pay_gold') {
+            // Spectral Merchant B: pay 60 gold → 1 random card
+            if (runState.gold >= 60) {
+              spendGold(60);
+              const [card] = pickCardRewards(runState.deckCardIds, rng, charIds);
+              if (card) addCardToDeck(card.definitionId);
+            }
+          } else if (result === 'gold_cache') {
+            // Fallen Cache B: take only the coins → +45 gold
+            addGold(45);
+          } else if (result === 'gold_bloom') {
+            // Toxic Bloom B: harvest carefully → +30 gold, no curse
+            addGold(30);
+          } else if (result === 'item_pay_gold') {
+            // Void Peddler B: pay 70 gold → uncommon item, no curse
+            if (runState.gold >= 70) {
+              spendGold(70);
+              const item = pickItemReward('uncommon', rng, charIds);
+              if (item) { setPendingEventItem(item); return; }
+            }
+          } else if (result === 'upgrade_pay_gold') {
+            // The Corruptor B: pay 80 gold → upgrade 1 random card, no curse
+            if (runState.gold < 80) { completeNonCombatNode(activeNodeId!); setActiveNodeId(null); setGameMode('roguelikeMap'); return; }
+            spendGold(80);
+            const upgradeableIds3 = runState.deckCardIds.filter(id => {
+              const def = CARD_DEFS.find((d: any) => d.definitionId === id);
+              return def && def.exclusiveTo === null && CARD_UPGRADES[id] && !runState.upgradedCardDefIds.includes(id);
+            });
+            if (upgradeableIds3.length > 0) {
+              const pick = upgradeableIds3[(Math.random() * upgradeableIds3.length) | 0];
+              upgradeSharedCard(pick);
+            }
           }
           completeNonCombatNode(activeNodeId!);
           setActiveNodeId(null);
@@ -678,6 +831,14 @@ const Index = () => {
     const item = pendingEventItem;
     const completeAndNavigate = () => {
       setPendingEventItem(null);
+      if (pendingEventItemSource === 'merchant') {
+        // Return to merchant shop — don't complete the node yet
+        setPendingEventItemSource('event');
+        setGameMode('merchant');
+        return;
+      }
+      // If a curse notification is also pending, let it handle final navigation
+      if (pendingCurseAdded) return;
       completeNonCombatNode(activeNodeId!);
       setActiveNodeId(null);
       setGameMode('roguelikeMap');
@@ -702,36 +863,49 @@ const Index = () => {
           <div className="flex flex-col gap-3">
             {runState.characters
               .filter(c => c.currentHp > 0)
-              .map(char => (
-                <div key={char.id} className="rounded-xl border border-slate-700/50 p-3"
-                  style={{ background: 'rgba(8,5,25,0.9)' }}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <img src={char.portrait} alt={char.displayName} className="w-8 h-8 rounded-full object-cover border border-slate-600" />
-                    <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {char.items.map((slotItem, idx) => {
-                      if (slotItem) return null;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            addItemToCharacter(item, char.id as CharacterId, idx);
-                            completeAndNavigate();
-                          }}
-                          className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
-                          style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
-                        >
-                          + Slot {idx + 1}
-                        </button>
-                      );
-                    })}
-                    {char.items.every(s => s !== null) && (
-                      <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+              .map(char => {
+                const alreadyHasIt = char.items.some(s => s?.id === item.id);
+                const isTargetMismatch = !alreadyHasIt && item.targetCharacter && !char.displayName.toLowerCase().includes(item.targetCharacter.toLowerCase());
+                return (
+                  <div key={char.id} className="rounded-xl border border-slate-700/50 p-3"
+                    style={{ background: 'rgba(8,5,25,0.9)', opacity: alreadyHasIt ? 0.55 : 1 }}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <img src={char.portrait} alt={char.displayName} className="w-8 h-8 rounded-full object-cover border border-slate-600" />
+                      <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
+                      {alreadyHasIt && (
+                        <span className="text-[9px] text-amber-500/70 font-orbitron ml-auto italic">Already carries this</span>
+                      )}
+                      {!alreadyHasIt && isTargetMismatch && (
+                        <span className="text-[9px] text-orange-400 font-orbitron ml-auto">Wrong class</span>
+                      )}
+                    </div>
+                    {!alreadyHasIt && (
+                      <div className="flex gap-2 flex-wrap">
+                        {char.items.map((slotItem, idx) => {
+                          if (slotItem) return null;
+                          return (
+                            <button
+                              key={idx}
+                              disabled={!!isTargetMismatch}
+                              onClick={() => {
+                                addItemToCharacter(item, char.id as CharacterId, idx);
+                                completeAndNavigate();
+                              }}
+                              className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+                              style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
+                            >
+                              + Slot {idx + 1}
+                            </button>
+                          );
+                        })}
+                        {char.items.every(s => s !== null) && (
+                          <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
           <div className="text-center mt-5">
             <button
@@ -741,6 +915,89 @@ const Index = () => {
               Skip — discard item
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Curse-added notification — shown after events that add a curse to the deck
+  if (pendingCurseAdded && !pendingEventItem) {
+    const curseDef = CARD_DEFS.find(d => d.definitionId === pendingCurseAdded.curseId);
+    const CURSE_EFFECT: Record<string, string> = {
+      curse_burden:    'Deck clutter — no end-of-turn penalty, just dead space.',
+      curse_malaise:   'End of turn: each character takes 1 damage per unplayed card in hand.',
+      curse_void_echo: 'Turn start: −2 mana this turn for each copy drawn.',
+      curse_dread:     'End of turn: each character has a 25% chance to be Stunned next turn.',
+      curse_chains:    'End of turn: all characters take 10 damage. Every turn it remains costs you.',
+    };
+    const effect = CURSE_EFFECT[pendingCurseAdded.curseId] ?? 'Lingers in your deck — cannot be removed by playing.';
+    return (
+      <div className="relative min-h-screen overflow-hidden flex items-center justify-center"
+        style={{ background: 'radial-gradient(ellipse at center, #1a0000 0%, #0a0000 60%, #000000 100%)' }}>
+        {/* Subtle animated vignette */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'repeating-linear-gradient(135deg, transparent, transparent 8px, rgba(120,0,0,0.04) 8px, rgba(120,0,0,0.04) 10px)' }} />
+        <div className="relative z-10 flex flex-col items-center gap-6 max-w-sm w-full px-4">
+          {/* Warning header */}
+          <div className="text-center">
+            <p className="font-orbitron text-[10px] tracking-[0.5em] text-red-600 mb-2">☠ CURSE ADDED TO DECK</p>
+            <h1 className="font-orbitron font-black text-3xl text-red-400"
+              style={{ textShadow: '0 0 30px rgba(239,68,68,0.6), 0 0 60px rgba(239,68,68,0.3)' }}>
+              {curseDef?.name ?? pendingCurseAdded.curseId}
+            </h1>
+          </div>
+          {/* Curse card */}
+          <div className="rounded-2xl border-2 border-red-800 p-5 w-full relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(160deg, #1f0000 0%, #0a0000 60%, #1a0008 100%)',
+              boxShadow: '0 0 40px rgba(239,68,68,0.25), inset 0 0 30px rgba(120,0,0,0.15)',
+            }}>
+            {/* Stripe pattern overlay */}
+            <div className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden"
+              style={{ backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(120,0,0,0.08) 6px, rgba(120,0,0,0.08) 8px)' }} />
+            {/* Inner border */}
+            <div className="absolute inset-[4px] rounded-xl pointer-events-none"
+              style={{ border: '1px solid rgba(239,68,68,0.25)' }} />
+            <div className="relative flex items-start gap-4">
+              <span className="text-5xl" style={{ filter: 'drop-shadow(0 0 12px rgba(239,68,68,0.5))' }}>💀</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-orbitron font-black text-lg text-red-300">{curseDef?.name ?? pendingCurseAdded.curseId}</span>
+                  <span className="font-orbitron text-[8px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ color: '#fca5a5', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)' }}>
+                    CURSE
+                  </span>
+                </div>
+                <p className="text-red-200/80 text-[12px] leading-relaxed mb-3">{curseDef?.description}</p>
+                <div className="rounded-lg px-3 py-2"
+                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <p className="text-[10px] text-red-400/90 font-orbitron leading-relaxed">⚠ {effect}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="text-[10px] text-slate-500 font-orbitron">Stays in your deck — cannot be removed by playing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Dismiss */}
+          <button
+            onClick={() => {
+              setPendingCurseAdded(null);
+              completeNonCombatNode(pendingCurseAdded.nodeId);
+              setActiveNodeId(null);
+              setGameMode('roguelikeMap');
+            }}
+            className="font-orbitron font-bold px-10 py-3 rounded-xl text-sm tracking-widest transition-all hover:scale-105 active:scale-95"
+            style={{
+              background: 'rgba(239,68,68,0.10)',
+              border: '2px solid rgba(239,68,68,0.45)',
+              color: '#ef4444',
+              boxShadow: '0 0 20px rgba(239,68,68,0.12)',
+            }}
+          >
+            UNDERSTOOD — CONTINUE →
+          </button>
+          <p className="text-slate-600 text-[10px] font-orbitron">This card is now in your deck. Remove it at a Campfire.</p>
         </div>
       </div>
     );
@@ -811,9 +1068,18 @@ const Index = () => {
           onTileHover={setHoveredTile}
           animations={animations}
           hoverPreviewRange={hoveredCardRange}
+          hoverPreviewExecutorId={hoveredCardExecutorId}
           externalIntentRange={hoveredEnemyAbilityRange}
         />
       </div>
+
+      {/* Red vignette — player team takes damage */}
+      {redVignette && (
+        <div className="absolute inset-0 pointer-events-none z-50" style={{
+          boxShadow: 'inset 0 0 120px rgba(220,10,10,0.65), inset 0 0 55px rgba(255,0,0,0.30)',
+          animation: 'anim-vignette-red 0.65s ease-out forwards',
+        }} />
+      )}
 
       {/* Turn transition flash */}
       {turnFlash !== null && (
@@ -942,6 +1208,7 @@ const Index = () => {
             currentTurnTimer={currentTurnTimer}
             onToggleHideUI={() => setHideUI(prev => !prev)}
             onCardHoverRange={setHoveredCardRange}
+            onCardHoverExecutorId={setHoveredCardExecutorId}
             onEnemyAbilityHoverRange={setHoveredEnemyAbilityRange}
             runItemsByCharacter={runState ? Object.fromEntries(
               runState.characters.map(c => [c.id, c.items.filter(Boolean).map(item => ({ icon: item!.icon, name: item!.name, description: item!.description }))])
@@ -1055,12 +1322,14 @@ const Index = () => {
                 finalHps[id] = icon?.stats.hp ?? 0;
                 if ((icon?.passiveStacks ?? 0) > 0) finalPassiveStacks[id] = icon!.passiveStacks!;
               });
+              const enemyIcons = gameState.players[1]?.icons ?? [];
               completeCombat({
                 nodeId: activeNodeId,
                 won,
                 turnsElapsed: gameState.currentTurn ?? 1,
                 finalHps: finalHps as any,
                 finalPassiveStacks,
+                enemiesKilled: enemyIcons.filter(i => !i.isAlive).length,
               });
               setActiveNodeId(null);
               setGameMode(won ? 'rewards' : 'runDefeated');

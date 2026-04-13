@@ -339,3 +339,162 @@ All colors MUST be HSL.
   0%, 100% { box-shadow: 0 2px 14px rgba(220,40,40,0.30), inset 0 1px 0 rgba(255,130,130,0.12); }
   50%       { box-shadow: 0 0 28px rgba(239,68,68,0.70), 0 0 55px rgba(220,40,40,0.28), inset 0 1px 0 rgba(255,160,160,0.22); }
 }
+
+/* ── Hit Flash & HP Ghost ──────────────────────────────────────────── */
+
+@keyframes anim-hit-flash {
+  0%   { opacity: 0.88; }
+  35%  { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+@keyframes anim-portrait-shake {
+  0%   { transform: translate(0, 0); }
+  18%  { transform: translate(-3px, 1px); }
+  36%  { transform: translate(3px, -2px); }
+  55%  { transform: translate(-2px, 2px); }
+  75%  { transform: translate(2px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes anim-hp-ghost-drain {
+  0%   { opacity: 0.72; }
+  55%  { opacity: 0.48; }
+  100% { opacity: 0; }
+}
+
+/* ── Low HP aura (pulsing red hex glow) ───────────────────────────── */
+
+@keyframes anim-low-hp-aura {
+  0%, 100% { opacity: 0.40; }
+  50%       { opacity: 0.85; }
+}
+
+/* ── Melee slash ──────────────────────────────────────────────────── */
+
+@keyframes anim-slash {
+  0%   { transform: translate(-50%, -50%) scale(0.4) rotate(-40deg); opacity: 1; }
+  45%  { transform: translate(-50%, -50%) scale(1.2) rotate(10deg);  opacity: 0.85; }
+  100% { transform: translate(-50%, -50%) scale(1.8) rotate(45deg);  opacity: 0; }
+}
+
+/* ── Heal ring ────────────────────────────────────────────────────── */
+
+@keyframes anim-heal-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.35); opacity: 0.95; }
+  60%  { transform: translate(-50%, -50%) scale(1.1);  opacity: 0.65; }
+  100% { transform: translate(-50%, -50%) scale(1.55); opacity: 0; }
+}
+
+/* ── Red vignette (player takes damage) ──────────────────────────── */
+
+@keyframes anim-vignette-red {
+  0%   { opacity: 0.80; }
+  100% { opacity: 0; }
+}
+
+/* ── Card draw fly-in ─────────────────────────────────────────────── */
+
+@keyframes anim-card-draw {
+  0%   { transform: translateY(55px) scale(0.80); opacity: 0; }
+  55%  { transform: translateY(-4px)  scale(1.04); opacity: 1; }
+  100% { transform: translateY(0px)   scale(1.00); opacity: 1; }
+}
+
+.card-draw-in {
+  animation: anim-card-draw 0.36s ease-out forwards;
+}
+
+/* ── Mana crystal tile pulse ──────────────────────────────────────── */
+
+@keyframes anim-crystal-pulse {
+  0%, 100% { opacity: 0.38; }
+  50%       { opacity: 0.78; }
+}
+
+/* ── River / lake shimmer sweep ──────────────────────────────────── */
+
+@keyframes anim-tile-shimmer {
+  0%   { left: -70%; }
+  100% { left: 170%; }
+}
+
+/* ── Burning forest flicker ──────────────────────────────────────── */
+
+@keyframes anim-fire-flicker {
+  0%   { opacity: 0.48; }
+  22%  { opacity: 0.78; }
+  45%  { opacity: 0.55; }
+  68%  { opacity: 0.82; }
+  100% { opacity: 0.48; }
+}
+
+/* ── Active unit dashed ring (SVG stroke-dashoffset) ─────────────── */
+
+@keyframes anim-active-ring-dash {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -30; }
+}
+
+/* ── Main menu title breathe ─────────────────────────────────────── */
+
+@keyframes anim-title-breathe {
+  0%, 100% {
+    text-shadow: 0 0 40px rgba(34,211,238,0.65), 0 0 80px rgba(34,211,238,0.20);
+  }
+  50% {
+    text-shadow: 0 0 65px rgba(34,211,238,0.95), 0 0 130px rgba(34,211,238,0.40), 0 0 200px rgba(34,211,238,0.15);
+  }
+}
+
+.anim-title-breathe {
+  animation: anim-title-breathe 3.8s ease-in-out infinite;
+}
+
+/* ── Main menu floating orb ──────────────────────────────────────── */
+
+@keyframes anim-menu-orb {
+  0%   { transform: translate(0px, 0px) scale(1.0); }
+  30%  { transform: translate(18px, -22px) scale(1.08); }
+  65%  { transform: translate(-12px, 14px) scale(0.94); }
+  100% { transform: translate(0px, 0px) scale(1.0); }
+}
+
+/* ── Menu separator shimmer ──────────────────────────────────────── */
+
+@keyframes anim-separator-shimmer {
+  0%   { left: -30%; }
+  100% { left: 120%; }
+}
+
+/* ── Roguelike map node pulse (available nodes) ───────────────────── */
+
+@keyframes anim-map-available-pulse {
+  0%, 100% { opacity: 0.55; r: 30; }
+  50%       { opacity: 0.88; r: 34; }
+}
+
+@keyframes anim-map-boss-pulse {
+  0%, 100% { opacity: 0.70; }
+  50%       { opacity: 1.0; }
+}
+
+/* ── Despawn crumble (terracotta / summoned unit expiry) ──────────── */
+
+@keyframes anim-despawn-crumble {
+  0%   { opacity: 0.90; transform: scale(1.0); }
+  30%  { opacity: 0.80; transform: scale(1.15); }
+  100% { opacity: 0;    transform: scale(0.4); }
+}
+
+@keyframes anim-despawn-shard {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1.0); opacity: 0.9; }
+  60%  { opacity: 0.7; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(180deg) scale(0.2); opacity: 0; }
+}
+
+@keyframes anim-despawn-rise {
+  0%   { transform: translate(-50%, -50%) scale(0.8); opacity: 0.9; }
+  40%  { transform: translate(-50%, -70%) scale(1.15); opacity: 1.0; }
+  100% { transform: translate(-50%, -110%) scale(0.7); opacity: 0; }
+}

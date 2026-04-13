@@ -29,6 +29,7 @@ interface HorizontalGameUIProps {
   runItemsByCharacter?: Record<string, RunItemSlot[]>;
   onToggleHideUI?: () => void;
   onCardHoverRange?: (range: number | null) => void;
+  onCardHoverExecutorId?: (id: string | null) => void;
   onEnemyAbilityHoverRange?: (val: { iconId: string; range: number } | null) => void;
 }
 
@@ -42,12 +43,14 @@ const HorizontalGameUI = ({
   currentTurnTimer,
   runItemsByCharacter,
   onCardHoverRange,
+  onCardHoverExecutorId,
   onToggleHideUI,
   onEnemyAbilityHoverRange,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
   const [hoveredCardCost, setHoveredCardCost] = useState<number | null>(null);
   const [abilityTooltip, setAbilityTooltip] = useState<{ ab: EnemyAbilityDef; icon: Icon; rect: DOMRect } | null>(null);
+  const [pinnedAbilityRange, setPinnedAbilityRange] = useState<{ iconId: string; abilityId: string; range: number } | null>(null);
 
   const { t } = useT();
   const extGameState = gameState as any;
@@ -145,6 +148,7 @@ const HorizontalGameUI = ({
     silence:     { icon: "🤫", color: "bg-purple-900/80 border-purple-600/60 text-purple-200" },
     poison:      { icon: "☠️", color: "bg-green-900/80 border-green-600/60 text-green-200" },
     stun:        { icon: "⚡", color: "bg-cyan-900/80 border-cyan-600/60 text-cyan-200" },
+    bleed:       { icon: "🩸", color: "bg-red-900/80 border-red-600/60 text-red-200" },
   };
 
   /* ── Character row ── */
@@ -190,7 +194,9 @@ const HorizontalGameUI = ({
           borderColor: isSelected ? "rgba(250,180,0,0.45)" : icon.isAlive ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.04)",
           boxShadow: icon.isAlive && !isSelected ? "inset 0 1px 0 rgba(255,255,255,0.06)" : undefined,
           opacity: icon.isAlive ? 1 : 0.50,
+          cursor: canSelect && icon.isAlive && icon.playerId === 0 ? "pointer" : "default",
         }}
+        onClick={() => { if (canSelect && icon.isAlive && icon.playerId === 0) onSelectIcon(icon.id); }}
       >
         {flashDeath && (
           <div className="absolute inset-0 rounded-lg pointer-events-none"
@@ -308,6 +314,7 @@ const HorizontalGameUI = ({
                   const border = isReady ? "rgba(239,68,68,0.85)" : isWarn ? "rgba(251,146,60,0.80)" : "rgba(80,60,110,0.45)";
                   const col = isReady ? "#fca5a5" : isWarn ? "#fdba74" : "#7c8da8";
                   const lbl = isReady ? "NOW" : `${cd}t`;
+                  const isPinned = pinnedAbilityRange?.iconId === icon.id && pinnedAbilityRange?.abilityId === ab.id;
                   return (
                     <div key={ab.id}
                       onMouseEnter={(e) => {
@@ -317,14 +324,28 @@ const HorizontalGameUI = ({
                       }}
                       onMouseLeave={() => {
                         setAbilityTooltip(null);
-                        onEnemyAbilityHoverRange?.(null);
+                        // Keep the range visible if this ability is pinned
+                        if (pinnedAbilityRange?.iconId === icon.id && pinnedAbilityRange?.abilityId === ab.id) return;
+                        if (!pinnedAbilityRange) onEnemyAbilityHoverRange?.(null);
+                        else onEnemyAbilityHoverRange?.({ iconId: pinnedAbilityRange.iconId, range: pinnedAbilityRange.range });
+                      }}
+                      onClick={() => {
+                        const range = ab.effect?.range ?? ab.effect?.dashRange ?? 1;
+                        if (isPinned) {
+                          setPinnedAbilityRange(null);
+                          onEnemyAbilityHoverRange?.(null);
+                        } else {
+                          setPinnedAbilityRange({ iconId: icon.id, abilityId: ab.id, range });
+                          onEnemyAbilityHoverRange?.({ iconId: icon.id, range });
+                        }
                       }}
                     >
                       <div
-                        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border w-full cursor-default select-none"
+                        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border w-full select-none"
                         style={{
-                          background: bg, border: `1px solid ${border}`, color: col,
-                          boxShadow: isReady ? "0 0 6px rgba(239,68,68,0.35)" : undefined,
+                          cursor: 'pointer',
+                          background: bg, border: `1px solid ${isPinned ? 'rgba(34,211,238,0.9)' : border}`, color: col,
+                          boxShadow: isPinned ? "0 0 8px rgba(34,211,238,0.55)" : isReady ? "0 0 6px rgba(239,68,68,0.35)" : undefined,
                           animation: isReady ? "pulse 1.4s ease-in-out infinite" : undefined,
                         }}>
                         <span style={{ fontSize: 11 }}>{ab.icon}</span>
@@ -354,12 +375,15 @@ const HorizontalGameUI = ({
               <div className="flex gap-0.5 mt-0.5 flex-wrap">
                 {items.map((item, i) => (
                   <div key={i} className="relative group">
-                    <span className="text-sm cursor-default" title={`${item.name}: ${item.description}`}>{item.icon}</span>
-                    <div className="absolute bottom-full left-0 mb-1 z-50 hidden group-hover:block pointer-events-none">
-                      <div className="rounded px-2 py-1.5 text-[10px] whitespace-nowrap shadow-xl max-w-[180px]"
-                        style={{ background: "rgba(4,2,18,0.96)", border: "1px solid rgba(80,50,140,0.50)" }}>
-                        <div className="font-bold text-white">{item.name}</div>
-                        <div className="text-slate-400 text-wrap">{item.description}</div>
+                    <span className="text-sm cursor-default">{item.icon}</span>
+                    <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block pointer-events-none w-44">
+                      <div className="rounded-lg px-3 py-2 shadow-2xl text-[10px]"
+                        style={{ background: "rgba(4,2,22,0.97)", border: "1px solid rgba(120,60,200,0.65)", boxShadow: "0 0 12px rgba(100,30,180,0.35), 0 4px 16px rgba(0,0,0,0.8)" }}>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-base leading-none">{item.icon}</span>
+                          <span className="font-bold text-purple-200 text-[11px] leading-tight">{item.name}</span>
+                        </div>
+                        <div className="text-slate-400 leading-snug break-words">{item.description}</div>
                       </div>
                     </div>
                   </div>
@@ -761,6 +785,7 @@ const HorizontalGameUI = ({
                       onPlayCard={onPlayCard}
                       onCardHover={(cost) => setHoveredCardCost(cost)}
                       onCardHoverRange={onCardHoverRange}
+                      onCardHoverExecutorId={onCardHoverExecutorId}
                       gameState={gameState}
                     />
                   )}

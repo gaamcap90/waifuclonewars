@@ -39,6 +39,20 @@ const ENEMY_PORTRAITS: Array<[string, string]> = [
   ["Znyxorga's Champion", "/art/enemies/znyxorgas_champion_portrait.png"],
 ];
 
+/** Fire-and-forget: start loading every portrait image so they're in the browser cache. */
+export function preloadPortraits(): void {
+  const allPaths = [
+    ...HERO_PORTRAITS,
+    ...SUMMON_PORTRAITS,
+    ...ENEMY_PORTRAITS,
+  ].map(([, path]) => path);
+
+  for (const src of allPaths) {
+    const img = new Image();
+    img.src = src;
+  }
+}
+
 export function getCharacterPortrait(name: string | undefined | null): string | null {
   if (!name) return null;
   for (const [key, path] of SUMMON_PORTRAITS) {

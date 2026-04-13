@@ -33,7 +33,7 @@ function ScreenWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function HpBar({ current, max }: { current: number; max: number }) {
-  const pct = current / max;
+  const pct = max > 0 ? current / max : 0;
   const color = pct > 0.5 ? '#4ade80' : pct > 0.25 ? '#fbbf24' : '#f87171';
   return (
     <div>
@@ -367,14 +367,18 @@ export interface MerchantScreenProps {
   onBuyHeal: (cost: number) => void;
   onDuplicateItem: (item: RunItem, characterId: CharacterId, slotIndex: number, cost: number) => void;
   onSellItem: (item: RunItem, characterId: CharacterId, slotIndex: number, goldGained: number) => void;
-  onMysteryBox: (cost: number) => 'item' | 'gold' | 'damage';
+  onMysteryBox: (cost: number) => 'item' | 'gold' | 'damage' | 'curse';
   onLeave: () => void;
 }
 
 const HEAL_ALL_COST = 40;
 const MYSTERY_BOX_COST = 60;
-const DUPLICATE_ITEM_BASE_COST: Record<string, number> = {
+// Base item values — sell = ½ base, buy at merchant = 2.5x base, duplicate = 2x base
+const ITEM_BASE_VALUE: Record<string, number> = {
   common: 30, uncommon: 50, rare: 80, legendary: 120,
+};
+const DUPLICATE_ITEM_BASE_COST: Record<string, number> = {
+  common: 60, uncommon: 100, rare: 160, legendary: 240,
 };
 const SELL_ITEM_PRICE: Record<string, number> = {
   common: 15, uncommon: 25, rare: 40, legendary: 60,
@@ -387,6 +391,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
   const [healPurchased, setHealPurchased] = useState(false);
   const [mysteryResult, setMysteryResult] = useState<'item' | 'gold' | 'damage' | 'curse' | null>(null);
   const [pendingDuplicate, setPendingDuplicate] = useState<RunItem | null>(null);
+  const [pendingSell, setPendingSell] = useState<{ item: RunItem; charId: string; slotIdx: number; price: number } | null>(null);
   const [hoveredItem, setHoveredItem] = useState<{ item: RunItem; x: number; y: number } | null>(null);
 
   // 3 random cards priced 50–80 gold, stable on mount
@@ -602,14 +607,30 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
                       const slotKey = `${char.id}:${idx}`;
                       const sold = soldSlots.has(slotKey);
                       const price = SELL_ITEM_PRICE[slotItem.tier] ?? 15;
+                      const isSellPending = pendingSell !== null && pendingSell.item.id === slotItem.id && pendingSell.charId === char.id && pendingSell.slotIdx === idx;
+                      if (isSellPending) {
+                        return (
+                          <div key={slotKey} className="rounded-lg border border-red-700/60 px-3 py-1.5 flex items-center gap-2"
+                            style={{ background: 'rgba(60,5,5,0.85)' }}>
+                            <span className="font-orbitron text-[10px] text-red-300">Sell {slotItem.icon} {slotItem.name} for 💰{price}?</span>
+                            <button className="font-orbitron text-[9px] px-2 py-0.5 rounded border border-green-600/60 text-green-400 hover:bg-green-900/30"
+                              onClick={() => {
+                                onSellItem(slotItem, char.id as CharacterId, idx, price);
+                                setSoldSlots(prev => new Set([...prev, slotKey]));
+                                setPendingSell(null);
+                              }}>Yes</button>
+                            <button className="font-orbitron text-[9px] px-2 py-0.5 rounded border border-slate-600/60 text-slate-400 hover:bg-slate-700/30"
+                              onClick={() => setPendingSell(null)}>No</button>
+                          </div>
+                        );
+                      }
                       return (
                         <button
                           key={slotKey}
                           disabled={sold}
                           onClick={() => {
                             if (sold) return;
-                            onSellItem(slotItem, char.id as CharacterId, idx, price);
-                            setSoldSlots(prev => new Set([...prev, slotKey]));
+                            setPendingSell({ item: slotItem, charId: char.id, slotIdx: idx, price });
                           }}
                           onMouseEnter={e => setHoveredItem({ item: slotItem, x: e.clientX, y: e.clientY })}
                           onMouseLeave={() => setHoveredItem(null)}
@@ -725,37 +746,44 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
             <div className="flex flex-col gap-4">
               {runState.characters
                 .filter(c => c.currentHp > 0)
-                .map(char => (
-                  <div key={char.id} className="rounded-xl border border-slate-700/50 p-4" style={{ background: 'rgba(8,5,25,0.9)' }}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <img src={char.portrait} alt={char.displayName} className="w-9 h-9 rounded-full object-cover border border-slate-600" />
-                      <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      {char.items.map((slotItem, idx) => {
-                        if (slotItem) return null; // only show empty slots
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => {
-                              const cost = DUPLICATE_ITEM_BASE_COST[pendingDuplicate.tier] ?? 50;
-                              onDuplicateItem(pendingDuplicate, char.id as CharacterId, idx, cost);
-                              setDuplicatedIds(prev => new Set([...prev, pendingDuplicate.id]));
-                              setPendingDuplicate(null);
-                            }}
-                            className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
-                            style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
-                          >
-                            + Slot {idx + 1}
-                          </button>
-                        );
-                      })}
-                      {char.items.every(s => s !== null) && (
-                        <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+                .map(char => {
+                  const alreadyOwns = char.items.some(s => s?.name === pendingDuplicate.name);
+                  return (
+                    <div key={char.id} className="rounded-xl border border-slate-700/50 p-4" style={{ background: 'rgba(8,5,25,0.9)' }}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img src={char.portrait} alt={char.displayName} className="w-9 h-9 rounded-full object-cover border border-slate-600" />
+                        <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
+                      </div>
+                      {alreadyOwns ? (
+                        <span className="text-[10px] text-amber-500/70 italic">Already equipped</span>
+                      ) : (
+                        <div className="flex gap-2 flex-wrap">
+                          {char.items.map((slotItem, idx) => {
+                            if (slotItem) return null;
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  const cost = DUPLICATE_ITEM_BASE_COST[pendingDuplicate.tier] ?? 50;
+                                  onDuplicateItem(pendingDuplicate, char.id as CharacterId, idx, cost);
+                                  setDuplicatedIds(prev => new Set([...prev, pendingDuplicate.id]));
+                                  setPendingDuplicate(null);
+                                }}
+                                className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
+                                style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
+                              >
+                                + Slot {idx + 1}
+                              </button>
+                            );
+                          })}
+                          {char.items.every(s => s !== null) && (
+                            <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
             <div className="text-center mt-4">
               <button onClick={() => setPendingDuplicate(null)} className="text-slate-500 hover:text-slate-300 text-[10px] font-orbitron underline">
@@ -946,7 +974,21 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
 
 // ── UnknownScreen ─────────────────────────────────────────────────────────────
 
-export type UnknownResult = 'gold' | 'card' | 'damage' | 'heal' | 'skip' | 'item' | 'item_gamble' | 'curse' | 'gold_curse' | 'card_or_damage' | 'heal_or_damage' | 'item_curse' | 'upgrade_curse';
+export type UnknownResult =
+  | 'gold' | 'card' | 'damage' | 'heal' | 'skip' | 'item' | 'item_gamble'
+  | 'curse' | 'gold_curse' | 'card_or_damage' | 'heal_or_damage' | 'item_curse' | 'upgrade_curse'
+  // New choice-B (and Spectral Merchant A fix) results:
+  | 'card_free'        // gain 1 card, no cost
+  | 'discard_for_gold' // discard 1 random card from deck → +45 gold
+  | 'gold_rift'        // +40 gold, guaranteed safe
+  | 'upgrade_hurt'     // upgrade 1 random card, −15 HP all
+  | 'gold_serum'       // +55 gold (sell the vials)
+  | 'item_hurt'        // −30 HP all → gain uncommon item
+  | 'card_pay_gold'    // pay 60 gold → gain 1 random card
+  | 'gold_cache'       // +45 gold, guaranteed safe
+  | 'gold_bloom'       // +30 gold, no curse
+  | 'item_pay_gold'    // pay 70 gold → uncommon item, no curse
+  | 'upgrade_pay_gold' // pay 80 gold → upgrade 1 random card, no curse
 
 export interface UnknownScreenProps {
   runState: RunState;
@@ -957,8 +999,8 @@ interface EventDef {
   title: string;
   icon: string;
   flavor: string;
-  choiceA: { label: string; detail: string; result: UnknownResult };
-  choiceB: { label: string; detail: string; result: UnknownResult };
+  choiceA: { label: string; detail: string; result: UnknownResult; goldCost?: number };
+  choiceB: { label: string; detail: string; result: UnknownResult; goldCost?: number };
   condition?: (runState: RunState) => boolean;
 }
 
@@ -974,7 +1016,7 @@ const EVENTS: EventDef[] = [
     },
     choiceB: {
       label: 'Pray to it',
-      detail: 'Receive a minor blessing — heal 15 HP to all',
+      detail: 'Receive a blessing — restore 30% max HP to all',
       result: 'heal',
     },
   },
@@ -984,13 +1026,13 @@ const EVENTS: EventDef[] = [
     flavor: 'A battered clone stumbles toward you, carrying a small cache of gold...',
     choiceA: {
       label: 'Help her',
-      detail: 'Lose 20 HP from all characters → gain 60 gold',
+      detail: 'Lose 20 HP from all → gain 60 gold',
       result: 'gold',
     },
     choiceB: {
-      label: 'Ignore her',
-      detail: 'Ignore her and move on',
-      result: 'skip',
+      label: 'Give her a card',
+      detail: 'Discard 1 random card from your deck → she gives you 45 gold',
+      result: 'discard_for_gold',
     },
   },
   {
@@ -1003,9 +1045,9 @@ const EVENTS: EventDef[] = [
       result: 'card_or_damage',
     },
     choiceB: {
-      label: 'Walk around it',
-      detail: 'Play it safe and avoid the rift',
-      result: 'skip',
+      label: 'Siphon it slowly',
+      detail: 'Harvest the energy safely — gain 40 gold, no risk',
+      result: 'gold_rift',
     },
   },
   {
@@ -1014,13 +1056,13 @@ const EVENTS: EventDef[] = [
     flavor: 'A supply crate lies cracked open on the battlefield. Medical supplies inside.',
     choiceA: {
       label: 'Use the supplies',
-      detail: 'Heal 25 HP to every living clone',
+      detail: 'Restore 30% max HP to every living clone',
       result: 'heal',
     },
     choiceB: {
-      label: 'Leave it',
-      detail: 'Leave it for someone else',
-      result: 'skip',
+      label: 'Salvage for parts',
+      detail: 'All take 15 damage — upgrade 1 random card if any are upgradeable',
+      result: 'upgrade_hurt',
     },
   },
   {
@@ -1033,9 +1075,9 @@ const EVENTS: EventDef[] = [
       result: 'item',
     },
     choiceB: {
-      label: 'Leave it',
-      detail: 'Could be a trap — walk away',
-      result: 'skip',
+      label: 'Rifle through it',
+      detail: 'Dig past the gear — find a random card instead',
+      result: 'card_free',
     },
   },
   {
@@ -1048,9 +1090,9 @@ const EVENTS: EventDef[] = [
       result: 'curse',
     },
     choiceB: {
-      label: 'Destroy the vials',
-      detail: 'It\'s not worth the risk',
-      result: 'skip',
+      label: 'Sell the vials',
+      detail: 'Too risky — offload them for 55 gold',
+      result: 'gold_serum',
     },
   },
   {
@@ -1059,13 +1101,14 @@ const EVENTS: EventDef[] = [
     flavor: 'A translucent figure offers a deal you can barely refuse. Pay with vitality, not gold.',
     choiceA: {
       label: 'Strike a deal',
-      detail: 'Pay 30 HP to all → gain a random card',
-      result: 'card',
+      detail: 'Pay 30 HP to all → gain a random item',
+      result: 'item_hurt',
     },
     choiceB: {
-      label: 'Dismiss the ghost',
-      detail: 'You have no business with spirits',
-      result: 'skip',
+      label: 'Counter-offer',
+      detail: 'Pay 60 gold instead → gain a random card',
+      result: 'card_pay_gold',
+      goldCost: 60,
     },
   },
   {
@@ -1078,9 +1121,9 @@ const EVENTS: EventDef[] = [
       result: 'item_gamble',
     },
     choiceB: {
-      label: 'Leave with respect',
-      detail: 'Honor the fallen and move on',
-      result: 'skip',
+      label: 'Take just the coins',
+      detail: 'Grab only the coin pouch — guaranteed 45 gold, no risk',
+      result: 'gold_cache',
     },
   },
   {
@@ -1089,13 +1132,13 @@ const EVENTS: EventDef[] = [
     flavor: 'Alien spores drift through the air. Breathing them in feels... invigorating and terrible.',
     choiceA: {
       label: 'Breathe them in',
-      detail: 'Gain 60 gold — but a Curse card is added to your deck',
+      detail: 'Gain 60 gold — a random Curse enters your deck',
       result: 'gold_curse',
     },
     choiceB: {
-      label: 'Cover up and pass',
-      detail: 'Not worth the contamination',
-      result: 'skip',
+      label: 'Harvest carefully',
+      detail: 'Collect a small sample — gain 30 gold, no curse',
+      result: 'gold_bloom',
     },
   },
   {
@@ -1104,13 +1147,13 @@ const EVENTS: EventDef[] = [
     flavor: 'A shimmering tear in space-time pulses before you. Reach through or stay back.',
     choiceA: {
       label: 'Reach through',
-      detail: '50% chance: heal 40 HP to all OR lose 40 HP to all',
+      detail: '50% chance: restore 30% max HP to all OR lose 40 HP to all',
       result: 'heal_or_damage',
     },
     choiceB: {
-      label: 'Seal the fracture',
-      detail: 'Leave the anomaly alone',
-      result: 'skip',
+      label: 'Stabilize the tear',
+      detail: 'Carefully collapse the fracture — gain a random card, safe',
+      result: 'card_free',
     },
   },
   {
@@ -1119,13 +1162,14 @@ const EVENTS: EventDef[] = [
     flavor: 'A hooded figure offers a glowing relic — but the price is a piece of your fate.',
     choiceA: {
       label: 'Accept the deal',
-      detail: 'Gain a random item — but a Curse card enters your deck',
+      detail: 'Gain a random item — a random Curse enters your deck',
       result: 'item_curse',
     },
     choiceB: {
-      label: 'Refuse the offer',
-      detail: 'Walk away from the temptation',
-      result: 'skip',
+      label: 'Pay in gold',
+      detail: 'Spend 70 gold — gain the item with no curse attached',
+      result: 'item_pay_gold',
+      goldCost: 70,
     },
     condition: (rs: RunState) => rs.characters.some(c => c.items.some(s => s !== null)),
   },
@@ -1139,9 +1183,10 @@ const EVENTS: EventDef[] = [
       result: 'upgrade_curse',
     },
     choiceB: {
-      label: 'Burn the tome',
-      detail: 'Knowledge is power, but not at this price',
-      result: 'skip',
+      label: 'Pay the price',
+      detail: 'Spend 80 gold to upgrade a random card — no curse',
+      result: 'upgrade_pay_gold',
+      goldCost: 80,
     },
     condition: (rs: RunState) =>
       rs.deckCardIds.length >= 10 &&
@@ -1176,28 +1221,46 @@ export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
         {/* Choices */}
         <div className="flex flex-col gap-4 mb-6">
           {/* Choice A */}
-          <button
-            onClick={() => onChoice(event.choiceA.result)}
-            className="rounded-xl border border-slate-600/40 p-5 text-left transition-all hover:border-purple-500/60 hover:bg-purple-900/10 group"
-            style={{ background: 'rgba(8,5,25,0.80)' }}
-          >
-            <p className="font-orbitron font-bold text-[13px] text-white mb-1 group-hover:text-purple-300 transition-colors">
-              A — {event.choiceA.label}
-            </p>
-            <p className="text-slate-400 text-[11px] leading-relaxed">{event.choiceA.detail}</p>
-          </button>
+          {(() => {
+            const canAffordA = !event.choiceA.goldCost || runState.gold >= event.choiceA.goldCost;
+            return (
+              <button
+                onClick={canAffordA ? () => onChoice(event.choiceA.result) : undefined}
+                disabled={!canAffordA}
+                className="rounded-xl border border-slate-600/40 p-5 text-left transition-all hover:border-purple-500/60 hover:bg-purple-900/10 group disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-600/40 disabled:hover:bg-transparent"
+                style={{ background: 'rgba(8,5,25,0.80)' }}
+              >
+                <p className="font-orbitron font-bold text-[13px] text-white mb-1 group-hover:text-purple-300 transition-colors">
+                  A — {event.choiceA.label}
+                </p>
+                <p className="text-slate-400 text-[11px] leading-relaxed">{event.choiceA.detail}</p>
+                {!canAffordA && (
+                  <p className="text-red-400 text-[10px] font-orbitron mt-1.5">⚠ Need {event.choiceA.goldCost} gold — you have {runState.gold}</p>
+                )}
+              </button>
+            );
+          })()}
 
           {/* Choice B */}
-          <button
-            onClick={() => onChoice(event.choiceB.result)}
-            className="rounded-xl border border-slate-700/30 p-5 text-left transition-all hover:border-slate-500/50 hover:bg-slate-800/20 group"
-            style={{ background: 'rgba(6,3,20,0.70)' }}
-          >
-            <p className="font-orbitron font-bold text-[13px] text-slate-300 mb-1 group-hover:text-white transition-colors">
-              B — {event.choiceB.label}
-            </p>
-            <p className="text-slate-500 text-[11px] leading-relaxed">{event.choiceB.detail}</p>
-          </button>
+          {(() => {
+            const canAffordB = !event.choiceB.goldCost || runState.gold >= event.choiceB.goldCost;
+            return (
+              <button
+                onClick={canAffordB ? () => onChoice(event.choiceB.result) : undefined}
+                disabled={!canAffordB}
+                className="rounded-xl border border-slate-700/30 p-5 text-left transition-all hover:border-slate-500/50 hover:bg-slate-800/20 group disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-700/30 disabled:hover:bg-transparent"
+                style={{ background: 'rgba(6,3,20,0.70)' }}
+              >
+                <p className="font-orbitron font-bold text-[13px] text-slate-300 mb-1 group-hover:text-white transition-colors">
+                  B — {event.choiceB.label}
+                </p>
+                <p className="text-slate-500 text-[11px] leading-relaxed">{event.choiceB.detail}</p>
+                {!canAffordB && (
+                  <p className="text-red-400 text-[10px] font-orbitron mt-1.5">⚠ Need {event.choiceB.goldCost} gold — you have {runState.gold}</p>
+                )}
+              </button>
+            );
+          })()}
         </div>
 
         {/* Party status summary */}
@@ -1232,6 +1295,15 @@ export interface RunDefeatScreenProps {
 }
 
 export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps) {
+  const rs = runState.runStats ?? { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 };
+  const stats = [
+    { icon: '🗺️', value: `Act ${runState.act}`, label: 'REACHED' },
+    { icon: '⚔️', value: String(runState.battleCount), label: 'BATTLES' },
+    { icon: '💀', value: String(rs.enemiesKilled), label: 'ENEMIES' },
+    { icon: '🃏', value: String(rs.cardsObtained), label: 'CARDS GOT' },
+    { icon: '🎒', value: String(rs.itemsObtained), label: 'ITEMS GOT' },
+    { icon: '💰', value: String(runState.gold), label: 'GOLD LEFT' },
+  ];
   return (
     <ScreenWrapper>
       <div className="rounded-2xl p-8 text-center" style={PANEL_STYLE}>
@@ -1242,47 +1314,31 @@ export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps
         </h1>
         <p className="text-slate-400 text-sm mb-8">Your clones have fallen. The Empire of Znyxorga claims victory.</p>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="rounded-xl border border-slate-700/40 p-4" style={{ background: 'rgba(8,5,25,0.80)' }}>
-            <div className="text-2xl mb-1">🗺️</div>
-            <div className="font-orbitron font-bold text-xl text-white">Act {runState.act}</div>
-            <div className="text-slate-500 text-[10px] font-orbitron tracking-wider">REACHED</div>
-          </div>
-          <div className="rounded-xl border border-slate-700/40 p-4" style={{ background: 'rgba(8,5,25,0.80)' }}>
-            <div className="text-2xl mb-1">⚔️</div>
-            <div className="font-orbitron font-bold text-xl text-white">{runState.battleCount}</div>
-            <div className="text-slate-500 text-[10px] font-orbitron tracking-wider">BATTLES</div>
-          </div>
-          <div className="rounded-xl border border-slate-700/40 p-4" style={{ background: 'rgba(8,5,25,0.80)' }}>
-            <div className="text-2xl mb-1">💰</div>
-            <div className="font-orbitron font-bold text-xl text-white">{runState.gold}</div>
-            <div className="text-slate-500 text-[10px] font-orbitron tracking-wider">GOLD LEFT</div>
-          </div>
+        {/* Characters — all shown as fallen */}
+        <div className="flex justify-center gap-5 mb-8">
+          {runState.characters.map(char => (
+            <div key={char.id} className="flex flex-col items-center gap-1.5">
+              <div className="relative">
+                <img src={char.portrait} alt={char.displayName}
+                  className="w-14 h-14 rounded-full object-cover border-2"
+                  style={{ borderColor: '#ef4444', filter: 'grayscale(1) brightness(0.45)' }} />
+                <div className="absolute inset-0 flex items-center justify-center text-xl">💀</div>
+              </div>
+              <span className="font-orbitron text-[9px] text-slate-400">{char.displayName.replace('-chan', '')}</span>
+              <span className="text-[9px] font-orbitron font-bold" style={{ color: '#ef4444' }}>FALLEN</span>
+            </div>
+          ))}
         </div>
 
-        {/* Characters */}
-        <div className="flex justify-center gap-4 mb-8">
-          {runState.characters.map(char => {
-            const dead = char.currentHp <= 0;
-            return (
-              <div key={char.id} className="flex flex-col items-center gap-1.5">
-                <div className="relative">
-                  <img src={char.portrait} alt={char.displayName}
-                    className="w-14 h-14 rounded-full object-cover border-2"
-                    style={{
-                      borderColor: dead ? '#ef4444' : '#4ade80',
-                      filter: dead ? 'grayscale(1) brightness(0.5)' : 'none',
-                    }} />
-                  {dead && <div className="absolute inset-0 flex items-center justify-center text-xl">💀</div>}
-                </div>
-                <span className="font-orbitron text-[9px] text-slate-400">{char.displayName.replace('-chan', '')}</span>
-                <span className="text-[9px]" style={{ color: dead ? '#ef4444' : '#4ade80' }}>
-                  {dead ? 'FALLEN' : `${char.currentHp}/${char.maxHp} HP`}
-                </span>
-              </div>
-            );
-          })}
+        {/* Stats grid */}
+        <div className="grid grid-cols-6 gap-2 mb-8">
+          {stats.map(({ icon, value, label }) => (
+            <div key={label} className="rounded-xl border border-slate-700/40 p-3" style={{ background: 'rgba(8,5,25,0.80)' }}>
+              <div className="text-xl mb-1">{icon}</div>
+              <div className="font-orbitron font-bold text-lg text-white">{value}</div>
+              <div className="text-slate-500 text-[9px] font-orbitron tracking-wider">{label}</div>
+            </div>
+          ))}
         </div>
 
         <button

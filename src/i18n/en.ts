@@ -250,13 +250,13 @@ export const en = {
 
   // ── Terrain ────────────────────────────────────────────────────────────────
   terrain: {
-    forest:       { label: 'Crystal Spires', lines: ['+40% Defense while standing in forest', 'Reduces enemy targeting priority', 'Normal movement cost'] },
+    forest:       { label: 'Crystal Spires', lines: ['+20% Defense while standing in forest', 'Reduces enemy targeting priority', 'Normal movement cost'] },
     mountain:     { label: 'Mountain',       lines: ['Impassable', 'Blocks Line of Sight'] },
     river:        { label: 'River',          lines: ['Passable — wade through', 'Movement costs 2/hex'] },
     lake:         { label: 'Lake',           lines: ['Impassable deep water', 'Yi Sun-sin can cross (Turtle Ship)'] },
-    desert:       { label: 'Desert',         lines: ['Scorching Heat — 5 pure damage at turn end', 'Movement costs 2/hex'] },
+    desert:       { label: 'Desert',         lines: ['Scorching Heat — 5 pure damage at turn end', 'Normal movement cost'] },
     snow:         { label: 'Deep Snow',      lines: ['Heavy snowdrifts — Movement costs 2/hex'] },
-    ice:          { label: 'Ice',            lines: ['Frozen surface — passable at normal cost'] },
+    ice:          { label: 'Ice',            lines: ['Slippery ice — landing here slides you 1 extra hex forward'] },
     ruins:        { label: 'Ruins',          lines: ['Elevated vantage — grants Range Bonus', 'Normal movement cost'] },
     plain:        { label: 'Arena Floor',    lines: ['No modifiers'] },
     mana_crystal: { label: 'Mana Crystal',   lines: ['+1 Mana on Entry'] },
@@ -309,7 +309,7 @@ export const en = {
     genghis_mongol_charge:  { name: 'Mongol Charge',       description: 'Power×1.2 damage at range 3.' },
     genghis_horde_tactics:  { name: 'Horde Tactics',       description: 'Power×0.8 damage to ALL enemies within range 2.' },
     genghis_riders_fury:    { name: "Rider's Fury",        description: 'ULTIMATE (Exhaust) — Power×0.7 to ALL enemies on a horizontal line, range 5.' },
-    leonidas_shield_bash:   { name: 'Shield Bash',         description: 'Power×1.8 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).' },
+    leonidas_shield_bash:   { name: 'Shield Bash',         description: 'Power×1.2 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).' },
     leonidas_spartan_wall:  { name: 'Spartan Wall',        description: '+20 Defense to Leonidas and all allies within range 2.' },
     leonidas_this_is_sparta: { name: 'THIS IS SPARTA!',   description: 'ULTIMATE (Exhaust) — Power×2.5 damage to target + Root all adjacent enemies for 2 turns.' },
     davinci_flying_machine: { name: 'Flying Machine',      description: 'Teleport to any hex within range 5.' },
@@ -370,7 +370,7 @@ export const en = {
     tileEffects: {
       forest: {
         name: 'Forest',
-        e1: '+40% Defense', e1desc: 'Units on a forest tile gain +40% Defense against all incoming attacks. Normal movement cost.',
+        e1: '+20% Defense', e1desc: 'Units on a forest tile gain +20% Defense against all incoming attacks. Normal movement cost.',
         e2: 'Stealth', e2desc: 'Reduces enemy targeting priority.',
         tip: 'Great for tanky and defensive positioning — forests now cost normal movement so you can retreat into them easily.',
       },

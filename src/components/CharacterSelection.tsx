@@ -120,8 +120,18 @@ const AVAILABLE: Character[] = [
   },
 ];
 
+const ROLE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+  dps_ranged:  { label: 'Ranged DPS',  icon: '🎯', color: 'rgba(232,72,232,0.7)' },
+  dps_melee:   { label: 'Melee DPS',   icon: '⚔️', color: 'rgba(248,100,100,0.7)' },
+  support:     { label: 'Support',     icon: '💚', color: 'rgba(52,211,153,0.7)' },
+  tank:        { label: 'Tank',        icon: '🛡️', color: 'rgba(251,191,36,0.7)' },
+  hybrid:      { label: 'Hybrid',      icon: '🐢', color: 'rgba(45,212,191,0.7)' },
+  controller:  { label: 'Controller',  icon: '🌀', color: 'rgba(167,139,250,0.7)' },
+};
+
 export default function CharacterSelection({ onStartGame, onBack }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const { t } = useT();
 
   const selected = useMemo(
@@ -140,6 +150,10 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
     );
   };
 
+  const visibleChars = roleFilter
+    ? AVAILABLE.filter(c => c.role === roleFilter)
+    : AVAILABLE;
+
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <ArenaBackground />
@@ -156,7 +170,7 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
           <p className="text-slate-300 mt-1">{t.characterSelect.subtitle}</p>
         </div>
 
-        <div className="flex items-center justify-center gap-4 mb-6">
+        <div className="flex items-center justify-center gap-4 mb-4">
           <div className="px-4 py-2 rounded-full border border-indigo-400/40 bg-indigo-500/10 text-indigo-200 font-semibold">
             {t.characterSelect.selectedCount.replace('{n}', String(selectedIds.length))}
           </div>
@@ -175,8 +189,43 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
           </Button>
         </div>
 
+        {/* Role filter bar */}
+        <div className="flex items-center justify-center gap-2 mb-5 flex-wrap">
+          <button
+            onClick={() => setRoleFilter(null)}
+            className="font-orbitron text-[10px] px-3 py-1.5 rounded-full border transition-all"
+            style={{
+              background: roleFilter === null ? 'rgba(100,80,200,0.25)' : 'rgba(255,255,255,0.04)',
+              borderColor: roleFilter === null ? 'rgba(139,92,246,0.70)' : 'rgba(80,70,110,0.40)',
+              color: roleFilter === null ? '#a78bfa' : '#64748b',
+              boxShadow: roleFilter === null ? '0 0 10px rgba(139,92,246,0.25)' : 'none',
+            }}
+          >
+            All
+          </button>
+          {Object.entries(ROLE_LABELS).map(([role, meta]) => {
+            const active = roleFilter === role;
+            return (
+              <button
+                key={role}
+                onClick={() => setRoleFilter(active ? null : role)}
+                className="font-orbitron text-[10px] px-3 py-1.5 rounded-full border transition-all flex items-center gap-1"
+                style={{
+                  background: active ? meta.color.replace('0.7)', '0.18)') : 'rgba(255,255,255,0.04)',
+                  borderColor: active ? meta.color : 'rgba(80,70,110,0.35)',
+                  color: active ? '#fff' : '#64748b',
+                  boxShadow: active ? `0 0 10px ${meta.color.replace('0.7)', '0.30)')}` : 'none',
+                }}
+              >
+                <span>{meta.icon}</span>
+                <span>{meta.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
-          {AVAILABLE.map((c) => {
+          {visibleChars.map((c) => {
             const picked = selectedIds.includes(c.id);
             const disabled = maxed && !picked;
             // Build translated character data
@@ -284,9 +333,13 @@ function CharacterCard({ c, picked, disabled, onToggle, onHover, t }: {
           {/* Land / Water toggle for Sun-sin */}
           {hasWaterForm && (
             <div className="flex gap-0 mb-3" onClick={(e) => e.stopPropagation()}>
-              <button
+              {/* divs instead of buttons — outer CharacterCard is already a <button>, can't nest */}
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setMode("land")}
-                className="flex-1 flex items-center justify-center gap-1 text-[10px] font-orbitron font-bold py-1.5 rounded-l-lg border-y border-l transition-all"
+                onKeyDown={(e) => e.key === 'Enter' && setMode("land")}
+                className="flex-1 flex items-center justify-center gap-1 text-[10px] font-orbitron font-bold py-1.5 rounded-l-lg border-y border-l transition-all cursor-pointer"
                 style={{
                   background: mode === "land" ? "rgba(134,239,172,0.15)" : "transparent",
                   borderColor: mode === "land" ? "rgba(134,239,172,0.55)" : "rgba(71,85,105,0.4)",
@@ -294,10 +347,13 @@ function CharacterCard({ c, picked, disabled, onToggle, onHover, t }: {
                 }}
               >
                 {t.characterSelect.land}
-              </button>
-              <button
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setMode("water")}
-                className="flex-1 flex items-center justify-center gap-1 text-[10px] font-orbitron font-bold py-1.5 rounded-r-lg border-y border-r transition-all"
+                onKeyDown={(e) => e.key === 'Enter' && setMode("water")}
+                className="flex-1 flex items-center justify-center gap-1 text-[10px] font-orbitron font-bold py-1.5 rounded-r-lg border-y border-r transition-all cursor-pointer"
                 style={{
                   background: mode === "water" ? "rgba(56,189,248,0.15)" : "transparent",
                   borderColor: mode === "water" ? "rgba(56,189,248,0.55)" : "rgba(71,85,105,0.4)",
@@ -305,7 +361,7 @@ function CharacterCard({ c, picked, disabled, onToggle, onHover, t }: {
                 }}
               >
                 {t.characterSelect.water}
-              </button>
+              </div>
             </div>
           )}
 

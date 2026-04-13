@@ -128,6 +128,7 @@ export interface CombatResult {
   turnsElapsed: number;
   finalHps: Record<CharacterId, number>; // HP each character ended with
   finalPassiveStacks?: Record<string, number>; // passive stacks to persist (e.g. Genghis bloodlust)
+  enemiesKilled?: number;
 }
 
 export interface PendingRewards {
@@ -153,4 +154,9 @@ export interface RunState {
   permanentlyDeadIds: CharacterId[];  // chars who died in combat and are gone for the run
   battleCount: number;                // how many combat nodes completed so far
   upgradedCardDefIds: string[];       // definitionIds upgraded this run (applied at battle start)
+  runStats: {
+    enemiesKilled: number;
+    itemsObtained: number;
+    cardsObtained: number;
+  };
 }

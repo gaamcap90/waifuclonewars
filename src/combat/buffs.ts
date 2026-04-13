@@ -53,10 +53,10 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
     defense *= 1.20;
   }
 
-  // 🌲 Forest defense buff (+40% Defense while on forest)
+  // 🌲 Forest defense buff (+20% Defense while on forest)
   const onForest = isForestAt(state, icon.position.q, icon.position.r);
   if (onForest) {
-    defense *= 1.40;
+    defense *= 1.20;
   }
 
   // 🐢 Yi Sun-sin — Turtle Ship passive: on lake or river (water terrain), boost Might/Defense
@@ -75,6 +75,10 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
       case 'rooted':      break; // Handled in selectTile: blocks movement, not card plays
       case 'armor_break': defense = Math.max(0, defense * (1 - d.magnitude / 100)); break;
       case 'silence':     break; // Blocks ability card use — handled at playCard and AI execution
+      case 'blinded':
+        // Magnitude > 0 (Flash Bang+): also reduces Might by that %
+        if (d.magnitude > 0) might = Math.max(0, might * (1 - d.magnitude / 100));
+        break;
       case 'poison':
         might   = Math.max(0, might   - d.magnitude);
         defense = Math.max(0, defense - d.magnitude);

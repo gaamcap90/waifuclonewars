@@ -101,7 +101,10 @@ function ItemAssignWidget({
   onChange: (charId: CharacterId | null, slotIdx: number | null) => void;
   label: string;
 }) {
-  const eligible = characters.filter(c => c.currentHp > 0 && (!item.targetCharacter || c.id === item.targetCharacter));
+  // Exclude characters who already own this exact item (same id) or who already have it (same item.name as global unique)
+  const alreadyOwnsItem = (c: CharacterRunState) => c.items.some(s => s?.id === item.id);
+  const eligible = characters.filter(c => c.currentHp > 0 && (!item.targetCharacter || c.id === item.targetCharacter) && !alreadyOwnsItem(c));
+  const ineligibleOwner = characters.filter(c => c.currentHp > 0 && alreadyOwnsItem(c));
 
   return (
     <div className="rounded-xl border p-5 mb-4"
@@ -123,28 +126,38 @@ function ItemAssignWidget({
         </div>
       </div>
 
+      {/* Show if someone already owns it */}
+      {ineligibleOwner.length > 0 && (
+        <p className="text-[10px] font-orbitron text-red-400 mb-3">
+          ⚠ {ineligibleOwner.map(c => c.displayName).join(', ')} already carries this item
+        </p>
+      )}
+
       {/* Character slot picker */}
       <p className="font-orbitron text-[10px] text-slate-500 mb-3">EQUIP TO:</p>
       <div className="flex gap-3 flex-wrap">
         {eligible.map(c => (
           <div key={c.id} className="rounded-xl border border-slate-700/40 p-3 min-w-[180px]"
             style={{ background: assignedTo === c.id ? 'rgba(34,211,238,0.08)' : 'rgba(2,4,14,0.80)' }}>
-            <button className="flex items-center gap-2 w-full mb-2"
-              onClick={() => onChange(c.id, null)}>
+            <div className="flex items-center gap-2 mb-2">
               <img src={c.portrait} alt={c.displayName} className="w-8 h-8 rounded-full object-cover" />
               <span className="font-orbitron text-[11px] text-white">{c.displayName}</span>
-            </button>
+            </div>
             <div className="flex gap-1.5 mt-1">
               {c.items.map((slot, i) => {
                 const isSelected = assignedTo === c.id && assignedSlot === i;
+                const isOccupied = !!slot;
                 return (
                   <button key={i}
-                    onClick={() => onChange(c.id, i)}
-                    className="w-9 h-9 rounded-lg border text-sm flex items-center justify-center transition-all"
+                    onClick={isOccupied ? undefined : () => onChange(c.id, i)}
+                    disabled={isOccupied}
+                    title={isOccupied ? `${slot!.name} (occupied)` : `Slot ${i + 1} — empty`}
+                    className="w-9 h-9 rounded-lg border text-sm flex items-center justify-center transition-all disabled:cursor-not-allowed"
                     style={{
-                      background: isSelected ? 'rgba(34,211,238,0.22)' : 'rgba(20,15,40,0.8)',
-                      borderColor: isSelected ? '#22d3ee' : 'rgba(100,80,150,0.4)',
+                      background: isSelected ? 'rgba(34,211,238,0.22)' : isOccupied ? 'rgba(10,8,25,0.6)' : 'rgba(20,15,40,0.8)',
+                      borderColor: isSelected ? '#22d3ee' : isOccupied ? 'rgba(60,50,80,0.5)' : 'rgba(100,80,150,0.4)',
                       boxShadow: isSelected ? '0 0 12px rgba(34,211,238,0.5)' : 'none',
+                      opacity: isOccupied ? 0.55 : 1,
                     }}>
                     {slot ? slot.icon : '·'}
                   </button>

@@ -46,7 +46,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 85, maxHp: 85, might: 28, power: 20, defense: 16, moveRange: 2, attackRange: 1 },
     ai: 'defensive',
     abilities: [
-      { id: 'shell_harden', name: 'Shell Harden', icon: '🐚', description: 'Retracts into armored shell — gains +18 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 18, duration: 2 } },
+      { id: 'shell_harden', name: 'Shell Harden', icon: '🐚', description: 'Retracts into armored shell — gains +18 Defense for 2 turns.', cooldown: 5, effect: { type: 'buff_self', defenseBonus: 18, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
   // Act 1 elites
@@ -88,12 +88,12 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'iron_wall', name: 'Iron Wall', icon: '🤖', count: 1,
     portrait: '/art/enemies/iron_wall_portrait.png',
     description: "The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered. Raw damage alone won't crack it.",
-    stats: { hp: 200, maxHp: 200, might: 60, power: 50, defense: 35, moveRange: 2, attackRange: 1 },
+    stats: { hp: 200, maxHp: 200, might: 60, power: 50, defense: 20, moveRange: 2, attackRange: 1 },
     ai: 'defensive',
     abilities: [
-      { id: 'shield_array', name: 'Shield Array', icon: '🛡️', description: 'Heals self for 50 HP. Triggers once when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'heal_self', amount: 50 } },
-      { id: 'emp_blast', name: 'EMP Blast', icon: '⚡', description: 'Deals 40 damage to all enemies within range 1, and silences them for 1 turn.', cooldown: 3, effect: { type: 'aoe_damage', range: 1, damage: 40 } },
-      { id: 'turret_mode', name: 'Turret Mode', icon: '🤖', description: 'Gains +40 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 40, duration: 2 } },
+      { id: 'shield_array', name: 'Shield Array', icon: '🛡️', description: 'Heals self for 35 HP. Triggers once when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'heal_self', amount: 35 } },
+      { id: 'emp_blast', name: 'EMP Blast', icon: '⚡', description: 'Deals 35 damage to all enemies within range 1, and silences them for 1 turn.', cooldown: 3, effect: { type: 'aoe_damage', range: 1, damage: 35 } },
+      { id: 'turret_mode', name: 'Turret Mode', icon: '🤖', description: 'Gains +30 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 30, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
   // Act 2 enemies
@@ -114,7 +114,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 70, maxHp: 70, might: 25, power: 50, defense: 8, moveRange: 3, attackRange: 3 },
     ai: 'ranged',
     abilities: [
-      { id: 'pinning_shot', name: 'Pinning Shot', icon: '📌', description: 'Fires a precision bolt at the closest target — deals Power×1.4 damage to enemies within range 3.', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 1.4, singleTarget: true } },
+      { id: 'pinning_shot', name: 'Pinning Shot', icon: '📌', description: 'Fires a precision bolt at the closest target — deals Power×1.2 damage to enemies within range 3.', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 1.2, singleTarget: true } },
     ] as EnemyAbilityDef[],
   },
   void_wraith: {
@@ -135,7 +135,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'berserker',
     abilities: [
       { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +25 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: -20, duration: 2 } },
-      { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals 1.5× Might damage on arrival (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.5 } },
+      { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals 1.2× Might damage on arrival (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.2 } },
     ] as EnemyAbilityDef[],
   },
   phasewarden: {
@@ -157,7 +157,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 160, maxHp: 160, might: 70, power: 55, defense: 20, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
-      { id: 'alpha_rush', name: 'Alpha Rush', icon: '🗡️', description: 'Charges 4 hexes and deals 1.8× Might damage on impact.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.8 } },
+      { id: 'alpha_rush', name: 'Alpha Rush', icon: '🗡️', description: 'Charges 4 hexes and deals 1.5× Might damage on impact.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.5 } },
       { id: 'twin_fury', name: 'Twin Fury', icon: '🔥', description: 'Gains +30 Might for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 30, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
@@ -168,7 +168,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 160, maxHp: 160, might: 50, power: 65, defense: 30, moveRange: 3, attackRange: 2 },
     ai: 'defensive',
     abilities: [
-      { id: 'aegis_heal', name: 'Aegis Heal', icon: '💚', description: 'Heals self for 65 HP. Triggers once when below 40% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.4, effect: { type: 'heal_self', amount: 65 } },
+      { id: 'aegis_heal', name: 'Aegis Heal', icon: '💚', description: 'Heals self for 45 HP. Triggers once when below 40% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.4, effect: { type: 'heal_self', amount: 45 } },
       { id: 'mirror_aegis', name: 'Mirror Aegis', icon: '🛡️', description: 'Gains +35 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', defenseBonus: 35, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
@@ -176,11 +176,11 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
   znyxorga_champion: {
     id: 'znyxorga_champion', name: "Znyxorga's Champion", icon: '👑', count: 1,
     portrait: '/art/enemies/znyxorgas_champion_portrait.png',
-    description: "Znyxorga's ultimate weapon — four arms, six eyes, 450 HP, and the patience of a god. It will annihilate your whole team simultaneously and grow stronger the closer it gets to death.",
-    stats: { hp: 450, maxHp: 450, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 },
+    description: "Znyxorga's ultimate weapon — four arms, six eyes, 400 HP, and the patience of a god. It will annihilate your whole team simultaneously and grow stronger the closer it gets to death.",
+    stats: { hp: 400, maxHp: 400, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 },
     ai: 'berserker',
     abilities: [
-      { id: 'arena_collapse', name: 'Arena Collapse', icon: '👑', description: 'The arena itself becomes a weapon — deals 55 damage to ALL player characters simultaneously.', cooldown: 3, effect: { type: 'damage_all_enemies', damage: 55 } },
+      { id: 'arena_collapse', name: 'Arena Collapse', icon: '👑', description: 'The arena itself becomes a weapon — deals 40 damage to ALL player characters simultaneously.', cooldown: 3, effect: { type: 'damage_all_enemies', damage: 40 } },
       { id: 'phase_shift', name: 'Phase Shift', icon: '🛡️', description: 'Becomes invincible for 2 turns and gains +15 Might, +15 Power, and +15 Defense permanently. Triggers ONCE when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'buff_self', mightBonus: 15, defenseBonus: 500, duration: 2 } },
       { id: 'champions_will', name: "Champion's Will", icon: '⭐', description: 'Driven by Znyxorga\'s will — gains +20 Might, +20 Power, and +20 Defense permanently. Triggers ONCE when below 30% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.30, effect: { type: 'buff_self', mightBonus: 20, defenseBonus: 20, duration: 999 } },
       { id: 'tyrant_strike', name: 'Tyrant Strike', icon: '💥', description: 'Channels Power into a devastating strike — deals Power×1.3 damage to all enemies within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.3 } },
@@ -208,7 +208,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'magnetic_pull', name: 'Magnetic Pull', icon: '🧲', description: 'Yanks a target 2 hexes closer then deals Power×0.8 damage. Range 3.', cooldown: 2, effect: { type: 'pull_attack', pullRange: 2, range: 3, multiplier: 0.8 } },
-      { id: 'emp_surge', name: 'EMP Surge', icon: '⚡', description: 'Releases an electromagnetic pulse — Silences all enemies within range 1 for 1 turn (Power reduced to 0).', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'silence', magnitude: 0, duration: 1 } },
+      { id: 'emp_surge', name: 'EMP Surge', icon: '⚡', description: 'Releases an electromagnetic pulse — Silences all enemies within range 1 for 1 turn (prevents ability use).', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'silence', magnitude: 0, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
   // Act 2 Common
@@ -255,7 +255,7 @@ export const ITEMS: RunItem[] = [
     statBonus: { power: 10 } },
   // UNCOMMON
   { id: 'battle_drum', name: 'Battle Drum', icon: '🥁', tier: 'uncommon',
-    description: 'After killing an enemy, draw 2 cards.',
+    description: 'After killing an enemy, draw 1 card.',
     passiveTag: 'draw_2_on_kill' },
   { id: 'arena_medkit', name: 'Arena Medkit', icon: '💊', tier: 'uncommon',
     description: 'Heal 25 HP at the start of your turn if below 40% HP.',
@@ -270,10 +270,10 @@ export const ITEMS: RunItem[] = [
     description: '+1 movement range permanently.',
     passiveTag: 'move_plus_1' },
   { id: 'soul_ember', name: 'Soul Ember', icon: '🕯️', tier: 'uncommon',
-    description: 'On kill, restore 15 HP to this character.',
+    description: 'On kill, restore 20 HP to this character.',
     passiveTag: 'on_kill_heal_15' },
   { id: 'war_trophy', name: 'War Trophy', icon: '💀', tier: 'uncommon',
-    description: 'On kill, permanently gain +3 Might and +3 Power for the rest of the run.',
+    description: 'On kill, permanently gain +2 Might and +2 Power for the rest of the run.',
     passiveTag: 'on_kill_might_power_plus3' },
   // RARE — general
   { id: 'alien_core', name: 'Alien Core', icon: '🧬', tier: 'rare',
@@ -295,7 +295,7 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'napoleon_barrage_splash' },
   { id: 'emperors_coat', name: "Emperor's Coat", icon: '🪖', tier: 'rare',
     targetCharacter: 'napoleon',
-    description: 'Grande Armée also grants +30% Might & Power and restores 1 Mana to each buffed ally.',
+    description: 'Grande Armée also grants +30% Might & Power to all allies.',
     passiveTag: 'napoleon_armee_mana' },
   // RARE — Genghis
   { id: 'eternal_hunger', name: 'Eternal Hunger', icon: '🩸', tier: 'rare',
@@ -394,7 +394,7 @@ export const CARD_REWARD_POOL: CardReward[] = [
   // ── Uncommon shared ───────────────────────────────────────────────────────
   { definitionId: 'shared_entangle',        name: 'Entangle',         icon: '🌿', manaCost: 2, rarity: 'uncommon', description: 'Root target enemy — cannot move for 2 turns. Range 2.' },
   { definitionId: 'shared_armor_break',     name: 'Armor Break',      icon: '🔨', manaCost: 2, rarity: 'uncommon', description: 'Target enemy loses 25% Defense for 2 turns. Range 2.' },
-  { definitionId: 'shared_silence',         name: 'Silence',          icon: '🔇', manaCost: 3, rarity: 'uncommon', description: 'Target Power drops to 0 for 2 turns. Range 1.' },
+  { definitionId: 'shared_silence',         name: 'Silence',          icon: '🔇', manaCost: 3, rarity: 'uncommon', description: 'Silences target — prevents ability use for 2 turns. Range 2.' },
   { definitionId: 'shared_poison_dart',     name: 'Poison Dart',      icon: '☠️', manaCost: 3, rarity: 'uncommon', description: 'Apply Poison — target loses Might/DEF each turn. Range 2.' },
   { definitionId: 'shared_suppressive_fire',name: 'Suppressive Fire', icon: '🔫', manaCost: 2, rarity: 'uncommon', description: 'Might×0.3 cone (3 wide, range 3) + Slow −1 move for 1 turn.' },
   { definitionId: 'shared_fortify',         name: 'Fortify',          icon: '🏰', manaCost: 2, rarity: 'uncommon', description: 'Cannot move this turn. +25 DEF, +15 Might until end of next turn.' },
@@ -414,11 +414,11 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'genghis_riders_fury', name: "Rider's Fury", icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Power×1.0 to all enemies on a line, range 5. Doubled if target <40% HP.', exclusiveTo: 'Genghis' },
   // ── Rare — Da Vinci ───────────────────────────────────────────────────────
   { definitionId: 'davinci_flying_machine', name: 'Flying Machine', icon: '✈️', manaCost: 2, rarity: 'rare', description: 'Teleport to any unoccupied hex on the board.', exclusiveTo: 'Da Vinci' },
-  { definitionId: 'davinci_masterpiece',    name: 'Masterpiece',    icon: '💚', manaCost: 3, rarity: 'rare', description: 'Heal an ally for Power×1.2 HP. Removes Poison. Range 3.', exclusiveTo: 'Da Vinci' },
+  { definitionId: 'davinci_masterpiece',    name: 'Masterpiece',    icon: '💚', manaCost: 3, rarity: 'rare', description: 'Heal an ally for Power×1.0 HP. Removes Poison. Range 3.', exclusiveTo: 'Da Vinci' },
   // ── Ultimate — Da Vinci ───────────────────────────────────────────────────
   { definitionId: 'davinci_vitruvian_guardian', name: 'Vitruvian Guardian', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Summon a combat drone (HP 75, Might 50, DEF 30). Lasts until defeated.', exclusiveTo: 'Da Vinci' },
   // ── Rare — Leonidas ───────────────────────────────────────────────────────
-  { definitionId: 'leonidas_shield_bash',  name: 'Shield Bash',  icon: '⚡', manaCost: 2, rarity: 'rare', description: 'Power×1.8 dmg at range 1 + Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
+  { definitionId: 'leonidas_shield_bash',  name: 'Shield Bash',  icon: '⚡', manaCost: 2, rarity: 'rare', description: 'Power×1.2 dmg at range 1 + Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_spartan_wall', name: 'Spartan Wall', icon: '🏛️', manaCost: 3, rarity: 'rare', description: '+20 Defense to Leonidas and all allies within range 2.', exclusiveTo: 'Leonidas' },
   // ── Ultimate — Leonidas ───────────────────────────────────────────────────
   { definitionId: 'leonidas_this_is_sparta', name: 'THIS IS SPARTA!', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Power×2.5 dmg to target + Root all adjacent enemies for 2 turns.', exclusiveTo: 'Leonidas' },
@@ -471,12 +471,16 @@ function buildEncounter(
   let gold: number;
   let dropChance: number;
 
+  // XP scales with act: Act 1 = ×1.0 (base), Act 2 = ×1.5, Act 3 = ×2.0.
+  // Designed so chars reach level 4 entering Act 2, and level 6 entering Act 3.
+  const actXpScale = act === 1 ? 1.0 : act === 2 ? 1.5 : 2.0;
+
   if (type === 'boss') {
     if (act === 1)      enemies = [ENEMIES.iron_wall];
     else if (act === 2) enemies = [ENEMIES.twin_terror_a, ENEMIES.twin_terror_b];
     else                enemies = [ENEMIES.znyxorga_champion];
     name = `Act ${act} Boss`;
-    xp = 160; gold = 90 + Math.floor(rng() * 30); dropChance = 1.0;
+    xp = Math.round(160 * actXpScale); gold = 90 + Math.floor(rng() * 30); dropChance = 1.0;
   } else if (type === 'elite') {
     // Late-row elites (rows 9-10) get the harder pair — doubled enemy count
     const useToughElite = row >= 9;
@@ -487,7 +491,7 @@ function buildEncounter(
     const extraEnemy = pick(latePool, rng);
     enemies = [...baseElites, extraEnemy];
     name = 'Elite Encounter';
-    xp = Math.round((60 + row * 2) * 1.25); gold = 40 + Math.floor(rng() * 25); dropChance = 0.90;
+    xp = Math.round((60 + row * 2) * actXpScale); gold = 40 + Math.floor(rng() * 25); dropChance = 0.90;
   } else {
     // Standard enemy: doubled to 2–4 enemies; later rows more likely to send 4
     const twoPct = row <= 3 ? 0.30 : row <= 6 ? 0.45 : 0.55;
@@ -495,7 +499,7 @@ function buildEncounter(
     const count = baseCount * 2; // always double
     enemies = Array.from({ length: count }, () => pick(enemyPool, rng));
     name = `${count} Enemies`;
-    xp = Math.round((35 + row * 3) * 1.25); gold = 18 + Math.floor(rng() * 20) + row; dropChance = 0.60 + row * 0.02;
+    xp = Math.round((35 + row * 3) * actXpScale); gold = 18 + Math.floor(rng() * 20) + row; dropChance = 0.60 + row * 0.02;
   }
 
   // Objective: bosses always destroy_base; elites 50% destroy_base; regular enemies 30% destroy_base, 15% survive
@@ -523,35 +527,67 @@ function buildEncounter(
     name, objective, objectiveLabel: objectiveLabels[objective], enemies,
     survivalTurns,
     spawnInterval: objective === 'survive' ? 2 : undefined,
-    goldReward: gold, xpReward: xp, bonusXpNoHit: 60, bonusXpFast: 40,
+    goldReward: gold, xpReward: xp,
+    bonusXpNoHit: Math.round(60 * actXpScale), bonusXpFast: Math.round(40 * actXpScale),
     itemDropChance: dropChance, guaranteedItem: type === 'boss',
   };
 }
 
 // ── Node Type Picker ──────────────────────────────────────────────────────────
+//
+// Non-battle types (elite, campfire, merchant, unknown, treasure) cannot appear
+// back-to-back on any connected path. If a direct predecessor node already has
+// one of these types, that type is excluded and weights re-normalised.
+//
+// Design intent:
+//   ~Every 2-3 rows is a normal enemy fight (backbone of the game)
+//   Elite chance low-to-moderate (10% early → 30% late)
+//   Unknown spread across all segments, slightly elevated
+//   Campfire & merchant weighted higher (only appear in ~half the map tiles)
+//   Treasure small chance in almost every row
+//   Row 12 has no campfire (back-to-back with forced campfire at row 13)
 
-function pickNodeType(row: number, rng: () => number): NodeType {
-  // 12-row map: row 0=start enemies, row 11=boss, rows 1-10 vary
-  // Campfire rows 2/3/6 have reduced frequency; rows 4/7 are rest rows; row 10 is guaranteed campfire
-  const tables: Record<number, [NodeType, number][]> = {
-    1:  [['enemy',0.65],['unknown',0.20],['treasure',0.15]],
-    2:  [['enemy',0.60],['campfire',0.15],['unknown',0.25]],
-    3:  [['enemy',0.50],['elite',0.15],['campfire',0.10],['merchant',0.25]],
-    4:  [['campfire',0.55],['merchant',0.45]],          // convergence row — always rest/shop
-    5:  [['enemy',0.40],['elite',0.25],['treasure',0.20],['merchant',0.15]],
-    6:  [['enemy',0.45],['elite',0.30],['campfire',0.10],['unknown',0.15]],
-    7:  [['campfire',0.50],['merchant',0.50]],          // mid-rest row
-    8:  [['enemy',0.35],['elite',0.30],['treasure',0.20],['unknown',0.15]],
-    9:  [['enemy',0.25],['elite',0.75]],                // heavy combat before final rest
+const CONSECUTIVE_BANNED: ReadonlySet<NodeType> = new Set(['elite', 'campfire', 'merchant', 'unknown', 'treasure']);
+
+function pickNodeType(
+  row: number,
+  rng: () => number,
+  predecessorTypes?: ReadonlySet<NodeType>,
+): NodeType {
+  const BASE_TABLES: Record<number, [NodeType, number][]> = {
+    //           enemy   elite   camp    merch   unkn    treas
+    1:  [['enemy',0.40],                        ['unknown',0.30],['treasure',0.15],['campfire',0.15]],
+    2:  [['enemy',0.35],         ['campfire',0.25],              ['unknown',0.25],['treasure',0.15]],
+    3:  [['enemy',0.35],['elite',0.10],['merchant',0.25],        ['unknown',0.20],['treasure',0.10]],
+    4:  [['enemy',0.30],['elite',0.10],['campfire',0.20],['merchant',0.20],['unknown',0.10],['treasure',0.10]],
+    5:  [['enemy',0.35],['elite',0.15],['campfire',0.10],        ['unknown',0.25],['treasure',0.15]],
+    6:  [['enemy',0.30],['elite',0.15],['campfire',0.20],['merchant',0.15],['unknown',0.10],['treasure',0.10]],
+    7:  [['enemy',0.30],['elite',0.20],['campfire',0.20],['merchant',0.20],                ['treasure',0.10]],
+    8:  [['enemy',0.30],['elite',0.20],          ['merchant',0.10],['unknown',0.25],['treasure',0.15]],
+    9:  [['enemy',0.35],['elite',0.25],                   ['merchant',0.10],['unknown',0.20],['treasure',0.10]],
+    10: [['enemy',0.30],['elite',0.25],['campfire',0.20],        ['unknown',0.15],['treasure',0.10]],
+    11: [['enemy',0.35],['elite',0.25],          ['merchant',0.10],['unknown',0.20],['treasure',0.10]],
+    12: [['enemy',0.40],['elite',0.30],          ['merchant',0.20],                ['treasure',0.10]],
+    // Row 13 forced campfire, Row 14 forced boss — handled in generateActMap
   };
-  const table = tables[row] ?? [['enemy',1.0]];
+
+  let table = BASE_TABLES[row] ?? [['enemy', 1.0]];
+
+  // Remove types that exist on any direct predecessor (back-to-back ban)
+  if (predecessorTypes && predecessorTypes.size > 0) {
+    table = table.filter(([t]) => !(CONSECUTIVE_BANNED.has(t) && predecessorTypes.has(t)));
+    const total = table.reduce((s, [, w]) => s + w, 0);
+    if (total > 0) table = table.map(([t, w]) => [t, w / total]);
+    else table = [['enemy', 1.0]];
+  }
+
   const roll = rng();
   let acc = 0;
   for (const [t, w] of table) {
     acc += w;
     if (roll <= acc) return t;
   }
-  return 'enemy';
+  return table[table.length - 1]?.[0] ?? 'enemy';
 }
 
 // ── First Battle Encounter (Alien Beasts) ─────────────────────────────────────
@@ -567,82 +603,147 @@ export const FIRST_ENCOUNTER: EncounterDef = {
 
 // ── Map Generation ────────────────────────────────────────────────────────────
 //
-// Slay-the-Spire style: 5-column grid, 12 rows. Dense branching paths that
-// converge and expand. Every node is guaranteed at least one incoming connection.
+// Slay-the-Spire style: 5-column grid, 15 rows. Free-crossing connection graph —
+// each node connects to 1-3 nodes in the next row via ±2 column jumps. No
+// monotone constraint, so paths can cross, branch, and merge freely. All paths
+// converge to the single boss node (row 14, col 2).
 
 export function generateActMap(seed: number, act: 1 | 2 | 3): RunNode[] {
   const rng = seededRng(seed + act * 997);
-  const ROWS = 12; // rows 0–11; row 11 = boss
+  const ROWS = 15; // rows 0–14; row 13 = pre-boss campfire, row 14 = boss
+  const COLS = 5;
 
-  // ── 6 sorted paths, monotone-assignment trick ─────────────────────────────────
-  // 6 paths across 5 columns (0–4). At each row, each path picks a random step
-  // (−1/0/+1). Raw destinations are SORTED and re-assigned in order — this
-  // monotone assignment means no two connections can ever cross. Every node
-  // belongs to at least one path → zero orphan nodes.
-  const pathCols: number[][] = [0, 1, 2, 2, 3, 4].map(c => [c]);
+  // ── Connection-graph generation ───────────────────────────────────────────────
+  // Row 0: all 5 columns active. Each active node independently picks 1-3 targets
+  // in the next row using ±2 column jumps (shuffled, then take N). Minimum 3
+  // active columns guaranteed per non-boss row. Paths can freely cross and merge.
 
-  for (let row = 1; row < ROWS; row++) {
-    if (row === ROWS - 1) {
-      // Boss: all paths converge to col 2 (center)
-      pathCols.forEach(p => p.push(2));
-      continue;
-    }
-
-    const prevCols = pathCols.map(p => p[p.length - 1]);
-
-    // Each path independently picks a raw next column (equal chance ±1/stay)
-    const rawNext = prevCols.map(col => {
-      const r = rng();
-      if (r < 0.33 && col > 0) return col - 1;
-      if (r < 0.67 && col < 4) return col + 1;
-      return col;
-    });
-
-    // Sort destinations and assign in order → monotone, no crossings
-    const sorted = [...rawNext].sort((a, b) => a - b);
-    pathCols.forEach((p, i) => p.push(sorted[i]));
-  }
-
-  // ── Build connection map from paths ──────────────────────────────────────────
   const nodeConns = new Map<string, Set<string>>();
-  for (const path of pathCols) {
-    for (let row = 0; row < ROWS - 1; row++) {
-      const fromId = `r${row}c${path[row]}`;
-      const toId   = `r${row + 1}c${path[row + 1]}`;
-      if (!nodeConns.has(fromId)) nodeConns.set(fromId, new Set());
-      nodeConns.get(fromId)!.add(toId);
+
+  // Fisher-Yates shuffle using seeded rng
+  const shuffleArr = <T>(arr: T[]): T[] => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  let activeCols: number[] = [0, 1, 2, 3, 4];
+
+  for (let row = 0; row < ROWS - 1; row++) {
+    const nextCols = new Set<number>();
+
+    if (row === ROWS - 2) {
+      // Pre-boss row (13): all campfire nodes converge to single boss node at col 2
+      for (const col of activeCols) {
+        const fromId = `r${row}c${col}`;
+        if (!nodeConns.has(fromId)) nodeConns.set(fromId, new Set());
+        nodeConns.get(fromId)!.add(`r${ROWS - 1}c2`);
+      }
+      nextCols.add(2);
+    } else {
+      for (const col of activeCols) {
+        const fromId = `r${row}c${col}`;
+        if (!nodeConns.has(fromId)) nodeConns.set(fromId, new Set());
+
+        // Candidates: col ±2, clamped to [0, COLS-1]
+        const candidates: number[] = [];
+        for (let dc = -2; dc <= 2; dc++) {
+          const nc = col + dc;
+          if (nc >= 0 && nc < COLS) candidates.push(nc);
+        }
+        shuffleArr(candidates);
+
+        // 50% → 1 connection, 45% → 2, 5% → 3 (rarely 3 to avoid web-like chaos)
+        const r = rng();
+        const numConns = r < 0.50 ? 1 : r < 0.95 ? 2 : 3;
+        const chosen = candidates.slice(0, numConns);
+        for (const nc of chosen) {
+          nodeConns.get(fromId)!.add(`r${row + 1}c${nc}`);
+          nextCols.add(nc);
+        }
+      }
+
+      // Guarantee at least 3 active columns in next row
+      while (nextCols.size < 3) {
+        const missing = ([0, 1, 2, 3, 4] as number[]).filter(c => !nextCols.has(c));
+        if (missing.length === 0) break;
+        const pick = missing[Math.floor(rng() * missing.length)];
+        nextCols.add(pick);
+        // Connect from the nearest already-active source column
+        const nearest = activeCols.reduce((best, c) =>
+          Math.abs(c - pick) < Math.abs(best - pick) ? c : best
+        );
+        const fromId = `r${row}c${nearest}`;
+        if (!nodeConns.has(fromId)) nodeConns.set(fromId, new Set());
+        nodeConns.get(fromId)!.add(`r${row + 1}c${pick}`);
+      }
+    }
+
+    activeCols = [...nextCols].sort((a, b) => a - b);
+  }
+
+  // ── Reverse connection map (toId → Set<fromId>) for predecessor lookups ──────
+  const reverseConns = new Map<string, Set<string>>();
+  for (const [fromId, toIds] of nodeConns) {
+    for (const toId of toIds) {
+      if (!reverseConns.has(toId)) reverseConns.set(toId, new Set());
+      reverseConns.get(toId)!.add(fromId);
     }
   }
 
-  // ── Collect all node IDs ──────────────────────────────────────────────────────
+  // ── Collect all node IDs grouped by row ──────────────────────────────────────
   const allNodeIds = new Set<string>(nodeConns.keys());
   for (const conns of nodeConns.values()) conns.forEach(id => allNodeIds.add(id));
 
-  // ── Build node objects ────────────────────────────────────────────────────────
-  const nodeMap = new Map<string, RunNode>();
+  // Group node IDs by row
+  const nodeIdsByRow = new Map<number, { key: string; col: number }[]>();
   for (const key of allNodeIds) {
     const m = key.match(/r(\d+)c(\d+)/);
     if (!m) continue;
     const row = parseInt(m[1]);
     const col = parseInt(m[2]);
+    if (!nodeIdsByRow.has(row)) nodeIdsByRow.set(row, []);
+    nodeIdsByRow.get(row)!.push({ key, col });
+  }
 
-    let type: NodeType;
-    if (row === 0)             type = 'enemy';
-    else if (row === ROWS - 1) type = 'boss';
-    else if (row === ROWS - 2) type = 'campfire';
-    else                       type = pickNodeType(row, rng);
+  // ── Build node objects ────────────────────────────────────────────────────────
+  const nodeMap = new Map<string, RunNode>();
 
-    const isCombat = type === 'enemy' || type === 'elite' || type === 'boss';
-    const encounter = row === 0 && act === 1
-      ? FIRST_ENCOUNTER
-      : isCombat ? buildEncounter(
-          type === 'boss' ? 'boss' : type === 'elite' ? 'elite' : 'enemy',
-          act, rng, row
-        ) : undefined;
+  for (let row = 0; row < ROWS; row++) {
+    const entries = nodeIdsByRow.get(row) ?? [];
 
-    nodeMap.set(key, {
-      id: key, row, col, rowCount: 5, type, connections: [], encounter,
-    } satisfies RunNode);
+    for (const { key, col } of entries) {
+      let type: NodeType;
+      if (row === 0) {
+        type = 'enemy';
+      } else if (row === ROWS - 1) {
+        type = 'boss';
+      } else if (row === ROWS - 2) {
+        type = 'campfire';
+      } else {
+        // Collect types of actual predecessor nodes (nodes with a direct connection to this one)
+        const predecessorTypes = new Set<NodeType>();
+        for (const predId of (reverseConns.get(key) ?? [])) {
+          const predNode = nodeMap.get(predId);
+          if (predNode) predecessorTypes.add(predNode.type);
+        }
+        type = pickNodeType(row, rng, predecessorTypes.size > 0 ? predecessorTypes : undefined);
+      }
+
+      const isCombat = type === 'enemy' || type === 'elite' || type === 'boss';
+      const encounter = row === 0 && act === 1
+        ? FIRST_ENCOUNTER
+        : isCombat ? buildEncounter(
+            type === 'boss' ? 'boss' : type === 'elite' ? 'elite' : 'enemy',
+            act, rng, row
+          ) : undefined;
+
+      nodeMap.set(key, {
+        id: key, row, col, rowCount: 5, type, connections: [], encounter,
+      } satisfies RunNode);
+    }
   }
 
   // ── Wire connections ──────────────────────────────────────────────────────────

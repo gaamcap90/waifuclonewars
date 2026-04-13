@@ -37,6 +37,7 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
     permanentlyDeadIds: [],
     battleCount: 0,
     upgradedCardDefIds: [],
+    runStats: { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 },
   };
 }
 
@@ -151,6 +152,10 @@ export function useRunState() {
         pendingRewards: pending,
         permanentlyDeadIds: [...prev.permanentlyDeadIds, ...newDeadIds] as any,
         battleCount: prev.battleCount + 1,
+        runStats: {
+          ...prev.runStats,
+          enemiesKilled: (prev.runStats?.enemiesKilled ?? 0) + (result.enemiesKilled ?? 0),
+        },
       };
     });
   }, []);
@@ -192,14 +197,19 @@ export function useRunState() {
       });
 
       // Equip all assigned items (regular drop + boss items all go through the same path)
+      // Per-character uniqueness: same character cannot hold the same item twice; other characters may
       let charsWithItem = chars;
+      let itemsAdded = 0;
       for (const eq of (equipItems ?? [])) {
+        const alreadyOwned = charsWithItem.find(c => c.id === eq.characterId)?.items.some(s => s?.id === eq.item.id) ?? false;
+        if (alreadyOwned) continue;
         charsWithItem = charsWithItem.map(c => {
           if (c.id !== eq.characterId) return c;
           const items = [...c.items];
           items[eq.slotIndex] = eq.item;
           return { ...c, items };
         });
+        itemsAdded++;
       }
 
       // Check if a boss was just completed → advance to next act
@@ -238,6 +248,11 @@ export function useRunState() {
         characters: charsWithItem,
         unlockedNodeIds: newUnlocked,
         pendingRewards: null,
+        runStats: {
+          ...prev.runStats,
+          itemsObtained: (prev.runStats?.itemsObtained ?? 0) + itemsAdded,
+          cardsObtained: (prev.runStats?.cardsObtained ?? 0) + (chosenCardId ? 1 : 0),
+        },
       };
     });
   }, []);
@@ -266,15 +281,18 @@ export function useRunState() {
     });
   }, []);
 
-  // Spend one pending ability upgrade token: upgrade all copies of defId in the deck
+  // Spend one pending ability upgrade token: upgrade ALL copies of defId in the deck
   const upgradeAbility = useCallback((characterId: CharacterId, defId: string, isUltimate: boolean) => {
     setRunState(prev => {
       if (!prev) return prev;
+      // Upgrade every un-upgraded copy of this card that exists in the deck
+      const copiesInDeck = prev.deckCardIds.filter(id => id === defId).length;
+      const alreadyUpgraded = prev.upgradedCardDefIds.filter(id => id === defId).length;
+      const toAdd = Math.max(0, copiesInDeck - alreadyUpgraded);
+      const newUpgradedCardDefIds = [...prev.upgradedCardDefIds, ...Array(toAdd).fill(defId)];
       return {
         ...prev,
-        upgradedCardDefIds: prev.upgradedCardDefIds.includes(defId)
-          ? prev.upgradedCardDefIds
-          : [...prev.upgradedCardDefIds, defId],
+        upgradedCardDefIds: newUpgradedCardDefIds,
         characters: prev.characters.map(c => {
           if (c.id !== characterId) return c;
           if (isUltimate && c.pendingUltimateUpgrade <= 0) return c;
@@ -322,7 +340,11 @@ export function useRunState() {
   }, []);
 
   const addCardToDeck = useCallback((cardId: string) => {
-    setRunState(prev => prev ? { ...prev, deckCardIds: [...prev.deckCardIds, cardId] } : prev);
+    setRunState(prev => prev ? {
+      ...prev,
+      deckCardIds: [...prev.deckCardIds, cardId],
+      runStats: { ...prev.runStats, cardsObtained: (prev.runStats?.cardsObtained ?? 0) + 1 },
+    } : prev);
   }, []);
 
   // Atomic merchant purchase: spend gold + add card in one state update (avoids async timing issues)
@@ -349,14 +371,15 @@ export function useRunState() {
     });
   }, []);
 
-  // Hurt all living characters by amount (minimum 1 HP — unknown events can't kill outright)
+  // Hurt (or heal, if amount < 0) all living characters. Never kills (floor 1),
+  // never exceeds maxHp (ceiling), and skips already-dead characters.
   const hurtAllCharacters = useCallback((amount: number) => {
     setRunState(prev => prev ? {
       ...prev,
-      characters: prev.characters.map(c => ({
-        ...c,
-        currentHp: Math.max(1, c.currentHp - amount),
-      })),
+      characters: prev.characters.map(c => {
+        if (c.currentHp <= 0) return c; // dead — don't touch
+        return { ...c, currentHp: Math.min(c.maxHp, Math.max(1, c.currentHp - amount)) };
+      }),
     } : prev);
   }, []);
 
@@ -390,11 +413,14 @@ export function useRunState() {
     });
   }, []);
 
-  // Upgrade a shared card at campfire — adds defId to upgradedCardDefIds (no character token needed)
+  // Upgrade a shared card at campfire — adds defId to upgradedCardDefIds (duplicates allowed for multiple copies)
   const upgradeSharedCard = useCallback((defId: string) => {
     setRunState(prev => {
       if (!prev) return prev;
-      if (prev.upgradedCardDefIds.includes(defId)) return prev;
+      // Allow upgrading multiple copies — but cap at the number of copies in the deck
+      const copiesInDeck = prev.deckCardIds.filter(id => id === defId).length;
+      const alreadyUpgraded = prev.upgradedCardDefIds.filter(id => id === defId).length;
+      if (alreadyUpgraded >= copiesInDeck) return prev;
       return { ...prev, upgradedCardDefIds: [...prev.upgradedCardDefIds, defId] };
     });
   }, []);
@@ -415,6 +441,9 @@ export function useRunState() {
   const addItemToCharacter = useCallback((item: RunItem, characterId: CharacterId, slotIndex: number) => {
     setRunState(prev => {
       if (!prev) return prev;
+      // Per-character uniqueness: one character cannot carry the same item twice
+      const targetChar = prev.characters.find(c => c.id === characterId);
+      if (targetChar?.items.some(s => s?.id === item.id)) return prev;
       return {
         ...prev,
         characters: prev.characters.map(c => {
@@ -423,6 +452,7 @@ export function useRunState() {
           items[slotIndex] = item;
           return { ...c, items };
         }),
+        runStats: { ...prev.runStats, itemsObtained: (prev.runStats?.itemsObtained ?? 0) + 1 },
       };
     });
   }, []);

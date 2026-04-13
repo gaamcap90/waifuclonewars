@@ -290,6 +290,127 @@ function ShieldPulse({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number
   );
 }
 
+function MeleeSlash({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
+  const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
+  const color = anim.color ?? 'rgba(255,220,60,0.95)';
+  return (
+    <>
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x,
+          top: c.y,
+          width: 54,
+          height: 54,
+          borderRadius: '12%',
+          background: `conic-gradient(${color} 0deg 80deg, transparent 80deg)`,
+          animation: 'anim-slash 0.38s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 196,
+          filter: 'blur(0.8px)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x,
+          top: c.y,
+          width: 44,
+          height: 3,
+          background: `linear-gradient(90deg, white, ${color})`,
+          boxShadow: `0 0 8px ${color}`,
+          animation: 'anim-slash 0.38s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 197,
+        }}
+      />
+    </>
+  );
+}
+
+function HealRing({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
+  const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
+  const color = anim.color ?? 'rgba(80,255,140,0.85)';
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: c.x,
+        top: c.y,
+        width: 62,
+        height: 62,
+        borderRadius: '50%',
+        border: `4px solid ${color}`,
+        boxShadow: `0 0 20px ${color}, inset 0 0 14px ${color}`,
+        animation: 'anim-heal-ring 0.75s ease-out forwards',
+        pointerEvents: 'none',
+        zIndex: 194,
+      }}
+    />
+  );
+}
+
+function DespawnEffect({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
+  const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
+  // Terracotta clay color shards
+  return (
+    <>
+      {/* Central hex crumble flash */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x - HEX_W / 2,
+          top: c.y - HEX_H / 2,
+          width: HEX_W,
+          height: HEX_H,
+          clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+          background: 'radial-gradient(ellipse at center, rgba(200,120,50,0.90) 0%, rgba(160,80,20,0.70) 50%, transparent 100%)',
+          animation: 'anim-despawn-crumble 0.7s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 199,
+        }}
+      />
+      {/* Shard particles */}
+      {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: c.x - 4,
+            top: c.y - 4,
+            width: 8,
+            height: 8,
+            borderRadius: '2px',
+            background: i % 2 === 0 ? '#c87832' : '#a05020',
+            boxShadow: '0 0 4px rgba(200,120,50,0.7)',
+            animation: `anim-despawn-shard 0.65s ease-out forwards`,
+            animationDelay: `${i * 30}ms`,
+            pointerEvents: 'none',
+            zIndex: 200,
+            ['--dx' as string]: `${Math.cos((deg * Math.PI) / 180) * 38}px`,
+            ['--dy' as string]: `${Math.sin((deg * Math.PI) / 180) * 38}px`,
+          } as React.CSSProperties}
+        />
+      ))}
+      {/* Rising 💀 or crumble emoji */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x - 12,
+          top: c.y - 12,
+          fontSize: '1.4rem',
+          animation: 'anim-despawn-rise 0.7s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 201,
+          filter: 'drop-shadow(0 0 6px rgba(200,120,50,0.9))',
+        }}
+      >
+        🧱
+      </div>
+    </>
+  );
+}
+
 // ── main component ───────────────────────────────────────────────────
 
 const AnimationLayer: React.FC<AnimationLayerProps> = ({ animations, offsetX, offsetY }) => {
@@ -326,6 +447,12 @@ const AnimationLayer: React.FC<AnimationLayerProps> = ({ animations, offsetX, of
             return <MoveTrail key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
           case 'aoe':
             return <AoeRing key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
+          case 'slash':
+            return <MeleeSlash key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
+          case 'heal_ring':
+            return <HealRing key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
+          case 'despawn':
+            return <DespawnEffect key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
           default:
             return null;
         }

@@ -32,11 +32,12 @@ interface GameBoardProps {
   onTileHover?: (tile: GameState['board'][number] | null) => void;
   animations?: AnimEvent[];
   hoverPreviewRange?: number | null;
+  hoverPreviewExecutorId?: string | null;
   externalIntentRange?: { iconId: string; range: number } | null;
 }
 
 
-const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], hoverPreviewRange, externalIntentRange }) => {
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], hoverPreviewRange, hoverPreviewExecutorId, externalIntentRange }) => {
   const { t } = useT();
   // 1) Hex dimensions
   const hexSize = 50;
@@ -139,9 +140,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     const cardTargetingModeLocal = (gameState as any).cardTargetingMode as { card: any; executorId: string } | undefined;
     const range = hoverPreviewRange ?? cardTargetingModeLocal?.card?.effect?.range ?? null;
     if (!range || range <= 0) return new Set();
+    const allIcons = gameState.players.flatMap(p => p.icons);
+    // Priority: cardTargetingMode executor > hoverPreviewExecutorId (card's owner) > selectedIcon
     const executor = cardTargetingModeLocal
-      ? gameState.players.flatMap(p => p.icons).find(i => i.id === cardTargetingModeLocal.executorId)
-      : selectedIcon;
+      ? allIcons.find(i => i.id === cardTargetingModeLocal.executorId)
+      : hoverPreviewExecutorId
+        ? allIcons.find(i => i.id === hoverPreviewExecutorId)
+        : selectedIcon;
     if (!executor) return new Set();
     const set = new Set<string>();
     for (const tile of gameState.board) {
@@ -150,7 +155,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       if (d > 0 && d <= range) set.add(`${q},${r}`);
     }
     return set;
-  }, [hoverPreviewRange, selectedIcon, gameState.board, gameState.players, (gameState as any).cardTargetingMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hoverPreviewRange, hoverPreviewExecutorId, selectedIcon, gameState.board, gameState.players, (gameState as any).cardTargetingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 5b) Hover damage preview when a damage card is selected
   const cardTargetingMode = (gameState as any).cardTargetingMode as { card: any; executorId: string } | undefined;
@@ -192,7 +197,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       if (!executor || !target || target.playerId === executor.playerId) return null;
       const card = cardTargetingMode.card;
       if (card.effect.damageType === 'atk') {
-        const dmg = resolveBasicAttackDamage(gameState, executor, target);
+        let dmg: number;
+        if (card.effect.mightMult !== undefined) {
+          const atkStats = calcEffectiveStats(gameState, executor);
+          const defStats = calcEffectiveStats(gameState, target);
+          dmg = Math.max(0.1, atkStats.might * card.effect.mightMult - (defStats.defense ?? 0));
+        } else {
+          dmg = resolveBasicAttackDamage(gameState, executor, target);
+        }
         return { q: hoveredCoords.q, r: hoveredCoords.r, text: `⚔ ${Math.round(dmg)}` };
       }
       if (card.effect.powerMult !== undefined) {
@@ -208,13 +220,21 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       return null;
     }
 
-    // Ability / basic-attack targeting
+    // Ability / basic-attack targeting (Basic Attack+ carries mightMult via cardRefund)
     if (gameState.targetingMode && target) {
       const { abilityId, iconId } = gameState.targetingMode;
       const caster = allIcons.find(i => i.id === iconId);
       if (!caster || target.playerId === caster.playerId) return null;
       if (abilityId === 'basic_attack') {
-        const dmg = resolveBasicAttackDamage(gameState, caster, target);
+        const cardMightMult = (gameState.targetingMode as any)?.cardRefund?.card?.effect?.mightMult as number | undefined;
+        let dmg: number;
+        if (cardMightMult !== undefined) {
+          const atkStats = calcEffectiveStats(gameState, caster);
+          const defStats = calcEffectiveStats(gameState, target);
+          dmg = Math.max(0.1, atkStats.might * cardMightMult - (defStats.defense ?? 0));
+        } else {
+          dmg = resolveBasicAttackDamage(gameState, caster, target);
+        }
         return { q: hoveredCoords.q, r: hoveredCoords.r, text: `⚔ ${Math.round(dmg)}` };
       }
       const ability = caster.abilities.find(a => a.id === abilityId);
@@ -247,7 +267,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       if (hoveredIcon.playerId === executor.playerId) return null; // own unit, not a damage target
 
       if (card.effect.damageType === 'atk') {
-        const dmg = resolveBasicAttackDamage(gameState, executor, hoveredIcon);
+        let dmg: number;
+        if (card.effect.mightMult !== undefined) {
+          const atkStats = calcEffectiveStats(gameState, executor);
+          const defStats = calcEffectiveStats(gameState, hoveredIcon);
+          dmg = Math.max(0, hoveredIcon.stats.hp - (atkStats.might * card.effect.mightMult - (defStats.defense ?? 0)));
+          return { iconId: hoveredIcon.id, previewHP: Math.max(0, dmg), isDamage: true };
+        }
+        dmg = resolveBasicAttackDamage(gameState, executor, hoveredIcon);
         return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
       }
       if (card.effect.powerMult !== undefined) {
@@ -267,7 +294,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       if (!caster) return null;
 
       if (abilityId === 'basic_attack' && hoveredIcon.playerId !== caster.playerId) {
-        const dmg = resolveBasicAttackDamage(gameState, caster, hoveredIcon);
+        const cardMightMult = (gameState.targetingMode as any)?.cardRefund?.card?.effect?.mightMult as number | undefined;
+        let dmg: number;
+        if (cardMightMult !== undefined) {
+          const atkStats = calcEffectiveStats(gameState, caster);
+          const defStats = calcEffectiveStats(gameState, hoveredIcon);
+          dmg = Math.max(0.1, atkStats.might * cardMightMult - (defStats.defense ?? 0));
+        } else {
+          dmg = resolveBasicAttackDamage(gameState, caster, hoveredIcon);
+        }
         return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
       }
 
@@ -290,27 +325,51 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
 
   // 5c) Line-targeting hover preview (Rider's Fury / any lineTarget card)
   const isLineTargetCard = Boolean(cardTargetingMode?.card?.effect?.lineTarget);
-  const lineHexes = useMemo((): Coordinates[] => {
-    if (!isLineTargetCard || !hoveredCoords || !cardTargetingMode) return [];
+  const lineHexSet = useMemo((): Set<string> => {
+    if (!isLineTargetCard || !hoveredCoords || !cardTargetingMode) return new Set();
     const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === cardTargetingMode.executorId);
-    if (!executor) return [];
+    if (!executor) return new Set();
     const range = cardTargetingMode.card?.effect?.range ?? 4;
-    return snapToLineHexes(executor.position, hoveredCoords, range);
+    const hexes = snapToLineHexes(executor.position, hoveredCoords, range);
+    return new Set(hexes.map(h => `${h.q},${h.r}`));
   }, [isLineTargetCard, hoveredCoords, cardTargetingMode, gameState.players]);
-  const lineHexSet = useMemo(() => new Set(lineHexes.map(h => `${h.q},${h.r}`)), [lineHexes]);
 
-  // 5d) AI intent range hover — highlight tiles within that range from the AI icon
+  // 5d) AI intent range hover — highlight movement + attack threat using Dijkstra
   //     Also handles externalIntentRange (from sidebar enemy ability hover)
   const intentRangeHighlight = useMemo((): Set<string> => {
     const active = hoveredIntentRange ?? externalIntentRange ?? null;
     if (!active) return new Set();
     const aiIcon = gameState.players.flatMap(p => p.icons).find(i => i.id === active.iconId);
     if (!aiIcon) return new Set();
+
+    // Movement reachable tiles (Dijkstra, respecting terrain and blocking units)
+    const moveBudget = aiIcon.stats.moveRange ?? 0;
+    const blockedKeys = new Set(
+      gameState.players.flatMap(p => p.icons)
+        .filter(ic => ic.isAlive && ic.id !== aiIcon.id && ic.playerId !== aiIcon.playerId)
+        .map(ic => tileKey(ic.position.q, ic.position.r))
+    );
+    const allyKeys = new Set(
+      gameState.players.flatMap(p => p.icons)
+        .filter(ic => ic.isAlive && ic.id !== aiIcon.id && ic.playerId === aiIcon.playerId)
+        .map(ic => tileKey(ic.position.q, ic.position.r))
+    );
+    const allowRiver = aiIcon.name.includes("Sun-sin");
+    const costMap = reachableWithCosts(gameState.board, aiIcon.position, moveBudget, blockedKeys, allowRiver, allyKeys);
+
+    // Attack threat: ability range from every reachable tile (+ current position)
+    const atkRange = active.range;
     const set = new Set<string>();
-    for (const tile of gameState.board) {
-      const { q, r } = tile.coordinates;
-      const dist = Math.max(Math.abs(q - aiIcon.position.q), Math.abs(r - aiIcon.position.r), Math.abs((q + r) - (aiIcon.position.q + aiIcon.position.r)));
-      if (dist <= active.range) set.add(`${q},${r}`);
+    const allAttackOrigins: Array<{q: number, r: number}> = [
+      aiIcon.position,
+      ...[...costMap.keys()].map(k => { const [sq, sr] = k.split(','); return { q: parseInt(sq, 10), r: parseInt(sr, 10) }; }),
+    ];
+    for (const pos of allAttackOrigins) {
+      for (const tile of gameState.board) {
+        const { q, r } = tile.coordinates;
+        const d = (Math.abs(q - pos.q) + Math.abs(r - pos.r) + Math.abs((q + r) - (pos.q + pos.r))) / 2;
+        if (d > 0 && d <= atkRange) set.add(`${q},${r}`);
+      }
     }
     return set;
   }, [hoveredIntentRange, externalIntentRange, gameState]);
@@ -354,56 +413,68 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     return { inspectedMoveSet, inspectedAttackSet };
   }, [inspectedEnemyId, gameState.players, gameState.board]);
 
-  // 6) Memoized board rendering
+  // 6a) Derived lookup structures — O(1) icon and range checks inside renderBoard
+  // Pre-sorted board (painter's order) — stable unless board layout changes
+  const sortedBoard = useMemo(() =>
+    [...gameState.board].sort((a, b) => (a.coordinates.q + 2 * a.coordinates.r) - (b.coordinates.q + 2 * b.coordinates.r)),
+    [gameState.board]
+  );
+  // Map from "q,r" → alive icon — replaces per-tile flatMap().find()
+  const iconByPos = useMemo(() => {
+    const map = new Map<string, (typeof gameState.players)[0]['icons'][0]>();
+    for (const p of gameState.players)
+      for (const ic of p.icons)
+        if (ic.isAlive) map.set(tileKey(ic.position.q, ic.position.r), ic);
+    return map;
+  }, [gameState.players]);
+  // Map from id → icon (all, alive or dead) — for respawn lookup
+  const iconById = useMemo(() => {
+    const map = new Map<string, (typeof gameState.players)[0]['icons'][0]>();
+    for (const p of gameState.players)
+      for (const ic of p.icons)
+        map.set(ic.id, ic);
+    return map;
+  }, [gameState.players]);
+  // Set versions of range arrays — O(1) per-tile check instead of O(n) .some()
+  const movementRangeSet = useMemo(() => new Set(movementRange.map(c => tileKey(c.q, c.r))), [movementRange]);
+  const attackRangeSet   = useMemo(() => new Set(attackRange.map(c => tileKey(c.q, c.r))),   [attackRange]);
+  const abilityRangeSet  = useMemo(() => new Set(abilityRange.map(c => tileKey(c.q, c.r))),  [abilityRange]);
+
+  // 6b) Memoized board rendering
   const renderBoard = useMemo(() => {
     const hexToPixel = (q: number, r: number) => ({
       x: hexSize * (3 / 2 * q),
       y: hexSize * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
     });
 
-    // Sort back-to-front by screen-y (proportional to q/2 + r) for correct isometric painter's order
-    const sorted = [...gameState.board].sort(
-      (a, b) => (a.coordinates.q + 2 * a.coordinates.r) - (b.coordinates.q + 2 * b.coordinates.r)
-    );
-    return sorted.map(tile => {
+    return sortedBoard.map(tile => {
       const { q, r } = tile.coordinates;
       const { x, y } = hexToPixel(q, r);
+      const tKey = `${q},${r}`;
 
-      // find icon on this tile
-      const icon = gameState.players
-        .flatMap(p => p.icons)
-        .find(ic =>
-          ic.position.q === q &&
-          ic.position.r === r &&
-          ic.isAlive
-        );
+      // O(1) icon lookup
+      const icon = iconByPos.get(tKey);
 
       const playerColor = icon ? (icon.playerId === 0 ? 'blue' : 'red') : undefined;
       const isActiveIcon = icon?.id === selectedIconId;
 
-      // ranges
-      const inMove = movementRange.some(c => c.q === q && c.r === r);
-      const inAttack = attackRange.some(c => c.q === q && c.r === r);
-      const inAbility = abilityRange.some(c => c.q === q && c.r === r);
+      // O(1) range checks
+      const inMove    = movementRangeSet.has(tKey);
+      const inAttack  = attackRangeSet.has(tKey);
+      const inAbility = abilityRangeSet.has(tKey);
 
       const isTargetable = inAttack || inAbility;
       const isValidMovement = inMove;
       const isRespawnTarget = Boolean(gameState.respawnPlacement && (() => {
-        const respawning = gameState.players
-          .flatMap(p => p.icons)
-          .find(i => i.id === gameState.respawnPlacement);
+        const respawning = iconById.get(gameState.respawnPlacement as string);
         if (!respawning) return false;
         const validZone = respawning.playerId === 0
           ? (q >= -5 && q <= -3 && r >= 3 && r <= 5)
           : (q >= 3 && q <= 5 && r >= -5 && r <= -3);
-        const occupied = gameState.players
-          .flatMap(p => p.icons)
-          .some(i => i.position.q === q && i.position.r === r && i.isAlive);
-        return validZone && !occupied;
+        return validZone && !iconByPos.has(tKey);
       })());
 
       const preview = hoverDamagePreview?.q === q && hoverDamagePreview?.r === r ? hoverDamagePreview.text : null;
-      const tKey = `${q},${r}`;
       const isOnLine = lineHexSet.has(tKey);
       const isIntentRange = intentRangeHighlight.has(tKey);
       const isHoverPreview = hoverPreviewSet.has(tKey);
@@ -437,6 +508,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         blinded:     { emoji: '💥', bg: 'rgba(253,224,71,0.88)' },
         mud_throw:   { emoji: '🐾', bg: 'rgba(161,120,38,0.88)' },
         taunted:     { emoji: '📢', bg: 'rgba(234,179,8,0.88)' },
+        bleed:       { emoji: '🩸', bg: 'rgba(220,38,38,0.88)' },
       };
       const activeBoardDebuffs = icon?.isAlive
         ? (icon.debuffs ?? []).filter(d => DEBUFF_BADGE[d.type])
@@ -448,7 +520,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       const isRespawnPreview = hasImmientRespawn &&
         !gameState.respawnPlacement && // not already in active respawn mode
         (q >= -5 && q <= -3 && r >= 3 && r <= 5) &&
-        !gameState.players.flatMap(p => p.icons).some(i => i.isAlive && i.position.q === q && i.position.r === r);
+        !iconByPos.has(tKey);
 
       // All AI intents for this tile's icon (shown during player's turn)
       const aiIntents: AIIntent[] = (gameState as any).aiIntents ?? [];
@@ -468,7 +540,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             top: y + offsetY,
             width: hexWidth,
             height: hexHeight,
-            transform: 'scale(0.95)',
             transformOrigin: 'center center',
           }}
           onMouseEnter={() => { setHoveredCoords({ q, r }); onTileHover?.(tile); }}
@@ -477,7 +548,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           <HexTile
             tile={tile}
             onClick={() => {
-              const isEnemy = icon && icon.playerId !== gameState.activePlayerId;
+              const isEnemy = icon && icon.playerId === 1; // always based on AI player, never own units
               if (isEnemy && !gameState.targetingMode && !(gameState as any).cardTargetingMode) {
                 setInspectedEnemyId(id => id === icon.id ? null : icon.id);
               } else {
@@ -502,6 +573,43 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             previewHP={hpPreview && icon && hpPreview.iconId === icon.id ? hpPreview.previewHP : undefined}
             isHealPreview={hpPreview && icon && hpPreview.iconId === icon.id ? !hpPreview.isDamage : false}
           />
+
+          {/* ── Terrain ambient overlays ─────────────────────────── */}
+
+          {/* Mana crystal — pulsing purple radial glow */}
+          {tile.terrain.type === 'mana_crystal' && (
+            <div className="absolute inset-0 pointer-events-none" style={{
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+              background: 'radial-gradient(ellipse at center, rgba(168,85,247,0.65) 0%, rgba(139,92,246,0.28) 45%, transparent 72%)',
+              animation: 'anim-crystal-pulse 2.3s ease-in-out infinite',
+              zIndex: 5,
+            }} />
+          )}
+
+          {/* River / lake — light-blue shimmer sweep */}
+          {(tile.terrain.type === 'river' || tile.terrain.type === 'lake') && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+              zIndex: 5,
+            }}>
+              <div style={{
+                position: 'absolute', top: 0, bottom: 0,
+                width: '55%',
+                background: 'linear-gradient(105deg, transparent 28%, rgba(100,200,255,0.42) 50%, transparent 72%)',
+                animation: 'anim-tile-shimmer 3.0s ease-in-out infinite',
+              }} />
+            </div>
+          )}
+
+          {/* Burning forest — animated flicker overlay */}
+          {isBurning && (
+            <div className="absolute inset-0 pointer-events-none" style={{
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+              background: 'radial-gradient(ellipse at center bottom, rgba(255,100,0,0.72) 0%, rgba(220,50,0,0.48) 45%, transparent 78%)',
+              animation: 'anim-fire-flicker 0.38s ease-in-out infinite',
+              zIndex: 5,
+            }} />
+          )}
 
           {/* Dev overlay — Ctrl+D: show axial (q,r) on every hex */}
           {showCoordOverlay && (
@@ -536,7 +644,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
               Stays visible during cardTargetingMode (clicked card, waiting for target).
               Suppressed during pure ability targeting (targetingMode only, no card). */}
           {isHoverPreview && (!gameState.targetingMode || !!(gameState as any).cardTargetingMode) && !isInspectedAttack && !isInspectedMove && (
-            <div className="absolute inset-0 pointer-events-none z-14" style={{
+            <div className="absolute inset-0 pointer-events-none" style={{
+              zIndex: 14,
               background: "rgba(34,211,238,0.18)",
               clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
               border: "1px solid rgba(34,211,238,0.40)",
@@ -614,8 +723,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
 
           {/* Pending Laser Grid warning — 1 turn before damage */}
           {isPendingLaser && !isLaserStruck && (
-            <div className="absolute inset-0 pointer-events-none z-24 flex items-center justify-center"
-              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center"
+              style={{ zIndex: 24, clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
               <div style={{
                 position: 'absolute', inset: 0,
                 background: "rgba(255,180,0,0.22)",
@@ -637,8 +746,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
 
           {/* Freudenspur resonance zone */}
           {isInZone && (
-            <div className="absolute inset-0 pointer-events-none z-22 flex items-center justify-center"
-              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center"
+              style={{ zIndex: 22, clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
               <div style={{
                 position: 'absolute', inset: 0,
                 background: "rgba(100,220,255,0.15)",
@@ -660,8 +769,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
 
           {/* Pending fire start tile warning (before forest fire activates) */}
           {isPendingFireStart && !isBurning && (
-            <div className="absolute inset-0 pointer-events-none z-23 flex items-center justify-center"
-              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center"
+              style={{ zIndex: 23, clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
               <div style={{
                 position: 'absolute', inset: 0,
                 background: "rgba(255,120,0,0.25)",
@@ -681,16 +790,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             </div>
           )}
 
-          {/* Burning forest tile indicator */}
+          {/* Burning forest tile indicator — emoji only (flicker glow handled above) */}
           {isBurning && (
-            <div className="absolute inset-0 pointer-events-none z-23 flex items-center justify-center"
-              style={{ clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: "rgba(220,80,0,0.40)",
-                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
-              }} />
-              <span style={{ fontSize: 16, zIndex: 1, textShadow: "0 0 8px rgba(255,120,0,0.9)" }}>🔥</span>
+            <div className="absolute inset-0 pointer-events-none z-23 flex items-center justify-center">
+              <span style={{ fontSize: 18, textShadow: "0 0 10px rgba(255,120,0,0.95)" }}>🔥</span>
             </div>
           )}
 
@@ -766,14 +869,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     });
   },
     [
-      gameState.board,
-      gameState.players,
+      sortedBoard,
+      iconByPos,
+      iconById,
       selectedIconId,
       gameState.targetingMode,
       gameState.respawnPlacement,
-      movementRange,
-      attackRange,
-      abilityRange,
+      movementRangeSet,
+      attackRangeSet,
+      abilityRangeSet,
       hoverDamagePreview,
       hpPreview,
       lineHexSet,
@@ -790,6 +894,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       (gameState as any).pendingLaserTiles,
       (gameState as any).laserGridStruckIds,
       (gameState as any).activeZones,
+      hoverPreviewSet,
+      gameState.activePlayerId,
     ]);
 
   // 6) Pan & zoom handlers

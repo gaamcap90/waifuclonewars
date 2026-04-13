@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Coordinates, GameState } from "@/types/game";
 import { tileKey, reachableWithCosts } from "@/utils/movement";
 
@@ -19,6 +19,10 @@ export const useRangeCalculation = (
   showAbility?: boolean,
   abilityRange?: number
 ) => {
+  // MUST be before any early return — React hooks must be called in the same order every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const boardKeySet = useMemo(() => new Set(gameState.board.map(t => tileKey(t.coordinates.q, t.coordinates.r))), [gameState.board]);
+
   const activeIcon = gameState.players
     .flatMap(p => p.icons)
     .find(i => i.id === activeIconId);
@@ -29,11 +33,7 @@ export const useRangeCalculation = (
     return (Math.abs(from.q - to.q) + Math.abs(from.q + from.r - to.q - to.r) + Math.abs(from.r - to.r)) / 2;
   };
 
-  const isValidHex = (coords: Coordinates): boolean => {
-    return gameState.board.some(tile =>
-      tile.coordinates.q === coords.q && tile.coordinates.r === coords.r
-    );
-  };
+  const isValidHex = (coords: Coordinates): boolean => boardKeySet.has(tileKey(coords.q, coords.r));
 
   const getTerrainAt = (coords: Coordinates) => {
     return gameState.board.find(tile =>
@@ -84,8 +84,9 @@ export const useRangeCalculation = (
   // Calculate attack range — highlights ALL tiles in range (not just tiles with enemies)
   const attackRange: Coordinates[] = [];
   if (showAttack && activeIcon) {
-    let baseAttackRange = abilityRange ?? 1;
-    if (abilityRange === undefined) {
+    const isBlinded = activeIcon.debuffs?.some(d => d.type === 'blinded') ?? false;
+    let baseAttackRange = isBlinded ? 1 : (abilityRange ?? 1);
+    if (!isBlinded && abilityRange === undefined) {
       if (activeIcon.name.includes("Napoleon") || activeIcon.name.includes("Da Vinci")) baseAttackRange = 2;
       const napoleonOnForest =
         activeIcon.name.includes("Napoleon") &&

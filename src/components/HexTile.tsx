@@ -1,4 +1,5 @@
 // src/components/HexTile.tsx
+import React, { memo, useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { HexTile as HexTileType } from "@/types/game";
 
@@ -23,7 +24,7 @@ interface HexTileProps {
   isHealPreview?: boolean;
 }
 
-export default function HexTile({
+function HexTile({
   tile,
   onClick,
   onTerrainClick,
@@ -43,6 +44,33 @@ export default function HexTile({
   previewHP,
   isHealPreview = false,
 }: HexTileProps) {
+  // ── Internal HP tracking for hit flash + ghost HP bar ──────────────
+  const prevHPRef = useRef<number | undefined>(undefined);
+  const [flashKey, setFlashKey] = useState(0);
+  const [ghostPct, setGhostPct] = useState<number | null>(null);
+  const ghostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (currentHP === undefined || maxHP === undefined || maxHP === 0) return;
+    const prev = prevHPRef.current;
+    if (prev !== undefined && currentHP < prev - 0.5) {
+      setFlashKey(k => k + 1);
+      const prevPct = Math.max(0, Math.min(100, (prev / maxHP) * 100));
+      setGhostPct(prevPct);
+      if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
+      ghostTimerRef.current = setTimeout(() => setGhostPct(null), 850);
+    }
+    prevHPRef.current = currentHP;
+  }, [currentHP, maxHP]);
+
+  useEffect(() => {
+    return () => { if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current); };
+  }, []);
+
+  const isLowHP = currentHP !== undefined && maxHP !== undefined && maxHP > 0
+    && currentHP > 0 && (currentHP / maxHP) < 0.25;
+
   // 1) Terrain → public URL
   const terrainMap: Record<string,string> = {
     forest:       "/art/tiles/Forest_180.png",
@@ -129,6 +157,8 @@ export default function HexTile({
     <div
       className="relative cursor-pointer"
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onContextMenu={e => { e.preventDefault(); onTerrainClick?.(e); }}
       style={{ width: hexWidth, height: hexHeight, ...(isTilted ? { transformStyle: 'preserve-3d' } : {}) }}
     >
@@ -188,6 +218,29 @@ export default function HexTile({
               opacity={0.95}
             />
           )}
+
+          {/* Active-turn animated ring — soft glow + spinning dashes */}
+          {isActiveIcon && (
+            <>
+              {/* Outer blurred glow */}
+              <polygon
+                points={pts}
+                fill="rgba(250,210,0,0.07)"
+                stroke="rgba(250,210,0,0.45)"
+                strokeWidth={9}
+                style={{ filter: 'blur(3px)' }}
+              />
+              {/* Spinning dashed ring */}
+              <polygon
+                points={pts}
+                fill="none"
+                stroke="rgba(250,210,0,0.92)"
+                strokeWidth={3}
+                strokeDasharray="10 5"
+                style={{ animation: 'anim-active-ring-dash 2.0s linear infinite' }}
+              />
+            </>
+          )}
         </svg>
       </div>
 
@@ -245,6 +298,26 @@ export default function HexTile({
 
       </svg>
 
+      {/* ── Hover glow for occupied tiles ── */}
+      {isHovered && icon && playerColor && (
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}>
+          <svg
+            className="absolute inset-0"
+            style={{ overflow: 'visible' }}
+            width={hexWidth}
+            height={hexHeight}
+            viewBox={`0 0 ${hexWidth} ${hexHeight}`}
+          >
+            <polygon
+              points={pts}
+              fill={playerColor === 'blue' ? 'rgba(59,130,246,0.18)' : 'rgba(239,68,68,0.18)'}
+              stroke={playerColor === 'blue' ? 'rgba(96,165,250,0.8)' : 'rgba(248,113,113,0.8)'}
+              strokeWidth={3}
+            />
+          </svg>
+        </div>
+      )}
+
       {/* ── Character portrait — counter-rotated to face camera ── */}
       {icon && (
         <div
@@ -280,6 +353,26 @@ export default function HexTile({
                 <div className="absolute inset-0 animate-pulse" style={{
                   background: 'rgba(250,210,0,0.20)',
                 }} />
+              )}
+              {/* Low HP critical aura */}
+              {isLowHP && (
+                <div className="absolute inset-0" style={{
+                  background: 'radial-gradient(ellipse at center, transparent 30%, rgba(239,68,68,0.55) 100%)',
+                  animation: 'anim-low-hp-aura 1.1s ease-in-out infinite',
+                  pointerEvents: 'none',
+                }} />
+              )}
+              {/* Hit flash white overlay */}
+              {flashKey > 0 && (
+                <div
+                  key={flashKey}
+                  className="absolute inset-0"
+                  style={{
+                    background: 'rgba(255,255,255,0.92)',
+                    animation: 'anim-hit-flash 0.32s ease-out forwards',
+                    pointerEvents: 'none',
+                  }}
+                />
               )}
             </>
           ) : (
@@ -344,6 +437,16 @@ export default function HexTile({
               return (
                 <div style={{ width: '90%', height: '4px', background: 'rgba(0,0,0,0.5)', borderRadius: '2px', marginTop: '3px', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${fillPct}%`, background: hpColor, borderRadius: '2px', transition: 'width 0.15s' }} />
+                  {/* Ghost HP drain bar (yellow, fades after hit) */}
+                  {ghostPct !== null && ghostPct > pct && (
+                    <div style={{
+                      position: 'absolute', top: 0, left: `${pct}%`,
+                      width: `${Math.max(0, ghostPct - pct)}%`, height: '100%',
+                      background: 'rgba(250,200,0,0.72)',
+                      animation: 'anim-hp-ghost-drain 0.85s ease-out forwards',
+                      borderRadius: '2px',
+                    }} />
+                  )}
                   {hasPreview && !isHealPreview && (
                     <div style={{ position: 'absolute', top: 0, left: `${prevPct}%`, width: `${Math.max(0, pct - prevPct)}%`, height: '100%', background: 'rgba(239,68,68,0.85)', animation: 'pulse 1s infinite' }} />
                   )}
@@ -388,3 +491,24 @@ export default function HexTile({
     </div>
   );
 }
+
+export default memo(HexTile, (prev, next) =>
+  prev.tile.coordinates.q    === next.tile.coordinates.q    &&
+  prev.tile.coordinates.r    === next.tile.coordinates.r    &&
+  prev.tile.terrain.type     === next.tile.terrain.type     &&
+  prev.tile.highlighted      === next.tile.highlighted      &&
+  prev.isActiveIcon          === next.isActiveIcon          &&
+  prev.isTargetable          === next.isTargetable          &&
+  prev.isValidMovement       === next.isValidMovement       &&
+  prev.isRespawnTarget       === next.isRespawnTarget       &&
+  prev.isInAttackRange       === next.isInAttackRange       &&
+  prev.isInAbilityRange      === next.isInAbilityRange      &&
+  prev.playerColor           === next.playerColor           &&
+  prev.currentHP             === next.currentHP             &&
+  prev.maxHP                 === next.maxHP                 &&
+  prev.previewHP             === next.previewHP             &&
+  prev.isHealPreview         === next.isHealPreview         &&
+  prev.icon                  === next.icon                  &&
+  prev.iconPortrait          === next.iconPortrait          &&
+  prev.iconName              === next.iconName
+);

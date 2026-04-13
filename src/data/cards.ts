@@ -193,9 +193,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "attack",
     rarity: "rare",
-    description: "Power×0.6 per enemy in range — damage multiplies by the number of enemies hit. Range 2.",
+    description: "Power×0.42 per enemy in range — damage multiplies by the number of enemies hit. Range 2.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { scalingAoE: true, perEnemyMult: 0.6, range: 2 },
+    effect: { scalingAoE: true, perEnemyMult: 0.42, range: 2 },
   },
   {
     definitionId: "genghis_riders_fury",
@@ -215,9 +215,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.8 damage at range 1. Applies Armor Break (−25% Defense for 2 turns). Grants Leonidas +20 Defense this turn (counter-stance).",
+    description: "Power×1.2 damage at range 1. Applies Armor Break (−25% Defense for 2 turns). Grants Leonidas +20 Defense this turn (counter-stance).",
     exclusiveTo: CHARACTER_IDS.leonidas,
-    effect: { powerMult: 1.8, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
+    effect: { powerMult: 1.2, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
   },
   {
     definitionId: "leonidas_spartan_wall",
@@ -257,9 +257,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "defense",
     rarity: "rare",
-    description: "Heal an ally within range 3 for Power×1.2 HP.",
+    description: "Heal an ally within range 3 for Power×1.0 HP.",
     exclusiveTo: CHARACTER_IDS.daVinci,
-    effect: { healingMult: 1.2, range: 3 },
+    effect: { healingMult: 1.0, range: 3 },
   },
   {
     definitionId: "davinci_vitruvian_guardian",
@@ -459,7 +459,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "curse",
     rarity: "common",
-    description: "Pollutes your deck. Play it to discard (wastes a card action). No end-of-turn penalty — just dead space.",
+    description: "Pollutes your deck. No end-of-turn penalty — just dead space clogging your hand.",
     exclusiveTo: null,
     effect: {},
   },
@@ -469,7 +469,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "curse",
     rarity: "common",
-    description: "End of turn: each character takes 1 damage per unplayed card remaining in hand (including this). Play it to avoid.",
+    description: "End of turn: each character takes 1 damage per unplayed card remaining in hand (including this).",
     exclusiveTo: null,
     effect: {},
   },
@@ -479,7 +479,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "curse",
     rarity: "common",
-    description: "If in hand at start of turn: −1 mana this turn. Play it to avoid losing that mana.",
+    description: "If in hand at start of turn: −2 mana this turn.",
     exclusiveTo: null,
     effect: {},
   },
@@ -489,7 +489,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "curse",
     rarity: "common",
-    description: "End of turn: each character has a 10% chance to be Stunned next turn. Play it to avoid.",
+    description: "End of turn: each character has a 25% chance to be Stunned next turn.",
     exclusiveTo: null,
     effect: {},
   },
@@ -499,7 +499,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "curse",
     rarity: "common",
-    description: "End of turn: all characters permanently lose 1 to all stats. Play it immediately — every turn it stays costs you.",
+    description: "End of turn: all characters take 10 damage. Every turn it stays in hand costs you.",
     exclusiveTo: null,
     effect: {},
   },
@@ -582,7 +582,7 @@ export const CARD_UPGRADES: Record<string, {
   genghis_horde_tactics: {
     upgradedName: 'Horde Tactics+',
     descriptionUpgrade: 'Range 2 → 3',
-    patch: { description: '~24 damage per enemy in range 3 — multiplies by enemy count. (Scales with Power)', effect: { scalingAoE: true, perEnemyMult: 0.6, range: 3 } },
+    patch: { description: '~17 damage per enemy in range 3 — multiplies by enemy count. (Scales with Power)', effect: { scalingAoE: true, perEnemyMult: 0.42, range: 3 } },
   },
   genghis_riders_fury: {
     upgradedName: "Rider's Fury+",
@@ -593,7 +593,7 @@ export const CARD_UPGRADES: Record<string, {
   leonidas_shield_bash: {
     upgradedName: 'Shield Bash+',
     descriptionUpgrade: 'Armor Break 2t → 3t',
-    patch: { description: '~50 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). Grants Leonidas +20 Defense this turn. (Scales with Power)', effect: { powerMult: 1.8, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
+    patch: { description: '~40 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). Grants Leonidas +20 Defense this turn. (Scales with Power)', effect: { powerMult: 1.5, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
   },
   leonidas_spartan_wall: {
     upgradedName: 'Spartan Wall+',
@@ -614,7 +614,7 @@ export const CARD_UPGRADES: Record<string, {
   davinci_masterpiece: {
     upgradedName: 'Masterpiece+',
     descriptionUpgrade: 'Heal Power×1.2 → 1.8',
-    patch: { description: 'Heal an ally within range 3 for ~90 HP. (Scales with Power)', effect: { healingMult: 1.8, range: 3 } },
+    patch: { description: 'Heal an ally within range 3 for ~70 HP. (Scales with Power)', effect: { healingMult: 1.4, range: 3 } },
   },
   davinci_vitruvian_guardian: {
     upgradedName: 'Vitruvian Guardian+',
@@ -688,7 +688,7 @@ export const CARD_UPGRADES: Record<string, {
   shared_basic_attack: {
     upgradedName: 'Basic Attack+',
     descriptionUpgrade: 'Damage ×1.2 Might',
-    patch: { description: 'Deal Might×1.2 − Defense damage to a target at range 1.', effect: { damageType: 'atk', mightMult: 1.2, range: 1 } },
+    patch: { description: 'Deal Might×1.2 dmg to a target in attack range.', effect: { damageType: 'atk', mightMult: 1.2, range: 1 } },
   },
   shared_shield: {
     upgradedName: 'Shields Up+',

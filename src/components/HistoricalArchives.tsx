@@ -387,14 +387,14 @@ const ITEMS: ItemEntry[] = [
   { id: 'vitality_shard',   name: 'Vitality Shard',    icon: '💠', tier: 'common',   description: '+25 max HP for this run.',                                  statBonus: { hp: 25 } },
   { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+10 Power for this run.',                                   statBonus: { power: 10 } },
   // Uncommon
-  { id: 'battle_drum',      name: 'Battle Drum',       icon: '🥁', tier: 'uncommon', description: 'After killing an enemy, draw 2 cards.' },
+  { id: 'battle_drum',      name: 'Battle Drum',       icon: '🥁', tier: 'uncommon', description: 'After killing an enemy, draw 1 card.' },
   { id: 'arena_medkit',     name: 'Arena Medkit',      icon: '💊', tier: 'uncommon', description: 'Heal 25 HP at the start of your turn if below 40% HP.' },
   { id: 'battle_drill',    name: 'Battle Drill',       icon: '⚔️', tier: 'uncommon', description: 'At the start of each turn, add a free Basic Attack card to your hand.' },
   { id: 'void_shard',       name: 'Void Shard',        icon: '🔥', tier: 'uncommon', description: '+10 Might. Basic attacks deal bonus damage.',              statBonus: { might: 10 } },
   { id: 'card_satchel',     name: 'Card Satchel',      icon: '🎒', tier: 'uncommon', description: '+1 starting hand size for this run.' },
   { id: 'quick_boots',      name: 'Quick Boots',       icon: '👟', tier: 'uncommon', description: '+1 movement range permanently.' },
-  { id: 'soul_ember',       name: 'Soul Ember',        icon: '🕯️', tier: 'uncommon', description: 'On kill, restore 15 HP to this character.' },
-  { id: 'war_trophy',       name: 'War Trophy',        icon: '💀', tier: 'uncommon', description: 'On kill, permanently gain +3 Might and +3 Power for the rest of the run.' },
+  { id: 'soul_ember',       name: 'Soul Ember',        icon: '🕯️', tier: 'uncommon', description: 'On kill, restore 20 HP to this character.' },
+  { id: 'war_trophy',       name: 'War Trophy',        icon: '💀', tier: 'uncommon', description: 'On kill, permanently gain +2 Might and +2 Power for the rest of the run.' },
   // Rare — General
   { id: 'strategists_case', name: "Strategist's Case", icon: '💼', tier: 'rare',     description: '+2 starting hand size for this run.' },
   { id: 'alien_core',       name: 'Alien Core',        icon: '🧬', tier: 'rare',     description: 'All ability damage dealt by this character is increased by 25%.' },
@@ -403,7 +403,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'diamond_shell',    name: 'Diamond Shell',     icon: '💎', tier: 'rare',     description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).' },
   // Rare — Napoleon
   { id: 'grand_strategy',   name: 'Grand Strategy',    icon: '🗺️', tier: 'rare',     description: 'Artillery Barrage hits an additional adjacent target.',      targetCharacter: 'napoleon' },
-  { id: 'emperors_coat',    name: "Emperor's Coat",    icon: '🪖', tier: 'rare',     description: 'Grande Armée also grants +30% Might & Power and restores 1 Mana to each buffed ally.', targetCharacter: 'napoleon' },
+  { id: 'emperors_coat',    name: "Emperor's Coat",    icon: '🪖', tier: 'rare',     description: 'Grande Armée also grants +30% Might & Power to all allies.', targetCharacter: 'napoleon' },
   // Rare — Genghis
   { id: 'eternal_hunger',   name: 'Eternal Hunger',    icon: '🩸', tier: 'rare',     description: 'Bloodlust kill stacks carry over between fights for the entire run.',               targetCharacter: 'genghis' },
   { id: 'khans_seal',       name: "Khan's Seal",       icon: '🏹', tier: 'rare',     description: "Rider's Fury also stuns each hit enemy for 1 turn.",        targetCharacter: 'genghis' },
@@ -468,7 +468,7 @@ const CARDS: CardEntry[] = [
   { definitionId: 'shared_suppressive_fire',name: 'Suppressive Fire',  icon: '🔫', manaCost: 2, type: 'attack',   rarity: 'common', description: 'Might×0.3 cone attack (3 wide, range 3). Slows hit enemies −1 move for 1 turn.' },
   { definitionId: 'shared_fortify',         name: 'Fortify',           icon: '🏰', manaCost: 2, type: 'defense',  rarity: 'common', description: 'Cannot move this turn. Gain +25 Defense and +15 Might until the end of your next turn.' },
   { definitionId: 'shared_taunt',           name: 'Taunt',             icon: '📢', manaCost: 2, type: 'debuff',   rarity: 'common', description: 'Force a nearby enemy to target this unit for 2 turns. This unit gains +15 Defense while Taunting.' },
-  { definitionId: 'shared_decoy',           name: 'Decoy',             icon: '🪆', manaCost: 2, type: 'buff',     rarity: 'common', description: 'Place a 30 HP Decoy within range 3. When it is destroyed, it explodes for 20 damage to all enemies in range 2.' },
+  { definitionId: 'shared_decoy',           name: 'Decoy',             icon: '🪆', manaCost: 2, type: 'buff',     rarity: 'common', description: 'Place a 30 HP Decoy within range 3. Decoys cannot move or play cards. When destroyed, explodes for 20 damage to all enemies in range 2.' },
   { definitionId: 'shared_blood_price',     name: 'Blood Price',       icon: '🩸', manaCost: 3, type: 'buff',     rarity: 'rare',   description: 'Sacrifice 20% of your HP. All allies gain +15 Might and +15 Power until end of turn.' },
   // Napoleon
   { definitionId: 'napoleon_artillery_barrage', name: 'Artillery Barrage', icon: '💥', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.3 damage to a target at range 4.',                  exclusiveTo: 'Napoleon' },
@@ -479,7 +479,7 @@ const CARDS: CardEntry[] = [
   { definitionId: 'genghis_horde_tactics',  name: 'Horde Tactics', icon: '🌀', manaCost: 3, type: 'attack',  rarity: 'rare',    description: '20 dmg per enemy in range 2 to ALL enemies in range 2. (Scales with count)', exclusiveTo: 'Genghis' },
   { definitionId: 'genghis_riders_fury',    name: "Rider's Fury",  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — 40 damage to all enemies on a line. Doubled (80) if target below 40% HP.", exclusiveTo: 'Genghis' },
   // Leonidas
-  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.8 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
+  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.2 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_spartan_wall',  name: 'Spartan Wall',   icon: '🏛️', manaCost: 3, type: 'defense', rarity: 'rare',    description: '+20 Defense to Leonidas and all allies within range 2.',     exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_this_is_sparta',name: 'THIS IS SPARTA!',icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~125 dmg (Power×2.5) to target + Root all adjacent enemies for 2 turns (cannot move).', exclusiveTo: 'Leonidas' },
   // Da Vinci
@@ -567,7 +567,7 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '🐆', name: 'Predator Leap', desc: 'Leaps up to range 4 toward the enemy with the lowest Defense and immediately attacks. (Every 3 turns)' },
     ],
   },
-  { id: 'iron_wall',         name: 'Iron Wall',            icon: '🤖', act: 1, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/iron_wall_portrait.png',       stats: { hp: 200, might: 60, power: 50, defense: 35, moveRange: 2, attackRange: 1 }, description: 'The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered.',
+  { id: 'iron_wall',         name: 'Iron Wall',            icon: '🤖', act: 1, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/iron_wall_portrait.png',       stats: { hp: 200, might: 60, power: 50, defense: 20, moveRange: 2, attackRange: 1 }, description: 'The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered.',
     abilities: [
       { icon: '💚', name: 'Shield Array', desc: 'Heals self for 50 HP. Triggers ONCE when below 50% HP.' },
       { icon: '⚡', name: 'EMP Blast', desc: 'Deals 40 damage to all enemies within range 1. (Every 3 turns)' },
@@ -613,7 +613,7 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '🛡️', name: 'Mirror Aegis', desc: 'Gains +35 Defense for 2 turns. (Every 3 turns)' },
     ],
   },
-  { id: 'znyxorga_champion', name: "Znyxorga's Champion",  icon: '👑', act: 3, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/znyxorgas_champion_portrait.png', stats: { hp: 450, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 }, description: "Znyxorga's ultimate weapon — four arms, six eyes, 450 HP, and the patience of a god. Annihilates your whole team simultaneously and grows stronger the closer it gets to death.",
+  { id: 'znyxorga_champion', name: "Znyxorga's Champion",  icon: '👑', act: 3, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/znyxorgas_champion_portrait.png', stats: { hp: 400, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 }, description: "Znyxorga's ultimate weapon — four arms, six eyes, 400 HP, and the patience of a god. Annihilates your whole team simultaneously and grows stronger the closer it gets to death.",
     abilities: [
       { icon: '👑', name: 'Arena Collapse', desc: 'The arena becomes a weapon — deals 55 damage to ALL player characters simultaneously. (Every 3 turns)' },
       { icon: '🛡️', name: 'Phase Shift', desc: 'INVINCIBLE for 2 turns and gains +15 Might/Power/Defense permanently. Triggers ONCE when below 50% HP — prepare for a power spike!' },
@@ -1458,8 +1458,8 @@ const ARENA_EVENTS = [
     id: 'alien_tide', name: 'Alien Tide', icon: '🌊', color: '#38bdf8',
     trigger: 'Random · 2-turn warning',
     duration: 'Permanent once activated',
-    duration2: 'Spreads 33% chance per adjacent lake tile each turn',
-    effect: 'The arena floods after 2 turns of warning. Each subsequent turn, every hex adjacent to a Lake tile has a 33% chance of also flooding and becoming impassable.',
+    duration2: 'Spreads 50% chance per adjacent lake tile each turn',
+    effect: 'The arena floods after 2 turns of warning. Each subsequent turn, every hex adjacent to a Lake tile has a 50% chance of also flooding and becoming impassable.',
     strategy: 'Cross rivers and claim flanks before flood lanes close. Long-range characters like Napoleon gain value as movement corridors shrink.',
   },
   {
@@ -1477,32 +1477,25 @@ const ARENA_EVENTS = [
     strategy: "Check every character's river proximity before acting. Two hexes toward center can send someone straight into a river. Deadly for the enemy if they're already near water.",
   },
   {
-    id: 'merchants_gamble', name: "The Merchant's Gamble", icon: '🎰', color: '#f59e0b',
-    trigger: 'Random · Shop Event',
-    duration: 'Instant (choice)',
-    effect: 'A shadowy merchant appears and offers to upgrade one random card in your deck for free — but also removes a random card permanently. You cannot see which card will be removed until after you accept.',
-    strategy: "High risk, high reward. If you're deep in a run with many good cards, be careful — losing a key card can be devastating. Accept if your deck is average and the upgrade target is powerful.",
-  },
-  {
-    id: 'ancient_inscription', name: 'Ancient Inscription', icon: '🔮', color: '#818cf8',
-    trigger: 'Random · Ruin Event',
-    duration: 'Permanent (run-wide)',
-    effect: 'Activate an ancient rune at the cost of 1 permanent Mana from your max mana pool. Grants a powerful permanent passive buff — such as +15 Defense to all characters, +1 card draw each turn, or similar major boons.',
-    strategy: "−1 permanent mana is severe. Only take this if the offered buff dramatically changes your win condition for the rest of the run. Pass if you're already low on mana.",
-  },
-  {
-    id: 'field_surgery', name: 'Field Surgery', icon: '🏥', color: '#4ade80',
-    trigger: 'Random · Rest Event',
+    id: 'repulse_field', name: 'Repulse Field', icon: '💥', color: '#fb923c',
+    trigger: 'Random',
     duration: 'Instant',
-    effect: "Choose one character to receive emergency field surgery — restore 60% of their missing HP. The procedure is rough: that character cannot use abilities for the next 1 fight.",
-    strategy: 'Use on a critically wounded carry before a tough fight. The ability lockout hurts, but surviving into the next encounter is more important than one fight\'s ability usage.',
+    effect: 'Magnetic repulsion erupts from the arena center. Every living unit is blasted 2 hexes outward away from the center. Units thrown into Lake tiles are instantly killed.',
+    strategy: "The mirror image of Gravity Well — instead of being sucked in, everyone is thrown outward. Stay away from lakes and arena edges before each turn. Units already near the perimeter are most at risk.",
   },
   {
-    id: 'mimic_chest', name: 'The Mimic Chest', icon: '📦', color: '#ef4444',
-    trigger: 'Random · Treasure Room',
-    duration: 'Encounter',
-    effect: "What appears to be an item chest is actually a Mimic — a shapeshifting creature with 120 HP, Might 45, Power 50, Defense 20, and Move 3. It attacks on sight. If defeated, it drops TWO item rewards instead of one.",
-    strategy: 'Always fight the Mimic if your team is healthy. Double item drops are enormous value. Skip only if a character is already near death — the Mimic hits hard enough to finish them off.',
+    id: 'adrenaline_cloud', name: 'Adrenaline Cloud', icon: '🧪', color: '#f472b6',
+    trigger: 'Random',
+    duration: '1 round',
+    effect: "The aliens pump experimental stimulants into the arena atmosphere. All units' Might and Power are increased by 50% for this round — enemies included. Every attack hits harder. Every ability hits harder.",
+    strategy: 'A double-edged round. Use your hardest-hitting cards now — abilities and attacks that already deal big numbers become devastating. Be warned: the enemy hits just as hard back.',
+  },
+  {
+    id: 'scramble', name: 'Scramble', icon: '🌀', color: '#34d399',
+    trigger: 'Random',
+    duration: 'Instant',
+    effect: "Znyxorga's teleportation array fires at random, scrambling the position of every living unit on the battlefield to a completely random valid tile. Formations are shattered. Nobody knows where they'll end up.",
+    strategy: 'Pure chaos — your carefully arranged formation is gone in an instant. After Scramble, re-evaluate the board completely before acting. Units that land adjacent to enemies are in immediate danger, but enemies may also be scattered away from you.',
   },
 ];
 

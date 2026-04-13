@@ -3,6 +3,45 @@
 
 import { HexTile } from "@/types/game";
 
+// ---------------------------------------------------------------------------
+// Minimal binary min-heap — used by Dijkstra to avoid O(n²) linear scans.
+// ---------------------------------------------------------------------------
+class MinHeap<T> {
+  private data: T[] = [];
+  constructor(private cmp: (a: T, b: T) => number) {}
+  push(item: T) {
+    this.data.push(item);
+    this._up(this.data.length - 1);
+  }
+  pop(): T | undefined {
+    if (!this.data.length) return undefined;
+    const top = this.data[0];
+    const last = this.data.pop()!;
+    if (this.data.length) { this.data[0] = last; this._down(0); }
+    return top;
+  }
+  get length() { return this.data.length; }
+  private _up(i: number) {
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this.cmp(this.data[p], this.data[i]) <= 0) break;
+      [this.data[p], this.data[i]] = [this.data[i], this.data[p]];
+      i = p;
+    }
+  }
+  private _down(i: number) {
+    const n = this.data.length;
+    while (true) {
+      let m = i, l = 2 * i + 1, r = l + 1;
+      if (l < n && this.cmp(this.data[l], this.data[m]) < 0) m = l;
+      if (r < n && this.cmp(this.data[r], this.data[m]) < 0) m = r;
+      if (m === i) break;
+      [this.data[m], this.data[i]] = [this.data[i], this.data[m]];
+      i = m;
+    }
+  }
+}
+
 export type Qr = { q: number; r: number };
 
 export const tileKey = (q: number, r: number) => `${q},${r}`;
@@ -33,7 +72,6 @@ export function movementCostForTile(tile: HexTile, allowLake?: boolean): number 
   if (tile.terrain.type === "river") return allowLake ? 1 : 2;
   // Slow terrain — costs 2 movement to enter
   if (
-    tile.terrain.type === "desert" ||
     tile.terrain.type === "snow" ||
     tile.terrain.type === "mud"
   ) return 2;
@@ -61,16 +99,14 @@ export function reachableWithCosts(
 ): Map<string, number> {
   const byKey = new Map(board.map((t) => [tileKey(t.coordinates.q, t.coordinates.r), t]));
   const dist = new Map<string, number>();
-  const pq: Array<{ key: string; cost: number }> = [];
+  const pq = new MinHeap<{ key: string; cost: number }>((a, b) => a.cost - b.cost);
 
   const startKey = tileKey(start.q, start.r);
   dist.set(startKey, 0);
   pq.push({ key: startKey, cost: 0 });
 
   while (pq.length) {
-    let minI = 0;
-    for (let i = 1; i < pq.length; i++) if (pq[i].cost < pq[minI].cost) minI = i;
-    const { key, cost } = pq.splice(minI, 1)[0];
+    const { key, cost } = pq.pop()!;
     if (cost > (dist.get(key) ?? Infinity)) continue;
 
     const [qStr, rStr] = key.split(",");

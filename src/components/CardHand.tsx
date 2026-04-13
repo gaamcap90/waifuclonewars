@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Card, Icon, GameState } from "@/types/game";
 import { calcEffectiveStats } from "@/combat/buffs";
@@ -79,11 +79,11 @@ function manaCostColor(cost: number): string {
 
 function curseEffectLabel(card: Card): string {
   switch (card.definitionId) {
-    case 'curse_burden':    return 'Deck clutter — no penalty';
-    case 'curse_malaise':   return '⚠ End turn: 1 dmg/unplayed card';
-    case 'curse_void_echo': return '⚠ Turn start: −1 mana';
-    case 'curse_dread':     return '⚠ End turn: 10% stun each char';
-    case 'curse_chains':    return '⚠ End turn: −1 all stats (perm)';
+    case 'curse_burden':    return 'Deck clutter — no penalty, just dead space';
+    case 'curse_malaise':   return '⚠ End turn: 1 dmg per unplayed card';
+    case 'curse_void_echo': return '⚠ Turn start: −2 mana this turn';
+    case 'curse_dread':     return '⚠ End turn: 25% chance to stun each char';
+    case 'curse_chains':    return '⚠ End turn: all chars take 10 damage';
     default:                return '⚠ Curse — play to discard';
   }
 }
@@ -110,10 +110,16 @@ function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): 
   if (e.damageType === 'atk') {
     if (executor && gameState) {
       const eff = calcEffectiveStats(gameState, executor);
-      const buffed = Math.floor(eff.might + (executor.cardBuffAtk ?? 0));
+      const might = eff.might + (executor.cardBuffAtk ?? 0);
+      if (e.mightMult !== undefined) {
+        const atk = Math.floor(might * e.mightMult);
+        return atk > 0 ? `${atk} atk` : "Might atk";
+      }
+      const buffed = Math.floor(might);
       return buffed > 0 ? `${buffed} Might dmg` : "Might dmg";
     }
     const might = executor?.stats.might ?? 0;
+    if (e.mightMult !== undefined) return "Might atk";
     return might > 0 ? `${might} Might dmg` : "Might dmg";
   }
   if (e.powerMult !== undefined) {
@@ -141,7 +147,11 @@ function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): 
 
 function canPlay(card: Card, executor: Icon | null, globalMana: number): boolean {
   if (!executor || !executor.isAlive) return false;
+  // Curses are never playable — they linger in hand and can only be removed at a Campfire
+  if (card.definitionId.startsWith('curse_')) return false;
   if (card.exclusiveTo && !executor.name.includes(card.exclusiveTo)) return false;
+  // Silenced units cannot use ability cards (exclusiveTo !== null cards are ability cards)
+  if (executor.debuffs?.some(d => d.type === 'silence') && card.exclusiveTo !== null) return false;
   // Terracotta units: warriors/archers may only use basic attack; cavalry may also use cavalry charge
   if (executor.name.includes("Terracotta")) {
     const isCavalry = executor.name.includes("Cavalry");
@@ -193,7 +203,7 @@ const PileModal: React.FC<{ title: string; cards: Card[]; onClose: () => void }>
                       {cardDisplayName}
                       {isCurseCard && <span className="ml-1 text-[8px] text-red-400 font-bold">CURSE</span>}
                     </div>
-                    <div className="text-[10px] text-gray-400 truncate">{cardDisplayDesc}</div>
+                    <div className="text-[10px] truncate" style={{ color: isUpgraded ? '#34d399' : '#9ca3af' }}>{cardDisplayDesc}</div>
                   </div>
                   <div className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${manaCostColor(c.manaCost)}`}>{c.manaCost}</div>
                 </div>
@@ -238,6 +248,18 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
   const isUpgraded = card.name.endsWith('+');
   const cardName = isUpgraded ? card.name : (tCard?.name ?? card.name);
   const playable = !isExhausted && canPlay(card, executor, globalMana);
+  const cardRef = useRef<HTMLButtonElement>(null);
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!cardRef.current || !playable) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const dx = (e.clientX - (rect.left + rect.width / 2))  / (rect.width  / 2);
+    const dy = (e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2);
+    setTilt({ rx: -dy * 7, ry: dx * 10 });
+  };
+
+  const handleCardMouseLeave = () => setTilt({ rx: 0, ry: 0 });
   const isUltimate = card.type === "ultimate";
   const isCurse = card.definitionId.startsWith('curse_');
   const colors = isCurse
@@ -280,20 +302,22 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
 
   return (
     <button
+      ref={cardRef}
       onClick={playable ? onSelect : undefined}
-      title={card.description}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleCardMouseLeave}
       className={[
         isCurse ? "" : "card-foil-hover",
         "relative flex flex-col items-start justify-between",
         "w-20 h-28 rounded-xl border-2 overflow-hidden",
-        "transition-all duration-150 select-none",
+        "select-none",
         isCurse ? "border-red-700 animate-curse-pulse" : colors.border,
         isSelected
           ? `scale-110 -translate-y-3 z-20`
           : "shadow-sm",
         !playable
           ? "opacity-40 cursor-not-allowed grayscale"
-          : "cursor-pointer hover:-translate-y-2 hover:scale-105 hover:z-10",
+          : "cursor-pointer hover:z-10",
       ].join(" ")}
       style={{
         background: isCurse
@@ -310,6 +334,10 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
           : playable
           ? `0 0 0 0px transparent, 0 2px 8px rgba(0,0,0,0.5)`
           : undefined,
+        transform: (tilt.rx !== 0 || tilt.ry !== 0)
+          ? `perspective(500px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translateY(-6px) scale(1.06)`
+          : undefined,
+        transition: (tilt.rx === 0 && tilt.ry === 0) ? 'transform 0.22s ease-out' : 'transform 0.07s linear',
       }}
     >
       {/* Curse stripe overlay — diagonal warning pattern */}
@@ -390,7 +418,7 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
 
       {/* Card name */}
       <div className="relative px-1.5 font-bold leading-tight text-[10px] flex-1 flex items-center"
-        style={{ color: isCurse ? '#fca5a5' : 'white', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)' }}>
+        style={{ color: isCurse ? '#fca5a5' : isUpgraded ? '#34d399' : 'white', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)' }}>
         {cardName}
       </div>
 
@@ -401,7 +429,7 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
           borderTop: `1px solid ${glowHex}33`,
         }}>
         <span className="text-[9px] font-semibold leading-tight"
-          style={{ color: 'rgba(220,220,240,0.92)', textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+          style={{ color: isUpgraded ? '#34d399' : 'rgba(220,220,240,0.92)', textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
           {effectLabel(card, executor, gameState)}
         </span>
       </div>
@@ -425,6 +453,7 @@ export interface CardHandProps {
   onPlayCard: (card: Card, executorId: string) => void;
   onCardHover?: (cost: number | null) => void;
   onCardHoverRange?: (range: number | null) => void;
+  onCardHoverExecutorId?: (id: string | null) => void;
   gameState?: GameState;
 }
 
@@ -433,6 +462,7 @@ const CardHand: React.FC<CardHandProps> = ({
   drawPileCards = [],
   discardPileCards = [],
   executor,
+  activeIcons,
   drawPileSize,
   discardPileSize,
   globalMana,
@@ -440,6 +470,7 @@ const CardHand: React.FC<CardHandProps> = ({
   onPlayCard,
   onCardHover,
   onCardHoverRange,
+  onCardHoverExecutorId,
   gameState,
 }) => {
   const { t } = useT();
@@ -447,6 +478,22 @@ const CardHand: React.FC<CardHandProps> = ({
   const [pileView, setPileView] = useState<'draw' | 'discard' | null>(null);
   const [flyingCardId, setFlyingCardId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ card: Card; rect: DOMRect } | null>(null);
+  const prevCardIdsRef = useRef<Set<string>>(new Set(cards.map(c => c.id)));
+  const [newCardIds, setNewCardIds] = useState<Set<string>>(new Set<string>());
+
+  useEffect(() => {
+    const currentIds = new Set(cards.map(c => c.id));
+    const newIds = new Set<string>();
+    currentIds.forEach(id => {
+      if (!prevCardIdsRef.current.has(id)) newIds.add(id);
+    });
+    if (newIds.size > 0) {
+      setNewCardIds(newIds);
+      const t = setTimeout(() => setNewCardIds(new Set()), 400);
+      return () => clearTimeout(t);
+    }
+    prevCardIdsRef.current = currentIds;
+  }, [cards]);
 
   const selectedCard = cards.find((c) => c.id === selectedCardId) ?? null;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -495,26 +542,38 @@ const CardHand: React.FC<CardHandProps> = ({
           {cards.map((card) => (
             <div
               key={card.id}
-              className="relative"
+              className={`relative${newCardIds.has(card.id) ? ' card-draw-in' : ''}`}
               onMouseEnter={(e) => {
                 onCardHover?.(card.manaCost ?? 0);
+                // For exclusive cards, use that character as the range-preview executor (not the currently selected character)
+                const cardOwner = card.exclusiveTo
+                  ? activeIcons.find(i => i.name.includes(card.exclusiveTo as string)) ?? executor
+                  : executor;
                 // Resolve effective hover range: explicit range, OR basic-attack → use executor's actual attack range
                 const explicitRange = typeof card.effect?.range === 'number' ? card.effect.range : null;
                 let hoverRange: number | null = explicitRange;
-                if (!hoverRange && card.definitionId === 'shared_basic_attack' && executor) {
-                  const isRanged = executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") || executor.name.includes("Beethoven");
+                if (card.definitionId === 'sunsin_hwajeon' && cardOwner) {
+                  // Hwajeon on water → Ramming Speed (range 1); on land → Hwajeon (range 3)
+                  const ownerTile = gameState?.board?.find(t =>
+                    t.coordinates.q === cardOwner.position.q && t.coordinates.r === cardOwner.position.r
+                  );
+                  hoverRange = ['river', 'lake'].includes(ownerTile?.terrain.type ?? '') ? 1 : 3;
+                } else if (!hoverRange && card.definitionId === 'shared_basic_attack' && cardOwner) {
+                  const isRanged = cardOwner.name.includes("Napoleon") || cardOwner.name.includes("Da Vinci") || cardOwner.name.includes("Beethoven");
                   const onWaterTile = ['river', 'lake'].includes(gameState?.board?.find(t =>
-                    t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r
+                    t.coordinates.q === cardOwner.position.q && t.coordinates.r === cardOwner.position.r
                   )?.terrain.type ?? '');
-                  const sunsinOnWater = executor.name.includes("Sun-sin") && onWaterTile;
-                  hoverRange = sunsinOnWater ? 3 : isRanged ? 2 : (executor.stats.attackRange ?? 1);
+                  const sunsinOnWater = cardOwner.name.includes("Sun-sin") && onWaterTile;
+                  hoverRange = sunsinOnWater ? 3 : isRanged ? 2 : (cardOwner.stats.attackRange ?? 1);
                 }
                 onCardHoverRange?.(hoverRange);
+                onCardHoverExecutorId?.(cardOwner?.id ?? null);
                 setTooltip({ card, rect: e.currentTarget.getBoundingClientRect() });
               }}
               onMouseLeave={() => {
                 onCardHover?.(null);
                 onCardHoverRange?.(null);
+                onCardHoverExecutorId?.(null);
                 setTooltip(null);
               }}
               style={flyingCardId === card.id ? {
@@ -592,7 +651,7 @@ const CardHand: React.FC<CardHandProps> = ({
               </span>
               <span className="font-orbitron font-bold text-[11px] text-blue-300 shrink-0">{tooltip.card.manaCost} 💧</span>
             </div>
-            <p className="text-[10px] text-slate-300 leading-snug">
+            <p className="text-[10px] leading-snug" style={{ color: tooltip.card.name.endsWith('+') ? '#34d399' : '#cbd5e1' }}>
               {tooltip.card.name.endsWith('+') ? tooltip.card.description : ((t.cards as Record<string, { name: string; description: string }>)[tooltip.card.definitionId]?.description ?? tooltip.card.description)}
             </p>
             {tooltip.card.effect?.range && tooltip.card.effect.range < 999 && (

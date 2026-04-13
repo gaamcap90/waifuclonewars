@@ -10,7 +10,10 @@ export type AnimType =
   | 'projectile'
   | 'shield'
   | 'trail'
-  | 'aoe';
+  | 'aoe'
+  | 'slash'
+  | 'heal_ring'
+  | 'despawn';
 
 export interface AnimEvent {
   id: string;
@@ -34,6 +37,9 @@ const DEFAULT_DURATIONS: Record<AnimType, number> = {
   shield:      750,
   trail:       500,
   aoe:         900,
+  slash:       380,
+  heal_ring:   750,
+  despawn:     700,
 };
 
 let _counter = 0;

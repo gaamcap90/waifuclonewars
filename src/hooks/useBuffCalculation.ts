@@ -34,7 +34,7 @@ export const useBuffCalculation = () => {
     })();
 
     const homeBaseBuff = isOnHomeBase ? 20 : 0;
-    const forestDefenseBuff = isOnForest ? 50 : 0; // +50% defense in forest
+    const forestDefenseBuff = isOnForest ? 20 : 0; // +20% defense in forest
 
     // Calculate total buffs (additive)
     const totalMightBonus = mightBonusPct + homeBaseBuff;

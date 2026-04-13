@@ -11,24 +11,26 @@ interface Props {
   runState: RunState;
   onSelectNode: (nodeId: string) => void;
   onAbandonRun: () => void;
+  onSettings?: () => void;
   onAllocateStat?: (characterId: CharacterId, stat: 'hp' | 'might' | 'power' | 'defense') => void;
   onUpgradeAbility?: (characterId: CharacterId, defId: string, isUltimate: boolean) => void;
 }
 
 // ── Horizontal pure-SVG coordinate system ────────────────────────────────────
-// Layout: floor 0 = left, floor 11 (boss) = right.
+// Layout: floor 0 = left, floor 14 (boss) = right.
 // Tracks 0-4 run top→bottom across the 5 possible vertical positions.
 // Both connection paths and node circles share this one coordinate space,
 // so connections are ALWAYS pixel-perfect.
 
-const SVG_W = 1300;
+const SVG_W = 1500;     // wider to accommodate 15 rows without crowding
 const SVG_H = 540;      // shorter → less vertical swing
 const MAP_PAD_X = 85;
 const MAP_PAD_Y = 95;   // large padding compresses track spread to ~88px between tracks
+const MAP_ROWS = 14;    // boss row index (0 = leftmost, 14 = rightmost)
 
-/** X position for a floor/row (0 = leftmost, 11 = rightmost) */
+/** X position for a floor/row (0 = leftmost, MAP_ROWS = rightmost) */
 function floorX(row: number): number {
-  return MAP_PAD_X + (row / 11) * (SVG_W - 2 * MAP_PAD_X);
+  return MAP_PAD_X + (row / MAP_ROWS) * (SVG_W - 2 * MAP_PAD_X);
 }
 
 /** Y position for a track/col (0 = top, 4 = bottom) */
@@ -174,10 +176,10 @@ function LeftPanelCharCard({
       {/* HP bar */}
       <div className="mb-1.5">
         <div className="flex justify-between mb-0.5">
-          <span className="text-[9px] text-slate-500 font-orbitron">HP</span>
-          <span className="text-[9px]" style={{ color: hpColor }}>{char.currentHp}/{char.maxHp}</span>
+          <span className="text-[10px] text-slate-500 font-orbitron font-bold">HP</span>
+          <span className="text-[11px] font-bold font-mono" style={{ color: hpColor }}>{char.currentHp}/{char.maxHp}</span>
         </div>
-        <div className="h-2 rounded-full bg-slate-800/80 overflow-hidden">
+        <div className="h-2.5 rounded-full bg-slate-800/80 overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${hpPct * 100}%`, background: hpColor, boxShadow: `0 0 6px ${hpColor}80` }}
@@ -189,8 +191,8 @@ function LeftPanelCharCard({
       {char.level < 6 ? (
         <div className="mb-2">
           <div className="flex justify-between mb-0.5">
-            <span className="text-[8px] text-purple-600 font-orbitron">XP</span>
-            <span className="text-[8px] text-purple-500">{char.xp}/{char.xpToNext}</span>
+            <span className="text-[9px] text-purple-600 font-orbitron font-bold">XP</span>
+            <span className="text-[10px] text-purple-400 font-bold font-mono">{char.xp}/{char.xpToNext}</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(88,28,135,0.35)' }}>
             <div
@@ -207,28 +209,28 @@ function LeftPanelCharCard({
         <div className="mb-2">
           <div className="h-1.5 rounded-full" style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', boxShadow: '0 0 6px rgba(168,85,247,0.5)' }} />
           <div className="text-center mt-0.5">
-            <span className="text-[8px] text-purple-400 font-orbitron tracking-widest">MAX LEVEL</span>
+            <span className="text-[9px] text-purple-400 font-orbitron font-bold tracking-widest">MAX LEVEL</span>
           </div>
         </div>
       )}
 
       {/* Inventory section */}
-      <div className="border-t border-slate-700/40 pt-2 mt-1">
-        <p className="font-orbitron text-[7px] tracking-[0.35em] text-slate-600 mb-1.5">INVENTORY</p>
+      <div className="border-t border-slate-600/50 pt-2 mt-1">
+        <p className="font-orbitron text-[8px] tracking-[0.35em] text-slate-500 mb-1.5 font-bold">INVENTORY</p>
         <div className="flex gap-1.5">
           {char.items.map((item, i) => (
             <div
               key={i}
               className="flex-1 h-9 rounded-lg border flex items-center justify-center text-sm"
               style={{
-                background: item ? 'rgba(10,6,30,0.9)' : 'rgba(5,3,15,0.4)',
-                borderColor: item ? TIER_COLOR[item.tier] + '70' : 'rgba(60,40,100,0.25)',
-                boxShadow: item && itemTooltip?.item === item ? `0 0 10px ${TIER_COLOR[item.tier]}60` : item ? `0 0 6px ${TIER_COLOR[item.tier]}30` : 'none',
+                background: item ? 'rgba(10,6,30,0.9)' : 'rgba(8,5,20,0.6)',
+                borderColor: item ? TIER_COLOR[item.tier] + '80' : 'rgba(80,55,130,0.40)',
+                boxShadow: item && itemTooltip?.item === item ? `0 0 12px ${TIER_COLOR[item.tier]}70` : item ? `0 0 6px ${TIER_COLOR[item.tier]}35` : 'inset 0 0 8px rgba(80,55,130,0.12)',
               }}
               onMouseEnter={item ? (e) => setItemTooltip({ item, rect: e.currentTarget.getBoundingClientRect() }) : undefined}
               onMouseLeave={() => setItemTooltip(null)}
             >
-              {item ? item.icon : <span className="text-slate-800 text-[10px]">·</span>}
+              {item ? item.icon : <span className="text-slate-700 text-[10px]">—</span>}
             </div>
           ))}
         </div>
@@ -285,20 +287,40 @@ function LeftPanelCharCard({
 
 function DeckOverlay({ deckIds, upgradedCardDefIds, onClose }: { deckIds: string[]; upgradedCardDefIds: string[]; onClose: () => void }) {
   const { t } = useT();
-  const counts: Record<string, number> = {};
-  for (const id of deckIds) counts[id] = (counts[id] ?? 0) + 1;
-  const unique = Object.keys(counts);
-  const cardMeta = unique.map(id => {
-    // If this card is upgraded, show its upgraded version
-    const isUpgraded = upgradedCardDefIds.includes(id);
+  // Count total and upgraded copies per definitionId
+  const totalCounts: Record<string, number> = {};
+  for (const id of deckIds) totalCounts[id] = (totalCounts[id] ?? 0) + 1;
+  const upgCounts: Record<string, number> = {};
+  for (const id of upgradedCardDefIds) upgCounts[id] = (upgCounts[id] ?? 0) + 1;
+  // Build separate entries for upgraded and non-upgraded copies of the same card
+  const entries: Array<{ defId: string; count: number; isUpgraded: boolean }> = [];
+  for (const id of Object.keys(totalCounts)) {
+    const total = totalCounts[id];
+    const upgraded = Math.min(upgCounts[id] ?? 0, total);
+    const notUpgraded = total - upgraded;
+    if (upgraded > 0) entries.push({ defId: id, count: upgraded, isUpgraded: true });
+    if (notUpgraded > 0) entries.push({ defId: id, count: notUpgraded, isUpgraded: false });
+  }
+  const cardMeta = entries.map(({ defId: id, count, isUpgraded }) => {
     const upgrade = isUpgraded ? CARD_UPGRADES[id] : undefined;
-    const base = CARD_REWARD_POOL.find(c => c.definitionId === id)
-      ?? { definitionId: id, name: id, icon: '🃏', description: '—', manaCost: 0, exclusiveTo: undefined };
+    const isCurse = id.startsWith('curse_');
+    const rewardEntry = CARD_REWARD_POOL.find(c => c.definitionId === id);
+    const defEntry = !rewardEntry ? CARD_DEFS.find(d => d.definitionId === id) : undefined;
+    const base = rewardEntry ?? (defEntry ? {
+      definitionId: id,
+      name: defEntry.name,
+      icon: isCurse ? '💀' : '🃏',
+      description: defEntry.description,
+      manaCost: defEntry.manaCost,
+      exclusiveTo: defEntry.exclusiveTo ?? undefined,
+    } : { definitionId: id, name: id, icon: '🃏', description: '—', manaCost: 0, exclusiveTo: undefined });
     return {
       ...base,
+      count,
       name: upgrade ? upgrade.upgradedName : base.name,
       description: upgrade ? (upgrade.patch.description ?? base.description) : base.description,
       isUpgraded,
+      isCurse,
       upgradeLabel: upgrade?.descriptionUpgrade,
     };
   });
@@ -319,26 +341,33 @@ function DeckOverlay({ deckIds, upgradedCardDefIds, onClose }: { deckIds: string
           {cardMeta.map(card => {
             const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : null;
             return (
-              <div key={card.definitionId}
+              <div key={`${card.definitionId}_${card.isUpgraded}`}
                 className="flex items-start gap-3 rounded-xl border p-3 relative"
                 style={{
-                  background: card.isUpgraded ? 'rgba(20,8,8,0.95)' : 'rgba(8,5,25,0.85)',
-                  borderColor: card.isUpgraded ? 'rgba(220,38,38,0.7)' : 'rgba(51,65,85,0.4)',
-                  boxShadow: card.isUpgraded ? '0 0 12px rgba(220,38,38,0.25), inset 0 0 20px rgba(220,38,38,0.05)' : 'none',
+                  background: card.isCurse ? 'rgba(60,3,3,0.75)' : card.isUpgraded ? 'rgba(2,20,14,0.92)' : 'rgba(8,5,25,0.85)',
+                  borderColor: card.isCurse ? 'rgba(220,40,40,0.70)' : card.isUpgraded ? 'rgba(52,211,153,0.55)' : 'rgba(51,65,85,0.4)',
+                  boxShadow: card.isCurse ? '0 0 14px rgba(220,40,40,0.25)' : card.isUpgraded ? '0 0 10px rgba(52,211,153,0.18)' : 'none',
                 }}>
+                {/* Curse badge */}
+                {card.isCurse && (
+                  <div className="absolute -top-2 -right-2 z-10 font-orbitron font-black text-[8px] px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#7f1d1d', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.5)' }}>
+                    ☠ CURSE
+                  </div>
+                )}
                 {/* Upgraded badge */}
-                {card.isUpgraded && (
+                {!card.isCurse && card.isUpgraded && (
                   <div className="absolute -top-2 -right-2 z-10 font-orbitron font-black text-[9px] px-1.5 py-0.5 rounded-full"
-                    style={{ background: '#dc2626', color: '#fff', border: '1px solid rgba(255,100,100,0.5)', boxShadow: '0 0 8px rgba(220,38,38,0.6)' }}>
+                    style={{ background: '#065f46', color: '#34d399', border: '1px solid rgba(52,211,153,0.5)', boxShadow: '0 0 8px rgba(52,211,153,0.4)' }}>
                     ✦ +
                   </div>
                 )}
                 <span className="text-xl shrink-0">{card.icon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-orbitron font-bold text-[12px]" style={{ color: card.isUpgraded ? '#fca5a5' : '#fff' }}>{card.name}</span>
-                    {counts[card.definitionId] > 1 && (
-                      <span className="text-[10px] text-cyan-400 font-bold">×{counts[card.definitionId]}</span>
+                    <span className="font-orbitron font-bold text-[12px]" style={{ color: card.isCurse ? '#fca5a5' : card.isUpgraded ? '#34d399' : '#fff' }}>{card.name}</span>
+                    {card.count > 1 && (
+                      <span className="text-[10px] text-cyan-400 font-bold">×{card.count}</span>
                     )}
                     {exColor && (
                       <span className="text-[9px] font-orbitron font-bold px-1.5 py-0.5 rounded-full"
@@ -347,7 +376,7 @@ function DeckOverlay({ deckIds, upgradedCardDefIds, onClose }: { deckIds: string
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] mt-0.5 leading-snug" style={{ color: card.isUpgraded ? '#fca5a5cc' : '#94a3b8' }}>{card.description}</p>
+                  <p className="text-[11px] mt-0.5 leading-snug" style={{ color: card.isCurse ? '#fca5a5aa' : card.isUpgraded ? '#6ee7b7' : '#94a3b8' }}>{card.description}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-cyan-300 font-orbitron">{t.roguelike.manaLabel.replace('{n}', String(card.manaCost))}</span>
                     {card.isUpgraded && card.upgradeLabel && (
@@ -632,13 +661,14 @@ function NodeTooltipPortal({
   );
 }
 
-export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onAllocateStat, onUpgradeAbility }: Props) {
+export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onSettings, onAllocateStat, onUpgradeAbility }: Props) {
   const { t } = useT();
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredInfo, setHoveredInfo] = useState<{ node: RunNode; sx: number; sy: number } | null>(null);
   const [showDeck, setShowDeck] = useState(false);
   const [detailChar, setDetailChar] = useState<CharacterRunState | null>(null);
   const [abilityUpgradeChar, setAbilityUpgradeChar] = useState<{ char: CharacterRunState; isUltimate: boolean } | null>(null);
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
   const { map, unlockedNodeIds, completedNodeIds, gold, act, characters, deckCardIds, permanentlyDeadIds } = runState as any;
 
   // Auto-open stat point overlay for the first character with pending points
@@ -691,27 +721,104 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
       <ArenaBackground />
 
       {/* ── Header ── */}
-      <div className="relative z-20 shrink-0 flex items-center gap-4 px-5 py-2 border-b border-slate-800/60"
-        style={{ background: 'rgba(2,4,14,0.94)' }}>
-        <div className="shrink-0">
-          <span className="font-orbitron text-[10px] text-slate-500 tracking-widest">ACT {act}</span>
-          <span className="font-orbitron text-[10px] text-slate-600 tracking-widest ml-2">
-            · {t.roguelike.actNames[(act as number) - 1] ?? ''}
-          </span>
+      <div className="relative z-20 shrink-0 flex items-center gap-3 px-5 py-2.5 border-b border-slate-800/60"
+        style={{ background: 'rgba(2,4,14,0.96)' }}>
+
+        {/* LEFT — gold + deck */}
+        <div className="flex items-center gap-4">
+          <button onClick={() => {}} className="flex items-center gap-2 group">
+            <span className="text-xl">💰</span>
+            <span className="font-orbitron font-black text-lg text-yellow-400"
+              style={{ textShadow: '0 0 14px rgba(250,200,0,0.55)' }}>
+              {gold}
+            </span>
+          </button>
+          <div className="h-6 w-px bg-slate-700/50" />
+          <button onClick={() => setShowDeck(true)}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
+            <span className="text-xl">🃏</span>
+            <span className="font-orbitron font-black text-lg text-cyan-400 group-hover:text-cyan-300 transition-colors"
+              style={{ textShadow: '0 0 12px rgba(34,211,238,0.45)' }}>
+              {deckCardIds.length}
+            </span>
+            <span className="font-orbitron text-[9px] text-slate-500 tracking-widest hidden sm:block">CARDS</span>
+          </button>
         </div>
-        <div className="h-5 w-px bg-slate-700/60 mx-1" />
+
+        {/* CENTER — spacer */}
         <div className="flex-1" />
-        <span className="font-orbitron text-sm font-bold text-yellow-400 shrink-0">💰 {gold}</span>
-        <div className="h-5 w-px bg-slate-700/60 mx-1" />
-        <button onClick={() => setShowDeck(true)}
-          className="font-orbitron text-[10px] text-slate-400 hover:text-cyan-300 transition-colors shrink-0 border border-slate-700/40 hover:border-cyan-500/40 rounded px-2 py-1">
-          🃏 {t.roguelike.deckCards.replace('{n}', String(deckCardIds.length))}
-        </button>
-        <button onClick={onAbandonRun}
-          className="font-orbitron text-[9px] text-slate-500 hover:text-red-400 transition-colors tracking-widest border border-slate-700/40 hover:border-red-500/40 rounded px-3 py-1.5 shrink-0">
-          {t.roguelike.abandonRun}
-        </button>
+
+        {/* RIGHT — settings + abandon */}
+        <div className="flex items-center gap-2">
+          {onSettings && (
+            <button onClick={onSettings}
+              className="font-orbitron text-[11px] text-slate-400 hover:text-white transition-colors border border-slate-700/50 hover:border-slate-500 rounded-lg px-3 py-1.5 flex items-center gap-1.5"
+              style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <span>⚙</span>
+              <span className="hidden sm:block">Settings</span>
+            </button>
+          )}
+          <button onClick={() => setConfirmAbandon(true)}
+            className="font-orbitron text-[11px] font-bold tracking-wide transition-all rounded-lg px-3 py-1.5 flex items-center gap-1.5 border"
+            style={{
+              color: '#f87171',
+              borderColor: 'rgba(239,68,68,0.40)',
+              background: 'rgba(239,68,68,0.08)',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.18)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.65)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.40)'; }}
+          >
+            <span>✕</span>
+            <span>{t.roguelike.abandonRun}</span>
+          </button>
+        </div>
       </div>
+
+      {/* ── Abandon Run confirm dialog ── */}
+      {confirmAbandon && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={() => setConfirmAbandon(false)}>
+          <div className="absolute inset-0 bg-black/70" />
+          <div
+            className="relative z-10 rounded-2xl p-8 flex flex-col items-center gap-5 text-center"
+            style={{
+              background: 'rgba(8,3,22,0.98)',
+              border: '1px solid rgba(239,68,68,0.45)',
+              boxShadow: '0 0 60px rgba(239,68,68,0.18), 0 8px 40px rgba(0,0,0,0.8)',
+              minWidth: 340,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '3rem', filter: 'drop-shadow(0 0 20px rgba(239,68,68,0.7))' }}>💀</div>
+            <div>
+              <p className="font-orbitron font-black text-xl text-white mb-1">Abandon Run?</p>
+              <p className="text-slate-400 text-sm">All progress will be lost. This cannot be undone.</p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setConfirmAbandon(false)}
+                className="flex-1 font-orbitron text-sm py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 transition-colors"
+                style={{ background: 'rgba(255,255,255,0.05)' }}
+              >
+                Keep Fighting
+              </button>
+              <button
+                onClick={onAbandonRun}
+                className="flex-1 font-orbitron text-sm font-bold py-2.5 rounded-xl transition-all"
+                style={{
+                  background: 'rgba(239,68,68,0.18)',
+                  border: '1px solid rgba(239,68,68,0.55)',
+                  color: '#fca5a5',
+                  boxShadow: '0 0 20px rgba(239,68,68,0.15)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.32)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.18)'; }}
+              >
+                Abandon Run
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Two-column body ── */}
       <div className="relative z-10 flex-1 flex overflow-hidden">
@@ -735,19 +842,37 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
         {/* ── Right Panel — Map ── */}
         <div className="flex-1 flex flex-col pt-3 pb-2 px-4 overflow-hidden">
 
-          {/* Act name as the map title — replaces "Choose Your Path" */}
-          <div className="shrink-0 text-center mb-2">
-            <p className="font-orbitron text-[9px] tracking-[0.5em] text-slate-500 uppercase">
-              ACT {act} · {t.roguelike.actNames[(act as number) - 1] ?? ''}
-            </p>
-          </div>
-
           <div className="relative flex-1 w-full rounded-2xl overflow-hidden border border-slate-700/40"
-            style={{ background: 'rgba(5,3,18,0.88)' }}>
+            style={{ background: 'rgba(3,2,14,0.95)' }}>
 
-            {/* Subtle dot grid */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-              style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+            {/* Nebula background */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: [
+                  'radial-gradient(ellipse 75% 55% at 28% 38%, rgba(88,28,135,0.28) 0%, transparent 62%)',
+                  'radial-gradient(ellipse 55% 65% at 72% 28%, rgba(15,23,90,0.40) 0%, transparent 58%)',
+                  'radial-gradient(ellipse 65% 50% at 52% 82%, rgba(50,5,90,0.22) 0%, transparent 55%)',
+                  'radial-gradient(ellipse 40% 40% at 85% 65%, rgba(100,10,40,0.18) 0%, transparent 50%)',
+                ].join(', '),
+              }} />
+              {/* Star field */}
+              <div className="absolute inset-0 opacity-[0.055]"
+                style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.7) 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
+              <div className="absolute inset-0 opacity-[0.035]"
+                style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px)', backgroundSize: '58px 58px', backgroundPosition: '13px 13px' }} />
+            </div>
+
+            {/* Act name — centered at top of the map canvas */}
+            <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-3 pointer-events-none z-10">
+              <p className="font-orbitron text-[9px] tracking-[0.45em] text-slate-500 uppercase mb-0.5">
+                ACT {act}
+              </p>
+              <h2 className="font-orbitron font-black text-xl tracking-wider text-white"
+                style={{ textShadow: '0 0 28px rgba(168,85,247,0.65), 0 0 60px rgba(88,28,135,0.35)' }}>
+                {t.roguelike.actNames[(act as number) - 1] ?? ''}
+              </h2>
+            </div>
 
             {/* Node type legend — bottom of map, inside the canvas */}
             <div className="absolute bottom-2 left-3 right-3 pointer-events-none z-10 flex items-center gap-3 flex-wrap">
@@ -772,10 +897,6 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
                   <feGaussianBlur stdDeviation="2.5" result="blur" />
                   <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
-                <filter id="map-line-glow-strong" x="-80%" y="-300%" width="260%" height="700%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
                 <filter id="map-node-glow" x="-120%" y="-120%" width="340%" height="340%">
                   <feGaussianBlur stdDeviation="6" />
                 </filter>
@@ -784,37 +905,32 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
                     from { stroke-dashoffset: 26; }
                     to   { stroke-dashoffset: 0; }
                   }
-                  @keyframes map-active-pulse {
-                    0%, 100% { opacity: 0.92; filter: url(#map-line-glow); }
-                    50%       { opacity: 1.0;  filter: url(#map-line-glow-strong); }
-                  }
                 `}</style>
               </defs>
 
-              {/* ── LAYER 1: locked paths — clearly dashed but dim ── */}
+              {/* ── LAYER 1: locked paths — visible but unlit (map structure stays readable) ── */}
               {connPaths.filter(p => p?.state === 'locked').map(p => p && (
                 <path
                   key={p.key}
                   d={p.d}
                   fill="none"
-                  stroke="rgba(130,85,195,0.55)"
+                  stroke="rgba(130,85,195,0.50)"
                   strokeWidth="2.5"
                   strokeDasharray="7,6"
                   strokeLinecap="round"
                 />
               ))}
 
-              {/* ── LAYER 2: active paths — pulsing glow ── */}
+              {/* ── LAYER 2: active paths — same unlit style (available but not highlighted) ── */}
               {connPaths.filter(p => p?.state === 'active').map(p => p && (
                 <path
                   key={p.key}
                   d={p.d}
                   fill="none"
-                  stroke="rgba(192,130,255,0.92)"
-                  strokeWidth="3.5"
+                  stroke="rgba(130,85,195,0.50)"
+                  strokeWidth="2.5"
+                  strokeDasharray="7,6"
                   strokeLinecap="round"
-                  filter="url(#map-line-glow)"
-                  style={{ animation: 'map-active-pulse 2.4s ease-in-out infinite' }}
                 />
               ))}
 
@@ -976,6 +1092,28 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onA
                         FINAL BOSS
                       </text>
                     )}
+
+                    {/* Boss star-spike ring — 8-point star around the node circle */}
+                    {isBoss && isUnlocked && !isDone && (() => {
+                      const spikes = 8;
+                      const outerR = r + 16;
+                      const innerR = r + 6;
+                      const pts = Array.from({ length: spikes * 2 }, (_, i) => {
+                        const angle = (Math.PI * i) / spikes - Math.PI / 2;
+                        const rad = i % 2 === 0 ? outerR : innerR;
+                        return `${cx + rad * Math.cos(angle)},${cy + rad * Math.sin(angle)}`;
+                      }).join(' ');
+                      return (
+                        <polygon
+                          points={pts}
+                          fill="none"
+                          stroke="rgba(244,63,94,0.70)"
+                          strokeWidth="1.5"
+                          style={{ animation: 'anim-map-boss-pulse 1.8s ease-in-out infinite' }}
+                        />
+                      );
+                    })()}
+
 
                     {/* Hover ring */}
                     {isHov && isUnlocked && !isDone && (
