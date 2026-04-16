@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import HexTile from "./HexTile";
 import AIIntentBadge from "./AIIntentBadge";
 import AnimationLayer from "./AnimationLayer";
@@ -6,8 +7,9 @@ import { GameState, Coordinates, AIIntent } from "@/types/game";
 import { useRangeCalculation } from "./RangeIndicator";
 import { resolveBasicAttackDamage, resolveAbilityDamage } from "@/combat/resolver";
 import { calcEffectiveStats } from "@/combat/buffs";
+import { hexDistance } from "@/engine/turnEngine";
 import { useT } from "@/i18n";
-import { getCharacterPortrait } from "@/utils/portraits";
+import { getCharacterPortrait, getCharacterSprite } from "@/utils/portraits";
 import { AnimEvent } from "@/hooks/useAnimations";
 import { tileKey, reachableWithCosts } from "@/utils/movement";
 
@@ -39,6 +41,72 @@ interface GameBoardProps {
 
 const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], hoverPreviewRange, hoverPreviewExecutorId, externalIntentRange }) => {
   const { t } = useT();
+
+  // ── Sprite animation tracking ─────────────────────────────────────────
+  // Maps iconId → current animation ('attack' | 'ability')
+  const [spriteAnimMap, setSpriteAnimMap] = useState<Map<string, 'attack' | 'ability'>>(new Map());
+  const prevIconHPsRef = useRef<Map<string, number>>(new Map());
+  const animTimersRef  = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const fireSpriteAnim = (iconId: string, anim: 'attack' | 'ability', duration: number) => {
+    const prev = animTimersRef.current.get(iconId);
+    if (prev) clearTimeout(prev);
+    setSpriteAnimMap(m => new Map(m).set(iconId, anim));
+    const t2 = setTimeout(() => {
+      setSpriteAnimMap(m => { const n = new Map(m); n.delete(iconId); return n; });
+    }, duration);
+    animTimersRef.current.set(iconId, t2);
+  };
+
+  // Detect attacks: when an enemy HP drops while a player unit is active
+  const allIconsForAnim = useMemo(() => gameState.players.flatMap(p => p.icons), [gameState.players]);
+  const activeIconIdForAnim: string | undefined = (gameState as any).activeIconId ?? (gameState as any).selectedIcon;
+  useEffect(() => {
+    const activeIcon = allIconsForAnim.find(i => i.id === activeIconIdForAnim);
+    allIconsForAnim.forEach(icon => {
+      const prevHP = prevIconHPsRef.current.get(icon.id);
+      if (prevHP !== undefined && icon.stats.hp < prevHP - 0.5) {
+        if (activeIcon && icon.playerId !== activeIcon.playerId && activeIcon.playerId === 0) {
+          fireSpriteAnim(activeIcon.id, 'attack', 520);
+        }
+      }
+      prevIconHPsRef.current.set(icon.id, icon.stats.hp);
+    });
+  }, [allIconsForAnim]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Detect card plays: cardTargetingMode goes false while a player unit is active
+  const prevCardTargetingRef = useRef<boolean>(false);
+  useEffect(() => {
+    const isTargeting = !!(gameState as any).cardTargetingMode;
+    if (prevCardTargetingRef.current && !isTargeting) {
+      const activeIcon = allIconsForAnim.find(i => i.id === activeIconIdForAnim && i.playerId === 0);
+      if (activeIcon) fireSpriteAnim(activeIcon.id, 'ability', 720);
+    }
+    prevCardTargetingRef.current = isTargeting;
+  }, [(gameState as any).cardTargetingMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Movement trail ────────────────────────────────────────────────────
+  const [moveTrails, setMoveTrails] = useState<Map<string, { portrait: string | null; color: 'blue' | 'red'; key: number }>>(new Map());
+  const prevIconCoordsRef = useRef<Map<string, { q: number; r: number }>>(new Map());
+  const trailKeyRef = useRef(0);
+
+  useEffect(() => {
+    allIconsForAnim.forEach(icon => {
+      const prev = prevIconCoordsRef.current.get(icon.id);
+      const curr = icon.position;
+      if (prev && (prev.q !== curr.q || prev.r !== curr.r)) {
+        const tileK = `${prev.q},${prev.r}`;
+        trailKeyRef.current++;
+        const portrait = icon.playerId !== 1
+          ? (getCharacterSprite(icon.name) ?? getCharacterPortrait(icon.name))
+          : getCharacterPortrait(icon.name);
+        setMoveTrails(m => new Map(m).set(tileK, { portrait, color: icon.playerId === 0 ? 'blue' : 'red', key: trailKeyRef.current }));
+        setTimeout(() => setMoveTrails(m => { const n = new Map(m); n.delete(tileK); return n; }), 450);
+      }
+      prevIconCoordsRef.current.set(icon.id, { ...curr });
+    });
+  }, [allIconsForAnim]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 1) Hex dimensions
   const hexSize = 50;
   const hexWidth = hexSize * 2;                // 100px
@@ -53,6 +121,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const [hoveredIntentRange, setHoveredIntentRange] = useState<{ iconId: string; range: number } | null>(null);
   const [showCoordOverlay, setShowCoordOverlay] = useState(false);
   const [inspectedEnemyId, setInspectedEnemyId] = useState<string | null>(null);
+  const [debuffTip, setDebuffTip] = useState<{ type: string; turnsRemaining: number; x: number; y: number } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
   // Dev overlay — Ctrl+D toggles (q,r) coordinate labels on every hex
@@ -70,6 +139,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   useEffect(() => {
     if (gameState.targetingMode || (gameState as any).cardTargetingMode) setInspectedEnemyId(null);
   }, [Boolean(gameState.targetingMode), Boolean((gameState as any).cardTargetingMode)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear debuff tooltip when phase changes (prevents stale tooltip after victory/defeat)
+  useEffect(() => { setDebuffTip(null); }, [gameState.phase]);
+
+  // Clear stuck intent hover range when the active player changes (badges may unmount without firing onMouseLeave)
+  useEffect(() => {
+    setHoveredIntentRange(null);
+  }, [gameState.activePlayerId]);
 
   // Board bounding box — recomputed whenever the board layout changes
   const boardBounds = useMemo(() => {
@@ -211,6 +288,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         const dmg = resolveAbilityDamage(gameState, executor, target, card.effect.powerMult);
         return { q: hoveredCoords.q, r: hoveredCoords.r, text: `💥 ${Math.round(dmg)}` };
       }
+      if (card.effect.chargeAndPull) {
+        const atkStats = calcEffectiveStats(gameState, executor);
+        const defStats = calcEffectiveStats(gameState, target);
+        const allies = allIcons.filter(i => i.isAlive && i.playerId === executor.playerId && i.id !== executor.id);
+        const isFlanked = allies.some(a => hexDistance(a.position, target.position) === 1);
+        const hitMult = (card.effect.chargeAndPullHitMult ?? 1.1) * (isFlanked ? 1.4 : 1.0);
+        const dmg = Math.max(0.1, atkStats.power * hitMult - (defStats.defense ?? 0));
+        const label = isFlanked ? `💥 ${Math.round(dmg)} ⚔CANNAE` : `💥 ${Math.round(dmg)}`;
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: label };
+      }
       if (card.effect.damage) {
         return { q: hoveredCoords.q, r: hoveredCoords.r, text: `💥 ${card.effect.damage}` };
       }
@@ -281,6 +368,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         const dmg = resolveAbilityDamage(gameState, executor, hoveredIcon, card.effect.powerMult);
         return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
       }
+      if (card.effect.chargeAndPull) {
+        const atkStats = calcEffectiveStats(gameState, executor);
+        const defStats = calcEffectiveStats(gameState, hoveredIcon);
+        const allies = allIcons.filter(i => i.isAlive && i.playerId === executor.playerId && i.id !== executor.id);
+        const isFlanked = allies.some(a => hexDistance(a.position, hoveredIcon.position) === 1);
+        const hitMult = (card.effect.chargeAndPullHitMult ?? 1.1) * (isFlanked ? 1.4 : 1.0);
+        const dmg = Math.max(0.1, atkStats.power * hitMult - (defStats.defense ?? 0));
+        return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
+      }
       if (card.effect.damage !== undefined) {
         return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - card.effect.damage), isDamage: true };
       }
@@ -323,16 +419,23 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     return null;
   }, [hoveredCoords, cardTargetingMode, gameState]);
 
-  // 5c) Line-targeting hover preview (Rider's Fury / any lineTarget card)
-  const isLineTargetCard = Boolean(cardTargetingMode?.card?.effect?.lineTarget);
+  // 5c) Line-targeting hover preview (Rider's Fury / any lineTarget, lineScaling, chargeMove card, or charge_move ability)
+  const isLineTargetCard = Boolean(
+    cardTargetingMode?.card?.effect?.lineTarget ||
+    cardTargetingMode?.card?.effect?.lineScaling ||
+    cardTargetingMode?.card?.effect?.chargeMove ||
+    (gameState as any).targetingMode?.abilityId === "charge_move"
+  );
   const lineHexSet = useMemo((): Set<string> => {
-    if (!isLineTargetCard || !hoveredCoords || !cardTargetingMode) return new Set();
-    const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === cardTargetingMode.executorId);
+    if (!isLineTargetCard || !hoveredCoords) return new Set();
+    const tm = (gameState as any).targetingMode;
+    const iconId = cardTargetingMode?.executorId ?? tm?.iconId;
+    const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === iconId);
     if (!executor) return new Set();
-    const range = cardTargetingMode.card?.effect?.range ?? 4;
+    const range = cardTargetingMode?.card?.effect?.range ?? tm?.range ?? 6;
     const hexes = snapToLineHexes(executor.position, hoveredCoords, range);
     return new Set(hexes.map(h => `${h.q},${h.r}`));
-  }, [isLineTargetCard, hoveredCoords, cardTargetingMode, gameState.players]);
+  }, [isLineTargetCard, hoveredCoords, cardTargetingMode, gameState]);
 
   // 5d) AI intent range hover — highlight movement + attack threat using Dijkstra
   //     Also handles externalIntentRange (from sidebar enemy ability hover)
@@ -440,6 +543,24 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const attackRangeSet   = useMemo(() => new Set(attackRange.map(c => tileKey(c.q, c.r))),   [attackRange]);
   const abilityRangeSet  = useMemo(() => new Set(abilityRange.map(c => tileKey(c.q, c.r))),  [abilityRange]);
 
+  // Zone membership Sets — O(1) per-tile lookup, computed once per zone change
+  const { moveZoneSet, manaZoneSet } = useMemo(() => {
+    const move = new Set<string>();
+    const mana = new Set<string>();
+    const zones: { center: { q: number; r: number }; radius: number; effect: string }[] =
+      (gameState as any).activeZones ?? [];
+    for (const z of zones) {
+      const target = z.effect === 'moveBonus' ? move : z.effect === 'manaRegen' ? mana : null;
+      if (!target) continue;
+      for (const tile of gameState.board) {
+        const { q, r } = tile.coordinates;
+        const dist = Math.max(Math.abs(q - z.center.q), Math.abs(r - z.center.r), Math.abs((q + r) - (z.center.q + z.center.r)));
+        if (dist <= z.radius) target.add(tileKey(q, r));
+      }
+    }
+    return { moveZoneSet: move, manaZoneSet: mana };
+  }, [(gameState as any).activeZones, gameState.board]);
+
   // 6b) Memoized board rendering
   const renderBoard = useMemo(() => {
     const hexToPixel = (q: number, r: number) => ({
@@ -489,26 +610,23 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       const isPendingFireStart = pendingFireStartTile === tKey;
       const pendingLaserTiles: string[] = (gameState as any).pendingLaserTiles ?? [];
       const isPendingLaser = pendingLaserTiles.includes(tKey);
-      const activeZones: { center: {q:number,r:number}; radius: number }[] = (gameState as any).activeZones ?? [];
-      const isInZone = activeZones.some(z => {
-        const dist = Math.max(Math.abs(q - z.center.q), Math.abs(r - z.center.r), Math.abs((q + r) - (z.center.q + z.center.r)));
-        return dist <= z.radius;
-      });
+      const isInMoveZone = moveZoneSet.has(tKey);
+      const isInManaZone = manaZoneSet.has(tKey);
 
       // Stun indicator — show on unit's hex if stunned
       const isStunned = icon?.isAlive && icon?.debuffs?.some(d => d.type === 'stun');
 
       // Active debuffs on this tile's unit (for board badge strip)
-      const DEBUFF_BADGE: Record<string, { emoji: string; bg: string }> = {
-        stun:        { emoji: '⚡', bg: 'rgba(34,211,238,0.88)' },
-        poison:      { emoji: '☠', bg: 'rgba(34,197,94,0.88)' },
-        silence:     { emoji: '🤫', bg: 'rgba(139,92,246,0.88)' },
-        armor_break: { emoji: '🔩', bg: 'rgba(249,115,22,0.88)' },
-        rooted:      { emoji: '🌿', bg: 'rgba(134,239,172,0.88)' },
-        blinded:     { emoji: '💥', bg: 'rgba(253,224,71,0.88)' },
-        mud_throw:   { emoji: '🐾', bg: 'rgba(161,120,38,0.88)' },
-        taunted:     { emoji: '📢', bg: 'rgba(234,179,8,0.88)' },
-        bleed:       { emoji: '🩸', bg: 'rgba(220,38,38,0.88)' },
+      const DEBUFF_BADGE: Record<string, { label: string; color: string; bg: string; urgent?: boolean }> = {
+        stun:        { label: 'STN', color: '#22d3ee', bg: 'rgba(8,60,80,0.96)',   urgent: true  },
+        poison:      { label: 'PSN', color: '#4ade80', bg: 'rgba(4,50,15,0.96)',   urgent: true  },
+        silence:     { label: 'SIL', color: '#c084fc', bg: 'rgba(35,8,65,0.96)',   urgent: true  },
+        armor_break: { label: 'ARM', color: '#fb923c', bg: 'rgba(50,18,4,0.96)',   urgent: false },
+        rooted:      { label: 'ROT', color: '#86efac', bg: 'rgba(8,40,16,0.96)',   urgent: false },
+        blinded:     { label: 'BLD', color: '#fde047', bg: 'rgba(45,35,4,0.96)',   urgent: false },
+        mud_throw:   { label: 'MUD', color: '#d97706', bg: 'rgba(40,24,4,0.96)',   urgent: false },
+        taunted:     { label: 'TNT', color: '#fbbf24', bg: 'rgba(45,30,4,0.96)',   urgent: false },
+        bleed:       { label: 'BLT', color: '#f87171', bg: 'rgba(50,6,6,0.96)',    urgent: false },
       };
       const activeBoardDebuffs = icon?.isAlive
         ? (icon.debuffs ?? []).filter(d => DEBUFF_BADGE[d.type])
@@ -558,7 +676,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             }}
             onTerrainClick={() => { }}
             icon={icon ? (icon.name === "Combat Drone" ? "⚙" : icon.name.charAt(0)) : undefined}
-            iconPortrait={icon ? getCharacterPortrait(icon.name) : undefined}
+            iconPortrait={icon ? (icon.playerId !== 1 ? (getCharacterSprite(icon.name) ?? getCharacterPortrait(icon.name)) : getCharacterPortrait(icon.name)) : undefined}
+            iconIsSprite={icon ? icon.playerId !== 1 && !!getCharacterSprite(icon.name) : false}
+            spriteAnim={icon ? spriteAnimMap.get(icon.id) : undefined}
             iconName={icon?.name}
             size={hexSize}
             playerColor={playerColor}
@@ -574,6 +694,33 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             isHealPreview={hpPreview && icon && hpPreview.iconId === icon.id ? !hpPreview.isDamage : false}
           />
 
+          {/* ── Movement trail ghost ──────────────────────────────── */}
+          {(() => {
+            const trail = moveTrails.get(`${q},${r}`);
+            if (!trail) return null;
+            return (
+              <div key={trail.key} className="absolute inset-0 pointer-events-none" style={{ zIndex: 11 }}>
+                {trail.portrait && (
+                  <div className="absolute inset-0" style={{
+                    transform: 'scale(1.7)',
+                    transformOrigin: 'center 55%',
+                  }}>
+                    <img
+                      src={trail.portrait}
+                      className="absolute inset-0 w-full h-full"
+                      style={{
+                        objectFit: 'contain',
+                        objectPosition: 'center center',
+                        filter: trail.color === 'blue' ? 'brightness(0.6) saturate(0.4) hue-rotate(200deg)' : 'brightness(0.6) saturate(0.4)',
+                        animation: 'anim-move-trail 0.45s ease-out forwards',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ── Terrain ambient overlays ─────────────────────────── */}
 
           {/* Mana crystal — pulsing purple radial glow */}
@@ -584,6 +731,80 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
               animation: 'anim-crystal-pulse 2.3s ease-in-out infinite',
               zIndex: 5,
             }} />
+          )}
+          {/* Mana crystal — floating sparkle particles */}
+          {tile.terrain.type === 'mana_crystal' && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 6,
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' }}>
+              {([
+                { left: '38%', top: '55%', delay: '0s',   dur: '2.1s', px: '-4px', color: 'rgba(200,130,255,0.95)' },
+                { left: '52%', top: '60%', delay: '0.7s',  dur: '1.8s', px: '5px',  color: 'rgba(160,100,255,0.90)' },
+                { left: '62%', top: '50%', delay: '1.4s',  dur: '2.3s', px: '-2px', color: 'rgba(220,160,255,0.85)' },
+                { left: '45%', top: '65%', delay: '0.35s', dur: '1.6s', px: '3px',  color: 'rgba(180,120,255,0.80)' },
+              ] as const).map((p, i) => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  left: p.left, top: p.top,
+                  width: 4, height: 4,
+                  borderRadius: '50%',
+                  background: p.color,
+                  boxShadow: `0 0 5px ${p.color}`,
+                  animation: `anim-particle-float ${p.dur} ease-out infinite`,
+                  animationDelay: p.delay,
+                  '--px': p.px,
+                } as React.CSSProperties} />
+              ))}
+            </div>
+          )}
+
+          {/* Mana crystal — pulsing hex rim SVG glow */}
+          {tile.terrain.type === 'mana_crystal' && (
+            <svg
+              className="absolute pointer-events-none"
+              style={{ inset: 0, width: '100%', height: '100%', zIndex: 7, overflow: 'visible' }}
+              viewBox="0 0 100 100"
+            >
+              {/* Outer bright stroke */}
+              <polygon
+                points="25,0 75,0 100,50 75,100 25,100 0,50"
+                fill="none"
+                stroke="rgb(192,100,255)"
+                strokeWidth="2.8"
+                style={{ animation: 'anim-crystal-rim 2.0s ease-in-out infinite' }}
+              />
+              {/* Inner softer halo — slightly smaller */}
+              <polygon
+                points="27,4 73,4 97,50 73,96 27,96 3,50"
+                fill="none"
+                stroke="rgba(160,80,255,0.50)"
+                strokeWidth="4"
+                style={{ animation: 'anim-crystal-rim 2.0s ease-in-out infinite', animationDelay: '0.3s' }}
+              />
+            </svg>
+          )}
+
+          {/* Forest — floating green sparkle particles */}
+          {tile.terrain.type === 'forest' && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 6,
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' }}>
+              {([
+                { left: '40%', top: '58%', delay: '0s',    dur: '2.6s', px: '-3px', color: 'rgba(100,220,80,0.85)' },
+                { left: '55%', top: '62%', delay: '0.9s',  dur: '2.2s', px: '4px',  color: 'rgba(80,200,60,0.80)' },
+                { left: '60%', top: '52%', delay: '1.7s',  dur: '2.8s', px: '-2px', color: 'rgba(120,240,100,0.75)' },
+              ] as const).map((p, i) => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  left: p.left, top: p.top,
+                  width: 3, height: 3,
+                  borderRadius: '50%',
+                  background: p.color,
+                  boxShadow: `0 0 4px ${p.color}`,
+                  animation: `anim-particle-float ${p.dur} ease-out infinite`,
+                  animationDelay: p.delay,
+                  '--px': p.px,
+                } as React.CSSProperties} />
+              ))}
+            </div>
           )}
 
           {/* River / lake — light-blue shimmer sweep */}
@@ -599,6 +820,63 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
                 animation: 'anim-tile-shimmer 3.0s ease-in-out infinite',
               }} />
             </div>
+          )}
+
+          {/* River / lake — water ripple rings */}
+          {(tile.terrain.type === 'river' || tile.terrain.type === 'lake') && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+              zIndex: 6,
+            }}>
+              {([
+                { delay: '0s',    dur: '2.8s', size: 28, color: 'rgba(100,190,255,0.48)' },
+                { delay: '0.95s', dur: '2.8s', size: 28, color: 'rgba(120,200,255,0.36)' },
+                { delay: '1.90s', dur: '2.8s', size: 28, color: 'rgba(140,210,255,0.26)' },
+              ] as const).map((r, i) => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  left: '50%', top: '48%',
+                  width: r.size, height: r.size,
+                  marginLeft: -r.size / 2, marginTop: -r.size / 2,
+                  borderRadius: '50%',
+                  border: `1.5px solid ${r.color}`,
+                  animation: `anim-water-ripple ${r.dur} ease-out infinite`,
+                  animationDelay: r.delay,
+                }} />
+              ))}
+            </div>
+          )}
+
+          {/* Snow — drifting snowflake particles */}
+          {tile.terrain.type === 'snow' && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 6,
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' }}>
+              {([
+                { left: '30%', top: '72%', delay: '0s',    dur: '3.4s', px: '-5px', color: 'rgba(220,235,255,0.92)' },
+                { left: '55%', top: '76%', delay: '1.15s', dur: '2.9s', px: '4px',  color: 'rgba(240,246,255,0.82)' },
+                { left: '72%', top: '62%', delay: '2.05s', dur: '3.7s', px: '-3px', color: 'rgba(210,230,255,0.88)' },
+                { left: '44%', top: '80%', delay: '0.55s', dur: '2.6s', px: '6px',  color: 'rgba(230,242,255,0.76)' },
+              ] as const).map((p, i) => (
+                <div key={i} style={{
+                  position: 'absolute', left: p.left, top: p.top,
+                  width: 3, height: 3, borderRadius: '50%',
+                  background: p.color,
+                  boxShadow: `0 0 3px ${p.color}`,
+                  animation: `anim-snow-drift ${p.dur} ease-out infinite`,
+                  animationDelay: p.delay, '--px': p.px,
+                } as React.CSSProperties} />
+              ))}
+            </div>
+          )}
+
+          {/* Desert — heat shimmer gradient breathe */}
+          {tile.terrain.type === 'desert' && (
+            <div className="absolute inset-0 pointer-events-none" style={{
+              zIndex: 6,
+              clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+              background: 'linear-gradient(to top, rgba(255,200,80,0.22) 0%, rgba(255,180,60,0.10) 48%, transparent 75%)',
+              animation: 'anim-heat-shimmer 3.8s ease-in-out infinite',
+            }} />
           )}
 
           {/* Burning forest — animated flicker overlay */}
@@ -655,17 +933,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           {/* AI intent range hover highlight — strong red wash + SVG border ring */}
           {isIntentRange && !isOnLine && (
             <>
-              <div className="absolute inset-0 pointer-events-none z-15" style={{
-                background: "rgba(220,40,40,0.55)",
+              <div className="absolute inset-0 pointer-events-none" style={{
+                zIndex: 15,
+                background: "rgba(220,30,30,0.80)",
                 clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
               }} />
-              <svg className="absolute inset-0 pointer-events-none z-16" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
+              <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 16 }} width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
                 <polygon
                   points={[
                     `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
                     `${hexWidth/4},${hexHeight}`,`0,${hexHeight/2}`,`${hexWidth/4},0`,
                   ].join(' ')}
-                  fill="none" stroke="rgba(255,80,80,0.9)" strokeWidth="3"
+                  fill="none" stroke="rgba(255,80,80,1.0)" strokeWidth="3"
                 />
               </svg>
             </>
@@ -673,7 +952,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
 
           {/* Enemy inspect — movement range (orange tint) — z-11 so intent-range overlay (z-15) wins */}
           {isInspectedMove && (
-            <div className="absolute inset-0 pointer-events-none z-11" style={{
+            <div className="absolute inset-0 pointer-events-none" style={{
+              zIndex: 11,
               background: "rgba(251,146,60,0.28)",
               clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
             }} />
@@ -681,11 +961,12 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           {/* Enemy inspect — attack/danger zone (red tint) — z-11 so intent-range overlay (z-15) wins */}
           {isInspectedAttack && (
             <>
-              <div className="absolute inset-0 pointer-events-none z-11" style={{
+              <div className="absolute inset-0 pointer-events-none" style={{
+                zIndex: 11,
                 background: "rgba(239,68,68,0.22)",
                 clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
               }} />
-              <svg className="absolute inset-0 pointer-events-none z-12" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
+              <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 12 }} width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
                 <polygon
                   points={[
                     `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
@@ -744,8 +1025,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             </div>
           )}
 
-          {/* Freudenspur resonance zone */}
-          {isInZone && (
+          {/* Freudenspur resonance zone — movement bonus (cyan ♪) */}
+          {isInMoveZone && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center"
               style={{ zIndex: 22, clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
               <div style={{
@@ -764,6 +1045,29 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
                 />
               </svg>
               <span style={{ fontSize: 11, zIndex: 1, textShadow: "0 0 6px rgba(100,220,255,0.9)", opacity: 0.8 }}>♪</span>
+            </div>
+          )}
+
+          {/* Salt Road mana zone — mana regen (gold ◆) */}
+          {isInManaZone && (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center"
+              style={{ zIndex: 22, clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: "rgba(251,191,36,0.12)",
+                clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+                animation: "pulse 2s ease-in-out infinite",
+              }} />
+              <svg className="absolute inset-0 pointer-events-none" width={hexWidth} height={hexHeight} viewBox={`0 0 ${hexWidth} ${hexHeight}`}>
+                <polygon
+                  points={[
+                    `${hexWidth*3/4},0`,`${hexWidth},${hexHeight/2}`,`${hexWidth*3/4},${hexHeight}`,
+                    `${hexWidth/4},${hexHeight}`,`0,${hexHeight/2}`,`${hexWidth/4},0`,
+                  ].join(' ')}
+                  fill="none" stroke="rgba(251,191,36,0.60)" strokeWidth="2" strokeDasharray="3,4"
+                />
+              </svg>
+              <span style={{ fontSize: 11, zIndex: 1, textShadow: "0 0 6px rgba(251,191,36,0.9)", opacity: 0.85 }}>◆</span>
             </div>
           )}
 
@@ -810,23 +1114,99 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
 
           {/* Debuff badge strip — shown below the unit portrait, above the pedestal */}
           {activeBoardDebuffs.length > 0 && (
-            <div className="absolute pointer-events-none z-[27]"
-              style={{ bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 2 }}>
+            <div className="absolute z-[27]"
+              style={{ bottom: 6, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 2.5 }}>
               {activeBoardDebuffs.map((d, i) => {
                 const meta = DEBUFF_BADGE[d.type]!;
                 return (
-                  <div key={i} title={`${d.type} (${d.turnsRemaining}t)`} style={{
-                    width: 16, height: 16,
-                    borderRadius: 3,
-                    background: meta.bg,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 9,
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.7)',
-                    border: '1px solid rgba(255,255,255,0.22)',
-                    color: 'white',
-                    fontWeight: 700,
-                  }}>
-                    {meta.emoji}
+                  <div key={i}
+                    onClick={e => e.stopPropagation()}
+                    onMouseEnter={e => {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setDebuffTip({ type: d.type, turnsRemaining: d.turnsRemaining, x: rect.left + rect.width / 2, y: rect.top - 6 });
+                    }}
+                    onMouseLeave={() => setDebuffTip(null)}
+                    style={{
+                      position: 'relative',
+                      width: 22, height: 22,
+                      borderRadius: 5,
+                      background: meta.bg,
+                      border: `1.5px solid ${meta.color}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                      cursor: 'default',
+                      boxShadow: `0 0 5px ${meta.color}88, 0 2px 5px rgba(0,0,0,0.85)`,
+                      '--debuff-color': meta.color,
+                      animation: meta.urgent
+                        ? 'anim-debuff-pulse 1.6s ease-in-out infinite'
+                        : undefined,
+                    } as React.CSSProperties}
+                  >
+                    {/* 3-letter label */}
+                    <span style={{
+                      fontFamily: "'Orbitron', monospace",
+                      fontSize: 6,
+                      fontWeight: 900,
+                      color: meta.color,
+                      letterSpacing: '0.02em',
+                      lineHeight: 1,
+                    }}>
+                      {meta.label}
+                    </span>
+                    {/* Poison drip particles */}
+                    {d.type === 'poison' && ([
+                      { left: '22%', top: '-4px', delay: '0s',    dur: '1.0s' },
+                      { left: '50%', top: '-4px', delay: '0.35s', dur: '0.9s' },
+                      { left: '72%', top: '-4px', delay: '0.65s', dur: '1.1s' },
+                    ] as const).map((p, pi) => (
+                      <div key={pi} style={{
+                        position: 'absolute',
+                        left: p.left, top: p.top,
+                        width: 3, height: 4,
+                        borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%',
+                        background: '#4ade80',
+                        boxShadow: '0 0 3px #4ade80',
+                        animation: `anim-poison-drip ${p.dur} ease-in infinite`,
+                        animationDelay: p.delay,
+                        pointerEvents: 'none',
+                      }} />
+                    ))}
+                    {/* Stun crackle sparks */}
+                    {d.type === 'stun' && ([
+                      { left: '15%', top: '10%', delay: '0s',    dur: '0.7s', cx: '4px',  cy: '-5px', cx2: '-3px', cy2: '3px' },
+                      { left: '65%', top: '5%',  delay: '0.25s', dur: '0.8s', cx: '-4px', cy: '-4px', cx2: '2px',  cy2: '4px' },
+                      { left: '40%', top: '0%',  delay: '0.5s',  dur: '0.65s', cx: '3px', cy: '-6px', cx2: '-2px', cy2: '2px' },
+                    ] as const).map((p, pi) => (
+                      <div key={pi} style={{
+                        position: 'absolute',
+                        left: p.left, top: p.top,
+                        width: 3, height: 3,
+                        borderRadius: '2px',
+                        background: '#22d3ee',
+                        boxShadow: '0 0 4px #22d3ee',
+                        animation: `anim-stun-crackle ${p.dur} ease-out infinite`,
+                        animationDelay: p.delay,
+                        '--cx': p.cx, '--cy': p.cy, '--cx2': p.cx2, '--cy2': p.cy2,
+                        pointerEvents: 'none',
+                      } as React.CSSProperties} />
+                    ))}
+                    {/* Turn count — bottom-right corner badge */}
+                    <span style={{
+                      position: 'absolute',
+                      bottom: -3, right: -3,
+                      width: 11, height: 11,
+                      borderRadius: '50%',
+                      background: meta.color,
+                      color: '#000',
+                      fontSize: 7,
+                      fontWeight: 900,
+                      fontFamily: 'monospace',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid rgba(0,0,0,0.6)',
+                      lineHeight: 1,
+                    }}>
+                      {d.turnsRemaining}
+                    </span>
                   </div>
                 );
               })}
@@ -893,7 +1273,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
       (gameState as any).pendingFireStartTile,
       (gameState as any).pendingLaserTiles,
       (gameState as any).laserGridStruckIds,
-      (gameState as any).activeZones,
+      moveZoneSet,
+      manaZoneSet,
       hoverPreviewSet,
       gameState.activePlayerId,
     ]);
@@ -1112,6 +1493,35 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           />
         </div>
       </div>
+
+      {/* Debuff badge tooltip portal */}
+      {debuffTip && createPortal(
+        <div
+          className="pointer-events-none"
+          style={{
+            position: 'fixed',
+            left: debuffTip.x,
+            top: debuffTip.y,
+            transform: 'translate(-50%, -100%)',
+            zIndex: 9999,
+            background: 'rgba(4,2,18,0.97)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: 6,
+            padding: '4px 8px',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.8)',
+          }}
+        >
+          <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 10, fontWeight: 700, color: '#e2e8f0', marginBottom: 1 }}>
+            {((t.game as any).debuffNames?.[debuffTip.type] ?? debuffTip.type).toUpperCase()}
+          </div>
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}>
+            {debuffTip.turnsRemaining} turn{debuffTip.turnsRemaining !== 1 ? 's' : ''} remaining
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

@@ -1,7 +1,8 @@
 // src/components/RewardsScreen.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { RunState, CardReward, RunItem, CharacterId, CharacterRunState } from "@/types/roguelike";
 import ArenaBackground from "@/ui/ArenaBackground";
+import { useT } from "@/i18n";
 
 interface Props {
   runState: RunState;
@@ -21,9 +22,6 @@ const TIER_BG: Record<string, string> = {
 
 const CARD_RARITY_COLOR: Record<string, string> = {
   common: '#94a3b8', uncommon: '#22c55e', rare: '#60a5fa', ultimate: '#f59e0b',
-};
-const CARD_RARITY_LABEL: Record<string, string> = {
-  common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', ultimate: '✦ ULTIMATE',
 };
 const EXCLUSIVE_COLOR: Record<string, string> = {
   Napoleon: '#d946ef', Genghis: '#ef4444', 'Da Vinci': '#34d399', Leonidas: '#f59e0b',
@@ -58,6 +56,7 @@ function AnimatedXPBar({ prevXp, gainXp, xpToNext }: { prevXp: number; gainXp: n
 }
 
 function CharacterXPCard({ char, gainXp }: { char: CharacterRunState; gainXp: number }) {
+  const { t } = useT();
   const isDead = char.currentHp <= 0;
   const leveledUp = !isDead && char.xp + gainXp >= char.xpToNext;
   const newXp = isDead ? char.xp : Math.min(char.xpToNext, char.xp + gainXp);
@@ -72,11 +71,11 @@ function CharacterXPCard({ char, gainXp }: { char: CharacterRunState; gainXp: nu
           <p className="font-orbitron text-[11px] text-white">{char.displayName}</p>
           <p className="text-[10px] text-purple-400">Level {char.level}</p>
         </div>
-        {isDead && <span className="text-red-400 text-xs font-bold font-orbitron shrink-0">💀 FALLEN</span>}
-        {leveledUp && <span className="text-yellow-400 text-xs font-bold font-orbitron animate-pulse shrink-0">▲ LEVEL UP!</span>}
+        {isDead && <span className="text-red-400 text-xs font-bold font-orbitron shrink-0">{t.rewards.fallen}</span>}
+        {leveledUp && <span className="text-yellow-400 text-xs font-bold font-orbitron animate-pulse shrink-0">{t.rewards.levelUp}</span>}
       </div>
       {isDead ? (
-        <div className="text-[10px] text-red-400/70 italic">No XP earned — character fallen</div>
+        <div className="text-[10px] text-red-400/70 italic">{t.rewards.noXpFallen}</div>
       ) : (
         <>
           <AnimatedXPBar prevXp={char.xp} gainXp={gainXp} xpToNext={char.xpToNext} />
@@ -101,6 +100,7 @@ function ItemAssignWidget({
   onChange: (charId: CharacterId | null, slotIdx: number | null) => void;
   label: string;
 }) {
+  const { t } = useT();
   // Exclude characters who already own this exact item (same id) or who already have it (same item.name as global unique)
   const alreadyOwnsItem = (c: CharacterRunState) => c.items.some(s => s?.id === item.id);
   const eligible = characters.filter(c => c.currentHp > 0 && (!item.targetCharacter || c.id === item.targetCharacter) && !alreadyOwnsItem(c));
@@ -114,30 +114,30 @@ function ItemAssignWidget({
         <span className="text-3xl">{item.icon}</span>
         <div>
           <div className="font-orbitron text-[9px] tracking-widest mb-0.5" style={{ color: TIER_COLOR[item.tier] }}>
-            {label} — {item.tier.toUpperCase()}
+            {label} — {((t.archives.itemTier as Record<string, string>)[item.tier] ?? item.tier).toUpperCase()}
           </div>
-          <p className="font-orbitron font-bold text-white text-base">{item.name}</p>
+          <p className="font-orbitron font-bold text-white text-base">{(t.items as Record<string, { name: string; description: string }>)[item.id]?.name ?? item.name}</p>
           {item.targetCharacter && (
             <p className="text-[10px] font-orbitron mt-0.5" style={{ color: TIER_COLOR[item.tier] }}>
               {item.targetCharacter.toUpperCase()} ONLY
             </p>
           )}
-          <p className="text-slate-300 text-[12px] mt-1 leading-relaxed">{item.description}</p>
+          <p className="text-slate-300 text-[12px] mt-1 leading-relaxed">{(t.items as Record<string, { name: string; description: string }>)[item.id]?.description ?? item.description}</p>
         </div>
       </div>
 
       {/* Show if someone already owns it */}
       {ineligibleOwner.length > 0 && (
         <p className="text-[10px] font-orbitron text-red-400 mb-3">
-          ⚠ {ineligibleOwner.map(c => c.displayName).join(', ')} already carries this item
+          {t.rewards.alreadyCarries.replace('{names}', ineligibleOwner.map(c => c.displayName).join(', '))}
         </p>
       )}
 
       {/* Character slot picker */}
-      <p className="font-orbitron text-[10px] text-slate-500 mb-3">EQUIP TO:</p>
-      <div className="flex gap-3 flex-wrap">
+      <p className="font-orbitron text-[10px] text-slate-500 mb-3">{t.rewards.equipTo}</p>
+      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(eligible.length, 3)}, 1fr)` }}>
         {eligible.map(c => (
-          <div key={c.id} className="rounded-xl border border-slate-700/40 p-3 min-w-[180px]"
+          <div key={c.id} className="rounded-xl border border-slate-700/40 p-3"
             style={{ background: assignedTo === c.id ? 'rgba(34,211,238,0.08)' : 'rgba(2,4,14,0.80)' }}>
             <div className="flex items-center gap-2 mb-2">
               <img src={c.portrait} alt={c.displayName} className="w-8 h-8 rounded-full object-cover" />
@@ -167,18 +167,41 @@ function ItemAssignWidget({
           </div>
         ))}
         {eligible.length === 0 && (
-          <p className="text-[11px] text-slate-500 italic">No eligible characters to equip this item.</p>
+          <p className="text-[11px] text-slate-500 italic">{t.rewards.noEligible}</p>
         )}
       </div>
     </div>
   );
 }
 
+/** Count-up from 0 to target over ~800ms on mount */
+function useRewardCountUp(target: number): number {
+  const [val, setVal] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (target <= 0) return;
+    const start = Date.now();
+    const dur = 800;
+    const tick = () => {
+      const t = Math.min(1, (Date.now() - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(eased * target));
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target]);
+  return val;
+}
+
 export default function RewardsScreen({ runState, onCollect }: Props) {
-  const { pendingRewards, characters } = runState;
+  const { t } = useT();
+  const { pendingRewards, characters, isTutorialRun } = runState;
   if (!pendingRewards) return null;
 
   const { gold, xp, cardChoices, itemDrop, bossItems } = pendingRewards;
+  const displayGold = useRewardCountUp(gold);
+  const displayXP = useRewardCountUp(xp);
 
   const [chosenCard, setChosenCard] = useState<string | null>(null);
 
@@ -217,31 +240,31 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <p className="font-orbitron text-[10px] tracking-[0.6em] text-purple-400 mb-2">ARENA</p>
+          <p className="font-orbitron text-[10px] tracking-[0.6em] text-purple-400 mb-2">{t.rewards.arena}</p>
           <h1 className="font-orbitron font-black text-5xl text-white"
             style={{ textShadow: '0 0 40px rgba(34,211,238,0.55)' }}>
-            VICTORY
+            {t.rewards.victory}
           </h1>
-          <p className="text-slate-400 mt-2 text-sm">Your clones have conquered this encounter</p>
+          <p className="text-slate-400 mt-2 text-sm">{t.rewards.conqueredEncounter}</p>
         </div>
 
         {/* Gold + XP summary */}
         <div className="flex gap-4 mb-8 justify-center">
           <div className="rounded-xl border border-yellow-600/40 px-8 py-4 text-center"
             style={{ background: 'rgba(40,28,5,0.80)' }}>
-            <p className="font-orbitron text-[10px] tracking-wider text-yellow-600 mb-1">GOLD EARNED</p>
-            <p className="font-orbitron font-black text-4xl text-yellow-400">+{gold}</p>
+            <p className="font-orbitron text-[10px] tracking-wider text-yellow-600 mb-1">{t.rewards.goldEarned}</p>
+            <p className="font-orbitron font-black text-4xl text-yellow-400">+{displayGold}</p>
           </div>
           <div className="rounded-xl border border-purple-600/40 px-8 py-4 text-center"
             style={{ background: 'rgba(30,10,60,0.80)' }}>
-            <p className="font-orbitron text-[10px] tracking-wider text-purple-400 mb-1">XP EARNED</p>
-            <p className="font-orbitron font-black text-4xl text-purple-300">+{xp}</p>
+            <p className="font-orbitron text-[10px] tracking-wider text-purple-400 mb-1">{t.rewards.xpEarned}</p>
+            <p className="font-orbitron font-black text-4xl text-purple-300">+{displayXP}</p>
           </div>
         </div>
 
         {/* Character XP progress */}
         <section className="mb-8">
-          <h2 className="font-orbitron text-[11px] tracking-[0.4em] text-slate-500 mb-4">CHARACTER PROGRESS</h2>
+          <h2 className="font-orbitron text-[11px] tracking-[0.4em] text-slate-500 mb-4">{t.rewards.characterProgress}</h2>
           <div className="grid grid-cols-3 gap-4">
             {characters.map(c => (
               <CharacterXPCard key={c.id} char={c} gainXp={xp} />
@@ -253,12 +276,13 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
         {cardChoices.length > 0 && (
           <section className="mb-8">
             <h2 className="font-orbitron text-[11px] tracking-[0.4em] text-cyan-400 mb-4">
-              CHOOSE A CARD <span className="text-slate-500 normal-case tracking-normal font-sans text-[10px]">(or skip)</span>
+              {t.rewards.chooseCard}{!isTutorialRun && <span className="text-slate-500 normal-case tracking-normal font-sans text-[10px]"> {t.rewards.orSkip}</span>}
             </h2>
-            <div className="grid grid-cols-3 gap-4">
-              {cardChoices.map(card => {
+            <div data-tut="reward_cards" className="grid grid-cols-3 gap-4">
+              {cardChoices.map((card, idx) => {
                 const selected = chosenCard === card.definitionId;
                 const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : null;
+                const tCard = (t.cards as Record<string, { name: string; description: string }>)[card.definitionId];
                 return (
                   <button key={card.definitionId}
                     onClick={() => setChosenCard(selected ? null : card.definitionId)}
@@ -267,6 +291,7 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
                       background: selected ? 'rgba(34,211,238,0.09)' : 'rgba(2,4,14,0.80)',
                       borderColor: selected ? 'rgba(34,211,238,0.75)' : 'rgba(100,120,150,0.30)',
                       boxShadow: selected ? '0 0 18px rgba(34,211,238,0.18)' : 'none',
+                      animation: `anim-reward-card-reveal 0.5s ease-out ${idx * 0.12}s both`,
                     }}>
                     <div className="flex items-start justify-between mb-2">
                       <span className="text-2xl">{card.icon}</span>
@@ -278,21 +303,21 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
                       ) : (
                         <span className="font-orbitron text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-600/40 text-slate-500"
                           style={{ background: 'rgba(100,100,120,0.15)' }}>
-                          Shared
+                          {t.rewards.shared}
                         </span>
                       )}
                     </div>
-                    <p className="font-orbitron font-bold text-sm text-white mb-1">{card.name}</p>
-                    <p className="text-slate-400 text-[11px] leading-relaxed flex-1">{card.description}</p>
+                    <p className="font-orbitron font-bold text-sm text-white mb-1">{tCard?.name ?? card.name}</p>
+                    <p className="text-slate-400 text-[11px] leading-relaxed flex-1">{tCard?.description ?? card.description}</p>
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-[10px] text-cyan-300 font-orbitron">{card.manaCost} Mana</span>
                       {card.rarity && (
                         <span className="font-orbitron text-[8px] font-bold px-1.5 py-0.5 rounded"
                           style={{ color: CARD_RARITY_COLOR[card.rarity] ?? '#94a3b8', background: (CARD_RARITY_COLOR[card.rarity] ?? '#94a3b8') + '18' }}>
-                          {CARD_RARITY_LABEL[card.rarity] ?? card.rarity.toUpperCase()}
+                          {((t.archives.cardRarity as Record<string, string>)[card.rarity] ?? card.rarity).toUpperCase()}
                         </span>
                       )}
-                      {selected && <span className="text-[10px] font-bold text-cyan-400 font-orbitron">✓ SELECTED</span>}
+                      {selected && <span className="text-[10px] font-bold text-cyan-400 font-orbitron">{t.rewards.selected}</span>}
                     </div>
                   </button>
                 );
@@ -305,7 +330,7 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
         {itemDrop && (
           <section className="mb-8">
             <h2 className="font-orbitron text-[11px] tracking-[0.4em] mb-4" style={{ color: TIER_COLOR[itemDrop.tier] }}>
-              ITEM DROP
+              {t.rewards.itemDrop}
             </h2>
             <ItemAssignWidget
               item={itemDrop}
@@ -313,7 +338,7 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
               assignedTo={dropCharId}
               assignedSlot={dropSlot}
               onChange={(charId, slot) => { setDropCharId(charId); setDropSlot(slot); }}
-              label="Item Drop"
+              label={t.rewards.itemDropLabel}
             />
           </section>
         )}
@@ -322,10 +347,10 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
         {bossItems && bossItems.length > 0 && (
           <section className="mb-8">
             <h2 className="font-orbitron text-[11px] tracking-[0.4em] text-yellow-400 mb-2">
-              BOSS REWARDS
+              {t.rewards.bossRewards}
             </h2>
             <p className="text-slate-400 text-[11px] mb-4">
-              Assign each item to a living character. One item per slot — choose carefully.
+              {t.rewards.assignItems}
             </p>
             {bossItems.map((item, idx) => (
               <ItemAssignWidget
@@ -337,25 +362,38 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
                 onChange={(charId, slot) => {
                   setBossAssignments(prev => prev.map((a, i) => i === idx ? { charId, slot } : a));
                 }}
-                label={`Boss Item ${idx + 1}`}
+                label={t.rewards.bossItem.replace('{n}', String(idx + 1))}
               />
             ))}
           </section>
         )}
 
         {/* Continue */}
-        <div className="flex justify-center mt-6 pb-4">
-          <button onClick={handleFinish}
-            className="font-orbitron font-bold px-14 py-4 rounded-xl text-sm tracking-widest transition-all duration-150 hover:scale-105"
-            style={{
-              background: 'rgba(34,211,238,0.12)',
-              border: '2px solid rgba(34,211,238,0.65)',
-              color: '#22d3ee',
-              boxShadow: '0 0 24px rgba(34,211,238,0.18)',
-            }}>
-            CONTINUE →
-          </button>
-        </div>
+        {(() => {
+          const mustPickCard = isTutorialRun && cardChoices.length > 0 && !chosenCard;
+          return (
+            <div className="flex flex-col items-center gap-3 mt-6 pb-4">
+              {mustPickCard && (
+                <p className="font-orbitron text-[11px] text-yellow-400 tracking-wider animate-pulse">
+                  {t.rewards.pickCardPrompt}
+                </p>
+              )}
+              <button
+                onClick={mustPickCard ? undefined : handleFinish}
+                disabled={mustPickCard}
+                className="font-orbitron font-bold px-14 py-4 rounded-xl text-sm tracking-widest transition-all duration-150"
+                style={{
+                  background: mustPickCard ? 'rgba(34,211,238,0.04)' : 'rgba(34,211,238,0.12)',
+                  border: `2px solid ${mustPickCard ? 'rgba(34,211,238,0.20)' : 'rgba(34,211,238,0.65)'}`,
+                  color: mustPickCard ? 'rgba(34,211,238,0.30)' : '#22d3ee',
+                  boxShadow: mustPickCard ? 'none' : '0 0 24px rgba(34,211,238,0.18)',
+                  cursor: mustPickCard ? 'not-allowed' : 'pointer',
+                }}>
+                {t.rewards.continue}
+              </button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

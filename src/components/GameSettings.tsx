@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, Volume2, VolumeX, Monitor, Gamepad2, BookOpen, Globe } from "lucide-react";
+import { ChevronLeft, Volume2, VolumeX, Monitor, Gamepad2, Globe } from "lucide-react";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { useAudio } from "@/hooks/useAudio";
 import { useT, LANG_LABELS, Language } from "@/i18n";
+import { clearTutorialDone } from "@/hooks/useTutorialState";
 
 interface Props {
   onBack: () => void;
+  onReplayTutorial?: () => void;
 }
 
 const SCALE_PRESETS_BASE = [
@@ -15,9 +17,9 @@ const SCALE_PRESETS_BASE = [
   { scale: 0 },
 ] as const;
 
-type SettingsTab = 'general' | 'controls' | 'rules';
+type SettingsTab = 'general' | 'controls';
 
-export default function GameSettings({ onBack }: Props) {
+export default function GameSettings({ onBack, onReplayTutorial }: Props) {
   const { settings, setMusicVolume, setSfxVolume, toggleMute } = useAudio();
   const { t, lang, setLang } = useT();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
@@ -43,7 +45,6 @@ export default function GameSettings({ onBack }: Props) {
   const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: 'general',  label: t.settings.tabs.general,   icon: <Monitor className="w-4 h-4" /> },
     { id: 'controls', label: t.settings.tabs.controls,  icon: <Gamepad2 className="w-4 h-4" /> },
-    { id: 'rules',    label: t.settings.tabs.rules,     icon: <BookOpen className="w-4 h-4" /> },
   ];
 
   const CONTROLS_DATA = [
@@ -53,6 +54,7 @@ export default function GameSettings({ onBack }: Props) {
         { action: t.settings.controls.actions.selectUnit,   key: t.settings.controls.keys.clickPortrait },
         { action: t.settings.controls.actions.moveUnit,     key: t.settings.controls.keys.clickHex },
         { action: t.settings.controls.actions.undoMovement, key: t.settings.controls.keys.undoBtn },
+        { action: t.settings.controls.actions.panBoard,     key: t.settings.controls.keys.clickDrag },
       ],
     },
     {
@@ -62,6 +64,7 @@ export default function GameSettings({ onBack }: Props) {
         { action: t.settings.controls.actions.useAbility,       key: t.settings.controls.keys.clickAbilityTarget },
         { action: t.settings.controls.actions.playCard,         key: t.settings.controls.keys.clickCard },
         { action: t.settings.controls.actions.cancelTargeting,  key: t.settings.controls.keys.escRightClick },
+        { action: t.settings.controls.actions.inspectEnemy,     key: t.settings.controls.keys.clickEnemyNoTarget },
       ],
     },
     {
@@ -71,6 +74,7 @@ export default function GameSettings({ onBack }: Props) {
         { action: t.settings.controls.actions.openEsc,       key: t.settings.controls.keys.esc },
         { action: t.settings.controls.actions.resignGame,    key: t.settings.controls.keys.resignBtn },
         { action: t.settings.controls.actions.viewCharacter, key: t.settings.controls.keys.clickPortrait2 },
+        { action: t.settings.controls.actions.hideUI,        key: t.settings.controls.keys.hKey },
       ],
     },
   ];
@@ -252,6 +256,34 @@ export default function GameSettings({ onBack }: Props) {
                     </p>
                   </div>
                 </section>
+
+                {/* Tutorial section */}
+                <section>
+                  <h2 className="font-orbitron font-bold text-[11px] tracking-[0.35em] uppercase mb-4"
+                    style={{ color: "#22d3ee" }}>{t.settingsTutorial.sectionTitle}</h2>
+                  <div className="flex items-center justify-between rounded-xl p-4"
+                    style={{ background: 'rgba(4,2,18,0.6)', border: '1px solid rgba(34,211,238,0.12)' }}>
+                    <div>
+                      <p className="font-orbitron font-bold text-[12px] text-slate-200">{t.settingsTutorial.replayLabel}</p>
+                      <p className="text-slate-500 text-[11px] mt-0.5">{t.settingsTutorial.replayDesc}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        clearTutorialDone();
+                        if (onReplayTutorial) onReplayTutorial();
+                        else onBack();
+                      }}
+                      className="font-orbitron font-bold text-[10px] tracking-[0.18em] uppercase rounded-lg px-4 py-2 transition-all hover:scale-105 active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(34,211,238,0.18), rgba(6,182,212,0.15))',
+                        border: '1px solid rgba(34,211,238,0.40)',
+                        color: '#22d3ee',
+                      }}
+                    >
+                      {t.settingsTutorial.replayBtn}
+                    </button>
+                  </div>
+                </section>
               </div>
             )}
 
@@ -283,25 +315,6 @@ export default function GameSettings({ onBack }: Props) {
                   <p className="text-slate-500 text-xs font-orbitron tracking-wider text-center">
                     {t.settings.controls.note}
                   </p>
-                </div>
-              </div>
-            )}
-
-            {/* ── GAME RULES TAB ── */}
-            {activeTab === 'rules' && (
-              <div>
-                <h2 className="font-orbitron text-[11px] tracking-[0.5em] mb-6 uppercase"
-                  style={{ color: "#a78bfa" }}>{t.settings.rules.section}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {t.settings.rules.entries.map(rule => (
-                    <div key={rule.title} className="rounded-xl border border-slate-700/40 p-4"
-                      style={{ background: "rgba(2,4,14,0.7)" }}>
-                      <h4 className="font-orbitron font-semibold text-sm text-slate-200 mb-1.5">
-                        {rule.title}
-                      </h4>
-                      <p className="text-slate-400 text-[12px] leading-relaxed">{rule.text}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}

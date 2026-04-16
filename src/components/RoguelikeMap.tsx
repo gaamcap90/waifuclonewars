@@ -7,6 +7,31 @@ import { CARD_UPGRADES, CARD_DEFS } from "@/data/cards";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { useT } from "@/i18n";
 
+/** Animates a number ticking from previous value to current over ~500ms */
+function useAnimatedNumber(target: number): number {
+  const [displayed, setDisplayed] = useState(target);
+  const prevRef = useRef(target);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const from = prevRef.current;
+    prevRef.current = target;
+    if (from === target) return;
+    const start = Date.now();
+    const dur = 450;
+    const tick = () => {
+      const t = Math.min(1, (Date.now() - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplayed(Math.round(from + (target - from) * eased));
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target]);
+
+  return displayed;
+}
+
 interface Props {
   runState: RunState;
   onSelectNode: (nodeId: string) => void;
@@ -71,13 +96,87 @@ function svgToScreen(
 }
 
 const NODE_META: Record<string, { icon: string; label: string; color: string; glow: string }> = {
-  enemy:    { icon: '⚔️',  label: 'Enemy',      color: '#ef4444', glow: 'rgba(239,68,68,0.6)' },
-  elite:    { icon: '💀',  label: 'Elite',      color: '#f97316', glow: 'rgba(249,115,22,0.6)' },
-  campfire: { icon: '🔥',  label: 'Campfire',   color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
-  merchant: { icon: '🛒',  label: 'Merchant',   color: '#22c55e', glow: 'rgba(34,197,94,0.6)' },
-  treasure: { icon: '📦',  label: 'Treasure',   color: '#eab308', glow: 'rgba(234,179,8,0.6)' },
-  unknown:  { icon: '❓',  label: 'Unknown',    color: '#94a3b8', glow: 'rgba(148,163,184,0.4)' },
-  boss:     { icon: '💀',  label: 'FINAL BOSS', color: '#f43f5e', glow: 'rgba(244,63,94,1.0)' },
+  enemy:    { icon: 'X',  label: 'Enemy',      color: '#ef4444', glow: 'rgba(239,68,68,0.6)' },
+  elite:    { icon: 'E',  label: 'Elite',      color: '#f97316', glow: 'rgba(249,115,22,0.6)' },
+  campfire: { icon: 'R',  label: 'Campfire',   color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
+  merchant: { icon: '$',  label: 'Merchant',   color: '#22c55e', glow: 'rgba(34,197,94,0.6)' },
+  treasure: { icon: 'T',  label: 'Treasure',   color: '#eab308', glow: 'rgba(234,179,8,0.6)' },
+  unknown:  { icon: '?',  label: 'Unknown',    color: '#94a3b8', glow: 'rgba(148,163,184,0.4)' },
+  boss:     { icon: 'B',  label: 'FINAL BOSS', color: '#f43f5e', glow: 'rgba(244,63,94,1.0)' },
+};
+
+/** Compute pointy-top hexagon polygon points */
+function hexPoints(cx: number, cy: number, r: number): string {
+  return Array.from({ length: 6 }, (_, i) => {
+    const angle = (Math.PI / 180) * (60 * i - 30);
+    return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+  }).join(' ');
+}
+
+/** SVG icon paths for each node type (14×14 viewBox, centered at 0,0) */
+const NODE_ICONS: Record<string, (color: string, size: number) => React.ReactNode> = {
+  enemy: (color, s) => (
+    // Two crossed swords (X shape)
+    <g>
+      <line x1={-s * 0.42} y1={-s * 0.42} x2={s * 0.42} y2={s * 0.42} stroke={color} strokeWidth={s * 0.18} strokeLinecap="round" />
+      <line x1={s * 0.42} y1={-s * 0.42} x2={-s * 0.42} y2={s * 0.42} stroke={color} strokeWidth={s * 0.18} strokeLinecap="round" />
+    </g>
+  ),
+  elite: (color, s) => (
+    // Skull-like: circle head + 2 eye dots + teeth line
+    <g>
+      <circle cx={0} cy={-s * 0.1} r={s * 0.38} fill="none" stroke={color} strokeWidth={s * 0.15} />
+      <circle cx={-s * 0.14} cy={-s * 0.14} r={s * 0.08} fill={color} />
+      <circle cx={s * 0.14} cy={-s * 0.14} r={s * 0.08} fill={color} />
+      <line x1={-s * 0.28} y1={s * 0.28} x2={s * 0.28} y2={s * 0.28} stroke={color} strokeWidth={s * 0.12} strokeLinecap="round" />
+    </g>
+  ),
+  campfire: (color, s) => (
+    // Flame shape: diamond with upward point
+    <g>
+      <polygon
+        points={`0,${-s * 0.44} ${s * 0.28},${s * 0.1} 0,${s * 0.28} ${-s * 0.28},${s * 0.1}`}
+        fill={color}
+        opacity={0.85}
+      />
+      <polygon
+        points={`0,${-s * 0.2} ${s * 0.15},${s * 0.15} 0,${s * 0.28} ${-s * 0.15},${s * 0.15}`}
+        fill="rgba(255,255,200,0.7)"
+      />
+    </g>
+  ),
+  merchant: (color, s) => (
+    // Dollar/coin sign
+    <g>
+      <circle cx={0} cy={0} r={s * 0.38} fill="none" stroke={color} strokeWidth={s * 0.14} />
+      <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
+        fontSize={s * 0.52} fontWeight={900} fill={color}
+        fontFamily="monospace" style={{ userSelect: 'none' }}>$</text>
+    </g>
+  ),
+  treasure: (color, s) => (
+    // Diamond (rotated square)
+    <polygon
+      points={`0,${-s * 0.44} ${s * 0.38},0 0,${s * 0.44} ${-s * 0.38},0`}
+      fill={color}
+      opacity={0.9}
+    />
+  ),
+  unknown: (color, s) => (
+    <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
+      fontSize={s * 0.7} fontWeight={900} fill={color}
+      fontFamily="'Orbitron', monospace" style={{ userSelect: 'none' }}>?</text>
+  ),
+  boss: (color, s) => (
+    // Crown shape
+    <g>
+      <polygon
+        points={`${-s * 0.42},${s * 0.22} ${-s * 0.42},${-s * 0.18} ${-s * 0.18},${s * 0.04} 0,${-s * 0.36} ${s * 0.18},${s * 0.04} ${s * 0.42},${-s * 0.18} ${s * 0.42},${s * 0.22}`}
+        fill={color}
+        opacity={0.9}
+      />
+    </g>
+  ),
 };
 
 const TIER_COLOR: Record<string, string> = {
@@ -522,6 +621,7 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
 const CHAR_TO_EXCLUSIVE: Record<string, string> = {
   napoleon: 'Napoleon', genghis: 'Genghis', davinci: 'Da Vinci',
   leonidas: 'Leonidas', sunsin: 'Sun-sin', beethoven: 'Beethoven', huang: 'Huang-chan',
+  nelson: 'Nelson', hannibal: 'Hannibal', picasso: 'Picasso', teddy: 'Teddy', mansa: 'Mansa',
 };
 
 function AbilityUpgradeOverlay({ char, deckIds, upgradedCardDefIds, isUltimate, onClose, onUpgrade }: {
@@ -616,8 +716,8 @@ function AbilityUpgradeOverlay({ char, deckIds, upgradedCardDefIds, isUltimate, 
 }
 
 function NodeTooltipPortal({
-  node, sx, sy,
-}: { node: RunNode; sx: number; sy: number }) {
+  node, sx, sy, isUnlocked,
+}: { node: RunNode; sx: number; sy: number; isUnlocked: boolean }) {
   const { t } = useT();
   const meta = NODE_META[node.type];
   const nodeLabel = (t.roguelike.nodeLabels as Record<string, string>)[node.type] ?? meta.label;
@@ -631,12 +731,22 @@ function NodeTooltipPortal({
 
   return createPortal(
     <div
-      className="fixed z-[9999] pointer-events-none rounded-xl border border-slate-600/60 p-3 shadow-2xl"
-      style={{ background: 'rgba(4,2,18,0.97)', width: W, left, top }}
+      className="fixed z-[9999] pointer-events-none rounded-xl border p-3 shadow-2xl"
+      style={{
+        background: 'rgba(4,2,18,0.97)',
+        borderColor: isUnlocked ? `${meta.color}50` : 'rgba(80,60,100,0.50)',
+        width: W, left, top,
+      }}
     >
       <div className="flex items-center gap-2 mb-2">
         <span className="text-lg">{meta.icon}</span>
-        <span className="font-orbitron font-bold text-sm" style={{ color: meta.color }}>{nodeLabel}</span>
+        <span className="font-orbitron font-bold text-sm" style={{ color: isUnlocked ? meta.color : '#64748b' }}>{nodeLabel}</span>
+        {!isUnlocked && (
+          <span className="ml-auto text-[8px] font-orbitron px-1.5 py-0.5 rounded"
+            style={{ color: '#475569', background: 'rgba(71,85,105,0.18)', border: '1px solid rgba(71,85,105,0.35)' }}>
+            LOCKED
+          </span>
+        )}
       </div>
       {enc && (
         <>
@@ -664,12 +774,30 @@ function NodeTooltipPortal({
 export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onSettings, onAllocateStat, onUpgradeAbility }: Props) {
   const { t } = useT();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [hoveredInfo, setHoveredInfo] = useState<{ node: RunNode; sx: number; sy: number } | null>(null);
+  const [hoveredInfo, setHoveredInfo] = useState<{ node: RunNode; sx: number; sy: number; isUnlocked: boolean } | null>(null);
   const [showDeck, setShowDeck] = useState(false);
   const [detailChar, setDetailChar] = useState<CharacterRunState | null>(null);
   const [abilityUpgradeChar, setAbilityUpgradeChar] = useState<{ char: CharacterRunState; isUltimate: boolean } | null>(null);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const startTime = runState.runStartTime ?? Date.now();
+    setElapsed(Math.floor((Date.now() - startTime) / 1000));
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [runState.runStartTime]);
+
+  const formatRunTime = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+      : `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  };
   const { map, unlockedNodeIds, completedNodeIds, gold, act, characters, deckCardIds, permanentlyDeadIds } = runState as any;
+  const displayedGold = useAnimatedNumber(gold as number);
 
   // Auto-open stat point overlay for the first character with pending points
   useEffect(() => {
@@ -730,7 +858,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
             <span className="text-xl">💰</span>
             <span className="font-orbitron font-black text-lg text-yellow-400"
               style={{ textShadow: '0 0 14px rgba(250,200,0,0.55)' }}>
-              {gold}
+              {displayedGold}
             </span>
           </button>
           <div className="h-6 w-px bg-slate-700/50" />
@@ -745,8 +873,16 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
           </button>
         </div>
 
-        {/* CENTER — spacer */}
-        <div className="flex-1" />
+        {/* CENTER — run timer */}
+        <div className="flex-1 flex justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-base">⏱️</span>
+            <span className="font-orbitron font-bold text-sm text-slate-300"
+              style={{ textShadow: '0 0 10px rgba(148,163,184,0.35)', letterSpacing: '0.05em' }}>
+              {formatRunTime(elapsed)}
+            </span>
+          </div>
+        </div>
 
         {/* RIGHT — settings + abandon */}
         <div className="flex items-center gap-2">
@@ -877,9 +1013,20 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
             {/* Node type legend — bottom of map, inside the canvas */}
             <div className="absolute bottom-2 left-3 right-3 pointer-events-none z-10 flex items-center gap-3 flex-wrap">
               {Object.entries(NODE_META).map(([type, meta]) => (
-                <div key={type} className="flex items-center gap-1">
-                  <span className="text-[11px] leading-none">{meta.icon}</span>
-                  <span className="font-orbitron text-[7px] tracking-wide" style={{ color: meta.color + 'bb' }}>
+                <div key={type} className="flex items-center gap-1.5">
+                  {/* Mini hex icon */}
+                  <svg width="14" height="14" viewBox="-7 -7 14 14" style={{ flexShrink: 0 }}>
+                    <polygon
+                      points={hexPoints(0, 0, 5.5).split(' ').join(' ')}
+                      fill={meta.color + '22'}
+                      stroke={meta.color}
+                      strokeWidth="1"
+                    />
+                    <g style={{ pointerEvents: 'none' }}>
+                      {(NODE_ICONS[type] ?? NODE_ICONS.unknown)(meta.color, 4.5)}
+                    </g>
+                  </svg>
+                  <span className="font-orbitron text-[7px] tracking-wide" style={{ color: meta.color + 'cc' }}>
                     {(t.roguelike.nodeLabels as Record<string, string>)[type] ?? meta.label}
                   </span>
                 </div>
@@ -888,6 +1035,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
 
             <svg
               ref={svgRef}
+              data-tut="map_nodes"
               className="w-full h-full"
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}
               preserveAspectRatio="xMidYMid meet"
@@ -993,9 +1141,9 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
                     opacity={opacity}
                     onClick={() => isUnlocked && !isDone && onSelectNode(node.id)}
                     onMouseEnter={() => {
-                      if (!svgRef.current || !isUnlocked || isDone) return;
+                      if (!svgRef.current || isDone) return;
                       const { x, y } = svgToScreen(svgRef.current, cx, cy);
-                      setHoveredInfo({ node, sx: x, sy: y });
+                      setHoveredInfo({ node, sx: x, sy: y, isUnlocked });
                     }}
                     onMouseLeave={() => setHoveredInfo(null)}
                   >
@@ -1003,33 +1151,28 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
                     {isUnlocked && !isDone && (
                       <>
                         <circle
-                          cx={cx} cy={cy} r={r + 3}
+                          cx={cx} cy={cy} r={r + 4}
                           fill="none"
                           stroke={meta.color}
                           strokeWidth="1.5"
                           opacity="0"
-                        >
-                          <animate attributeName="r" from={r + 3} to={r + 14} dur="2.2s" repeatCount="indefinite" />
-                          <animate attributeName="opacity" from="0.55" to="0" dur="2.2s" repeatCount="indefinite" />
-                        </circle>
+                          style={{ animation: 'anim-map-available-pulse 2.2s ease-out infinite' }}
+                        />
                         <circle
-                          cx={cx} cy={cy} r={r + 3}
+                          cx={cx} cy={cy} r={r + 4}
                           fill="none"
                           stroke={meta.color}
                           strokeWidth="1"
                           opacity="0"
-                        >
-                          <animate attributeName="r" from={r + 3} to={r + 14} dur="2.2s" begin="1.1s" repeatCount="indefinite" />
-                          <animate attributeName="opacity" from="0.35" to="0" dur="2.2s" begin="1.1s" repeatCount="indefinite" />
-                        </circle>
+                          style={{ animation: 'anim-map-available-pulse 2.2s ease-out 1.1s infinite' }}
+                        />
                       </>
                     )}
 
-                    {/* Glow halo — unlocked only, tighter radius than before */}
+                    {/* Glow halo — unlocked only */}
                     {isUnlocked && !isDone && (
-                      <circle
-                        cx={cx} cy={cy}
-                        r={r + (isHov ? 13 : 5)}
+                      <polygon
+                        points={hexPoints(cx, cy, r + (isHov ? 14 : 6))}
                         fill={meta.glow}
                         filter="url(#map-node-glow)"
                         opacity={isHov ? 0.80 : 0.35}
@@ -1058,24 +1201,38 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
                       </>
                     )}
 
-                    {/* Main circle */}
-                    <circle
-                      cx={cx} cy={cy} r={r}
+                    {/* Main hex badge */}
+                    <polygon
+                      points={hexPoints(cx, cy, r)}
                       fill={fillColor}
                       stroke={strokeColor}
                       strokeWidth={strokeW}
                     />
+                    {/* Inner hex ring for depth */}
+                    {!isDone && (
+                      <polygon
+                        points={hexPoints(cx, cy, r * 0.72)}
+                        fill="none"
+                        stroke={strokeColor}
+                        strokeWidth={strokeW * 0.35}
+                        opacity={0.35}
+                      />
+                    )}
 
                     {/* Icon */}
-                    <text
-                      x={cx} y={cy}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fontSize={isDone ? (isBoss ? 26 : 15) : (isBoss ? 28 : 18)}
-                      style={{ userSelect: 'none', pointerEvents: 'none' }}
-                    >
-                      {isDone ? '✓' : meta.icon}
-                    </text>
+                    <g transform={`translate(${cx}, ${cy})`} style={{ pointerEvents: 'none' }}>
+                      {isDone ? (
+                        <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
+                          fontSize={isBoss ? 22 : 13} fontWeight={900}
+                          fill="#22d3ee" fontFamily="'Orbitron', monospace"
+                          style={{ userSelect: 'none' }}>✓</text>
+                      ) : (
+                        (NODE_ICONS[node.type] ?? NODE_ICONS.unknown)(
+                          isUnlocked ? meta.color : strokeColor,
+                          isBoss ? r * 0.72 : r * 0.68
+                        )
+                      )}
+                    </g>
 
                     {/* FINAL BOSS label — always shown, dimmer when locked */}
                     {isBoss && !isDone && (
@@ -1136,6 +1293,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
                 node={hoveredInfo.node}
                 sx={hoveredInfo.sx}
                 sy={hoveredInfo.sy}
+                isUnlocked={hoveredInfo.isUnlocked}
               />
             )}
           </div>

@@ -1,13 +1,16 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { getCharacterPortrait } from "@/utils/portraits";
+import { useT } from "@/i18n";
 
 export function TurnQueueBar({
   gameState,
   onEndTurn,
+  runStartTime,
 }: {
   gameState: any;
   onEndTurn: () => void;
   currentTurnTimer?: number;
+  runStartTime?: number;
 }) {
   const activePlayerId: 0 | 1 = gameState.activePlayerId ?? 0;
   const playerName: string = gameState.players?.[activePlayerId]?.name ?? (activePlayerId === 0 ? "Blue" : "Red");
@@ -21,13 +24,32 @@ export function TurnQueueBar({
   const activeIcon = aliveIcons.find((i: any) => i.id === selectedIconId) ?? aliveIcons[0] ?? null;
   const portrait = activeIcon ? getCharacterPortrait(activeIcon.name) : null;
 
+  const { t } = useT();
   const isDestroyBase = gameState.encounterObjective === 'destroy_base';
   const turnsUntilBombardment = isDestroyBase
     ? (((3 - (turn % 3)) % 3) || 3)
     : null;
 
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!runStartTime) return;
+    setElapsed(Math.floor((Date.now() - runStartTime) / 1000));
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - runStartTime) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [runStartTime]);
+
+  const formatTime = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+      : `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  };
+
   return (
     <div
+      data-tut="turn_queue"
       className="flex items-center gap-2.5 rounded-xl"
       style={{
         background: "rgba(4,2,18,0.96)",
@@ -36,6 +58,22 @@ export function TurnQueueBar({
         padding: "5px 14px 5px 6px",
       }}
     >
+      {/* Run timer — only shown in roguelike runs */}
+      {runStartTime !== undefined && (
+        <>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[11px] leading-none">⏱️</span>
+            <span
+              className="font-orbitron font-bold text-[11px] leading-none"
+              style={{ color: '#94a3b8', letterSpacing: '0.06em' }}
+            >
+              {formatTime(elapsed)}
+            </span>
+          </div>
+          <div className="w-px h-6 shrink-0" style={{ background: "rgba(255,255,255,0.08)" }} />
+        </>
+      )}
+
       {/* Active icon portrait */}
       <div className="shrink-0 relative" style={{ width: 36, height: 36 }}>
         <div style={{
@@ -68,7 +106,7 @@ export function TurnQueueBar({
       {/* Turn + player name */}
       <div className="min-w-0">
         <div className="font-orbitron text-[9px] tracking-widest text-slate-500 leading-none mb-0.5">
-          TURN {turn} · {activeIcon?.name ?? playerName}
+          {t.turnQueue.turn} {turn} · {activeIcon?.name ?? playerName}
         </div>
         <div
           className="font-orbitron text-[13px] font-black leading-none truncate"
@@ -93,12 +131,12 @@ export function TurnQueueBar({
           >
             <span className="text-sm leading-none">💥</span>
             <div>
-              <div className="font-orbitron text-[7px] tracking-widest text-slate-500 leading-none">BOMBARDMENT</div>
+              <div className="font-orbitron text-[7px] tracking-widest text-slate-500 leading-none">{t.turnQueue.bombardment}</div>
               <div
                 className="font-orbitron text-[11px] font-bold leading-none mt-0.5"
                 style={{ color: turnsUntilBombardment === 1 ? '#f87171' : '#fbbf24' }}
               >
-                {turnsUntilBombardment === 1 ? 'NEXT TURN' : `IN ${turnsUntilBombardment} TURNS`}
+                {turnsUntilBombardment === 1 ? t.turnQueue.nextTurn : t.turnQueue.inNTurns.replace('{n}', String(turnsUntilBombardment))}
               </div>
             </div>
           </div>
@@ -116,17 +154,24 @@ export function TurnQueueBar({
         </div>
       ) : (
         <button
+          data-tut="endturn_btn"
           onClick={onEndTurn}
-          className="font-orbitron text-[11px] font-bold px-4 py-2 rounded-lg transition-transform hover:scale-105 active:scale-95"
+          className="font-orbitron text-[11px] font-bold px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95 relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, rgba(220,40,40,0.85) 0%, rgba(150,15,15,0.90) 100%)",
-            border: "1px solid rgba(239,68,68,0.65)",
-            color: "#fca5a5",
-            letterSpacing: "0.12em",
-            animation: "btn-end-turn-pulse 2s ease-in-out infinite",
+            background: "linear-gradient(135deg, rgba(240,50,50,0.92) 0%, rgba(160,15,15,0.96) 100%)",
+            border: "1px solid rgba(255,80,80,0.75)",
+            color: "#fff",
+            letterSpacing: "0.14em",
+            textShadow: "0 0 12px rgba(255,120,120,0.9)",
+            animation: "btn-end-turn-pulse 1.8s ease-in-out infinite",
           }}
         >
-          END TURN
+          {/* Shimmer sweep */}
+          <span className="absolute inset-0 pointer-events-none" style={{
+            background: "linear-gradient(105deg, transparent 30%, rgba(255,200,200,0.18) 50%, transparent 70%)",
+            animation: "card-foil-sweep 2.2s ease-in-out infinite",
+          }} />
+          {t.turnQueue.endTurn}
         </button>
       )}
     </div>

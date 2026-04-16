@@ -142,6 +142,11 @@ All colors MUST be HSL.
   100% { transform: translateY(0px); }
 }
 
+@keyframes lore-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(34,211,238,0.2), inset 0 0 8px rgba(34,211,238,0.04); }
+  50%       { box-shadow: 0 0 22px rgba(34,211,238,0.45), inset 0 0 16px rgba(34,211,238,0.1); }
+}
+
 @keyframes pulseSoft {
   0%,100% { opacity: .65; filter: saturate(100%); }
   50%     { opacity: .95; filter: saturate(120%); }
@@ -170,9 +175,16 @@ All colors MUST be HSL.
 }
 
 @keyframes anim-float-up-fade {
-  0%   { transform: translateY(0px) scale(1);    opacity: 1; }
-  20%  { transform: translateY(-8px) scale(1.1); opacity: 1; }
-  100% { transform: translateY(-58px) scale(0.9); opacity: 0; }
+  0%   { transform: translateY(0px) scale(1);     opacity: 1; }
+  18%  { transform: translateY(-10px) scale(1.12); opacity: 1; }
+  100% { transform: translateY(-64px) scale(0.85); opacity: 0; }
+}
+/* Big-hit variant: punchy scale-pop before rising */
+@keyframes anim-float-up-big {
+  0%   { transform: translateY(0px)  scale(0.6);  opacity: 0; }
+  12%  { transform: translateY(-4px) scale(1.35); opacity: 1; }
+  30%  { transform: translateY(-14px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-72px) scale(0.80); opacity: 0; }
 }
 
 @keyframes anim-impact {
@@ -303,9 +315,56 @@ All colors MUST be HSL.
   100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.30); filter: brightness(0.5); }
 }
 
+@keyframes anim-death-spark {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+  60%  { opacity: 0.8; transform: translate(var(--spark-x), var(--spark-y)) scale(0.7); }
+  100% { opacity: 0; transform: translate(var(--spark-x), var(--spark-y)) scale(0.1); }
+}
+
 @keyframes anim-idle-bob {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-2px); }
+}
+
+/* ── Movement trail — ghost afterimage fades out ──────────────────── */
+@keyframes anim-move-trail {
+  0%   { opacity: 0.55; transform: scale(1); }
+  100% { opacity: 0;    transform: scale(0.75); }
+}
+
+/* ── Sprite personality animations ────────────────────────────────── */
+
+@keyframes anim-sprite-active {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  40%       { transform: translateY(-5px) scale(1.04); }
+  70%       { transform: translateY(-2px) scale(1.01); }
+}
+@keyframes anim-sprite-hit {
+  0%   { transform: translateX(0)    rotate(0deg);   filter: brightness(1); }
+  12%  { transform: translateX(-9px) rotate(-6deg);  filter: brightness(4) saturate(0.1); }
+  28%  { transform: translateX(6px)  rotate(4deg);   filter: brightness(1.8); }
+  50%  { transform: translateX(-3px) rotate(-1deg);  filter: brightness(1.1); }
+  100% { transform: translateX(0)    rotate(0deg);   filter: brightness(1); }
+}
+@keyframes anim-sprite-attack {
+  0%   { transform: translateX(0)    rotate(0deg)   scaleX(1);    filter: brightness(1); }
+  22%  { transform: translateX(12px) rotate(10deg)  scaleX(1.1);  filter: brightness(1.6); }
+  42%  { transform: translateX(-4px) rotate(-2deg)  scaleX(0.97); }
+  65%  { transform: translateX(2px)  rotate(1deg); }
+  100% { transform: translateX(0)    rotate(0deg)   scaleX(1);    filter: brightness(1); }
+}
+@keyframes anim-sprite-ability {
+  0%   { transform: scale(1)    rotate(0deg);  filter: brightness(1)   saturate(1); }
+  18%  { transform: scale(1.18) rotate(-4deg); filter: brightness(2.4) saturate(3); }
+  38%  { transform: scale(0.93) rotate(2deg);  filter: brightness(1.5) saturate(2); }
+  60%  { transform: scale(1.06) rotate(-1deg); filter: brightness(1.2) saturate(1.3); }
+  100% { transform: scale(1)    rotate(0deg);  filter: brightness(1)   saturate(1); }
+}
+@keyframes anim-sprite-death {
+  0%   { transform: rotate(0deg)   translateY(0px);  opacity: 1;   filter: brightness(1); }
+  15%  { transform: rotate(-8deg)  translateY(-7px); opacity: 1;   filter: brightness(1.8); }
+  45%  { transform: rotate(-55deg) translateY(4px);  opacity: 0.7; filter: brightness(0.8) saturate(0.4); }
+  100% { transform: rotate(-90deg) translateY(14px); opacity: 0;   filter: brightness(0.3) saturate(0); }
 }
 
 @keyframes anim-battle-curtain {
@@ -419,6 +478,41 @@ All colors MUST be HSL.
   100% { left: 170%; }
 }
 
+/* ── Terrain ambient particle float ─────────────────────────────── */
+
+@keyframes anim-particle-float {
+  0%   { transform: translate(0px, 0px) scale(1.0); opacity: 0; }
+  12%  { opacity: 0.85; }
+  80%  { opacity: 0.60; }
+  100% { transform: translate(var(--px, 0px), -28px) scale(0.4); opacity: 0; }
+}
+
+/* ── Poison drip — downward dot fade ────────────────────────────── */
+
+@keyframes anim-poison-drip {
+  0%   { transform: translateY(-4px) scale(1.1); opacity: 0.9; }
+  70%  { opacity: 0.7; }
+  100% { transform: translateY(9px)  scale(0.5); opacity: 0; }
+}
+
+/* ── Stun crackle — random jitter and fade ──────────────────────── */
+
+@keyframes anim-stun-crackle {
+  0%   { transform: translate(0, 0)   scale(1.0); opacity: 0.9; }
+  25%  { transform: translate(var(--cx, 3px), var(--cy, -3px)) scale(1.3); opacity: 0.7; }
+  55%  { transform: translate(var(--cx2, -2px), var(--cy2, 2px)) scale(0.8); opacity: 0.5; }
+  100% { transform: translate(0, 0)   scale(0.2); opacity: 0; }
+}
+
+/* ── Respawn materialise — blue-white shimmer expand ────────────── */
+
+@keyframes anim-respawn-flash {
+  0%   { transform: scale(0.3); opacity: 0.0; filter: brightness(6) saturate(0.2); }
+  18%  { transform: scale(1.2); opacity: 1.0; filter: brightness(4) saturate(0.4); }
+  55%  { transform: scale(1.0); opacity: 0.8; filter: brightness(1.5) saturate(1.5); }
+  100% { transform: scale(1.0); opacity: 0.0; filter: brightness(1) saturate(1); }
+}
+
 /* ── Burning forest flicker ──────────────────────────────────────── */
 
 @keyframes anim-fire-flicker {
@@ -427,6 +521,39 @@ All colors MUST be HSL.
   45%  { opacity: 0.55; }
   68%  { opacity: 0.82; }
   100% { opacity: 0.48; }
+}
+
+/* ── Water ripple — expanding fading ring ───────────────────────── */
+
+@keyframes anim-water-ripple {
+  0%   { transform: scale(0.10); opacity: 0.80; }
+  60%  { opacity: 0.28; }
+  100% { transform: scale(2.20); opacity: 0.00; }
+}
+
+/* ── Snow drift — gentle lateral float ──────────────────────────── */
+
+@keyframes anim-snow-drift {
+  0%   { transform: translate(0px, 0px) scale(1.0); opacity: 0; }
+  10%  { opacity: 0.88; }
+  80%  { opacity: 0.50; }
+  100% { transform: translate(var(--px, 4px), -24px) scale(0.22); opacity: 0; }
+}
+
+/* ── Desert heat shimmer — slow opacity breathe ──────────────────── */
+
+@keyframes anim-heat-shimmer {
+  0%   { opacity: 0.12; }
+  28%  { opacity: 0.70; }
+  62%  { opacity: 0.30; }
+  100% { opacity: 0.12; }
+}
+
+/* ── Mana crystal hex rim — pulsing SVG stroke glow ─────────────── */
+
+@keyframes anim-crystal-rim {
+  0%,  100% { stroke-opacity: 0.30; }
+  50%        { stroke-opacity: 1.00; }
 }
 
 /* ── Active unit dashed ring (SVG stroke-dashoffset) ─────────────── */
@@ -458,6 +585,13 @@ All colors MUST be HSL.
   30%  { transform: translate(18px, -22px) scale(1.08); }
   65%  { transform: translate(-12px, 14px) scale(0.94); }
   100% { transform: translate(0px, 0px) scale(1.0); }
+}
+@keyframes anim-menu-mote {
+  0%   { transform: translate(0px, 0px); opacity: 0.4; }
+  25%  { transform: translate(8px, -14px); opacity: 0.75; }
+  50%  { transform: translate(-6px, -24px); opacity: 0.5; }
+  75%  { transform: translate(10px, -10px); opacity: 0.8; }
+  100% { transform: translate(0px, 0px); opacity: 0.4; }
 }
 
 /* ── Menu separator shimmer ──────────────────────────────────────── */
@@ -497,4 +631,226 @@ All colors MUST be HSL.
   0%   { transform: translate(-50%, -50%) scale(0.8); opacity: 0.9; }
   40%  { transform: translate(-50%, -70%) scale(1.15); opacity: 1.0; }
   100% { transform: translate(-50%, -110%) scale(0.7); opacity: 0; }
+}
+
+/* ── 10: Debuff badge pulse — high urgency ───────────────────────────── */
+@keyframes anim-debuff-pulse {
+  0%, 100% { box-shadow: 0 0 4px var(--debuff-color), 0 1px 4px rgba(0,0,0,0.8); transform: scale(1.0); }
+  50%       { box-shadow: 0 0 10px var(--debuff-color), 0 2px 8px rgba(0,0,0,0.8); transform: scale(1.08); }
+}
+
+/* ── 4: Screen transition veil — directional wipe ──────────────────── */
+@keyframes anim-veil-out {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes anim-veil-in {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes anim-veil-wipe-out {
+  0%   { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+@keyframes anim-veil-wipe-in {
+  0%   { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 0 0 100%); }
+}
+@keyframes anim-veil-emblem {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+  100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.0); }
+}
+
+/* ── C: Victory/Defeat cinematic animations ─────────────────────────── */
+@keyframes anim-victory-overlay {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes anim-victory-panel {
+  0%   { opacity: 0; transform: translateY(55px) scale(0.88); filter: brightness(2.0); }
+  55%  { opacity: 1; transform: translateY(-6px) scale(1.02); filter: brightness(1.1); }
+  75%  { transform: translateY(2px) scale(0.995); }
+  100% { transform: translateY(0px) scale(1.0); filter: brightness(1.0); }
+}
+@keyframes anim-victory-icon {
+  0%   { opacity: 0; transform: translateY(-40px) scale(0.3); }
+  55%  { opacity: 1; transform: translateY(8px) scale(1.15); }
+  75%  { transform: translateY(-3px) scale(0.95); }
+  90%  { transform: translateY(2px) scale(1.02); }
+  100% { transform: translateY(0px) scale(1.0); }
+}
+@keyframes anim-victory-title {
+  0%   { opacity: 0; transform: scaleX(0.2) scaleY(1.4); letter-spacing: 0.5em; filter: blur(8px); }
+  60%  { opacity: 1; transform: scaleX(1.04) scaleY(0.97); letter-spacing: -0.02em; filter: blur(0px); }
+  100% { opacity: 1; transform: scale(1.0); }
+}
+@keyframes anim-victory-label {
+  0%   { opacity: 0; letter-spacing: 0.05em; }
+  100% { opacity: 1; letter-spacing: 0.5em; }
+}
+@keyframes anim-victory-content {
+  0%   { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes anim-victory-particle {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.2); }
+}
+@keyframes anim-victory-glow-pulse {
+  0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(1.0); }
+  50%       { opacity: 0.65; transform: translate(-50%, -50%) scale(1.15); }
+}
+/* ── D: Turn transition banner ───────────────────────────────────────── */
+@keyframes anim-turn-banner-in {
+  0%   { opacity: 0; transform: scaleX(0.02) scaleY(1); }
+  25%  { opacity: 1; transform: scaleX(1.04) scaleY(1); }
+  40%  { transform: scaleX(1.0) scaleY(1); }
+  75%  { opacity: 1; transform: scaleX(1.0) scaleY(1); }
+  100% { opacity: 0; transform: scaleX(1.0) scaleY(1); }
+}
+@keyframes anim-turn-banner-text {
+  0%   { opacity: 0; letter-spacing: 0.8em; filter: blur(6px); }
+  30%  { opacity: 1; letter-spacing: 0.15em; filter: blur(0); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes anim-turn-banner-line {
+  0%   { transform: scaleX(0); opacity: 0; }
+  30%  { transform: scaleX(1); opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── H: Reward card reveal ──────────────────────────────────────────── */
+@keyframes anim-reward-card-reveal {
+  0%   { opacity: 0; transform: translateY(24px) scale(0.88) rotateX(12deg); filter: brightness(2.0); }
+  55%  { opacity: 1; transform: translateY(-4px) scale(1.02); filter: brightness(1.15); }
+  100% { opacity: 1; transform: translateY(0) scale(1.0); filter: brightness(1.0); }
+}
+
+/* ── G: Mana pip fill animation ──────────────────────────────────────── */
+@keyframes anim-pip-fill {
+  0%   { transform: scale(0.4); opacity: 0; box-shadow: 0 0 0px rgba(96,165,250,0); }
+  55%  { transform: scale(1.3); opacity: 1; box-shadow: 0 0 10px rgba(96,165,250,0.9); }
+  100% { transform: scale(1.0); box-shadow: 0 0 4px rgba(96,165,250,0.55); }
+}
+@keyframes anim-pip-drain {
+  0%   { transform: scale(1.0); opacity: 1; }
+  100% { transform: scale(0.3); opacity: 0; }
+}
+@keyframes anim-mana-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(96,165,250,0.4); }
+  50%       { box-shadow: 0 0 14px rgba(96,165,250,0.85); }
+}
+
+/* ── Game-style toast overrides ────────────────────────────────────── */
+.game-toast-error {
+  background: rgba(40,3,3,0.97) !important;
+  border-color: rgba(239,68,68,0.65) !important;
+  color: #fca5a5 !important;
+  box-shadow: 0 0 18px rgba(200,20,20,0.30), 0 4px 24px rgba(0,0,0,0.75) !important;
+}
+.game-toast-success {
+  background: rgba(2,20,10,0.97) !important;
+  border-color: rgba(52,211,153,0.60) !important;
+  color: #6ee7b7 !important;
+  box-shadow: 0 0 18px rgba(20,180,100,0.25), 0 4px 24px rgba(0,0,0,0.75) !important;
+}
+.game-toast-warning {
+  background: rgba(30,15,2,0.97) !important;
+  border-color: rgba(251,146,60,0.60) !important;
+  color: #fdba74 !important;
+  box-shadow: 0 0 18px rgba(200,100,10,0.25), 0 4px 24px rgba(0,0,0,0.75) !important;
+}
+
+/* ── Tutorial panel enter animation (delayed so it appears after screen transitions) */
+@keyframes tut-panel-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tut-panel-enter {
+  animation: tut-panel-enter 0.25s ease-out 0.35s both;
+}
+
+/* ── Tutorial highlight pulse animations ─────────────────────────── */
+@keyframes tut-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,211,238,0); }
+  50%       { box-shadow: 0 0 0 4px rgba(34,211,238,0.55), 0 0 20px rgba(34,211,238,0.25); }
+}
+@keyframes tut-glow {
+  0%, 100% { filter: brightness(1); }
+  50%       { filter: brightness(1.18) drop-shadow(0 0 6px rgba(34,211,238,0.7)); }
+}
+
+/* stats panel — highlight */
+body.tut-hl-stats_panel [data-tut="stats_panel"] {
+  animation: tut-pulse 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+/* hand cards — highlight */
+body.tut-hl-hand_cards [data-tut="hand_cards"] {
+  animation: tut-pulse 1.4s ease-in-out infinite;
+  border-radius: 12px;
+}
+/* mana display */
+body.tut-hl-mana_display [data-tut="mana_display"] {
+  animation: tut-pulse 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+/* end turn button */
+body.tut-hl-endturn_btn [data-tut="endturn_btn"] {
+  animation: tut-pulse 1s ease-in-out infinite;
+  border-radius: 10px;
+}
+/* turn queue */
+body.tut-hl-turn_queue [data-tut="turn_queue"] {
+  animation: tut-pulse 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+/* enemy highlight — pulse red hex tiles */
+body.tut-hl-enemy [data-tut="enemy"] {
+  animation: tut-glow 1.2s ease-in-out infinite;
+}
+/* map nodes */
+body.tut-hl-map_nodes [data-tut="map_nodes"] {
+  animation: tut-pulse 1.2s ease-in-out infinite;
+  border-radius: 8px;
+}
+/* reward cards */
+body.tut-hl-reward_cards [data-tut="reward_cards"] {
+  animation: tut-pulse 1.4s ease-in-out infinite;
+  border-radius: 12px;
+}
+/* move tiles — blue moveable hexes glow brighter */
+body.tut-hl-move_tiles [data-tut="move_tiles"] {
+  animation: tut-glow 1s ease-in-out infinite;
+}
+/* basic attack card — glow the target card, dim + disable all others */
+body.tut-hl-basic_attack_card [data-card-def] {
+  opacity: 0.25;
+  filter: grayscale(0.5);
+  pointer-events: none !important;
+  transition: opacity 0.2s, filter 0.2s;
+}
+body.tut-hl-basic_attack_card [data-card-def="shared_basic_attack"] {
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto !important;
+  animation: tut-pulse 1.2s ease-in-out infinite;
+  border-radius: 10px;
+}
+/* shields up card — same pattern */
+body.tut-hl-shields_up_card [data-card-def] {
+  opacity: 0.25;
+  filter: grayscale(0.5);
+  pointer-events: none !important;
+  transition: opacity 0.2s, filter 0.2s;
+}
+body.tut-hl-shields_up_card [data-card-def="shared_shield"] {
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto !important;
+  animation: tut-pulse 1.2s ease-in-out infinite;
+  border-radius: 10px;
 }

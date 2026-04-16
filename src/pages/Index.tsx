@@ -7,7 +7,6 @@ import MainMenu from "@/components/MainMenu";
 import LoadingScreen from "@/components/LoadingScreen";
 import HistoricalArchives from "@/components/HistoricalArchives";
 import GameSettings from "@/components/GameSettings";
-import GameRules from "@/components/GameRules";
 import HorizontalGameUI from "@/components/HorizontalGameUI";
 import EscapeMenu from "@/components/EscapeMenu";
 import CharacterSelection from "@/components/CharacterSelection";
@@ -18,7 +17,7 @@ import { CampfireScreen, MerchantScreen, TreasureScreen, UnknownScreen, RunDefea
 import useGameState from "@/hooks/useGameStateNew";
 import { useRunState } from "@/hooks/useRunState";
 import { useAudio } from "@/hooks/useAudio";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster, toast } from "@/components/ui/sonner";
 import CombatLogPanel from "@/ui/CombatLogPanel";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { CharacterId } from "@/types/roguelike";
@@ -27,24 +26,66 @@ import { CARD_DEFS, CARD_UPGRADES } from "@/data/cards";
 import MusicPlayer from "@/components/MusicPlayer";
 import { useAnimations, nextAnimId } from "@/hooks/useAnimations";
 import { getCharacterPortrait } from "@/utils/portraits";
+import { useTutorialState, loadTutorialDone } from "@/hooks/useTutorialState";
+import { TutorialOverlay, TutorialCompleteOverlay } from "@/components/tutorial/TutorialOverlay";
+import { TUTORIAL_CHARS } from "@/data/tutorialData";
+import type { TutorialRunNode } from "@/data/tutorialData";
+import { useAchievements } from "@/hooks/useAchievements";
+import { AchievementToast } from "@/components/AchievementToast";
+
+type GameMode = 'loading' | 'menu' | 'archives' | 'settings' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated' | 'runVictory';
+
+// Screens that open as overlays — no fade transition
+const OVERLAY_MODES = new Set<GameMode>(['settings', 'archives']);
+
+/** Capture final HP and passive stack values from all player icons after combat. */
+function captureIconStates(playerIcons: any[]): { finalHps: Record<string, number>; finalPassiveStacks: Record<string, number> } {
+  const finalHps: Record<string, number> = {};
+  const finalPassiveStacks: Record<string, number> = {};
+  (['napoleon', 'genghis', 'davinci', 'leonidas', 'sunsin', 'beethoven', 'huang', 'nelson', 'hannibal', 'picasso', 'teddy', 'mansa'] as CharacterId[]).forEach(id => {
+    const icon = playerIcons.find((i: any) => i.name.toLowerCase().includes(
+      id === 'davinci' ? 'vinci' : id === 'sunsin' ? 'sun-sin' : id === 'teddy' ? 'teddy' : id
+    ));
+    finalHps[id] = icon?.stats.hp ?? 0;
+    if ((icon?.passiveStacks ?? 0) > 0) finalPassiveStacks[id] = icon!.passiveStacks!;
+  });
+  return { finalHps, finalPassiveStacks };
+}
 
 const Index = () => {
-  const [gameMode, setGameMode] = useState<'loading' | 'menu' | 'archives' | 'settings' | 'rules' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated' | 'runVictory'>('loading');
-  const handleLoadingComplete = useCallback(() => setGameMode('menu'), []);
+  const [gameMode, setGameModeRaw] = useState<GameMode>('loading');
+  const [veil, setVeil] = useState<'idle' | 'out' | 'in'>('idle');
+  const veilTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Drop-in replacement for setGameMode — fades to black, switches, fades back
+  const setGameMode = useCallback((mode: GameMode) => {
+    if (OVERLAY_MODES.has(mode) || OVERLAY_MODES.has(gameMode as GameMode)) {
+      setGameModeRaw(mode);
+      return;
+    }
+    if (veilTimerRef.current) clearTimeout(veilTimerRef.current);
+    setVeil('out');
+    veilTimerRef.current = setTimeout(() => {
+      setGameModeRaw(mode);
+      setVeil('in');
+      veilTimerRef.current = setTimeout(() => setVeil('idle'), 380);
+    }, 260);
+  }, [gameMode]);
+
+  const handleLoadingComplete = useCallback(() => setGameModeRaw('menu'), []);
 
   // Kick off portrait preloads once on mount so images are cached before first battle
   useEffect(() => { preloadPortraits(); }, []);
   const [pendingMode, setPendingMode] = useState<'singleplayer' | 'multiplayer'>('singleplayer');
   const [selectedCharacters, setSelectedCharacters] = useState<any[]>([]);
   const [showEscapeMenu, setShowEscapeMenu] = useState(false);
-  const [prevModeBeforeRules, setPrevModeBeforeRules] = useState<string | null>(null);
   const [settingsReturnMode, setSettingsReturnMode] = useState<string>('menu');
   const [hoveredTile, setHoveredTile] = useState<any>(null);
   const [hoveredCardRange, setHoveredCardRange] = useState<number | null>(null);
   const [hoveredCardExecutorId, setHoveredCardExecutorId] = useState<string | null>(null);
   const [hoveredEnemyAbilityRange, setHoveredEnemyAbilityRange] = useState<{ iconId: string; range: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const { runState, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, upgradeSharedCard, removeCardFromDeck, addItemToCharacter, removeItemFromCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility } = useRunState();
+  const { runState, hasSavedRun, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, upgradeSharedCard, removeCardFromDeck, addItemToCharacter, removeItemFromCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility, startTutorialRun } = useRunState();
   const [pendingEventItem, setPendingEventItem] = useState<import('@/types/roguelike').RunItem | null>(null);
   const [pendingEventItemSource, setPendingEventItemSource] = useState<'event' | 'merchant'>('event');
   // Shown after events that add a curse — display the curse card before going back to map
@@ -57,8 +98,18 @@ const Index = () => {
   const { t } = useT();
   const { playSound, playMusic, stopMusic } = useAudio();
   const { animations, addAnimation } = useAnimations();
+  const { tutorialState, currentStep, totalStepsInStage, stageId, startTutorial, skipTutorial, advanceTutorial, setTutorialStage, clearJustCompleted } = useTutorialState();
+  const { fireEvent, toastQueue, dismissToast, isLoreUnlocked, isUnlocked, stats } = useAchievements();
+  // Tracks which characters used their ultimate in the current fight (reset on fight start)
+  const fightUltimatesRef = useRef<Set<string>>(new Set());
+  // Tracks whether any player icon took damage in the current fight
+  const fightDamageTakenRef = useRef(false);
+  // Snapshot of player icon HPs at fight start (to detect no-damage runs)
+  const fightStartHpRef = useRef<Record<string, number>>({});
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(!loadTutorialDone());
   const [turnFlash, setTurnFlash] = useState<0 | 1 | null>(null);
   const [showEnemyBanner, setShowEnemyBanner] = useState(false);
+  const [showPlayerBanner, setShowPlayerBanner] = useState(false);
   const [hideUI, setHideUI] = useState(false);
   const [shakeActive, setShakeActive] = useState(false);
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +153,7 @@ const Index = () => {
         if (delta < -0.5) {
           // Damage received
           const dmg = Math.round(-delta);
+          if (icon.playerId === 0) fightDamageTakenRef.current = true;
           addAnimation({
             id: nextAnimId('dmg'),
             type: 'damage',
@@ -137,26 +189,35 @@ const Index = () => {
             playSound('unit_death');
           }
         } else if (delta > 0.5) {
-          // Healing received
-          const heal = Math.round(delta);
-          addAnimation({
-            id: nextAnimId('heal'),
-            type: 'heal',
-            position: icon.position,
-            value: heal,
-          });
-          addAnimation({
-            id: nextAnimId('aura'),
-            type: 'aura',
-            position: icon.position,
-            color: 'rgba(80,255,140,0.85)',
-          });
-          addAnimation({
-            id: nextAnimId('heal_ring'),
-            type: 'heal_ring',
-            position: icon.position,
-            color: 'rgba(80,255,140,0.85)',
-          });
+          if (prev.hp <= 0 && currHp > 0) {
+            // Respawn — unit materialises from nothing
+            addAnimation({ id: nextAnimId('cast'),      type: 'cast',      position: icon.position, color: 'rgba(140,200,255,0.95)' });
+            addAnimation({ id: nextAnimId('shield'),    type: 'shield',    position: icon.position, color: 'rgba(120,180,255,0.90)' });
+            addAnimation({ id: nextAnimId('aura'),      type: 'aura',      position: icon.position, color: 'rgba(160,220,255,0.80)' });
+            addAnimation({ id: nextAnimId('heal_ring'), type: 'heal_ring', position: icon.position, color: 'rgba(100,180,255,0.75)' });
+            playSound('ability_cast');
+          } else {
+            // Normal healing received
+            const heal = Math.round(delta);
+            addAnimation({
+              id: nextAnimId('heal'),
+              type: 'heal',
+              position: icon.position,
+              value: heal,
+            });
+            addAnimation({
+              id: nextAnimId('aura'),
+              type: 'aura',
+              position: icon.position,
+              color: 'rgba(80,255,140,0.85)',
+            });
+            addAnimation({
+              id: nextAnimId('heal_ring'),
+              type: 'heal_ring',
+              position: icon.position,
+              color: 'rgba(80,255,140,0.85)',
+            });
+          }
         }
       }
 
@@ -170,7 +231,10 @@ const Index = () => {
           color: icon.playerId === 0 ? 'rgba(100,180,255,0.7)' : 'rgba(255,100,100,0.7)',
         });
         // Only play move sound for player team (avoid noise during AI multi-move)
-        if (icon.playerId === 0) playSound('card_play');
+        if (icon.playerId === 0) {
+          playSound('card_play');
+          advanceTutorial('any_move');
+        }
       }
 
       snap.set(icon.id, { hp: currHp, q: icon.position.q, r: icon.position.r });
@@ -207,6 +271,9 @@ const Index = () => {
       if (gameState.activePlayerId === 1) {
         setShowEnemyBanner(true);
         setTimeout(() => setShowEnemyBanner(false), 1600);
+      } else {
+        setShowPlayerBanner(true);
+        setTimeout(() => setShowPlayerBanner(false), 1400);
       }
     }
     prevActivePlayerRef.current = gameState.activePlayerId;
@@ -288,15 +355,93 @@ const Index = () => {
     prevHandSizeRef.current = hand.length;
   }, [(gameState as any).hand?.length]);
 
-  // ── SFX: victory / defeat ─────────────────────────────────────────────────
+  // ── SFX: victory / defeat + fight_ended achievement event ───────────────────
   const prevPhaseRef = useRef(gameState.phase);
   useEffect(() => {
     if (gameState.phase !== prevPhaseRef.current) {
-      if (gameState.phase === 'victory') playSound('victory');
-      if (gameState.phase === 'defeat')  playSound('defeat');
+      if (gameState.phase === 'victory') {
+        playSound('victory');
+        advanceTutorial('battle_won');
+        // Fire fight_ended achievement event (skip during tutorial runs)
+        if (!runState?.isTutorialRun) {
+          const playerIcons = gameState.players[0]?.icons ?? [];
+          const enemyIcons  = gameState.players[1]?.icons ?? [];
+          const alivePlayerIcons = playerIcons.filter((i: any) => i.isAlive);
+          const turns = gameState.currentTurn ?? 1;
+          const deadEnemies = enemyIcons.filter((i: any) => !i.isAlive);
+          fireEvent('fight_ended', {
+            won:            true,
+            turnsElapsed:   turns,
+            enemiesKilled:  deadEnemies.length,
+            killedEnemyNames: deadEnemies.map((i: any) => i.name),
+            allAlive:       alivePlayerIcons.length === playerIcons.length,
+            oneCloneAlive:  alivePlayerIcons.length === 1,
+            noDamageTaken:  !fightDamageTakenRef.current,
+            anyAt1Hp:       alivePlayerIcons.some((i: any) => i.stats.hp <= 1),
+            survivedLethal: false,
+            napoleonUltimate: fightUltimatesRef.current.has('napoleon'),
+            genghisUltimate:  fightUltimatesRef.current.has('genghis'),
+          });
+          if (turns === 1) fireEvent('fight_1_turn');
+        }
+        fightUltimatesRef.current = new Set();
+        fightDamageTakenRef.current = false;
+      }
+      if (gameState.phase === 'defeat') {
+        playSound('defeat');
+        if (!runState?.isTutorialRun) {
+          fireEvent('fight_ended', {
+            won: false, turnsElapsed: gameState.currentTurn ?? 1,
+            enemiesKilled: 0, allAlive: false, oneCloneAlive: false,
+            noDamageTaken: false, anyAt1Hp: false, survivedLethal: false,
+            napoleonUltimate: false, genghisUltimate: false,
+          });
+        }
+        fightUltimatesRef.current = new Set();
+        fightDamageTakenRef.current = false;
+      }
     }
     prevPhaseRef.current = gameState.phase;
   }, [gameState.phase]);
+
+  // ── Tutorial complete → fire achievement event ───────────────────────────
+  useEffect(() => {
+    if (tutorialState.justCompleted) fireEvent('tutorial_complete');
+  }, [tutorialState.justCompleted]);
+
+  // ── Tutorial: skip victory screen → go straight to rewards ──────────────
+  const tutorialVictoryHandledRef = useRef(false);
+  useEffect(() => {
+    if (gameState.phase !== 'victory') { tutorialVictoryHandledRef.current = false; return; }
+    if (!runState?.isTutorialRun || gameMode !== 'singleplayer' || !activeNodeId) return;
+    if (tutorialVictoryHandledRef.current) return;
+    tutorialVictoryHandledRef.current = true;
+
+    const allIcons = gameState.players[0].icons;
+    const finalHps: Record<string, number> = {};
+    const finalPassiveStacks: Record<string, number> = {};
+    (['napoleon', 'genghis', 'davinci', 'leonidas', 'sunsin', 'beethoven', 'huang', 'nelson', 'hannibal', 'picasso', 'teddy', 'mansa'] as CharacterId[]).forEach(id => {
+      const icon = allIcons.find(i => i.name.toLowerCase().includes(
+        id === 'davinci' ? 'vinci' : id === 'sunsin' ? 'sun-sin' : id === 'teddy' ? 'teddy' : id
+      ));
+      // Only record HP for icons that actually participated — characters not in this battle
+      // are omitted so completeCombat keeps their existing currentHp instead of zeroing them out
+      if (icon) {
+        finalHps[id] = icon.stats.hp;
+        if ((icon.passiveStacks ?? 0) > 0) finalPassiveStacks[id] = icon.passiveStacks!;
+      }
+    });
+    completeCombat({
+      nodeId: activeNodeId,
+      won: true,
+      turnsElapsed: gameState.currentTurn ?? 1,
+      finalHps: finalHps as any,
+      finalPassiveStacks,
+      enemiesKilled: (gameState.players[1]?.icons ?? []).filter(i => !i.isAlive).length,
+    });
+    setActiveNodeId(null);
+    setGameMode('rewards');
+  }, [gameState.phase, gameMode, runState?.isTutorialRun, activeNodeId]);
 
   const handleStartGame = (mode: 'singleplayer' | 'multiplayer') => {
     playSound('ui_click');
@@ -308,31 +453,75 @@ const Index = () => {
     setSelectedCharacters(selectedIcons);
     if (pendingMode === 'singleplayer') {
       startRun(selectedIcons.map(c => c.id));
+      fireEvent('run_started');
       setGameMode('roguelikeMap');
     } else {
       setGameMode('multiplayer');
     }
   };
 
+  // ── Tutorial action gate ─────────────────────────────────────────────────────
+  // Returns false if the tutorial is active and this action type isn't the current goal.
+  const tutorialBlocks = useCallback((action: 'move' | 'card' | 'end_turn') => {
+    if (!tutorialState.active || !currentStep) return false;
+    const trigger = currentStep.trigger;
+    if (trigger === 'battle_won') return false; // fight freely
+    switch (action) {
+      case 'move':     return trigger !== 'any_move';
+      case 'card':     return trigger !== 'any_card';
+      case 'end_turn': return trigger !== 'end_turn';
+      default:         return false;
+    }
+  }, [tutorialState.active, currentStep]);
+
+  const handleStartTutorial = useCallback(() => {
+    setShowTutorialPrompt(false);
+    setSelectedCharacters(TUTORIAL_CHARS as any[]);
+    startTutorialRun();
+    startTutorial();
+    setGameMode('roguelikeMap');
+  }, [startTutorialRun, startTutorial]);
+
   const handleNodeSelect = (nodeId: string) => {
     if (!runState) return;
+    // Tutorial gate: block node clicks unless the current step's goal is to click a node
+    if (tutorialState.active && currentStep && currentStep.trigger !== 'fight_node_clicked') return;
     const node = runState.map.find(n => n.id === nodeId);
     if (!node) return;
     playSound('ui_click');
     enterNode(nodeId);
     setActiveNodeId(nodeId);
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
+      if (runState.isTutorialRun) {
+        const tutNode = node as TutorialRunNode;
+        advanceTutorial('fight_node_clicked');
+        setTutorialStage(tutNode.tutorialStage);
+      }
       const mapSeed = runState.seed ^ (runState.battleCount * 31337);
       const transLabel = node.type === 'boss' ? 'BOSS BATTLE' : node.type === 'elite' ? 'ELITE ENCOUNTER' : 'COMBAT';
       const transIcon = node.type === 'boss' ? '💀' : node.type === 'elite' ? '⚡' : '⚔️';
       setBattleTransition({ label: transLabel, icon: transIcon });
+      const charsToUse = runState.isTutorialRun
+        ? runState.characters.filter(c => (node as TutorialRunNode).tutorialCharIds?.includes(c.id))
+        : runState.characters;
+      // Sync selectedCharacters so the game hook builds only the correct icons
+      if (runState.isTutorialRun) {
+        const tutCharsFull = (TUTORIAL_CHARS as any[]).filter(c => (node as TutorialRunNode).tutorialCharIds?.includes(c.id));
+        setSelectedCharacters(tutCharsFull);
+      }
       setTimeout(() => {
-        startBattle(runState.characters, runState.deckCardIds, node.encounter ?? null, mapSeed, true, runState.battleCount, runState.upgradedCardDefIds, runState.act as 1 | 2 | 3);
+        fightUltimatesRef.current = new Set();
+        fightDamageTakenRef.current = false;
+        fightStartHpRef.current = {};
+        startBattle(charsToUse, runState.deckCardIds, node.encounter ?? null, mapSeed, true, runState.battleCount, runState.upgradedCardDefIds, runState.act as 1 | 2 | 3);
         setGameMode('singleplayer');
         setTimeout(() => setBattleTransition(null), 800);
       }, 1100);
     }
     if (node.type === 'campfire') {
+      if (runState.isTutorialRun) {
+        setTutorialStage('s3b_campfire');
+      }
       setGameMode('campfire');
     }
     if (node.type === 'merchant') {
@@ -347,13 +536,16 @@ const Index = () => {
   };
 
   const handleBackToMenu = () => {
+    if (tutorialState.active) skipTutorial();
     resetGame();
     setGameMode('menu');
     setShowEscapeMenu(false);
   };
 
   const handleEndTurn = () => {
+    if (tutorialBlocks('end_turn')) return;
     playSound('end_turn');
+    advanceTutorial('end_turn');
     endTurn();
   };
 
@@ -415,11 +607,60 @@ const Index = () => {
         }
       }
     }
+    // Tutorial: block completing a card target when cards aren't the current goal
+    if (tutorialState.active && currentStep && (cardTm || abilityTm)) {
+      const trigger = currentStep.trigger;
+      if (trigger !== 'any_card' && trigger !== 'battle_won') return;
+    }
+
+    // Capture abilityTm before selectTile clears it
+    const wasBasicAttackMode = abilityTm?.abilityId === 'basic_attack';
     selectTile(coords);
-  }, [gameState, selectTile, addAnimation]);
+    // For targeted-card tutorial steps (Basic Attack), advance only when hit lands on a living enemy.
+    // Basic Attack uses targetingMode (not cardTargetingMode), so check abilityTm instead of cardTm.
+    if (tutorialState.active && currentStep?.trigger === 'any_card' && currentStep?.highlight === 'basic_attack_card') {
+      if (cardTm || wasBasicAttackMode) {
+        const allIcons = gameState.players.flatMap(p => p.icons);
+        const hitLivingEnemy = allIcons.some(
+          i => i.isAlive && i.playerId === 1 && i.position.q === coords.q && i.position.r === coords.r
+        );
+        if (hitLivingEnemy) advanceTutorial('any_card');
+      }
+    }
+  }, [gameState, selectTile, addAnimation, advanceTutorial, tutorialState.active, currentStep]);
 
   const handlePlayCard = (card: any, executorId: string) => {
     playSound('card_play');
+    // Achievement tracking — fire card_played event
+    const isUltimate = card?.rarity === 'ultimate';
+    if (isUltimate && !runState?.isTutorialRun) {
+      // Map executor icon name → characterId
+      const allIcons = gameState.players.flatMap((p: any) => p.icons);
+      const executor = allIcons.find((i: any) => i.id === executorId);
+      if (executor) {
+        const name = executor.name.toLowerCase();
+        const charId = name.includes('napoleon') ? 'napoleon'
+          : name.includes('genghis')   ? 'genghis'
+          : name.includes('leonidas')  ? 'leonidas'
+          : name.includes('sun-sin')   ? 'sunsin'
+          : name.includes('vinci')     ? 'davinci'
+          : name.includes('beethoven') ? 'beethoven'
+          : name.includes('huang')     ? 'huang'
+          : name.includes('nelson')    ? 'nelson'
+          : name.includes('hannibal')  ? 'hannibal'
+          : name.includes('picasso')   ? 'picasso'
+          : name.includes('teddy')     ? 'teddy'
+          : name.includes('mansa')     ? 'mansa'
+          : null;
+        if (charId) {
+          fightUltimatesRef.current.add(charId);
+          const ultId = card.definitionId?.includes('final_salvo') ? 'final_salvo' : undefined;
+          fireEvent('card_played', { isUltimate: true, characterId: charId, ultimateId: ultId });
+        }
+      }
+    } else if (!runState?.isTutorialRun) {
+      fireEvent('card_played', { isUltimate: false, characterId: '' });
+    }
     // Cast burst at executor's current position
     const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === executorId);
     if (executor) {
@@ -461,6 +702,14 @@ const Index = () => {
         });
       }
     }
+    if (tutorialBlocks('card')) return;
+    // Restrict to the specific highlighted card when a card-spotlight step is active
+    if (tutorialState.active && currentStep?.highlight === 'basic_attack_card' && card.definitionId !== 'shared_basic_attack') return;
+    if (tutorialState.active && currentStep?.highlight === 'shields_up_card' && card.definitionId !== 'shared_shield') return;
+    // Basic Attack is a targeted card — defer advanceTutorial to handleSelectTile (after the hit lands).
+    // All other any_card steps use non-targeted cards and can advance immediately.
+    const isTargetedTutCard = tutorialState.active && currentStep?.highlight === 'basic_attack_card';
+    if (!isTargetedTutCard) advanceTutorial('any_card');
     playCard(card, executorId);
   };
 
@@ -503,47 +752,170 @@ const Index = () => {
     return () => document.removeEventListener('contextmenu', onContextMenu);
   }, [(gameState as any).targetingMode, cancelTargeting]);
 
+  // ── Veil overlay — always rendered as sibling, persists across mode switches ──
+  const isWipeOut = veil === 'out';
+  const screenVeil = veil !== 'idle' ? (
+    <div
+      className="fixed inset-0 pointer-events-none"
+      style={{
+        zIndex: 9999,
+        background: '#04030e',
+        backgroundImage: [
+          'repeating-linear-gradient(0deg,   rgba(139,92,246,0.04) 0px, rgba(139,92,246,0.04) 1px, transparent 1px, transparent 48px)',
+          'repeating-linear-gradient(90deg,  rgba(139,92,246,0.04) 0px, rgba(139,92,246,0.04) 1px, transparent 1px, transparent 48px)',
+        ].join(', '),
+        animation: isWipeOut
+          ? 'anim-veil-wipe-out 0.26s ease-in forwards'
+          : 'anim-veil-wipe-in 0.38s ease-out forwards',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Leading-edge energy scanline */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: 3,
+        right: isWipeOut ? 0 : undefined,
+        left: isWipeOut ? undefined : 0,
+        background: 'linear-gradient(to bottom, rgba(139,92,246,0.3) 0%, rgba(34,211,238,0.95) 30%, rgba(255,255,255,1) 50%, rgba(34,211,238,0.95) 70%, rgba(139,92,246,0.3) 100%)',
+        boxShadow: '0 0 20px rgba(34,211,238,0.8), 0 0 50px rgba(139,92,246,0.4)',
+      }} />
+      {/* Broader glow behind the scanline */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: 80,
+        right: isWipeOut ? 0 : undefined,
+        left: isWipeOut ? undefined : 0,
+        background: isWipeOut
+          ? 'linear-gradient(to left, rgba(34,211,238,0.15) 0%, transparent 100%)'
+          : 'linear-gradient(to right, rgba(34,211,238,0.15) 0%, transparent 100%)',
+      }} />
+      {/* Center emblem flash — alien glyph */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontFamily: 'var(--font-orbitron, monospace)',
+        fontSize: '1.4rem',
+        letterSpacing: '0.3em',
+        color: 'rgba(139,92,246,0.35)',
+        textShadow: '0 0 20px rgba(139,92,246,0.3)',
+        whiteSpace: 'nowrap',
+        animation: isWipeOut
+          ? 'anim-veil-emblem 0.26s ease-in forwards'
+          : 'anim-veil-emblem 0.38s ease-out forwards',
+      }}>
+        ⬡ WCW ⬡
+      </div>
+    </div>
+  ) : null;
+
   if (gameMode === 'loading') {
     return <LoadingScreen onComplete={handleLoadingComplete} />;
   }
 
   if (gameMode === 'archives') {
-    return <HistoricalArchives onBack={() => setGameMode('menu')} />;
+    return <HistoricalArchives
+      onBack={() => setGameMode('menu')}
+      onFireEvent={fireEvent}
+      isLoreUnlocked={isLoreUnlocked}
+      isUnlocked={isUnlocked}
+      achievementStats={stats}
+    />;
   }
 
   if (gameMode === 'settings') {
-    return <GameSettings onBack={() => setGameMode(settingsReturnMode as any)} />;
-  }
-
-  if (gameMode === 'rules') {
-    return <GameRules onBack={() => {
-      if (prevModeBeforeRules === 'singleplayer' || prevModeBeforeRules === 'multiplayer') {
-        setGameMode(prevModeBeforeRules as any);
-        setShowEscapeMenu(true);
-      } else {
+    return <GameSettings
+      onBack={() => setGameMode(settingsReturnMode as any)}
+      onReplayTutorial={() => {
+        setShowTutorialPrompt(false);
         setGameMode('menu');
-      }
-      setPrevModeBeforeRules(null);
-    }} />;
+        setTimeout(handleStartTutorial, 350);
+      }}
+    />;
   }
 
   if (gameMode === 'menu') {
-    return (
+    return (<>
+      {screenVeil}
+      <AchievementToast queue={toastQueue} onDismiss={dismissToast} />
       <MainMenu
         onStartGame={handleStartGame}
         onArchives={() => setGameMode('archives')}
         onSettings={() => setGameMode('settings')}
-        onRules={() => setGameMode('rules')}
+        hasSavedRun={hasSavedRun}
+        onContinueRun={() => setGameMode(runState?.pendingRewards ? 'rewards' : 'roguelikeMap')}
       />
-    );
+      {/* First-launch tutorial prompt */}
+      {showTutorialPrompt && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1400,
+          background: 'rgba(0,0,0,0.78)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'rgba(4,2,18,0.98)',
+            border: '2px solid rgba(34,211,238,0.45)',
+            borderRadius: 18,
+            padding: '36px 44px',
+            maxWidth: 440,
+            textAlign: 'center',
+            boxShadow: '0 0 60px rgba(34,211,238,0.12)',
+          }}>
+            <div style={{ fontSize: 44, marginBottom: 14 }}>🎮</div>
+            <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: 18, fontWeight: 900, color: '#22d3ee', letterSpacing: '0.12em', marginBottom: 10 }}>
+              NEW CLONE DETECTED
+            </div>
+            <div style={{ fontFamily: 'Orbitron, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.7, marginBottom: 24 }}>
+              You have been abducted by the Znyxorga Empire.<br />
+              A short tutorial will teach you to survive.<br />
+              <span style={{ color: '#f1f5f9', fontWeight: 600 }}>It takes about 5 minutes.</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={() => { skipTutorial(); setShowTutorialPrompt(false); }}
+                style={{
+                  fontFamily: 'Orbitron, sans-serif', fontSize: 10, fontWeight: 700,
+                  letterSpacing: '0.15em', textTransform: 'uppercase',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: '#64748b', borderRadius: 8,
+                  padding: '10px 20px', cursor: 'pointer',
+                }}
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleStartTutorial}
+                style={{
+                  fontFamily: 'Orbitron, sans-serif', fontSize: 11, fontWeight: 800,
+                  letterSpacing: '0.2em', textTransform: 'uppercase',
+                  background: 'linear-gradient(135deg, rgba(34,211,238,0.92), rgba(6,182,212,0.88))',
+                  color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '12px 28px', cursor: 'pointer',
+                  boxShadow: '0 0 22px rgba(34,211,238,0.32)',
+                }}
+              >
+                Start Tutorial →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>);
   }
 
   if (gameMode === 'characterSelect') {
-    return <CharacterSelection onStartGame={handleCharacterSelectionComplete} onBack={() => setGameMode('menu')} gameMode={pendingMode} />;
+    return <>{screenVeil}<CharacterSelection onStartGame={handleCharacterSelectionComplete} onBack={() => setGameMode('menu')} gameMode={pendingMode} /></>;
   }
 
   if (gameMode === 'roguelikeMap' && runState) {
-    return (
+    return (<>
+      {screenVeil}
       <RoguelikeMap
         runState={runState}
         onSelectNode={handleNodeSelect}
@@ -552,45 +924,118 @@ const Index = () => {
         onAllocateStat={allocateStatPoint}
         onUpgradeAbility={upgradeAbility}
       />
-    );
+      <TutorialOverlay
+        step={currentStep}
+        stepIndex={tutorialState.step}
+        totalSteps={totalStepsInStage}
+        stageId={stageId}
+        stageSeed={tutorialState.stage}
+        onNext={() => advanceTutorial('button')}
+        onSkip={() => { skipTutorial(); abandonRun(); setGameMode('menu'); }}
+      />
+    </>);
   }
 
   if (gameMode === 'rewards' && runState?.pendingRewards) {
-    return (
+    // Tutorial boss complete — show the tutorial complete overlay instead of rewards
+    if (runState.isTutorialRun && tutorialState.done) {
+      return (<>
+        {screenVeil}
+        <TutorialCompleteOverlay
+          onStartRun={() => {
+            clearJustCompleted();
+            abandonRun();
+            setPendingMode('singleplayer');
+            setGameMode('characterSelect');
+          }}
+          onReplayTutorial={() => {
+            clearJustCompleted();
+            handleStartTutorial();
+          }}
+        />
+      </>);
+    }
+    // For tutorial runs: only show characters that fought in this battle
+    const rewardsRunState = (runState.isTutorialRun && activeNodeId) ? (() => {
+      const tutNode = runState.map.find(n => n.id === activeNodeId) as TutorialRunNode | undefined;
+      const fightIds = tutNode?.tutorialCharIds;
+      if (!fightIds || fightIds.length === 0) return runState;
+      return { ...runState, characters: runState.characters.filter(c => fightIds.includes(c.id)) };
+    })() : runState;
+
+    return (<>
+      {screenVeil}
       <RewardsScreen
-        runState={runState}
+        runState={rewardsRunState}
         onCollect={(cardId, equipItems) => {
+          if (cardId) advanceTutorial('card_picked');
           const completedNode = runState.map.find(n => n.id === runState.pendingRewards?.completedNodeId);
-          const isFinalBoss = completedNode?.type === 'boss' && runState.act === 3;
+          const isBossNode = completedNode?.type === 'boss';
+          const isFinalBoss = isBossNode && runState.act === 3;
+          if (isBossNode && !runState.isTutorialRun) {
+            if (isFinalBoss) fireEvent('boss_killed');
+            if (runState.act === 1) fireEvent('act_complete', { act: 1 });
+          }
+          if (isFinalBoss && !runState.isTutorialRun) {
+            const charIds = runState.characters.map(c => c.id);
+            const deathless = runState.permanentlyDeadIds.length === 0;
+            const noLosses = runState.completedNodeIds.length === runState.map.filter(n => n.type === 'enemy' || n.type === 'elite' || n.type === 'boss').length;
+            fireEvent('run_ended', { won: true, characterIds: charIds, deathless, noLosses });
+          }
           collectRewards(cardId, equipItems);
           setGameMode(isFinalBoss ? 'runVictory' : 'roguelikeMap');
         }}
       />
-    );
+      <TutorialOverlay
+        step={currentStep}
+        stepIndex={tutorialState.step}
+        totalSteps={totalStepsInStage}
+        stageId={stageId}
+        stageSeed={tutorialState.stage}
+        onNext={() => advanceTutorial('button')}
+        onSkip={() => { skipTutorial(); abandonRun(); setGameMode('menu'); }}
+        placement="top"
+      />
+    </>);
   }
 
   if (gameMode === 'campfire' && runState) {
-    return (
+    return (<>
+      {screenVeil}
       <CampfireScreen
         runState={runState}
         onHealAll={() => { healAllAtCampfire(); }}
         onRemoveCard={(cardId) => { removeCardFromDeck(cardId); }}
         onUpgradeSharedCard={(defId) => { upgradeSharedCard(defId); }}
         onLeave={() => {
+          advanceTutorial('campfire_done');
           completeNonCombatNode(activeNodeId!);
           setActiveNodeId(null);
           setGameMode('roguelikeMap');
         }}
       />
-    );
+      <TutorialOverlay
+        step={currentStep}
+        stepIndex={tutorialState.step}
+        totalSteps={totalStepsInStage}
+        stageId={stageId}
+        stageSeed={tutorialState.stage}
+        onNext={() => advanceTutorial('button')}
+        onSkip={() => { skipTutorial(); abandonRun(); setGameMode('menu'); }}
+      />
+    </>);
   }
 
   if (gameMode === 'merchant' && runState && !pendingEventItem) {
-    return (
-      <MerchantScreen
+    return (<>{screenVeil}<MerchantScreen
         runState={runState}
         onBuyCard={(cardId, cost) => { buyCardFromMerchant(cardId, cost); }}
         onBuyHeal={(cost) => { buyHealAllFromMerchant(cost); }}
+        onBuyItem={(item, cost) => {
+          spendGold(cost);
+          setPendingEventItemSource('merchant');
+          setPendingEventItem(item);
+        }}
         onDuplicateItem={(item, characterId, slotIndex, cost) => {
           spendGold(cost);
           addItemToCharacter(item, characterId, slotIndex);
@@ -635,13 +1080,11 @@ const Index = () => {
           setActiveNodeId(null);
           setGameMode('roguelikeMap');
         }}
-      />
-    );
+      /></>);
   }
 
   if (gameMode === 'treasure' && runState) {
-    return (
-      <TreasureScreen
+    return (<>{screenVeil}<TreasureScreen
         runState={runState}
         onTakeCard={(cardId) => { collectRewards(cardId, []); completeNonCombatNode(activeNodeId!); setActiveNodeId(null); setGameMode('roguelikeMap'); }}
         onTakeItem={(item, characterId, slotIndex) => {
@@ -652,14 +1095,14 @@ const Index = () => {
         }}
         onSkip={() => { completeNonCombatNode(activeNodeId!); setActiveNodeId(null); setGameMode('roguelikeMap'); }}
       />
-    );
+    </>);
   }
 
-  if (gameMode === 'unknown' && runState && !pendingEventItem) {
-    return (
-      <UnknownScreen
+  if (gameMode === 'unknown' && runState && !pendingEventItem && !pendingCurseAdded) {
+    return (<>{screenVeil}<UnknownScreen
         runState={runState}
         onChoice={(result) => {
+          if (!runState?.isTutorialRun) fireEvent('arena_event_triggered');
           const rng = () => Math.random();
           const charIds = runState.characters.map(c => c.id);
           const nodeId = activeNodeId!;
@@ -819,8 +1262,7 @@ const Index = () => {
           setActiveNodeId(null);
           setGameMode('roguelikeMap');
         }}
-      />
-    );
+      /></>);
   }
 
   // Pending event item overlay — shown after unknown events that give an item
@@ -882,25 +1324,25 @@ const Index = () => {
                     {!alreadyHasIt && (
                       <div className="flex gap-2 flex-wrap">
                         {char.items.map((slotItem, idx) => {
-                          if (slotItem) return null;
+                          const isReplace = !!slotItem;
                           return (
                             <button
                               key={idx}
                               disabled={!!isTargetMismatch}
                               onClick={() => {
                                 addItemToCharacter(item, char.id as CharacterId, idx);
+                                if (!runState?.isTutorialRun) fireEvent('item_found', { itemId: item.id, tier: item.tier });
                                 completeAndNavigate();
                               }}
                               className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
+                              style={isReplace
+                                ? { background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.5)', color: '#f59e0b' }
+                                : { background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
                             >
-                              + Slot {idx + 1}
+                              {isReplace ? `↩ ${slotItem.icon}` : `+ Slot ${idx + 1}`}
                             </button>
                           );
                         })}
-                        {char.items.every(s => s !== null) && (
-                          <span className="text-[10px] text-slate-600 italic">No empty slots</span>
-                        )}
                       </div>
                     )}
                   </div>
@@ -1004,28 +1446,21 @@ const Index = () => {
   }
 
   if (gameMode === 'runDefeated' && runState) {
-    return (
-      <RunDefeatScreen
-        runState={runState}
-        onBackToMenu={() => { abandonRun(); setGameMode('menu'); }}
-      />
-    );
+    return (<>{screenVeil}<RunDefeatScreen runState={runState} onBackToMenu={() => { abandonRun(); setGameMode('menu'); }} /></>);
   }
 
   if (gameMode === 'runVictory' && runState) {
-    return (
-      <RunVictoryScreen
-        runState={runState}
-        onBackToMenu={() => { abandonRun(); setGameMode('menu'); }}
-      />
-    );
+    return (<>{screenVeil}<RunVictoryScreen runState={runState} onBackToMenu={() => { abandonRun(); setGameMode('menu'); }} /></>);
   }
 
   return (
+    <>
+    {screenVeil}
     <div className="relative min-h-screen overflow-hidden">
       <ArenaBackground />
       <Toaster />
       {!hideUI && <MusicPlayer />}
+      <AchievementToast queue={toastQueue} onDismiss={dismissToast} />
 
       {/* Battle transition curtain */}
       {battleTransition && (
@@ -1154,6 +1589,68 @@ const Index = () => {
         );
       })()}
 
+      {/* Player turn banner — cinematic YOUR TURN with portrait strip */}
+      {showPlayerBanner && (() => {
+        const playerIcons = gameState.players[0]?.icons.filter((i: any) => i.isAlive) ?? [];
+        return (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0,
+              background: 'linear-gradient(135deg, rgba(5,20,100,0.97) 0%, rgba(2,10,60,0.97) 100%)',
+              border: '1px solid rgba(60,130,255,0.70)',
+              borderRadius: 10,
+              overflow: 'hidden',
+              boxShadow: '0 0 60px rgba(30,80,240,0.50), 0 0 120px rgba(20,50,200,0.25)',
+              animation: 'anim-turn-banner-in 1.4s ease-in-out forwards',
+            }}>
+              {/* Text block first (left side for player) */}
+              <div style={{ padding: '12px 18px 12px 28px' }}>
+                <div style={{
+                  fontFamily: 'var(--font-orbitron, monospace)',
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.30em',
+                  color: 'rgba(140,180,255,0.75)',
+                  textTransform: 'uppercase',
+                  marginBottom: 3,
+                }}>⚡ PLAYER</div>
+                <div style={{
+                  fontFamily: 'var(--font-orbitron, monospace)',
+                  fontSize: '1.2rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: '#fff',
+                  textShadow: '0 0 22px rgba(60,130,255,0.95)',
+                  animation: 'anim-turn-banner-text 1.4s ease-in-out forwards',
+                }}>YOUR TURN</div>
+              </div>
+              {/* Portrait strip */}
+              {playerIcons.length > 0 && (
+                <div style={{ display: 'flex', gap: 0, borderLeft: '1px solid rgba(60,130,255,0.30)' }}>
+                  {playerIcons.slice(0, 3).map((icon: any) => {
+                    const portrait = getCharacterPortrait(icon.name);
+                    return (
+                      <div key={icon.id} style={{ width: 52, height: 64, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                        {portrait ? (
+                          <img src={portrait} alt={icon.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 10%', filter: 'brightness(0.75) saturate(0.8)' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: 'rgba(28,60,185,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+                            {icon.name.charAt(0)}
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, transparent 60%, rgba(2,10,60,0.7) 100%)' }} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Boss Phase Announcement Banner */}
       {phaseBanner && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
@@ -1213,6 +1710,7 @@ const Index = () => {
             runItemsByCharacter={runState ? Object.fromEntries(
               runState.characters.map(c => [c.id, c.items.filter(Boolean).map(item => ({ icon: item!.icon, name: item!.name, description: item!.description }))])
             ) : undefined}
+            runStartTime={runState?.runStartTime}
           />
         </div>
       )}
@@ -1265,16 +1763,35 @@ const Index = () => {
         </button>
       )}
 
+      {/* Tutorial Overlay — combat (positioned above card HUD) */}
+      <TutorialOverlay
+        step={currentStep}
+        stepIndex={tutorialState.step}
+        totalSteps={totalStepsInStage}
+        stageId={stageId}
+        stageSeed={tutorialState.stage}
+        onNext={() => advanceTutorial('button')}
+        onSkip={() => { skipTutorial(); handleBackToMenu(); }}
+        bottomOffset={215}
+      />
+
       {/* Escape Menu */}
       {showEscapeMenu && (
         <EscapeMenu
-          onMainMenu={handleBackToMenu}
-          onContinue={() => setShowEscapeMenu(false)}
-          onRules={() => {
+          onSaveQuit={() => {
+            if (tutorialState.active) skipTutorial();
+            resetGame();
+            setGameMode('menu');
             setShowEscapeMenu(false);
-            setPrevModeBeforeRules(gameMode);
-            setGameMode('rules');
           }}
+          onResign={() => {
+            if (tutorialState.active) skipTutorial();
+            abandonRun();
+            resetGame();
+            setGameMode('menu');
+            setShowEscapeMenu(false);
+          }}
+          onContinue={() => setShowEscapeMenu(false)}
         />
       )}
 
@@ -1293,7 +1810,7 @@ const Index = () => {
           { label: 'TURNS', value: turnsElapsed, accent: '#fbbf24' },
           { label: 'DAMAGE', value: totalDmg > 0 ? totalDmg : '—', accent: '#fb923c' },
         ];
-        const HERO_NAMES_CHECK = ["Napoleon", "Genghis", "Da Vinci", "Leonidas", "Sun-sin", "Beethoven", "Huang"];
+        const HERO_NAMES_CHECK = ["Napoleon", "Genghis", "Da Vinci", "Leonidas", "Sun-sin", "Beethoven", "Huang", "Nelson", "Hannibal", "Picasso", "Teddy", "Mansa"];
         const characterResults = allIcons
           .filter(icon => HERO_NAMES_CHECK.some(n => icon.name.includes(n)))
           .map(icon => ({
@@ -1308,20 +1825,45 @@ const Index = () => {
           playAgainLabel={pendingMode === 'singleplayer' ? 'NEXT ROUND' : 'PLAY AGAIN'}
           combatStats={combatStats}
           characterResults={characterResults}
-          onBackToMenu={handleBackToMenu}
+          onBackToMenu={() => {
+            if (pendingMode === 'singleplayer' && runState && activeNodeId) {
+              const won = gameState.phase === 'victory';
+              const { finalHps, finalPassiveStacks } = captureIconStates(gameState.players[0].icons);
+              const enemyIcons = gameState.players[1]?.icons ?? [];
+              if (won) {
+                completeCombat({
+                  nodeId: activeNodeId,
+                  won: true,
+                  turnsElapsed: gameState.currentTurn ?? 1,
+                  finalHps: finalHps as any,
+                  finalPassiveStacks,
+                  enemiesKilled: enemyIcons.filter(i => !i.isAlive).length,
+                });
+                if (!runState.isTutorialRun) {
+                  toast('Run saved — continue anytime from the main menu', {
+                    icon: '💾', duration: 3500,
+                    style: { background: 'rgba(6,3,22,0.97)', border: '1px solid rgba(168,85,247,0.5)', color: '#e2e8f0' },
+                  });
+                }
+              } else {
+                // Lost — run is over, clear the save
+                if (!runState.isTutorialRun) {
+                  fireEvent('run_ended', {
+                    won: false,
+                    characterIds: runState.characters.map(c => c.id),
+                    deathless: false,
+                    noLosses: false,
+                  });
+                }
+                abandonRun();
+              }
+            }
+            handleBackToMenu();
+          }}
           onPlayAgain={() => {
             if (pendingMode === 'singleplayer' && runState && activeNodeId) {
               const won = gameState.phase === 'victory';
-              const allIcons = gameState.players[0].icons;
-              const finalHps: Record<string, number> = {};
-              const finalPassiveStacks: Record<string, number> = {};
-              (['napoleon', 'genghis', 'davinci', 'leonidas', 'sunsin', 'beethoven', 'huang'] as CharacterId[]).forEach(id => {
-                const icon = allIcons.find(i => i.name.toLowerCase().includes(
-                  id === 'davinci' ? 'vinci' : id === 'sunsin' ? 'sun-sin' : id
-                ));
-                finalHps[id] = icon?.stats.hp ?? 0;
-                if ((icon?.passiveStacks ?? 0) > 0) finalPassiveStacks[id] = icon!.passiveStacks!;
-              });
+              const { finalHps, finalPassiveStacks } = captureIconStates(gameState.players[0].icons);
               const enemyIcons = gameState.players[1]?.icons ?? [];
               completeCombat({
                 nodeId: activeNodeId,
@@ -1331,6 +1873,20 @@ const Index = () => {
                 finalPassiveStacks,
                 enemiesKilled: enemyIcons.filter(i => !i.isAlive).length,
               });
+              if (!won && !runState.isTutorialRun) {
+                fireEvent('run_ended', {
+                  won: false,
+                  characterIds: runState.characters.map(c => c.id),
+                  deathless: false,
+                  noLosses: false,
+                });
+              }
+              // Fire item_found for any boss items that were auto-equipped
+              if (won && !runState.isTutorialRun && runState.pendingRewards?.bossItems) {
+                for (const item of runState.pendingRewards.bossItems) {
+                  fireEvent('item_found', { itemId: item.id, tier: item.tier });
+                }
+              }
               setActiveNodeId(null);
               setGameMode(won ? 'rewards' : 'runDefeated');
             } else {
@@ -1341,6 +1897,7 @@ const Index = () => {
         );
       })()}
     </div>
+    </>
   );
 };
 

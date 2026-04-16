@@ -1,21 +1,30 @@
-import React from "react";
+import React, { useState } from "react";
 import { useT } from "@/i18n";
 
 interface EscapeMenuProps {
-  onMainMenu: () => void;
+  onSaveQuit: () => void;
+  onResign: () => void;
   onContinue: () => void;
-  onRules?: () => void;
 }
 
-const EscapeMenu = ({ onMainMenu, onContinue, onRules }: EscapeMenuProps) => {
+type ConfirmAction = null | 'save' | 'resign';
+
+const EscapeMenu = ({ onSaveQuit, onResign, onContinue }: EscapeMenuProps) => {
   const { t } = useT();
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+
+  const handleConfirm = () => {
+    if (confirmAction === 'save') onSaveQuit();
+    if (confirmAction === 'resign') onResign();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(2,4,14,0.82)", backdropFilter: "blur(6px)" }}>
       <div
         className="relative flex flex-col"
         style={{
-          width: 340,
+          width: 370,
           background: "rgba(2,4,14,0.96)",
           border: "1px solid rgba(34,211,238,0.18)",
           borderRadius: 14,
@@ -33,51 +42,101 @@ const EscapeMenu = ({ onMainMenu, onContinue, onRules }: EscapeMenuProps) => {
           }}
         />
 
-        {/* Title */}
-        <p
-          className="font-orbitron font-black text-center mb-8"
-          style={{
-            fontSize: "1.05rem",
-            letterSpacing: "0.22em",
-            color: "#e2e8f0",
-            textShadow: "0 0 20px rgba(34,211,238,0.35)",
-            textTransform: "uppercase",
-          }}
-        >
-          {t.game.escMenu.title}
-        </p>
+        {confirmAction ? (
+          /* ── Confirmation view ────────────────────────────────── */
+          <>
+            <p
+              className="font-orbitron font-black text-center mb-4"
+              style={{
+                fontSize: "1.05rem",
+                letterSpacing: "0.22em",
+                color: confirmAction === 'resign' ? '#fca5a5' : '#e2e8f0',
+                textShadow: confirmAction === 'resign'
+                  ? '0 0 20px rgba(239,68,68,0.35)'
+                  : '0 0 20px rgba(34,211,238,0.35)',
+                textTransform: "uppercase",
+              }}
+            >
+              {t.game.escMenu.confirmTitle}
+            </p>
 
-        {/* Buttons */}
-        <div className="flex flex-col gap-2">
-          <MenuButton
-            onClick={onContinue}
-            icon="▶"
-            label={t.game.escMenu.continue}
-            accent="#22d3ee"
-          />
+            <p
+              className="text-center mb-8"
+              style={{
+                fontSize: "0.78rem",
+                lineHeight: 1.6,
+                color: "#94a3b8",
+              }}
+            >
+              {confirmAction === 'save'
+                ? t.game.escMenu.saveQuitDesc
+                : t.game.escMenu.resignDesc}
+            </p>
 
-          {onRules && (
-            <MenuButton
-              onClick={onRules}
-              icon="📖"
-              label={t.game.escMenu.rules}
-              accent="#a78bfa"
-            />
-          )}
+            <div className="flex gap-3">
+              <MenuButton
+                onClick={() => setConfirmAction(null)}
+                icon="←"
+                label={t.game.escMenu.cancel}
+                accent="#64748b"
+                flex
+              />
+              <MenuButton
+                onClick={handleConfirm}
+                icon={confirmAction === 'resign' ? '⚑' : '✓'}
+                label={t.game.escMenu.yes}
+                accent={confirmAction === 'resign' ? '#ef4444' : '#22d3ee'}
+                danger={confirmAction === 'resign'}
+                flex
+              />
+            </div>
+          </>
+        ) : (
+          /* ── Main menu view ──────────────────────────────────── */
+          <>
+            <p
+              className="font-orbitron font-black text-center mb-8"
+              style={{
+                fontSize: "1.05rem",
+                letterSpacing: "0.22em",
+                color: "#e2e8f0",
+                textShadow: "0 0 20px rgba(34,211,238,0.35)",
+                textTransform: "uppercase",
+              }}
+            >
+              {t.game.escMenu.title}
+            </p>
 
-          <div
-            className="my-2"
-            style={{ height: 1, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}
-          />
+            <div className="flex flex-col gap-2">
+              <MenuButton
+                onClick={onContinue}
+                icon="▶"
+                label={t.game.escMenu.continue}
+                accent="#22d3ee"
+              />
 
-          <MenuButton
-            onClick={onMainMenu}
-            icon="⚑"
-            label={t.game.escMenu.resign}
-            accent="#ef4444"
-            danger
-          />
-        </div>
+              <MenuButton
+                onClick={() => setConfirmAction('save')}
+                icon="💾"
+                label={t.game.escMenu.saveQuit}
+                accent="#a78bfa"
+              />
+
+              <div
+                className="my-2"
+                style={{ height: 1, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}
+              />
+
+              <MenuButton
+                onClick={() => setConfirmAction('resign')}
+                icon="⚑"
+                label={t.game.escMenu.resign}
+                accent="#ef4444"
+                danger
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -89,9 +148,10 @@ interface MenuButtonProps {
   label: string;
   accent: string;
   danger?: boolean;
+  flex?: boolean;
 }
 
-const MenuButton = ({ onClick, icon, label, accent, danger }: MenuButtonProps) => {
+const MenuButton = ({ onClick, icon, label, accent, danger, flex }: MenuButtonProps) => {
   const [hov, setHov] = React.useState(false);
 
   return (
@@ -99,13 +159,15 @@ const MenuButton = ({ onClick, icon, label, accent, danger }: MenuButtonProps) =
       onClick={onClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      className="relative w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150"
+      className="relative text-left flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150"
       style={{
+        flex: flex ? 1 : undefined,
         background: hov
           ? danger ? "rgba(239,68,68,0.10)" : `rgba(34,211,238,0.07)`
           : "transparent",
         border: `1px solid ${hov ? accent + "55" : "rgba(255,255,255,0.06)"}`,
         transition: "background 0.15s, border-color 0.15s",
+        justifyContent: flex ? 'center' : undefined,
       }}
     >
       {/* Left accent bar */}

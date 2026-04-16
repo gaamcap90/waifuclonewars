@@ -20,6 +20,11 @@ export const CHARACTER_IDS = {
   sunsin:    "Sun-sin",
   beethoven: "Beethoven",
   huang:     "Huang-chan",
+  nelson:    "Nelson",
+  hannibal:  "Hannibal",
+  picasso:   "Picasso",
+  teddy:     "Teddy",
+  mansa:     "Mansa",
 } as const;
 
 // How many copies of each shared card go into a deck (default 2)
@@ -161,9 +166,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "buff",
     rarity: "rare",
-    description: "+20% Might AND Power to all allies for 2 turns. (No range limit.)",
+    description: "+15% Might AND Power to all allies for 2 turns. (No range limit.)",
     exclusiveTo: CHARACTER_IDS.napoleon,
-    effect: { teamDmgPct: 20, turns: 2 },
+    effect: { teamDmgPct: 15, turns: 2 },
   },
   {
     definitionId: "napoleon_final_salvo",
@@ -203,9 +208,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×1.0 to ALL enemies on a line, range 5. Doubled if target <40% HP.",
+    description: "ULTIMATE (Exhaust) — Power×1.5 to ALL enemies on a line, range 5. Doubled if target <40% HP.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { powerMult: 1.0, lineTarget: true, range: 5, executeDouble: true },
+    effect: { powerMult: 1.5, lineTarget: true, range: 5, executeDouble: true },
   },
 
   // ── Leonidas ─────────────────────────────────────────────────────────────────
@@ -215,9 +220,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.2 damage at range 1. Applies Armor Break (−25% Defense for 2 turns). Grants Leonidas +20 Defense this turn (counter-stance).",
+    description: "Power×1.6 damage at range 1. Applies Armor Break (−25% Defense for 2 turns). Grants Leonidas +20 Defense this turn (counter-stance).",
     exclusiveTo: CHARACTER_IDS.leonidas,
-    effect: { powerMult: 1.2, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
+    effect: { powerMult: 1.6, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
   },
   {
     definitionId: "leonidas_spartan_wall",
@@ -235,9 +240,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×2 damage to target + Root all adjacent enemies for 2 turns.",
+    description: "ULTIMATE (Exhaust) — Power×2.5 damage to target + Root all adjacent enemies for 2 turns.",
     exclusiveTo: CHARACTER_IDS.leonidas,
-    effect: { powerMult: 2.0, range: 3, aoeRooted: true },
+    effect: { powerMult: 2.5, range: 3, aoeRooted: true },
   },
 
   // ── Da Vinci ─────────────────────────────────────────────────────────────────
@@ -267,7 +272,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Summon a combat drone. Lasts until defeated. Stats scale with Power (≈HP×1.5, Might×1.0, Def×0.6).",
+    description: "ULTIMATE (Exhaust) — Summon a combat drone. Lasts until defeated. Stats scale with Power (≈HP×1.8, Might×1.2, Def×0.6).",
     exclusiveTo: CHARACTER_IDS.daVinci,
     effect: {},
   },
@@ -299,7 +304,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Unleash the full Sternensturm. Deal 46 damage and stun all enemies within range 3 for 1 turn.",
+    description: "ULTIMATE (Exhaust) — Unleash the full Sternensturm. Deal Power×0.7 damage and stun all enemies within range 3 for 1 turn.",
     exclusiveTo: CHARACTER_IDS.beethoven,
     effect: { range: 3, allEnemiesInRange: true, debuffType: 'stun', debuffDuration: 1, powerMult: 0.7 },
   },
@@ -442,12 +447,172 @@ const CARD_DEFS: CardDef[] = [
   {
     definitionId: "shared_blood_price",
     name: "Blood Price",
-    manaCost: 3,
+    manaCost: 2,
     type: "buff",
     rarity: "common",
     description: "This unit loses 20% of current HP. All allied units gain +15 Might and +15 Power until end of turn.",
     exclusiveTo: null,
     effect: { selfHpCostPct: 0.2, teamDmgFlat: 15, teamPowerFlat: 15 },
+  },
+
+  // ── Nelson ────────────────────────────────────────────────────────────────────
+  {
+    definitionId: "nelson_crossing_the_t",
+    name: "Crossing the T",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Fire a line shot at range 5 — ~65 damage to the first target, ~40 to the second, ~26 to the third+. Damage falls off for each additional target.",
+    exclusiveTo: CHARACTER_IDS.nelson,
+    effect: { lineScaling: true, range: 5, powerMult: 1.0 },
+  },
+  {
+    definitionId: "nelson_kiss_me_hardy",
+    name: "Kiss Me Hardy",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Charge up to 4 hexes in a straight line. Each enemy in the path takes ~55 damage and is pushed sideways 1 hex.",
+    exclusiveTo: CHARACTER_IDS.nelson,
+    effect: { chargeLinePushSide: true, chargeDmgMult: 0.85, chargeDist: 4, range: 4 },
+  },
+  {
+    definitionId: "nelson_trafalgar_square",
+    name: "Trafalgar Square",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — ~130 damage to one target at range 4. If target dies, deal ~50 damage to all adjacent enemies.",
+    exclusiveTo: CHARACTER_IDS.nelson,
+    effect: { powerMult: 2.0, range: 4 },
+  },
+
+  // ── Hannibal ──────────────────────────────────────────────────────────────────
+  {
+    definitionId: "hannibal_alpine_march",
+    name: "Alpine March",
+    manaCost: 1,
+    type: "movement",
+    rarity: "rare",
+    description: "Charge up to 6 hexes in a straight line across any terrain.",
+    exclusiveTo: CHARACTER_IDS.hannibal,
+    effect: { chargeMove: true, chargeDist: 6, range: 6 },
+  },
+  {
+    definitionId: "hannibal_double_envelopment",
+    name: "Double Envelopment",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Deal ~55 damage to a target at range 3, then ~28 damage to all enemies adjacent to that target.",
+    exclusiveTo: CHARACTER_IDS.hannibal,
+    effect: { chargeAndPull: true, chargeAndPullHitMult: 1.1, chargeAndPullArrivalMult: 0.55, chargeAndPullArrivalRange: 1, range: 3 },
+  },
+  {
+    definitionId: "hannibal_war_elephant",
+    name: "War Elephant",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Summon a War Elephant on an adjacent hex. HP 120, Might 70, Defense 20, Move 2. Basic attacks only. Lasts 2 turns.",
+    exclusiveTo: CHARACTER_IDS.hannibal,
+    effect: { summonWarElephant: true, range: 1, turns: 2 },
+  },
+
+  // ── Picasso ───────────────────────────────────────────────────────────────────
+  {
+    definitionId: "picasso_guernica",
+    name: "Guernica",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Deal ~70 damage to ALL enemies within range 2. Apply Armor Break (−25% Defense for 2 turns) to all hit.",
+    exclusiveTo: CHARACTER_IDS.picasso,
+    effect: { powerMult: 1.0, range: 2, allEnemiesInRange: true, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
+  },
+  {
+    definitionId: "picasso_cubist_mirror",
+    name: "Cubist Mirror",
+    manaCost: 2,
+    type: "movement",
+    rarity: "rare",
+    description: "Swap positions with a target within range 4. If the target is an enemy, deal ~35 damage on swap.",
+    exclusiveTo: CHARACTER_IDS.picasso,
+    effect: { swapEnemyAlly: true, range: 4, powerMult: 0.5 },
+  },
+  {
+    definitionId: "picasso_blue_period",
+    name: "Blue Period",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Teleport all units to random positions. Heal all allies for 60 HP and grant them +20 Defense until Picasso's next turn.",
+    exclusiveTo: CHARACTER_IDS.picasso,
+    effect: { scrambleAll: true, scrambleAllyDefBonus: 20, healing: 60 },
+  },
+
+  // ── Teddy ─────────────────────────────────────────────────────────────────────
+  {
+    definitionId: "teddy_speak_softly",
+    name: "Speak Softly",
+    manaCost: 2,
+    type: "debuff",
+    rarity: "rare",
+    description: "All enemies within range 2 are Taunted — must target Teddy next turn. Teddy gains +30 Defense until her next turn.",
+    exclusiveTo: CHARACTER_IDS.teddy,
+    effect: { globalTauntRange: 2, defBonus: 30, range: 2 },
+  },
+  {
+    definitionId: "teddy_big_stick",
+    name: "Big Stick",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Deal ~87 Might damage at range 1. Doubled (~174) if target is Stunned or Taunted.",
+    exclusiveTo: CHARACTER_IDS.teddy,
+    effect: { damage: 1, damageType: 'atk', mightMult: 1.45, range: 1, executeVsDebuffed: true },
+  },
+  {
+    definitionId: "teddy_rough_riders_rally",
+    name: "Rough Riders' Rally",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — All allies gain +25 Might and +2 Movement this turn. Teddy gains +45 Might and teleports to any hex within range 5.",
+    exclusiveTo: CHARACTER_IDS.teddy,
+    effect: { teamDmgFlat: 25, moveBonus: 2, turns: 2, selfMightBonus: 45, selfTeleportAnywhere: 5 },
+  },
+
+  // ── Mansa ─────────────────────────────────────────────────────────────────────
+  {
+    definitionId: "mansa_salt_road",
+    name: "Salt Road",
+    manaCost: 1,
+    type: "buff",
+    rarity: "rare",
+    description: "Place a 7-hex zone within range 3. Allied units starting their turn on the zone restore 1 Mana. Lasts 2 turns.",
+    exclusiveTo: CHARACTER_IDS.mansa,
+    effect: { manaZone: true, zoneDuration: 2, range: 3 },
+  },
+  {
+    definitionId: "mansa_hajj_of_gold",
+    name: "Hajj of Gold",
+    manaCost: 2,
+    type: "defense",
+    rarity: "rare",
+    description: "Heal all allies for 20% of their max HP. All allies gain +10 Power this turn.",
+    exclusiveTo: CHARACTER_IDS.mansa,
+    effect: { hajjOfGold: true, hajjHealPct: 0.2, teamPowerFlat: 10, turns: 2 },
+  },
+  {
+    definitionId: "mansa_bounty",
+    name: "Mansa's Bounty",
+    manaCost: 2,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Golden Stasis: all units on the board (allies and enemies) are frozen in golden light and cannot act for 1 turn.",
+    exclusiveTo: CHARACTER_IDS.mansa,
+    effect: { mansaBounty: true },
   },
 
   // ── Curses (passive penalties — added to deck by events, not drafted) ────────
@@ -565,7 +730,7 @@ export const CARD_UPGRADES: Record<string, {
   },
   napoleon_grande_armee: {
     upgradedName: 'Grande Armée+',
-    descriptionUpgrade: '+20% → +30% team buff',
+    descriptionUpgrade: '+15% → +30% team buff',
     patch: { description: '+30% Might AND Power to all allies for 2 turns. (No range limit.)', effect: { teamDmgPct: 30, turns: 2 } },
   },
   napoleon_final_salvo: {
@@ -586,14 +751,14 @@ export const CARD_UPGRADES: Record<string, {
   },
   genghis_riders_fury: {
     upgradedName: "Rider's Fury+",
-    descriptionUpgrade: 'Power×1.0 → 1.5 on line',
-    patch: { description: 'ULTIMATE (Exhaust) — ~60 damage to all enemies on a line, range 5. Doubled (~120) if target <50% HP. (Scales with Power)', effect: { powerMult: 1.5, lineTarget: true, range: 5, executeDouble: true } },
+    descriptionUpgrade: 'Power×1.5 → 2.0 on line',
+    patch: { description: 'ULTIMATE (Exhaust) — Power×2.0 to all enemies on a line, range 5. Doubled if target <40% HP. (Scales with Power)', effect: { powerMult: 2.0, lineTarget: true, range: 5, executeDouble: true } },
   },
   // Leonidas
   leonidas_shield_bash: {
     upgradedName: 'Shield Bash+',
-    descriptionUpgrade: 'Armor Break 2t → 3t',
-    patch: { description: '~40 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). Grants Leonidas +20 Defense this turn. (Scales with Power)', effect: { powerMult: 1.5, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
+    descriptionUpgrade: 'Power×1.6 → 1.9, Armor Break 2t → 3t',
+    patch: { description: 'Power×1.9 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). Grants Leonidas +20 Defense this turn. (Scales with Power)', effect: { powerMult: 1.9, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
   },
   leonidas_spartan_wall: {
     upgradedName: 'Spartan Wall+',
@@ -602,8 +767,8 @@ export const CARD_UPGRADES: Record<string, {
   },
   leonidas_this_is_sparta: {
     upgradedName: 'THIS IS SPARTA!+',
-    descriptionUpgrade: 'Power×2 → 2.5',
-    patch: { description: 'ULTIMATE (Exhaust) — Power×2.5 damage to target + Root all adjacent enemies for 2 turns. (Scales with Power)', effect: { powerMult: 2.5, range: 3, aoeRooted: true } },
+    descriptionUpgrade: 'Power×2.5 → 3.0',
+    patch: { description: 'ULTIMATE (Exhaust) — Power×3.0 damage to target + Root all adjacent enemies for 2 turns. (Scales with Power)', effect: { powerMult: 3.0, range: 3, aoeRooted: true } },
   },
   // Da Vinci
   davinci_flying_machine: {
@@ -635,7 +800,7 @@ export const CARD_UPGRADES: Record<string, {
   beethoven_gotterfunken: {
     upgradedName: 'Götterfunken+',
     descriptionUpgrade: 'Stun 1 → 2 turns',
-    patch: { description: 'ULTIMATE (Exhaust) — Unleash the full Sternensturm. Deal 46 damage and stun all enemies within range 3 for 2 turns.', effect: { range: 3, allEnemiesInRange: true, debuffType: 'stun', debuffDuration: 2, powerMult: 0.7 } },
+    patch: { description: 'ULTIMATE (Exhaust) — Unleash the full Sternensturm. Deal Power×0.7 damage and stun all enemies within range 3 for 2 turns.', effect: { range: 3, allEnemiesInRange: true, debuffType: 'stun', debuffDuration: 2, powerMult: 0.7 } },
   },
   // Yi Sun-sin
   sunsin_hwajeon: {
@@ -681,8 +846,8 @@ export const CARD_UPGRADES: Record<string, {
   },
   shared_blood_price: {
     upgradedName: 'Blood Price+',
-    descriptionUpgrade: 'Cost 3 → 2 mana',
-    patch: { description: 'This unit loses 20% of current HP. All allied units gain +15 Might and +15 Power until end of turn.', manaCost: 2, effect: { selfHpCostPct: 0.2, teamDmgFlat: 15, teamPowerFlat: 15 } },
+    descriptionUpgrade: 'HP cost 20% → 15%',
+    patch: { description: 'This unit loses 15% of current HP. All allied units gain +15 Might and +15 Power until end of turn.', manaCost: 2, effect: { selfHpCostPct: 0.15, teamDmgFlat: 15, teamPowerFlat: 15 } },
   },
   // Shared card upgrades
   shared_basic_attack: {
@@ -744,6 +909,86 @@ export const CARD_UPGRADES: Record<string, {
     upgradedName: 'Flash Bang+',
     descriptionUpgrade: '2 → 3 turns Blinded',
     patch: { description: 'Blind target for 3 turns (−50% Might, range 0). Range 3.', effect: { range: 3, debuffType: 'blinded', debuffMagnitude: 50, debuffDuration: 3 } },
+  },
+  // Nelson
+  nelson_crossing_the_t: {
+    upgradedName: 'Crossing the T+',
+    descriptionUpgrade: 'Fall-off 60%→80% (second target)',
+    patch: { description: 'Line shot at range 5 — ~65 damage to first target, ~52 to second, ~33 to third+.', effect: { lineScaling: true, range: 5, powerMult: 1.0, crossingSecondMult: 0.8 } },
+  },
+  nelson_kiss_me_hardy: {
+    upgradedName: 'Kiss Me Hardy+',
+    descriptionUpgrade: 'Pushes enemies sideways 2 hexes',
+    patch: { description: 'Charge up to 4 hexes. Each enemy in path takes ~55 damage and is pushed sideways 2 hexes.', effect: { chargeLinePushSide: true, chargeDmgMult: 0.85, chargeDist: 4, range: 4, chargeLinePushDist: 2 } },
+  },
+  nelson_trafalgar_square: {
+    upgradedName: 'Trafalgar Square+',
+    descriptionUpgrade: 'AoE kill explosion range 1→2',
+    patch: { description: 'ULTIMATE (Exhaust) — ~130 damage to one target at range 4. If target dies, deal ~50 damage to all enemies within range 2.', effect: { powerMult: 2.0, range: 4, trafalgarKillAoeRange: 2 } },
+  },
+  // Hannibal
+  hannibal_alpine_march: {
+    upgradedName: 'Alpine March+',
+    descriptionUpgrade: '+3 → +4 Movement',
+    patch: { description: '+4 Movement this turn.', effect: { moveBonus: 4 } },
+  },
+  hannibal_double_envelopment: {
+    upgradedName: 'Double Envelopment+',
+    descriptionUpgrade: 'Primary hit ×1.1→×1.4',
+    patch: { description: 'Deal ~70 damage to a target at range 3, then ~28 damage to all adjacent enemies.', effect: { chargeAndPull: true, chargeAndPullHitMult: 1.4, chargeAndPullArrivalMult: 0.55, chargeAndPullArrivalRange: 1, range: 3 } },
+  },
+  hannibal_war_elephant: {
+    upgradedName: 'War Elephant+',
+    descriptionUpgrade: 'HP 120→150, Might 70→85',
+    patch: { description: 'ULTIMATE (Exhaust) — Summon a War Elephant: HP 150, Might 85, Defense 20, Move 2. Lasts 2 turns.', effect: { summonWarElephant: true, range: 1, turns: 2, elephantHpBonus: 30, elephantMightBonus: 15 } },
+  },
+  // Picasso
+  picasso_guernica: {
+    upgradedName: 'Guernica+',
+    descriptionUpgrade: 'Armor Break 2→3 turns',
+    patch: { description: '~70 damage to ALL enemies in range 2. Armor Break (−25% Defense for 3 turns) to all hit.', effect: { powerMult: 1.0, range: 2, allEnemiesInRange: true, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
+  },
+  picasso_cubist_mirror: {
+    upgradedName: 'Cubist Mirror+',
+    descriptionUpgrade: 'Swap damage ×0.5→×0.8',
+    patch: { description: 'Swap positions with target within range 4. Enemy takes ~56 damage on swap.', effect: { swapEnemyAlly: true, range: 4, powerMult: 0.8 } },
+  },
+  picasso_blue_period: {
+    upgradedName: 'Blue Period+',
+    descriptionUpgrade: 'Heal 60→90 HP, +20→+30 Defense',
+    patch: { description: 'ULTIMATE (Exhaust) — Scramble all units. Heal all allies for 90 HP and grant +30 Defense until next turn.', effect: { scrambleAll: true, scrambleAllyDefBonus: 30, healing: 90 } },
+  },
+  // Teddy
+  teddy_speak_softly: {
+    upgradedName: 'Speak Softly+',
+    descriptionUpgrade: 'Taunt range 2→3',
+    patch: { description: 'All enemies within range 3 are Taunted — must target Teddy next turn. Teddy gains +30 Defense until her next turn.', effect: { globalTauntRange: 3, defBonus: 30 } },
+  },
+  teddy_big_stick: {
+    upgradedName: 'Big Stick+',
+    descriptionUpgrade: 'Applies Stun 1 turn on hit',
+    patch: { description: '~100 Might damage at range 1. Doubled (~200) vs Stunned or Taunted. Stuns target for 1 turn.', effect: { damage: 1, damageType: 'atk', mightMult: 1.65, range: 1, executeVsDebuffed: true, debuffType: 'stun', debuffDuration: 2, debuffMagnitude: 0 } },
+  },
+  teddy_rough_riders_rally: {
+    upgradedName: "Rough Riders' Rally+",
+    descriptionUpgrade: 'Allies +25→+35 Might, Teddy +45→+60 Might',
+    patch: { description: 'ULTIMATE (Exhaust) — All allies gain +35 Might and +2 Movement for 2 turns. Teddy gains +60 Might and teleports to any hex within range 5.', effect: { teamDmgFlat: 35, moveBonus: 2, turns: 2, selfMightBonus: 60, selfTeleportAnywhere: 5 } },
+  },
+  // Mansa
+  mansa_salt_road: {
+    upgradedName: 'Salt Road+',
+    descriptionUpgrade: 'Zone lasts 3 turns',
+    patch: { description: 'Place a 7-hex zone within range 3. Allies starting their turn on the zone restore 1 Mana. Lasts 3 turns.', effect: { manaZone: true, zoneDuration: 3, range: 3 } },
+  },
+  mansa_hajj_of_gold: {
+    upgradedName: 'Hajj of Gold+',
+    descriptionUpgrade: 'Heal 20%→30% max HP',
+    patch: { description: 'Heal all allies for 30% of their max HP. All allies gain +10 Power for 2 turns.', effect: { hajjOfGold: true, hajjHealPct: 0.3, teamPowerFlat: 10, turns: 2 } },
+  },
+  mansa_bounty: {
+    upgradedName: "Mansa's Bounty+",
+    descriptionUpgrade: 'Enemies frozen 2 turns instead of 1',
+    patch: { description: 'ULTIMATE (Exhaust) — Golden Stasis+: allies are frozen 1 turn, enemies are frozen 2 turns.', effect: { mansaBounty: true, mansaBountyExtra: true } },
   },
   // Huang-chan
   huang_terracotta_summon: {

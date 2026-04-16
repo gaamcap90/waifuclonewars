@@ -2,8 +2,10 @@
 import React, { useState, useMemo } from "react";
 import { RunState, RunItem, CharacterId, CardReward } from "@/types/roguelike";
 import { CARD_REWARD_POOL, pickCardRewards, pickItemReward } from "@/data/roguelikeData";
+import { seededRng } from "@/utils/rng";
 import { CARD_DEFS, CARD_UPGRADES } from "@/data/cards";
 import ArenaBackground from "@/ui/ArenaBackground";
+import { useT } from "@/i18n";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -61,6 +63,7 @@ export interface CampfireScreenProps {
 type CampfirePhase = 'choose' | 'remove_card' | 'upgrade_shared';
 
 export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSharedCard, onLeave }: CampfireScreenProps) {
+  const { t } = useT();
   const [phase, setPhase] = useState<CampfirePhase>('choose');
 
   // Shared cards in deck that can still be upgraded at campfire — each copy shown separately
@@ -141,9 +144,9 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
           <div className="text-center mb-6">
             <div className="text-5xl mb-3">🔥</div>
             <h1 className="font-orbitron font-black text-3xl text-white mb-1" style={{ textShadow: '0 0 30px rgba(245,158,11,0.5)' }}>
-              CAMPFIRE
+              {t.campfire.title}
             </h1>
-            <p className="text-amber-300/70 text-sm">Choose one — then move on</p>
+            <p className="text-amber-300/70 text-sm">{t.campfire.chooseOne}</p>
           </div>
 
           {/* Party HP summary */}
@@ -176,8 +179,8 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
             >
               <span className="text-2xl">💊</span>
               <div>
-                <p className="font-orbitron font-bold text-[13px] text-green-400">Heal All Clones</p>
-                <p className="text-slate-400 text-[11px]">Restore 30% max HP to every living clone.</p>
+                <p className="font-orbitron font-bold text-[13px] text-green-400">{t.campfire.healAll}</p>
+                <p className="text-slate-400 text-[11px]">{t.campfire.healAllDesc}</p>
               </div>
             </button>
 
@@ -195,8 +198,8 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
             >
               <span className="text-2xl">🗑️</span>
               <div>
-                <p className="font-orbitron font-bold text-[13px] text-yellow-400">Remove a Card</p>
-                <p className="text-slate-400 text-[11px]">Permanently remove one card from your deck.</p>
+                <p className="font-orbitron font-bold text-[13px] text-yellow-400">{t.campfire.removeCard}</p>
+                <p className="text-slate-400 text-[11px]">{t.campfire.removeCardDesc}</p>
               </div>
             </button>
 
@@ -217,11 +220,11 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
                 >
                   <span className="text-2xl">✦</span>
                   <div>
-                    <p className="font-orbitron font-bold text-[13px] text-emerald-400">Upgrade a Shared Card</p>
+                    <p className="font-orbitron font-bold text-[13px] text-emerald-400">{t.campfire.upgradeShared}</p>
                     <p className="text-slate-400 text-[11px]">
                       {canUpgrade
-                        ? `${upgradeableShared.length} card${upgradeableShared.length > 1 ? 's' : ''} eligible — permanently upgrade one.`
-                        : 'No upgradeable shared cards in your deck.'}
+                        ? t.campfire.upgradeSharedDesc.replace('{n}', String(upgradeableShared.length)).replace('{s}', upgradeableShared.length > 1 ? 's' : '')
+                        : t.campfire.noUpgrades}
                     </p>
                   </div>
                 </button>
@@ -238,7 +241,7 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
               color: '#64748b',
             }}
           >
-            Skip →
+            {t.campfire.skip}
           </button>
         </div>
       </ScreenWrapper>
@@ -252,8 +255,8 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
         <div className="rounded-2xl p-8" style={PANEL_STYLE}>
           <div className="text-center mb-6">
             <div className="text-4xl mb-3">🗑️</div>
-            <h1 className="font-orbitron font-black text-2xl text-white mb-1">REMOVE A CARD</h1>
-            <p className="text-slate-400 text-sm">Select a card to permanently remove from your deck</p>
+            <h1 className="font-orbitron font-black text-2xl text-white mb-1">{t.campfire.removeCardTitle}</h1>
+            <p className="text-slate-400 text-sm">{t.campfire.removeCardSub}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-6 max-h-80 overflow-y-auto pr-1">
@@ -292,7 +295,7 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
               onClick={() => setPhase('choose')}
               className="font-orbitron text-[11px] text-slate-500 hover:text-slate-300 underline transition-colors"
             >
-              ← Back
+              {t.campfire.back}
             </button>
           </div>
         </div>
@@ -307,8 +310,8 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
         <div className="rounded-2xl p-8" style={PANEL_STYLE}>
           <div className="text-center mb-6">
             <div className="text-4xl mb-3">✦</div>
-            <h1 className="font-orbitron font-black text-2xl text-white mb-1">UPGRADE A SHARED CARD</h1>
-            <p className="text-slate-400 text-sm">Choose one copy to upgrade — other copies remain unchanged</p>
+            <h1 className="font-orbitron font-black text-2xl text-white mb-1">{t.campfire.upgradeTitle}</h1>
+            <p className="text-slate-400 text-sm">{t.campfire.upgradeSub}</p>
           </div>
 
           <div className="flex flex-col gap-3 mb-6 max-h-96 overflow-y-auto pr-1">
@@ -329,7 +332,7 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-orbitron font-bold text-[13px] text-white">{entry.name}</span>
                       {entry.totalUpgradeable > 1 && (
-                        <span className="font-orbitron text-[10px] text-slate-500">copy {entry.copyIndex}/{entry.totalUpgradeable}</span>
+                        <span className="font-orbitron text-[10px] text-slate-500">{t.campfire.copyLabel.replace('{i}', String(entry.copyIndex)).replace('{n}', String(entry.totalUpgradeable))}</span>
                       )}
                       <span className="font-orbitron font-bold text-[11px]" style={{ color: '#34d399' }}>→ {up.upgradedName}</span>
                       <span className="ml-auto font-orbitron text-[10px] text-slate-500 shrink-0">{entry.manaCost} Mana</span>
@@ -347,7 +350,7 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
               onClick={() => setPhase('choose')}
               className="font-orbitron text-[11px] text-slate-500 hover:text-slate-300 underline transition-colors"
             >
-              ← Back
+              {t.campfire.back}
             </button>
           </div>
         </div>
@@ -365,27 +368,30 @@ export interface MerchantScreenProps {
   runState: RunState;
   onBuyCard: (cardId: string, cost: number) => void;
   onBuyHeal: (cost: number) => void;
+  onBuyItem: (item: RunItem, cost: number) => void;
   onDuplicateItem: (item: RunItem, characterId: CharacterId, slotIndex: number, cost: number) => void;
   onSellItem: (item: RunItem, characterId: CharacterId, slotIndex: number, goldGained: number) => void;
   onMysteryBox: (cost: number) => 'item' | 'gold' | 'damage' | 'curse';
   onLeave: () => void;
 }
 
-const HEAL_ALL_COST = 40;
-const MYSTERY_BOX_COST = 60;
-// Base item values — sell = ½ base, buy at merchant = 2.5x base, duplicate = 2x base
-const ITEM_BASE_VALUE: Record<string, number> = {
-  common: 30, uncommon: 50, rare: 80, legendary: 120,
-};
+const HEAL_ALL_COST = 60;
+const MYSTERY_BOX_COST = 100;
 const DUPLICATE_ITEM_BASE_COST: Record<string, number> = {
   common: 60, uncommon: 100, rare: 160, legendary: 240,
 };
 const SELL_ITEM_PRICE: Record<string, number> = {
   common: 15, uncommon: 25, rare: 40, legendary: 60,
 };
+// ~2× duplicate cost but intentionally not round numbers
+const BUY_ITEM_PRICE: Record<string, number> = {
+  common: 115, uncommon: 190, rare: 295, legendary: 460,
+};
 
-export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem, onSellItem, onMysteryBox, onLeave }: MerchantScreenProps) {
+export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDuplicateItem, onSellItem, onMysteryBox, onLeave }: MerchantScreenProps) {
+  const { t } = useT();
   const [purchased, setPurchased] = useState<Set<string>>(new Set());
+  const [boughtItemIds, setBoughtItemIds] = useState<Set<number>>(new Set()); // shop item indices
   const [duplicatedIds, setDuplicatedIds] = useState<Set<string>>(new Set());
   const [soldSlots, setSoldSlots] = useState<Set<string>>(new Set()); // "charId:slotIdx"
   const [healPurchased, setHealPurchased] = useState(false);
@@ -396,26 +402,31 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
 
   // 3 random cards priced 50–80 gold, stable on mount
   const shopCards = useMemo<{ card: CardReward; price: number }[]>(() => {
-    const rng = () => Math.random();
+    const rng = seededRng(runState.seed ^ 0xC0FFEE);
     const runCharIds = runState.characters.map(c => c.id);
     const picks = pickCardRewards(runState.deckCardIds, rng, runCharIds, 'merchant');
+    const priceRng = seededRng(runState.seed ^ 0xABCDE);
     return picks.map(card => ({
       card,
-      price: 50 + Math.floor(Math.random() * 31), // 50–80
+      price: 50 + Math.floor(priceRng() * 31),
     }));
   }, []);
 
-  // Collect all non-null items across the party for duplication
-  const partyItems = useMemo<{ item: RunItem; charName: string; charPortrait: string }[]>(() => {
-    const list: { item: RunItem; charName: string; charPortrait: string }[] = [];
-    for (const char of runState.characters) {
-      if (char.currentHp <= 0) continue;
-      for (const item of char.items) {
-        if (item) list.push({ item, charName: char.displayName, charPortrait: char.portrait });
+  // 3 items for sale: common, uncommon, rare — seeded and stable
+  const shopItems = useMemo<{ item: RunItem; price: number }[]>(() => {
+    const rng = seededRng(runState.seed ^ 0xDEAD7);
+    const deadIds = (runState.permanentlyDeadIds ?? []) as string[];
+    const teamCharIds = runState.characters.filter(c => c.currentHp > 0).map(c => c.id);
+    const tiers = ['common', 'uncommon', 'rare'] as const;
+    return tiers.map(tier => {
+      let item = pickItemReward(tier, rng, teamCharIds);
+      // Re-roll if exclusive to a dead character
+      for (let i = 0; i < 6 && item?.targetCharacter && deadIds.includes(item.targetCharacter); i++) {
+        item = pickItemReward(tier, rng, teamCharIds);
       }
-    }
-    return list;
-  }, [runState.characters]);
+      return { item, price: BUY_ITEM_PRICE[tier] ?? 190 };
+    });
+  }, []);
 
   const handleBuyCard = (cardId: string, price: number) => {
     if (runState.gold < price) return;
@@ -435,6 +446,11 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
     setMysteryResult(result);
   };
 
+  // Characters with at least one item equipped (excluding dead)
+  const charsWithItems = runState.characters.filter(
+    c => c.currentHp > 0 && c.items.some(Boolean)
+  );
+
   return (
     <ScreenWrapper>
       <div className="rounded-2xl p-8" style={PANEL_STYLE}>
@@ -442,23 +458,22 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
         <div className="text-center mb-6">
           <div className="text-5xl mb-3">🛒</div>
           <h1 className="font-orbitron font-black text-3xl text-white mb-1" style={{ textShadow: '0 0 30px rgba(34,197,94,0.4)' }}>
-            MERCHANT
+            {t.merchant.title}
           </h1>
           <div className="flex items-center justify-center gap-2">
             <span className="text-yellow-400 font-orbitron font-bold text-lg">💰 {runState.gold}</span>
-            <span className="text-slate-500 text-sm">gold available</span>
+            <span className="text-slate-500 text-sm">{t.merchant.goldAvailable}</span>
           </div>
         </div>
 
         {/* Cards for sale */}
         <div className="mb-5">
-          <p className="font-orbitron text-[10px] tracking-[0.4em] text-cyan-400 mb-3">CARDS FOR SALE</p>
+          <p className="font-orbitron text-[10px] tracking-[0.4em] text-cyan-400 mb-3">{t.merchant.cardsForSale}</p>
           <div className="grid grid-cols-3 gap-4">
             {shopCards.map(({ card, price }) => {
               const bought = purchased.has(card.definitionId);
               const canAfford = runState.gold >= price && !bought;
               const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : '#4b5563';
-              // Map card type to art image
               const artMap: Record<string, string> = {
                 attack: '/art/cards/attack.png', defense: '/art/cards/defense.png',
                 movement: '/art/cards/movement.png', ultimate: '/art/cards/ultimate.png',
@@ -466,9 +481,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
               };
               const artSrc = artMap[card.type ?? 'attack'] ?? '/art/cards/attack.png';
               return (
-                <div key={card.definitionId} className="flex flex-col items-center"
-                  style={{ opacity: bought ? 0.6 : 1 }}>
-                  {/* Card frame */}
+                <div key={card.definitionId} className="flex flex-col items-center" style={{ opacity: bought ? 0.6 : 1 }}>
                   <div className="relative rounded-xl overflow-hidden flex flex-col w-full"
                     style={{
                       background: `linear-gradient(160deg, #0f1118 0%, #060810 100%)`,
@@ -476,57 +489,36 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
                       boxShadow: canAfford ? `0 0 14px ${exColor}30, 0 4px 16px rgba(0,0,0,0.7)` : '0 2px 8px rgba(0,0,0,0.5)',
                       minHeight: 180,
                     }}>
-                    {/* Art */}
                     <div className="relative w-full" style={{ height: 90, overflow: 'hidden' }}>
-                      <img src={artSrc} alt="" className="w-full h-full object-cover"
-                        style={{ opacity: 0.52, filter: 'brightness(0.9)' }} />
-                      <div className="absolute inset-0" style={{
-                        background: `linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 40%, rgba(6,3,22,0.92) 100%)`
-                      }} />
-                      <div className="absolute inset-0" style={{
-                        background: `linear-gradient(to top, ${exColor}30 0%, transparent 50%)`,
-                      }} />
-                      {/* Character ribbon */}
+                      <img src={artSrc} alt="" className="w-full h-full object-cover" style={{ opacity: 0.52, filter: 'brightness(0.9)' }} />
+                      <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 40%, rgba(6,3,22,0.92) 100%)` }} />
+                      <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${exColor}30 0%, transparent 50%)` }} />
                       <div className="absolute top-0 left-0 right-0 px-2 py-1 flex items-center justify-between"
                         style={{ background: `linear-gradient(90deg, ${exColor}cc 0%, ${exColor}55 100%)` }}>
-                        <span className="font-orbitron text-[8px] font-bold text-white/90 truncate">
-                          {card.exclusiveTo ?? 'SHARED'}
-                        </span>
+                        <span className="font-orbitron text-[8px] font-bold text-white/90 truncate">{card.exclusiveTo ?? 'SHARED'}</span>
                         <span className="text-[10px]">{card.icon}</span>
                       </div>
-                      {/* Inner frame */}
-                      <div className="absolute inset-[3px] rounded-lg pointer-events-none"
-                        style={{ border: `1px solid ${exColor}30` }} />
+                      <div className="absolute inset-[3px] rounded-lg pointer-events-none" style={{ border: `1px solid ${exColor}30` }} />
                     </div>
-                    {/* Text body */}
                     <div className="px-2.5 pt-1.5 pb-2 flex flex-col flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <p className="font-orbitron font-bold text-[11px] text-white leading-tight">{card.name}</p>
                         {card.rarity && (() => {
                           const rc: Record<string,string> = { common:'#94a3b8', uncommon:'#22c55e', rare:'#60a5fa', ultimate:'#f59e0b' };
                           const cl = rc[card.rarity] ?? '#94a3b8';
-                          return (
-                            <span className="font-orbitron text-[7px] font-bold px-1 py-0.5 rounded ml-1 shrink-0"
-                              style={{ color: cl, background: cl + '18' }}>
-                              {card.rarity.toUpperCase()}
-                            </span>
-                          );
+                          return <span className="font-orbitron text-[7px] font-bold px-1 py-0.5 rounded ml-1 shrink-0" style={{ color: cl, background: cl + '18' }}>{card.rarity.toUpperCase()}</span>;
                         })()}
                       </div>
                       <p className="text-slate-400 text-[10px] leading-snug flex-1 mb-2.5">{card.description}</p>
-                      <button
-                        onClick={() => handleBuyCard(card.definitionId, price)}
-                        disabled={!canAfford}
+                      <button onClick={() => handleBuyCard(card.definitionId, price)} disabled={!canAfford}
                         className="font-orbitron text-[10px] font-bold py-1.5 rounded-lg border transition-all w-full hover:scale-[1.02] active:scale-95"
                         style={{
                           background: bought ? 'transparent' : canAfford ? `${exColor}18` : 'rgba(20,15,35,0.6)',
                           borderColor: bought ? '#475569' : canAfford ? `${exColor}70` : 'rgba(60,50,80,0.4)',
                           color: bought ? '#475569' : canAfford ? exColor : '#64748b',
                           cursor: canAfford ? 'pointer' : 'not-allowed',
-                          boxShadow: canAfford && !bought ? `0 0 8px ${exColor}25` : 'none',
-                        }}
-                      >
-                        {bought ? '✓ BOUGHT' : `💰 ${price} gold`}
+                        }}>
+                        {bought ? t.merchant.bought : t.merchant.goldPrice.replace('{n}', String(price))}
                       </button>
                     </div>
                   </div>
@@ -536,29 +528,87 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
           </div>
         </div>
 
+        {/* Items for Sale */}
+        <div className="mb-5">
+          <p className="font-orbitron text-[10px] tracking-[0.4em] text-amber-400 mb-3">{t.merchant.itemsForSale}</p>
+          <div className="grid grid-cols-3 gap-3">
+            {shopItems.map(({ item, price }, i) => {
+              const bought = boughtItemIds.has(i);
+              const canAfford = runState.gold >= price && !bought;
+              const tc = TIER_COLOR[item.tier] ?? '#94a3b8';
+              return (
+                <div key={i} className="rounded-xl flex flex-col"
+                  style={{
+                    background: 'rgba(6,3,22,0.92)',
+                    border: `1px solid ${tc}${bought ? '22' : '45'}`,
+                    boxShadow: canAfford ? `0 0 12px ${tc}18, 0 4px 14px rgba(0,0,0,0.6)` : 'none',
+                    opacity: bought ? 0.55 : 1,
+                  }}>
+                  {/* Tier accent bar */}
+                  <div className="h-[3px] rounded-t-xl" style={{ background: `linear-gradient(90deg, transparent, ${tc}, transparent)` }} />
+                  <div className="px-3 pt-3 pb-2 flex flex-col flex-1">
+                    {/* Icon + name row */}
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="text-2xl leading-none mt-0.5">{item.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-orbitron font-bold text-[11px] text-white leading-tight truncate">{item.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="font-orbitron text-[7px] font-bold px-1.5 py-0.5 rounded"
+                            style={{ color: tc, background: tc + '18', border: `1px solid ${tc}30` }}>
+                            {item.tier.toUpperCase()}
+                          </span>
+                          {item.targetCharacter && (
+                            <span className="font-orbitron text-[7px] text-slate-500 truncate">
+                              {item.targetCharacter}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-slate-400 text-[10px] leading-snug flex-1 mb-2.5">{item.description}</p>
+                    <button
+                      onClick={() => {
+                        if (!canAfford) return;
+                        onBuyItem(item, price);
+                        setBoughtItemIds(prev => new Set([...prev, i]));
+                      }}
+                      disabled={!canAfford}
+                      className="font-orbitron text-[10px] font-bold py-1.5 rounded-lg border transition-all w-full hover:scale-[1.02] active:scale-95"
+                      style={{
+                        background: bought ? 'transparent' : canAfford ? tc + '18' : 'rgba(20,15,35,0.6)',
+                        borderColor: bought ? '#475569' : canAfford ? tc + '70' : 'rgba(60,50,80,0.4)',
+                        color: bought ? '#475569' : canAfford ? tc : '#64748b',
+                        cursor: canAfford ? 'pointer' : 'not-allowed',
+                      }}>
+                      {bought ? t.merchant.purchased : t.merchant.goldPrice.replace('{n}', String(price))}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Services */}
         <div className="mb-5">
-          <p className="font-orbitron text-[10px] tracking-[0.4em] text-green-400 mb-3">SERVICES</p>
+          <p className="font-orbitron text-[10px] tracking-[0.4em] text-green-400 mb-3">{t.merchant.services}</p>
           <div className="flex flex-col gap-3">
             {/* Heal All */}
             <div className="rounded-xl border border-slate-700/40 p-4 flex items-center justify-between"
               style={{ background: 'rgba(6,3,22,0.85)' }}>
               <div>
-                <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">💊 Heal All Clones</p>
-                <p className="text-slate-400 text-[11px]">Restore 30% max HP to every living character</p>
+                <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">{t.merchant.healAll}</p>
+                <p className="text-slate-400 text-[11px]">{t.merchant.healAllDesc}</p>
               </div>
-              <button
-                onClick={handleBuyHeal}
-                disabled={runState.gold < HEAL_ALL_COST || healPurchased}
+              <button onClick={handleBuyHeal} disabled={runState.gold < HEAL_ALL_COST || healPurchased}
                 className="font-orbitron text-[10px] font-bold px-5 py-2 rounded-lg border transition-all"
                 style={{
                   background: healPurchased ? 'transparent' : runState.gold >= HEAL_ALL_COST ? 'rgba(34,197,94,0.12)' : 'rgba(20,15,35,0.6)',
                   borderColor: healPurchased ? '#475569' : runState.gold >= HEAL_ALL_COST ? 'rgba(34,197,94,0.55)' : 'rgba(60,50,80,0.4)',
                   color: healPurchased ? '#475569' : runState.gold >= HEAL_ALL_COST ? '#4ade80' : '#64748b',
                   cursor: (runState.gold >= HEAL_ALL_COST && !healPurchased) ? 'pointer' : 'not-allowed',
-                }}
-              >
-                {healPurchased ? '✓ DONE' : `💰 ${HEAL_ALL_COST}`}
+                }}>
+                {healPurchased ? t.merchant.done : t.merchant.goldPrice.replace('{n}', String(HEAL_ALL_COST))}
               </button>
             </div>
 
@@ -566,159 +616,146 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
             <div className="rounded-xl border border-slate-700/40 p-4 flex items-center justify-between"
               style={{ background: 'rgba(6,3,22,0.85)' }}>
               <div className="flex-1">
-                <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">🎲 Mystery Box</p>
-                <p className="text-slate-400 text-[11px]">Unknown contents — could be great, could be terrible</p>
+                <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">{t.merchant.mysteryBox}</p>
+                <p className="text-slate-400 text-[11px]">{t.merchant.mysteryBoxDesc}</p>
                 {mysteryResult && (
-                  <p className="text-[10px] font-orbitron mt-1" style={{
-                    color: mysteryResult === 'gold' ? '#fbbf24' : mysteryResult === 'item' ? '#60a5fa' : mysteryResult === 'curse' ? '#f87171' : '#f87171'
-                  }}>
-                    {mysteryResult === 'gold' ? '✓ +80 gold!'
-                      : mysteryResult === 'item' ? '✓ Item acquired!'
-                      : mysteryResult === 'curse' ? '☠ Cursed! A curse card enters your deck'
-                      : '✗ Backfired! −20 HP all'}
+                  <p className="text-[10px] font-orbitron mt-1" style={{ color: mysteryResult === 'gold' ? '#fbbf24' : mysteryResult === 'item' ? '#60a5fa' : '#f87171' }}>
+                    {mysteryResult === 'gold' ? '✓ +80 gold!' : mysteryResult === 'item' ? '✓ Item acquired!' : mysteryResult === 'curse' ? '☠ Cursed! A curse card enters your deck' : '✗ Backfired! −20 HP all'}
                   </p>
                 )}
               </div>
-              <button
-                onClick={handleMysteryBox}
-                disabled={runState.gold < MYSTERY_BOX_COST || mysteryResult !== null}
+              <button onClick={handleMysteryBox} disabled={runState.gold < MYSTERY_BOX_COST || mysteryResult !== null}
                 className="font-orbitron text-[10px] font-bold px-5 py-2 rounded-lg border transition-all ml-3"
                 style={{
                   background: mysteryResult !== null ? 'transparent' : runState.gold >= MYSTERY_BOX_COST ? 'rgba(168,85,247,0.12)' : 'rgba(20,15,35,0.6)',
                   borderColor: mysteryResult !== null ? '#475569' : runState.gold >= MYSTERY_BOX_COST ? 'rgba(168,85,247,0.55)' : 'rgba(60,50,80,0.4)',
                   color: mysteryResult !== null ? '#475569' : runState.gold >= MYSTERY_BOX_COST ? '#c084fc' : '#64748b',
                   cursor: (runState.gold >= MYSTERY_BOX_COST && mysteryResult === null) ? 'pointer' : 'not-allowed',
-                }}
-              >
-                {mysteryResult !== null ? '✓ OPENED' : `💰 ${MYSTERY_BOX_COST}`}
+                }}>
+                {mysteryResult !== null ? t.merchant.opened : t.merchant.goldPrice.replace('{n}', String(MYSTERY_BOX_COST))}
               </button>
             </div>
-
-            {/* Sell Item */}
-            {partyItems.length > 0 && (
-              <div className="rounded-xl border border-slate-700/40 p-4"
-                style={{ background: 'rgba(6,3,22,0.85)' }}>
-                <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">💸 Sell an Item</p>
-                <p className="text-slate-400 text-[11px] mb-3">Sell for half price — frees the slot for something better</p>
-                <div className="flex flex-wrap gap-2">
-                  {runState.characters.map(char =>
-                    char.items.map((slotItem, idx) => {
-                      if (!slotItem) return null;
-                      const slotKey = `${char.id}:${idx}`;
-                      const sold = soldSlots.has(slotKey);
-                      const price = SELL_ITEM_PRICE[slotItem.tier] ?? 15;
-                      const isSellPending = pendingSell !== null && pendingSell.item.id === slotItem.id && pendingSell.charId === char.id && pendingSell.slotIdx === idx;
-                      if (isSellPending) {
-                        return (
-                          <div key={slotKey} className="rounded-lg border border-red-700/60 px-3 py-1.5 flex items-center gap-2"
-                            style={{ background: 'rgba(60,5,5,0.85)' }}>
-                            <span className="font-orbitron text-[10px] text-red-300">Sell {slotItem.icon} {slotItem.name} for 💰{price}?</span>
-                            <button className="font-orbitron text-[9px] px-2 py-0.5 rounded border border-green-600/60 text-green-400 hover:bg-green-900/30"
-                              onClick={() => {
-                                onSellItem(slotItem, char.id as CharacterId, idx, price);
-                                setSoldSlots(prev => new Set([...prev, slotKey]));
-                                setPendingSell(null);
-                              }}>Yes</button>
-                            <button className="font-orbitron text-[9px] px-2 py-0.5 rounded border border-slate-600/60 text-slate-400 hover:bg-slate-700/30"
-                              onClick={() => setPendingSell(null)}>No</button>
-                          </div>
-                        );
-                      }
-                      return (
-                        <button
-                          key={slotKey}
-                          disabled={sold}
-                          onClick={() => {
-                            if (sold) return;
-                            setPendingSell({ item: slotItem, charId: char.id, slotIdx: idx, price });
-                          }}
-                          onMouseEnter={e => setHoveredItem({ item: slotItem, x: e.clientX, y: e.clientY })}
-                          onMouseLeave={() => setHoveredItem(null)}
-                          className="rounded-lg border px-3 py-1.5 text-left transition-all hover:scale-105"
-                          style={{
-                            background: sold ? 'rgba(20,15,35,0.5)' : 'rgba(234,179,8,0.08)',
-                            borderColor: sold ? 'rgba(60,50,80,0.3)' : 'rgba(234,179,8,0.40)',
-                            cursor: sold ? 'not-allowed' : 'pointer',
-                            opacity: sold ? 0.55 : 1,
-                          }}
-                        >
-                          <span className="mr-1">{slotItem.icon}</span>
-                          <span className="font-orbitron text-[10px]" style={{ color: sold ? '#475569' : '#fbbf24' }}>
-                            {sold ? `✓ Sold` : slotItem.name}
-                          </span>
-                          {!sold && <span className="ml-1.5 font-orbitron text-[9px] text-yellow-600">+💰{price}</span>}
-                          <span className="ml-1 text-[8px] text-slate-600">({char.displayName.replace('-chan', '')})</span>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Duplicate Item */}
-            {partyItems.length > 0 && (
-              <div className="rounded-xl border border-slate-700/40 p-4"
-                style={{ background: 'rgba(6,3,22,0.85)' }}>
-                <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">🔁 Duplicate an Item</p>
-                <p className="text-slate-400 text-[11px] mb-3">Create a copy of one item from your party</p>
-                <div className="flex flex-wrap gap-2">
-                  {partyItems.map(({ item, charName }, idx) => {
-                    const cost = DUPLICATE_ITEM_BASE_COST[item.tier] ?? 50;
-                    const alreadyDuped = duplicatedIds.has(item.id);
-                    const canAfford = runState.gold >= cost && !alreadyDuped;
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => canAfford && setPendingDuplicate(item)}
-                        disabled={!canAfford}
-                        onMouseEnter={e => setHoveredItem({ item, x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setHoveredItem(null)}
-                        className="rounded-lg border px-3 py-1.5 text-left transition-all hover:scale-105"
-                        style={{
-                          background: alreadyDuped ? 'rgba(20,15,35,0.5)' : canAfford ? TIER_COLOR[item.tier] + '12' : 'rgba(20,15,35,0.5)',
-                          borderColor: alreadyDuped ? 'rgba(60,50,80,0.3)' : canAfford ? TIER_COLOR[item.tier] + '50' : 'rgba(60,50,80,0.3)',
-                          cursor: canAfford ? 'pointer' : 'not-allowed',
-                          opacity: canAfford ? 1 : 0.55,
-                        }}
-                      >
-                        <span className="mr-1">{item.icon}</span>
-                        <span className="font-orbitron text-[10px]" style={{ color: alreadyDuped ? '#475569' : canAfford ? TIER_COLOR[item.tier] : '#475569' }}>
-                          {alreadyDuped ? `✓ ${item.name}` : item.name}
-                        </span>
-                        {!alreadyDuped && <span className="ml-1.5 font-orbitron text-[9px] text-slate-500">💰{cost}</span>}
-                        <span className="ml-1 text-[8px] text-slate-600">({charName.replace('-chan', '')})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
+        {/* Party Inventory — sell & duplicate grouped by character */}
+        {charsWithItems.length > 0 && (
+          <div className="mb-5">
+            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-400 mb-3">{t.merchant.partyInventory}</p>
+            <div className="flex flex-col gap-3">
+              {charsWithItems.map(char => (
+                <div key={char.id} className="rounded-xl border border-slate-700/30 overflow-hidden"
+                  style={{ background: 'rgba(6,3,22,0.85)' }}>
+                  {/* Character header */}
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-700/30"
+                    style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <img src={char.portrait} alt={char.displayName}
+                      className="w-8 h-8 rounded-full object-cover border border-slate-600/60" />
+                    <span className="font-orbitron font-bold text-[12px] text-white">{char.displayName}</span>
+                    <span className="ml-auto font-orbitron text-[9px] text-slate-500">
+                      {char.items.filter(Boolean).length} item{char.items.filter(Boolean).length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {/* Item rows */}
+                  <div className="divide-y divide-slate-700/20">
+                    {char.items.map((slotItem, idx) => {
+                      if (!slotItem) return null;
+                      const slotKey = `${char.id}:${idx}`;
+                      const sold = soldSlots.has(slotKey);
+                      const duped = duplicatedIds.has(slotItem.id);
+                      const sellPrice = SELL_ITEM_PRICE[slotItem.tier] ?? 15;
+                      const dupeCost = DUPLICATE_ITEM_BASE_COST[slotItem.tier] ?? 60;
+                      const canDupe = runState.gold >= dupeCost && !duped && !sold;
+                      const tc = TIER_COLOR[slotItem.tier] ?? '#94a3b8';
+                      const isSellPending = pendingSell?.item.id === slotItem.id && pendingSell.charId === char.id && pendingSell.slotIdx === idx;
+
+                      return (
+                        <div key={slotKey} className="px-4 py-2.5 flex items-center gap-3"
+                          style={{ opacity: sold ? 0.45 : 1 }}>
+                          {/* Item icon + info */}
+                          <span className="text-xl leading-none">{slotItem.icon}</span>
+                          <div className="flex-1 min-w-0"
+                            onMouseEnter={e => !sold && setHoveredItem({ item: slotItem, x: e.clientX, y: e.clientY })}
+                            onMouseLeave={() => setHoveredItem(null)}>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-orbitron font-bold text-[11px] text-white truncate">
+                                {sold ? `✓ Sold — ${slotItem.name}` : slotItem.name}
+                              </span>
+                              <span className="font-orbitron text-[7px] px-1 rounded shrink-0"
+                                style={{ color: tc, background: tc + '18' }}>
+                                {slotItem.tier.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          {/* Actions */}
+                          {!sold && (
+                            <div className="flex items-center gap-2 shrink-0">
+                              {isSellPending ? (
+                                <>
+                                  <span className="font-orbitron text-[9px] text-red-300">{t.merchant.confirm}</span>
+                                  <button className="font-orbitron text-[9px] px-2 py-1 rounded border border-green-600/60 text-green-400 hover:bg-green-900/30 transition-colors"
+                                    onClick={() => {
+                                      onSellItem(slotItem, char.id as CharacterId, idx, sellPrice);
+                                      setSoldSlots(prev => new Set([...prev, slotKey]));
+                                      setPendingSell(null);
+                                    }}>{t.merchant.yes}</button>
+                                  <button className="font-orbitron text-[9px] px-2 py-1 rounded border border-slate-600/60 text-slate-400 hover:bg-slate-700/30 transition-colors"
+                                    onClick={() => setPendingSell(null)}>{t.merchant.no}</button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => setPendingSell({ item: slotItem, charId: char.id, slotIdx: idx, price: sellPrice })}
+                                    className="font-orbitron text-[9px] px-2.5 py-1 rounded-lg border transition-all hover:scale-105"
+                                    style={{ background: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.35)', color: '#fbbf24' }}
+                                    title={`Sell for 💰${sellPrice}`}>
+                                    {t.merchant.sell.replace('{n}', String(sellPrice))}
+                                  </button>
+                                  <button
+                                    onClick={() => canDupe && setPendingDuplicate(slotItem)}
+                                    disabled={!canDupe}
+                                    className="font-orbitron text-[9px] px-2.5 py-1 rounded-lg border transition-all hover:scale-105"
+                                    style={{
+                                      background: duped ? 'transparent' : canDupe ? tc + '12' : 'rgba(20,15,35,0.5)',
+                                      borderColor: duped ? '#475569' : canDupe ? tc + '50' : 'rgba(60,50,80,0.3)',
+                                      color: duped ? '#475569' : canDupe ? tc : '#64748b',
+                                      cursor: canDupe ? 'pointer' : 'not-allowed',
+                                    }}
+                                    title={`Duplicate for 💰${dupeCost}`}>
+                                    {duped ? t.merchant.duped : t.merchant.dupe.replace('{n}', String(dupeCost))}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Leave */}
         <div className="flex justify-center">
-          <button
-            onClick={onLeave}
+          <button onClick={onLeave}
             className="font-orbitron font-bold px-12 py-3 rounded-xl text-sm tracking-widest transition-all hover:scale-105"
-            style={{
-              background: 'rgba(148,163,184,0.08)',
-              border: '2px solid rgba(100,116,139,0.4)',
-              color: '#94a3b8',
-            }}
-          >
-            LEAVE MERCHANT →
+            style={{ background: 'rgba(148,163,184,0.08)', border: '2px solid rgba(100,116,139,0.4)', color: '#94a3b8' }}>
+            {t.merchant.leave}
           </button>
         </div>
       </div>
 
       {/* Item hover tooltip */}
       {hoveredItem && (
-        <div
-          className="fixed z-[200] pointer-events-none"
-          style={{ left: hoveredItem.x + 12, top: hoveredItem.y - 8, maxWidth: 220 }}
-        >
+        <div className="fixed z-[200] pointer-events-none"
+          style={{
+            left: hoveredItem.x + 12 + 220 > window.innerWidth ? Math.max(4, hoveredItem.x - 232) : hoveredItem.x + 12,
+            top: hoveredItem.y - 8,
+            maxWidth: 220,
+          }}>
           <div className="rounded-xl px-3 py-2.5 shadow-2xl"
             style={{ background: 'rgba(4,2,18,0.97)', border: `1px solid ${TIER_COLOR[hoveredItem.item.tier] ?? '#475569'}55` }}>
             <div className="flex items-center gap-2 mb-1">
@@ -740,8 +777,8 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
           <div className="rounded-2xl p-6 w-full max-w-lg" style={PANEL_STYLE}>
             <div className="text-center mb-5">
               <span className="text-3xl">{pendingDuplicate.icon}</span>
-              <p className="font-orbitron font-bold text-white text-lg mt-2">{pendingDuplicate.name} — COPY</p>
-              <p className="text-slate-400 text-[11px] mt-1">Choose who equips the duplicate</p>
+              <p className="font-orbitron font-bold text-white text-lg mt-2">{pendingDuplicate.name} {t.merchant.copy}</p>
+              <p className="text-slate-400 text-[11px] mt-1">{t.merchant.chooseDuplicate}</p>
             </div>
             <div className="flex flex-col gap-4">
               {runState.characters
@@ -755,14 +792,13 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
                         <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
                       </div>
                       {alreadyOwns ? (
-                        <span className="text-[10px] text-amber-500/70 italic">Already equipped</span>
+                        <span className="text-[10px] text-amber-500/70 italic">{t.merchant.alreadyEquipped}</span>
                       ) : (
                         <div className="flex gap-2 flex-wrap">
                           {char.items.map((slotItem, idx) => {
                             if (slotItem) return null;
                             return (
-                              <button
-                                key={idx}
+                              <button key={idx}
                                 onClick={() => {
                                   const cost = DUPLICATE_ITEM_BASE_COST[pendingDuplicate.tier] ?? 50;
                                   onDuplicateItem(pendingDuplicate, char.id as CharacterId, idx, cost);
@@ -770,14 +806,13 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
                                   setPendingDuplicate(null);
                                 }}
                                 className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
-                                style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
-                              >
+                                style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}>
                                 + Slot {idx + 1}
                               </button>
                             );
                           })}
                           {char.items.every(s => s !== null) && (
-                            <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+                            <span className="text-[10px] text-slate-600 italic">{t.merchant.noEmptySlots}</span>
                           )}
                         </div>
                       )}
@@ -787,7 +822,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onDuplicateItem
             </div>
             <div className="text-center mt-4">
               <button onClick={() => setPendingDuplicate(null)} className="text-slate-500 hover:text-slate-300 text-[10px] font-orbitron underline">
-                Cancel
+                {t.merchant.cancel}
               </button>
             </div>
           </div>
@@ -807,6 +842,7 @@ export interface TreasureScreenProps {
 }
 
 export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: TreasureScreenProps) {
+  const { t } = useT();
   const [pendingItem, setPendingItem] = useState<RunItem | null>(null);
 
   // Picks stable on mount; avoids dropping items exclusive to dead characters
@@ -832,16 +868,16 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">📦</div>
           <h1 className="font-orbitron font-black text-3xl text-white mb-1" style={{ textShadow: '0 0 30px rgba(234,179,8,0.5)' }}>
-            TREASURE FOUND
+            {t.treasure.found}
           </h1>
-          <p className="text-yellow-300/70 text-sm">Choose one reward — card or item</p>
+          <p className="text-yellow-300/70 text-sm">{t.treasure.choose}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-6 mb-8">
           {/* Card choice */}
           {tCard && (
             <div className="rounded-xl border border-slate-700/40 p-5 flex flex-col" style={{ background: 'rgba(8,5,25,0.85)' }}>
-              <p className="font-orbitron text-[9px] tracking-[0.4em] text-cyan-400 mb-3">CARD</p>
+              <p className="font-orbitron text-[9px] tracking-[0.4em] text-cyan-400 mb-3">{t.treasure.cardLabel}</p>
               <div className="flex items-start justify-between mb-3">
                 <span className="text-3xl">{tCard.icon}</span>
                 {tCard.exclusiveTo && exColor && (
@@ -863,7 +899,7 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
                   color: '#22d3ee',
                 }}
               >
-                TAKE CARD
+                {t.treasure.takeCard}
               </button>
             </div>
           )}
@@ -904,7 +940,7 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
                   color: TIER_COLOR[tItem.tier],
                 }}
               >
-                TAKE ITEM
+                {t.treasure.takeItem}
               </button>
             </div>
           )}
@@ -916,7 +952,7 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
             onClick={onSkip}
             className="text-slate-500 hover:text-slate-300 text-[11px] font-orbitron transition-colors underline underline-offset-4"
           >
-            Skip both — leave empty handed
+            {t.treasure.skipBoth}
           </button>
         </div>
       </div>
@@ -928,41 +964,46 @@ export function TreasureScreen({ runState, onTakeCard, onTakeItem, onSkip }: Tre
             <div className="text-center mb-5">
               <span className="text-3xl">{pendingItem.icon}</span>
               <p className="font-orbitron font-bold text-white text-lg mt-2">{pendingItem.name}</p>
-              <p className="text-slate-400 text-[11px] mt-1">Choose who equips this item</p>
+              <p className="text-slate-400 text-[11px] mt-1">{t.treasure.chooseEquip}</p>
             </div>
             <div className="flex flex-col gap-4">
               {runState.characters
                 .filter(char => !((runState.permanentlyDeadIds ?? []) as string[]).includes(char.id))
-                .map(char => (
-                <div key={char.id} className="rounded-xl border border-slate-700/50 p-4" style={{ background: 'rgba(8,5,25,0.9)' }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <img src={char.portrait} alt={char.displayName} className="w-10 h-10 rounded-full object-cover border border-slate-600" />
-                    <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {char.items.map((slotItem, idx) => {
-                      if (slotItem) return null;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => { onTakeItem(pendingItem, char.id as CharacterId, idx); setPendingItem(null); }}
-                          className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
-                          style={{ background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
-                        >
-                          + Slot {idx + 1}
-                        </button>
-                      );
-                    })}
-                    {char.items.every(s => s !== null) && (
-                      <span className="text-[10px] text-slate-600 italic">No empty slots</span>
+                .map(char => {
+                  const alreadyHasIt = char.items.some(s => s?.id === pendingItem.id);
+                  return (
+                  <div key={char.id} className="rounded-xl border border-slate-700/50 p-4" style={{ background: 'rgba(8,5,25,0.9)', opacity: alreadyHasIt ? 0.55 : 1 }}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <img src={char.portrait} alt={char.displayName} className="w-10 h-10 rounded-full object-cover border border-slate-600" />
+                      <span className="font-orbitron font-bold text-sm text-white">{char.displayName}</span>
+                      {alreadyHasIt && <span className="text-[9px] text-amber-500/70 font-orbitron ml-auto italic">Already carries this</span>}
+                    </div>
+                    {!alreadyHasIt && (
+                      <div className="flex gap-2 flex-wrap">
+                        {char.items.map((slotItem, idx) => {
+                          const isReplace = !!slotItem;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => { onTakeItem(pendingItem, char.id as CharacterId, idx); setPendingItem(null); }}
+                              className="font-orbitron text-[10px] py-1.5 px-3 rounded-lg border transition-all hover:scale-105"
+                              style={isReplace
+                                ? { background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.5)', color: '#f59e0b' }
+                                : { background: 'rgba(34,211,238,0.1)', borderColor: 'rgba(34,211,238,0.4)', color: '#22d3ee' }}
+                            >
+                              {isReplace ? `↩ ${slotItem.icon}` : `+ Slot ${idx + 1}`}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
             <div className="text-center mt-4">
               <button onClick={() => setPendingItem(null)} className="text-slate-500 hover:text-slate-300 text-[10px] font-orbitron underline">
-                Cancel
+                {t.merchant.cancel}
               </button>
             </div>
           </div>
@@ -1198,6 +1239,7 @@ const EVENTS: EventDef[] = [
 ];
 
 export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
+  const { t } = useT();
   // Pick event once on mount, filtered by conditions
   const [event] = useState<EventDef>(() => {
     const eligible = EVENTS.filter(e => !e.condition || e.condition(runState));
@@ -1210,7 +1252,7 @@ export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">{event.icon}</div>
-          <p className="font-orbitron text-[9px] tracking-[0.5em] text-slate-500 mb-2">UNKNOWN EVENT</p>
+          <p className="font-orbitron text-[9px] tracking-[0.5em] text-slate-500 mb-2">{t.unknown.eventLabel}</p>
           <h1 className="font-orbitron font-black text-2xl text-white mb-3"
             style={{ textShadow: '0 0 24px rgba(148,163,184,0.4)' }}>
             {event.title}
@@ -1235,7 +1277,7 @@ export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
                 </p>
                 <p className="text-slate-400 text-[11px] leading-relaxed">{event.choiceA.detail}</p>
                 {!canAffordA && (
-                  <p className="text-red-400 text-[10px] font-orbitron mt-1.5">⚠ Need {event.choiceA.goldCost} gold — you have {runState.gold}</p>
+                  <p className="text-red-400 text-[10px] font-orbitron mt-1.5">{t.unknown.needGold.replace('{n}', String(event.choiceA.goldCost)).replace('{have}', String(runState.gold))}</p>
                 )}
               </button>
             );
@@ -1256,7 +1298,7 @@ export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
                 </p>
                 <p className="text-slate-500 text-[11px] leading-relaxed">{event.choiceB.detail}</p>
                 {!canAffordB && (
-                  <p className="text-red-400 text-[10px] font-orbitron mt-1.5">⚠ Need {event.choiceB.goldCost} gold — you have {runState.gold}</p>
+                  <p className="text-red-400 text-[10px] font-orbitron mt-1.5">{t.unknown.needGold.replace('{n}', String(event.choiceB.goldCost)).replace('{have}', String(runState.gold))}</p>
                 )}
               </button>
             );
@@ -1265,7 +1307,7 @@ export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
 
         {/* Party status summary */}
         <div className="rounded-xl border border-slate-800/60 p-3" style={{ background: 'rgba(4,2,12,0.60)' }}>
-          <p className="font-orbitron text-[8px] tracking-[0.4em] text-slate-600 mb-2">PARTY STATUS</p>
+          <p className="font-orbitron text-[8px] tracking-[0.4em] text-slate-600 mb-2">{t.unknown.partyStatus}</p>
           <div className="flex gap-3 flex-wrap">
             {runState.characters.map(char => {
               const pct = char.currentHp / char.maxHp;
@@ -1287,6 +1329,17 @@ export function UnknownScreen({ runState, onChoice }: UnknownScreenProps) {
   );
 }
 
+// ── Run timer helper ──────────────────────────────────────────────────────────
+function formatRunTime(startTime: number): string {
+  const s = Math.floor((Date.now() - startTime) / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+}
+
 // ── RunDefeatScreen ────────────────────────────────────────────────────────────
 
 export interface RunDefeatScreenProps {
@@ -1295,14 +1348,16 @@ export interface RunDefeatScreenProps {
 }
 
 export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps) {
+  const { t } = useT();
   const rs = runState.runStats ?? { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 };
   const stats = [
-    { icon: '🗺️', value: `Act ${runState.act}`, label: 'REACHED' },
-    { icon: '⚔️', value: String(runState.battleCount), label: 'BATTLES' },
-    { icon: '💀', value: String(rs.enemiesKilled), label: 'ENEMIES' },
-    { icon: '🃏', value: String(rs.cardsObtained), label: 'CARDS GOT' },
-    { icon: '🎒', value: String(rs.itemsObtained), label: 'ITEMS GOT' },
-    { icon: '💰', value: String(runState.gold), label: 'GOLD LEFT' },
+    { icon: '⏱️', value: formatRunTime(runState.runStartTime ?? Date.now()), label: t.runEnd.statTime },
+    { icon: '🗺️', value: t.runEnd.actLabel.replace('{n}', String(runState.act)), label: t.runEnd.statReached },
+    { icon: '⚔️', value: String(runState.battleCount), label: t.runEnd.statBattles },
+    { icon: '💀', value: String(rs.enemiesKilled), label: t.runEnd.statEnemies },
+    { icon: '🃏', value: String(rs.cardsObtained), label: t.runEnd.statCardsGot },
+    { icon: '🎒', value: String(rs.itemsObtained), label: t.runEnd.statItemsGot },
+    { icon: '💰', value: String(runState.gold), label: t.runEnd.statGoldLeft },
   ];
   return (
     <ScreenWrapper>
@@ -1310,9 +1365,9 @@ export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps
         <div className="text-6xl mb-4">💀</div>
         <h1 className="font-orbitron font-black text-4xl mb-2"
           style={{ color: '#ef4444', textShadow: '0 0 40px rgba(239,68,68,0.55)' }}>
-          RUN OVER
+          {t.runEnd.runOver}
         </h1>
-        <p className="text-slate-400 text-sm mb-8">Your clones have fallen. The Empire of Znyxorga claims victory.</p>
+        <p className="text-slate-400 text-sm mb-8">{t.runEnd.clonesFallen}</p>
 
         {/* Characters — all shown as fallen */}
         <div className="flex justify-center gap-5 mb-8">
@@ -1325,13 +1380,13 @@ export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps
                 <div className="absolute inset-0 flex items-center justify-center text-xl">💀</div>
               </div>
               <span className="font-orbitron text-[9px] text-slate-400">{char.displayName.replace('-chan', '')}</span>
-              <span className="text-[9px] font-orbitron font-bold" style={{ color: '#ef4444' }}>FALLEN</span>
+              <span className="text-[9px] font-orbitron font-bold" style={{ color: '#ef4444' }}>{t.runEnd.fallen}</span>
             </div>
           ))}
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-6 gap-2 mb-8">
+        <div className="grid grid-cols-4 gap-2 mb-8">
           {stats.map(({ icon, value, label }) => (
             <div key={label} className="rounded-xl border border-slate-700/40 p-3" style={{ background: 'rgba(8,5,25,0.80)' }}>
               <div className="text-xl mb-1">{icon}</div>
@@ -1351,7 +1406,7 @@ export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps
             boxShadow: '0 0 20px rgba(239,68,68,0.15)',
           }}
         >
-          RETURN TO MAIN MENU
+          {t.runEnd.returnToMenu}
         </button>
       </div>
     </ScreenWrapper>
@@ -1366,6 +1421,7 @@ export interface RunVictoryScreenProps {
 }
 
 export function RunVictoryScreen({ runState, onBackToMenu }: RunVictoryScreenProps) {
+  const { t } = useT();
   return (
     <ScreenWrapper>
       <div className="rounded-2xl p-8 text-center" style={PANEL_STYLE}>
@@ -1375,17 +1431,18 @@ export function RunVictoryScreen({ runState, onBackToMenu }: RunVictoryScreenPro
           className="font-orbitron font-black text-5xl mb-1 tracking-wide"
           style={{ color: '#fbbf24', textShadow: '0 0 60px rgba(251,191,36,0.7), 0 0 20px rgba(251,191,36,0.4)' }}
         >
-          VICTORY
+          {t.runEnd.victory}
         </h1>
-        <p className="text-slate-300 text-sm mb-1">Znyxorga's Greatest Warrior has fallen.</p>
-        <p className="text-slate-500 text-xs mb-8">The crowd goes silent. Even gods can bleed.</p>
+        <p className="text-slate-300 text-sm mb-1">{t.runEnd.victoryTagline}</p>
+        <p className="text-slate-500 text-xs mb-8">{t.runEnd.victorySubline}</p>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-4 gap-4 mb-8">
           {[
-            { icon: '🗺️', value: 'Act 3', label: 'COMPLETED' },
-            { icon: '⚔️', value: String(runState.battleCount), label: 'BATTLES' },
-            { icon: '💰', value: String(runState.gold), label: 'GOLD LEFT' },
+            { icon: '⏱️', value: formatRunTime(runState.runStartTime ?? Date.now()), label: t.runEnd.statTime },
+            { icon: '🗺️', value: t.runEnd.act3Label, label: t.runEnd.statCompleted },
+            { icon: '⚔️', value: String(runState.battleCount), label: t.runEnd.statBattles },
+            { icon: '💰', value: String(runState.gold), label: t.runEnd.statGoldLeft },
           ].map(({ icon, value, label }) => (
             <div key={label} className="rounded-xl border p-4"
               style={{ background: 'rgba(251,191,36,0.06)', borderColor: 'rgba(251,191,36,0.25)' }}>
@@ -1416,7 +1473,7 @@ export function RunVictoryScreen({ runState, onBackToMenu }: RunVictoryScreenPro
                 </div>
                 <span className="font-orbitron text-[9px] text-slate-400">{char.displayName.replace('-chan', '')}</span>
                 <span className="text-[9px]" style={{ color: dead ? '#ef4444' : '#fbbf24' }}>
-                  {dead ? 'FALLEN' : `${char.currentHp}/${char.maxHp} HP`}
+                  {dead ? t.runEnd.fallen : `${char.currentHp}/${char.maxHp} HP`}
                 </span>
               </div>
             );
@@ -1433,7 +1490,7 @@ export function RunVictoryScreen({ runState, onBackToMenu }: RunVictoryScreenPro
             boxShadow: '0 0 30px rgba(251,191,36,0.25)',
           }}
         >
-          RETURN TO MAIN MENU
+          {t.runEnd.returnToMenu}
         </button>
       </div>
     </ScreenWrapper>

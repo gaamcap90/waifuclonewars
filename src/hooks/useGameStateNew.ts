@@ -475,7 +475,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Genghis-chan",
       role: "dps_melee" as const,
-      stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 40, defense: 25, movement: 2 },
+      stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 50, defense: 25, movement: 2 },
       abilities: [
         { id: "1", name: "Mongol Charge", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "48 damage at range 3 + Bleed (16 HP/turn, 2 turns).", damage: 0, powerMult: 1.2, bleedMult: 0.4 },
         { id: "2", name: "Horde Tactics", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "20 dmg per enemy × enemy count to ALL in range 2.", damage: 0, scalingAoE: true, perEnemyMult: 0.5 },
@@ -559,8 +559,13 @@ type ExtState = GameState & {
   survivalTurnsTarget: number;  // 0 if not survive
   spawnInterval: number;        // 0 if not onslaught
   isRoguelikeRun: boolean;
+  baseMaxHealth?: number[];
   arenaEvent?: import('@/types/game').ArenaEventDef | null;
   phaseBanner?: { enemyName: string; abilityName: string; icon: string } | null;
+  /** Tutorial scripted hands per player-0 turn (index 0 = initial deal). */
+  tutorialHandScript?: string[][];
+  /** How many times player 0 has drawn a fresh hand (starts at 0). */
+  tutorialPlayerTurnIdx: number;
 };
 
 /** Remove `card` from `playerId`'s hand and put it in discard (no mid-turn replacement draw). */
@@ -629,6 +634,9 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
         maxHp:     maxHp,
         moveRange: (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne,
         speed:     template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : template.role === "tank" ? 3 : 4,
+        attackRange: template.name.includes("Mansa") ? 3
+                   : (template.name.includes("Picasso") || template.role === "dps_ranged") ? 2
+                   : 1,
         might:     template.stats.might + (statBonus.might ?? 0) + itemBonus.might,
         power:     (template.stats.power ?? 50) + (statBonus.power ?? 0) + itemBonus.power,
         defense:   baseDefense + (statBonus.defense ?? 0) + itemBonus.defense,
@@ -673,8 +681,8 @@ function getAbilitiesForCharacter(name: string) {
   ];
   if (name.includes("Genghis")) return [
     { id: "1", name: "Mongol Charge", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Rush attack. Power×1.2 damage + Bleed (Power×0.4/turn, 2 turns).", damage: 0, powerMult: 1.2, bleedMult: 0.4 },
-    { id: "2", name: "Horde Tactics", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Power×0.5 per enemy in range 2 to ALL enemies in range 2.", damage: 0, scalingAoE: true, perEnemyMult: 0.5 },
-    { id: "ultimate", name: "Rider's Fury", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Power×1 to all enemies in a line. Doubled if target <50% HP.", damage: 0, powerMult: 1.0, executeDouble: true },
+    { id: "2", name: "Horde Tactics", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Power×0.7 per enemy in range 2 to ALL enemies in range 2.", damage: 0, scalingAoE: true, perEnemyMult: 0.7 },
+    { id: "ultimate", name: "Rider's Fury", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Power×1.5 to all enemies in a line. Doubled if target <40% HP.", damage: 0, powerMult: 1.5, executeDouble: true },
   ];
   if (name.includes("Da Vinci")) return [
     { id: "1", name: "Flying Machine", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 999, description: "Teleport to any hex (unlimited range).", damage: 0, targetMode: "hex" as any },
@@ -701,6 +709,31 @@ function getAbilitiesForCharacter(name: string) {
     { id: "2", name: "First Emperor's Command", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Summon Terracotta Cavalry (Might×1.5, Def×1.5, Power×1) adjacent to you. HP 60, Move 3. Lasts 2 turns. Gain free Cavalry Charge.", damage: 0, summonCavalry: true },
     { id: "ultimate", name: "Eternal Army", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Control a non-boss enemy for 2 turns.", damage: 0, controlEnemy: true, controlDuration: 2 },
   ];
+  if (name.includes("Nelson")) return [
+    { id: "1", name: "Crossing the T", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 5, description: "Line shot — ~65 dmg to 1st target, ~40 to 2nd, ~26 to 3rd+.", damage: 0, lineScaling: true, powerMult: 1.0 },
+    { id: "2", name: "Kiss Me Hardy", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 4, description: "Charge up to 4 hexes — each enemy in path takes ~55 dmg and is pushed sideways.", damage: 0, chargeLinePushSide: true, chargeDmgMult: 0.85 },
+    { id: "ultimate", name: "Trafalgar Square", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 4, description: "ULTIMATE: ~130 dmg to one target. If target dies, ~50 dmg to all adjacent enemies.", damage: 0, powerMult: 2.0 },
+  ];
+  if (name.includes("Hannibal")) return [
+    { id: "1", name: "Alpine March", manaCost: 1, cooldown: 0, currentCooldown: 0, range: 6, description: "Charge up to 6 hexes in a straight line across any terrain.", damage: 0, chargeMove: true, chargeDist: 6 },
+    { id: "2", name: "Double Envelopment", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "~55 dmg to target + ~28 dmg to all adjacent enemies.", damage: 0, chargeAndPull: true, chargeAndPullHitMult: 1.1, chargeAndPullArrivalMult: 0.55 },
+    { id: "ultimate", name: "War Elephant", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "ULTIMATE: Summon War Elephant — HP 120, Might 70, Def 20, Move 2. Basic attacks only. Lasts 2 turns.", damage: 0, summonWarElephant: true },
+  ];
+  if (name.includes("Picasso")) return [
+    { id: "1", name: "Guernica", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 2, description: "~70 dmg to ALL enemies in range 2. Applies Armor Break (−25% DEF, 2t) to all hit.", damage: 0, powerMult: 1.0, allEnemiesInRange: true },
+    { id: "2", name: "Cubist Mirror", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 4, description: "Swap positions with target in range 4. If enemy: deal ~35 dmg on swap.", damage: 0, swapEnemyAlly: true, powerMult: 0.5 },
+    { id: "ultimate", name: "Blue Period", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 0, description: "ULTIMATE: Scramble all units to random positions. Heal all allies for 60 HP, +20 DEF until next turn.", damage: 0, scrambleAll: true, healing: 60 },
+  ];
+  if (name.includes("Teddy")) return [
+    { id: "1", name: "Speak Softly", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 2, description: "All enemies in range 2 Taunted — must target Teddy. Teddy gains +30 DEF until her next turn.", damage: 0, globalTauntRange: 2 },
+    { id: "2", name: "Big Stick", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "~100 Might dmg at range 1. Doubled (~200) if target is Stunned or Taunted.", damage: 0, mightMult: 1.65, executeVsDebuffed: true },
+    { id: "ultimate", name: "Rough Riders' Rally", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Allies gain +25 Might, +2 Move for 2 turns. Teddy gains +45 Might and teleports range 5.", damage: 0, selfMightBonus: 45, selfTeleportAnywhere: 5 },
+  ];
+  if (name.includes("Mansa")) return [
+    { id: "1", name: "Salt Road", manaCost: 1, cooldown: 0, currentCooldown: 0, range: 3, description: "Place a 7-hex mana zone. Allies starting their turn on it restore 1 Mana. Lasts 2 turns.", damage: 0, manaZone: true },
+    { id: "2", name: "Hajj of Gold", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 0, description: "Heal all allies for 20% of max HP. All allies gain +10 Power for 2 turns.", damage: 0, hajjOfGold: true, hajjHealPct: 0.2 },
+    { id: "ultimate", name: "Mansa's Bounty", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 0, description: "ULTIMATE: Golden Stasis — all units (allies and enemies) are frozen for 1 turn.", damage: 0, mansaBounty: true },
+  ];
   // fallback (shouldn't be reached)
   return [
     { id: "1", name: "Flying Machine", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 999, description: "Teleport to any hex (unlimited range).", damage: 0, targetMode: "hex" as any },
@@ -717,6 +750,11 @@ function getPassiveForCharacter(name: string) {
   if (name.includes("Sun-sin")) return "Turtle Ship: Can enter lake tiles. On lake: +40% Might, +30% DEF, −40% Power, Move 1, Range 3";
   if (name.includes("Beethoven")) return "Taubheit: Cannot be pushed or displaced while playing an ability card";
   if (name.includes("Huang"))    return "Imperial Command: Cannot play Basic Attack cards. Guaranteed at least 1 Basic Attack card is drawn each turn (for Terracotta units to use). Terracotta units may only use Basic Attack cards.";
+  if (name.includes("Nelson"))   return "One Eye, One Hand: Nelson cannot be Silenced. The first hit she takes each fight is negated entirely.";
+  if (name.includes("Hannibal")) return "Cannae: When Hannibal attacks a flanked enemy (an ally is adjacent to the target), deal 40% bonus damage. Works on basic attacks and card attacks.";
+  if (name.includes("Picasso"))  return "Fractured Perspective: Every 3rd card Picasso plays this battle costs 0 mana (3rd, 6th, 9th... free). Counter persists across turns.";
+  if (name.includes("Teddy"))    return "Bully!: Each kill grants Teddy +10 Might (stacks up to 3×, max +30). Cannot be stacked by Terracotta or drone kills.";
+  if (name.includes("Mansa"))    return "Treasury: After each battle, earn bonus gold equal to Mansa's Power% (60 Power = +60% more gold). Mansa's ability cards cost 1 less Mana.";
   return "";
 }
 
@@ -1224,7 +1262,7 @@ function executeAITurn(state: ExtState): ExtState {
           }));
           s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
           pushLog(s, `${ai.name} attacked ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
-        } else if (hexDistance(ai.position, PLAYER_BASE) <= basicRange && s.baseHealth[0] > 0) {
+        } else if (!(s as any).isRoguelikeRun && hexDistance(ai.position, PLAYER_BASE) <= basicRange && s.baseHealth[0] > 0) {
           const dmg = Math.max(0.1, calcEffectiveStats(s, ai).might);
           const newBases = [...s.baseHealth];
           newBases[0] = Math.max(0, newBases[0] - dmg);
@@ -1313,6 +1351,24 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
     }
   }
 
+  // Teddy Bully!: each kill grants +10 Might (up to 3 stacks; excludes Terracotta/drone kills)
+  if (killer.name.includes("Teddy")) {
+    const stacks = killer.passiveStacks ?? 0;
+    const isMinorUnit = killer.name.includes("Terracotta") || killer.name.includes("Drone") || killer.name.includes("drone");
+    if (stacks < 3 && !isMinorUnit) {
+      const newStacks = stacks + 1;
+      s.players = s.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== killerId ? ic : {
+          ...ic,
+          passiveStacks: newStacks,
+          stats: { ...ic.stats, might: ic.stats.might + 10 },
+        }),
+      }));
+      pushLog(s, `${killer.name} Bully! ${newStacks}/3 stacks (+10 Might)`, killer.playerId);
+    }
+  }
+
   // Battle Drum (draw_2_on_kill): draw 2 cards for killer's player
   const draw2Count = killer.itemPassiveTags?.filter(t => t === 'draw_2_on_kill').length ?? 0;
   const draw1Count = killer.itemPassiveTags?.filter(t => t === 'draw_on_kill').length ?? 0;
@@ -1381,9 +1437,10 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
  * Returns updated icon with hp/isAlive/voidArmorUsed adjusted.
  */
 function applyDmgToIcon(ic: Icon, dmg: number, s: ExtState, logFn?: (msg: string) => void): Icon {
-  // Diamond Shell: negate the first damaging hit each fight
-  if (dmg > 0 && !ic.firstHitNegated && ic.itemPassiveTags?.includes('negate_first_hit')) {
-    if (logFn) logFn(`${ic.name} Diamond Shell: first hit negated!`);
+  // Diamond Shell / Nelson One Eye, One Hand: negate the first damaging hit each fight
+  if (dmg > 0 && !ic.firstHitNegated && (ic.name.includes("Nelson") || ic.itemPassiveTags?.includes('negate_first_hit'))) {
+    const label = ic.name.includes("Nelson") ? "One Eye, One Hand" : "Diamond Shell";
+    if (logFn) logFn(`${ic.name} ${label}: first hit negated!`);
     return { ...ic, firstHitNegated: true };
   }
   // Turtle Hull: Yi Sun-sin takes 20% less damage from all sources
@@ -1617,7 +1674,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
     if (!bh || bh.length < 2) return;
     if (bh[1] <= 0) {
       setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
-    } else if (bh[0] <= 0) {
+    } else if (bh[0] <= 0 && !(gameState as any).isRoguelikeRun) {
       setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'defeat' as any, winner: 1 } : prev);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1671,8 +1728,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
 
           const dronePower = executor.stats.power;
-          const droneHp   = Math.round(dronePower * 1.5);
-          const droneMight = Math.round(dronePower * 1.0);
+          const droneHp   = Math.round(dronePower * 1.8);
+          const droneMight = Math.round(dronePower * 1.2);
           const droneDef   = Math.round(dronePower * 0.6);
           const drone: Icon = {
             id: `drone_${makeId()}`,
@@ -2248,6 +2305,362 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
 
+        // ── Nelson: Crossing the T — line shot with scaling damage ───────────
+        if (state.targetingMode?.abilityId === "line_scaling") {
+          const range = (card.effect.range ?? 5) + (executor.itemPassiveTags?.includes('nelson_crossing_extend') ? 1 : 0);
+          const lineHexes = snapToLineHexes(executor.position, coordinates, range);
+          const lineKeys = new Set(lineHexes.map(h => tileKey(h.q, h.r)));
+          const enemies = updated.players
+            .flatMap(p => p.icons)
+            .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && lineKeys.has(tileKey(ic.position.q, ic.position.r)))
+            .sort((a, b) => hexDistance(a.position, executor.position) - hexDistance(b.position, executor.position));
+          if (enemies.length === 0) { toast.error(getT().messages.noEnemiesOnLine); return prev; }
+          const atkStats = calcEffectiveStats(updated, executor);
+          // Each successive target takes 65% of the previous hit
+          let mult = card.effect.powerMult ?? 1.0;
+          for (const enemy of enemies) {
+            const defStats = calcEffectiveStats(updated, enemy);
+            const dmg = Math.max(0.1, atkStats.power * mult - defStats.defense);
+            const newHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+              }),
+            }));
+            updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0);
+            pushLog(updated, `${executor.name} Crossing the T hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
+            mult *= 0.65; // each subsequent target takes 65% of previous
+          }
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Hannibal: Alpine March — directed charge move, ignores terrain cost ─
+        if (state.targetingMode?.abilityId === "charge_move") {
+          const HEX_DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+          const rawDq = coordinates.q - executor.position.q;
+          const rawDr = coordinates.r - executor.position.r;
+          const chargeDir = HEX_DIRS.reduce((best, d) => {
+            const dot = rawDq * d.q + rawDr * d.r;
+            return dot > (rawDq * best.q + rawDr * best.r) ? d : best;
+          });
+          const maxSteps = card.effect.chargeDist ?? 6;
+          let currentPos = { ...executor.position };
+          for (let step = 0; step < maxSteps; step++) {
+            const nextPos = { q: currentPos.q + chargeDir.q, r: currentPos.r + chargeDir.r };
+            const nextTile = updated.board.find(t => t.coordinates.q === nextPos.q && t.coordinates.r === nextPos.r);
+            if (!nextTile) break; // off-map
+            // Stop if occupied (but can pass through all terrain types)
+            const occupied = updated.players.flatMap(p => p.icons).some(
+              ic => ic.isAlive && ic.position.q === nextPos.q && ic.position.r === nextPos.r
+            );
+            if (occupied) break;
+            currentPos = nextPos;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+              ...ic, position: currentPos, movedThisTurn: true, cardUsedThisTurn: true,
+              cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1,
+            }),
+          }));
+          pushLog(updated, `${executor.name} Alpine March charged!`, executor.playerId);
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Nelson: Kiss Me Hardy — charge in line, push enemies sideways ─────
+        if (state.targetingMode?.abilityId === "charge_line_push") {
+          const HEX_DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+          const rawDq = coordinates.q - executor.position.q;
+          const rawDr = coordinates.r - executor.position.r;
+          const chargeDir = HEX_DIRS.reduce((best, d) => {
+            const dot = rawDq * d.q + rawDr * d.r;
+            return dot > (rawDq * best.q + rawDr * best.r) ? d : best;
+          });
+          const rotCW  = (dq: number, dr: number) => ({ q: -dr,    r: dq + dr });
+          const rotCCW = (dq: number, dr: number) => ({ q: dq + dr, r: -dq   });
+          const maxSteps = card.effect.chargeDist ?? 4;
+          const dmgMult = card.effect.chargeDmgMult ?? 0.85;
+          let currentPos = { ...executor.position };
+          const atkStats = calcEffectiveStats(updated, executor);
+          for (let step = 0; step < maxSteps; step++) {
+            const nextPos = { q: currentPos.q + chargeDir.q, r: currentPos.r + chargeDir.r };
+            const nextTile = updated.board.find(t => t.coordinates.q === nextPos.q && t.coordinates.r === nextPos.r);
+            if (!nextTile || nextTile.terrain.effects.movementModifier === -999) break;
+            const enemyAtNext = updated.players.flatMap(p => p.icons).find(
+              ic => ic.isAlive && ic.playerId !== executor.playerId && ic.position.q === nextPos.q && ic.position.r === nextPos.r
+            );
+            if (enemyAtNext) {
+              const defStats = calcEffectiveStats(updated, enemyAtNext);
+              const dmg = Math.max(0.1, atkStats.power * dmgMult - defStats.defense);
+              const newHp = Math.max(0, enemyAtNext.stats.hp - dmg);
+              // Side push (perpendicular)
+              const cwDir = rotCW(chargeDir.q, chargeDir.r);
+              const ccwDir = rotCCW(chargeDir.q, chargeDir.r);
+              const cwPos  = { q: nextPos.q + cwDir.q,  r: nextPos.r + cwDir.r  };
+              const ccwPos = { q: nextPos.q + ccwDir.q, r: nextPos.r + ccwDir.r };
+              const allIcons = updated.players.flatMap(p => p.icons);
+              const isFree = (pos: {q:number,r:number}) => {
+                const t = updated.board.find(b => b.coordinates.q === pos.q && b.coordinates.r === pos.r);
+                return t && t.terrain.effects.movementModifier !== -999 &&
+                  !allIcons.some(ic => ic.isAlive && ic.position.q === pos.q && ic.position.r === pos.r);
+              };
+              const pushPos = isFree(cwPos) ? cwPos : isFree(ccwPos) ? ccwPos : null;
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => {
+                  if (ic.id !== enemyAtNext.id) return ic;
+                  const dest = pushPos ?? nextPos;
+                  const destTile = updated.board.find(t => t.coordinates.q === dest.q && t.coordinates.r === dest.r);
+                  const drowned = destTile?.terrain.type === 'lake' && pushPos !== null;
+                  return { ...ic, position: drowned ? ic.position : dest, stats: { ...ic.stats, hp: Math.round(newHp) }, isAlive: newHp > 0 && !drowned, respawnTurns: (newHp <= 0 || drowned) ? 4 : ic.respawnTurns };
+                }),
+              }));
+              updated = applyKillPassives(updated, executorId, enemyAtNext.isAlive, newHp <= 0);
+              pushLog(updated, `${executor.name} Kiss Me Hardy hit ${enemyAtNext.name} for ${dmg.toFixed(0)} dmg, pushed sideways`, executor.playerId);
+            }
+            currentPos = nextPos;
+          }
+          // Move Nelson to final charge position
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+              ...ic, position: currentPos, movedThisTurn: true, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true,
+            }),
+          }));
+          pushLog(updated, `${executor.name} Kiss Me Hardy charged!`, executor.playerId);
+          // Hardy's Coat: +25 DEF for 2 turns after Kiss Me Hardy
+          if (executor.itemPassiveTags?.includes('nelson_hardy_coat')) {
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+                ...ic, passiveStacks: 2, cardBuffDef: (ic.cardBuffDef ?? 0) + 25,
+              }),
+            }));
+            pushLog(updated, `${executor.name} Hardy's Coat: +25 DEF for 2 turns!`, executor.playerId);
+          }
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Hannibal: War Elephant summon ─────────────────────────────────────
+        if (state.targetingMode?.abilityId === "summon_war_elephant") {
+          const occupied = updated.players.flatMap(p => p.icons).some(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          const tile = updated.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (occupied || !tile || tile.terrain.effects.movementModifier === -999) {
+            toast.error(getT().messages.tileOccupied); return prev;
+          }
+          const elephantHpBonus = executor.itemPassiveTags?.includes('hannibal_elephant_buff') ? 40 : 0;
+          const elephantMightBonus = executor.itemPassiveTags?.includes('hannibal_elephant_buff') ? 20 : 0;
+          const elephant: Icon = {
+            id: `elephant_${makeId()}`,
+            name: "War Elephant",
+            role: "tank" as any,
+            stats: { hp: 120 + elephantHpBonus, maxHp: 120 + elephantHpBonus, moveRange: 2, speed: 3, might: 70 + elephantMightBonus, power: 0, defense: 20, movement: 0, mana: 0, maxMana: 0, attackRange: 1 },
+            abilities: [],
+            passive: "War Beast: basic attacks only",
+            position: coordinates,
+            playerId: executor.playerId,
+            isAlive: true,
+            respawnTurns: 0,
+            cardUsedThisTurn: false,
+            movedThisTurn: true,
+            hasUltimate: false,
+            ultimateUsed: true,
+            droneExpiresTurn: (updated as any).currentTurn + 2,
+          };
+          updated.players = updated.players.map(p =>
+            p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, elephant] }
+          );
+          // Inject a Basic Attack card for the elephant to use
+          const baDef = CARD_DEFS.find((d: any) => d.definitionId === 'shared_basic_attack');
+          if (baDef) {
+            const baCard = instantiateCard(baDef as any);
+            const baHandArr = (updated as any).hands;
+            const baPid = executor.playerId as 0 | 1;
+            if (baHandArr?.[baPid]) {
+              (updated as any).hands = [...baHandArr];
+              (updated as any).hands[baPid] = { ...baHandArr[baPid], cards: [...baHandArr[baPid].cards, baCard] };
+            }
+          }
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          pushLog(updated, `${executor.name} summons a War Elephant (HP 120, Might 70, Def 20)! Lasts 2 turns.`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Hannibal: Double Envelopment — hit target + AoE adjacent enemies ──
+        if (state.targetingMode?.abilityId === "charge_and_pull") {
+          const target = updated.players.flatMap(p => p.icons).find(
+            ic => ic.isAlive && ic.playerId !== executor.playerId && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (!target) { toast.error(getT().messages.mustTargetEnemy); return prev; }
+          const atkStats = calcEffectiveStats(updated, executor);
+          const defStats = calcEffectiveStats(updated, target);
+          // Check for Cannae flanking bonus
+          const allies = updated.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.playerId === executor.playerId && ic.id !== executorId);
+          const isFlanked = allies.some(a => hexDistance(a.position, target.position) === 1);
+          const hitMult = (card.effect.chargeAndPullHitMult ?? 1.1) * (isFlanked ? 1.4 : 1.0);
+          const primaryDmg = Math.max(0.1, atkStats.power * hitMult - defStats.defense);
+          const primaryHp = Math.round(Math.max(0, target.stats.hp - primaryDmg));
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+              ...ic, stats: { ...ic.stats, hp: primaryHp }, isAlive: primaryHp > 0, respawnTurns: primaryHp > 0 ? ic.respawnTurns : 4,
+            }),
+          }));
+          updated = applyKillPassives(updated, executorId, target.isAlive, primaryHp <= 0);
+          if (isFlanked) pushLog(updated, `${executor.name} Cannae — flanked! +40% dmg`, executor.playerId);
+          pushLog(updated, `${executor.name} Double Envelopment: ${primaryDmg.toFixed(0)} dmg to ${target.name}`, executor.playerId);
+          // AoE to adjacent enemies
+          const adjMult = card.effect.chargeAndPullArrivalMult ?? 0.55;
+          const adjRange = card.effect.chargeAndPullArrivalRange ?? 1;
+          const adjEnemies = updated.players.flatMap(p => p.icons).filter(
+            ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== target.id && hexDistance(ic.position, target.position) <= adjRange
+          );
+          for (const adj of adjEnemies) {
+            const adjDef = calcEffectiveStats(updated, adj);
+            const adjDmg = Math.max(0.1, atkStats.power * adjMult - adjDef.defense);
+            const adjHp = Math.round(Math.max(0, adj.stats.hp - adjDmg));
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== adj.id ? ic : {
+                ...ic, stats: { ...ic.stats, hp: adjHp }, isAlive: adjHp > 0, respawnTurns: adjHp > 0 ? ic.respawnTurns : 4,
+              }),
+            }));
+            updated = applyKillPassives(updated, executorId, adj.isAlive, adjHp <= 0);
+            pushLog(updated, `${executor.name} Double Envelopment AoE: ${adjDmg.toFixed(0)} to ${adj.name}`, executor.playerId);
+          }
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Picasso: Cubist Mirror — swap positions, deal dmg if enemy ────────
+        if (state.targetingMode?.abilityId === "swap_target") {
+          const swapTarget = updated.players.flatMap(p => p.icons).find(
+            ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (!swapTarget) { toast.error("No unit on that tile!"); return prev; }
+          if (swapTarget.id === executorId) { toast.error("Can't swap with yourself!"); return prev; }
+          const fromPos = { ...executor.position };
+          const toPos = { ...swapTarget.position };
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => {
+              if (ic.id === executorId) return { ...ic, position: toPos, movedThisTurn: true };
+              if (ic.id === swapTarget.id) return { ...ic, position: fromPos };
+              return ic;
+            }),
+          }));
+          // Deal damage if enemy
+          if (swapTarget.playerId !== executor.playerId && card.effect.powerMult) {
+            const atkStats = calcEffectiveStats(updated, executor);
+            const defStats = calcEffectiveStats(updated, swapTarget);
+            const dmg = Math.max(0.1, atkStats.power * card.effect.powerMult - defStats.defense);
+            const newHp = Math.round(Math.max(0, swapTarget.stats.hp - dmg));
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== swapTarget.id ? ic : {
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+              }),
+            }));
+            updated = applyKillPassives(updated, executorId, swapTarget.isAlive, newHp <= 0);
+            pushLog(updated, `${executor.name} Cubist Mirror: swapped with ${swapTarget.name}, dealt ${dmg.toFixed(0)} dmg!`, executor.playerId);
+          } else {
+            pushLog(updated, `${executor.name} Cubist Mirror: swapped with ${swapTarget.name}!`, executor.playerId);
+          }
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Mansa: Salt Road — place mana zone ────────────────────────────────
+        if (state.targetingMode?.abilityId === "mana_zone") {
+          const tile = updated.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error("Can't place zone there!"); return prev; }
+          const zone: Zone = {
+            center: coordinates,
+            radius: 1,
+            effect: 'manaRegen',
+            magnitude: 1,
+            ownerId: executor.playerId,
+            turnsRemaining: card.effect.zoneDuration ?? 2,
+          };
+          updated = { ...updated, activeZones: [...(updated.activeZones ?? []), zone] } as ExtState;
+          // Mansa Treasury: ability cards cost 1 less mana (2 less with Mali Coffers)
+          const saltRoadDiscount = executor.name.includes("Mansa") && card.definitionId?.startsWith("mansa_")
+            ? (executor.itemPassiveTags?.includes('mansa_discount_2') ? 2 : 1)
+            : 0;
+          const effectiveSaltRoadCost = Math.max(0, card.manaCost - saltRoadDiscount);
+          if (effectiveSaltRoadCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - effectiveSaltRoadCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          pushLog(updated, `${executor.name} Salt Road — mana zone active for ${zone.turnsRemaining} turns!`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
         // ── Debuff cards ──────────────────────────────────────────────────────
         if (card.effect.debuffType) {
           const targetIcon = state.players.flatMap(p => p.icons).find(
@@ -2336,8 +2749,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   pushLog(updated, `${pushed.name} was knocked back by Spartan Shield!`, executor.playerId);
                 }
               }
-              // Stun for 1 turn
-              const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
+              // Stun for 1 visible turn (turnsRemaining:2 because debuffs tick at every turn-end)
+              const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
@@ -2370,7 +2783,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             if (card.effect.mightMult !== undefined) {
               const atkStats = calcEffectiveStats(updated, executor);
               const defStats = tgt ? calcEffectiveStats(updated, tgt) : { defense: 0 };
-              return Math.max(0.1, atkStats.might * card.effect.mightMult * terrainMult - (defStats.defense ?? 0));
+              let baseDmg = Math.max(0.1, atkStats.might * card.effect.mightMult * terrainMult - (defStats.defense ?? 0));
+              // Carry a Bigger Stick: +20 flat Might damage bonus
+              if (card.definitionId === 'teddy_big_stick' && executor.itemPassiveTags?.includes('teddy_big_stick_range2')) baseDmg += 20;
+              // Big Stick executeVsDebuffed: double damage if target is Stunned or Taunted
+              if (card.effect.executeVsDebuffed && tgt) {
+                const isDebuffed = (tgt.debuffs ?? []).some(d => d.type === 'stun' || d.type === 'taunted');
+                if (isDebuffed) baseDmg *= 2;
+              }
+              return baseDmg;
             }
             const baseAtk = resolveBasicAttackDamage(updated, executor, tgt ?? null);
             return baseAtk;
@@ -2398,20 +2819,28 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
             for (const enemy of enemies) {
               const dmg = computeCardDamage(enemy);
+              const newHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
                   ...ic,
-                  stats: { ...ic.stats, hp: Math.round(Math.max(0, ic.stats.hp - dmg)) },
-                  isAlive: ic.stats.hp - dmg > 0,
-                  respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
+                  stats: { ...ic.stats, hp: newHp },
+                  isAlive: newHp > 0,
+                  respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
                 }),
               }));
+              updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0);
+              if (card.effect.debuffType && newHp > 0) {
+                // Blue Canvas: Guernica armor break lasts 3 player turns instead of 2
+                const debuffDuration = (card.effect.debuffDuration ?? 2) + (executor.itemPassiveTags?.includes('picasso_guernica_extend') ? 2 : 0);
+                const debuff: Debuff = { type: card.effect.debuffType, magnitude: card.effect.debuffMagnitude ?? 1, turnsRemaining: debuffDuration };
+                updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== enemy.id ? ic : { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== debuff.type), debuff] }) }));
+              }
               pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
             }
             updated.players = updated.players.map(p => ({
               ...p,
-              icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+              icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }),
             }));
             if (card.manaCost > 0) {
               const pid = executor.playerId as 0 | 1;
@@ -2496,7 +2925,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg${executeLabel}`, executor.playerId);
               // Khan's Seal: stun each hit enemy for 1 turn
               if (newEnemyHp > 0 && executor.itemPassiveTags?.includes('genghis_fury_stun')) {
-                const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
+                const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
                 updated.players = updated.players.map(p => ({
                   ...p,
                   icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
@@ -2566,7 +2995,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             let totalDmg = 0;
             let currentHp = targetIcon.stats.hp;
             for (let hit = 0; hit < multiHit; hit++) {
-              const hitDmg = computeCardDamage(targetIcon);
+              let hitDmg = computeCardDamage(targetIcon);
+              // Hannibal Cannae: +40% if target is flanked (ally adjacent to target); +70% with Carthaginian Ring
+              if (executor.name.includes("Hannibal")) {
+                const allies = updated.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.playerId === executor.playerId && ic.id !== executorId);
+                if (allies.some(a => hexDistance(a.position, targetIcon.position) === 1)) {
+                  const cannaeMult = executor.itemPassiveTags?.includes('hannibal_cannae_70pct') ? 1.7 : 1.4;
+                  hitDmg = Math.round(hitDmg * cannaeMult);
+                }
+              }
               totalDmg += hitDmg;
               currentHp = Math.max(0, currentHp - hitDmg);
             }
@@ -2589,6 +3026,27 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0);
             const hitLabel = multiHit > 1 ? `${multiHit}×${(totalDmg/multiHit).toFixed(0)}` : totalDmg.toFixed(0);
             pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${hitLabel} dmg`, executor.playerId);
+
+            // Nelson Trafalgar Square: on-kill AoE ~50 dmg to enemies adjacent to dead target
+            if (newHp <= 0 && card.definitionId?.includes('trafalgar')) {
+              const atkStats = calcEffectiveStats(updated, executor);
+              const splashEnemies = updated.players.flatMap(p => p.icons).filter(
+                ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(ic.position, targetIcon.position) === 1
+              );
+              for (const splashEnemy of splashEnemies) {
+                const defStats = calcEffectiveStats(updated, splashEnemy);
+                const splashDmg = Math.max(0.1, atkStats.power * 0.7 - defStats.defense);
+                const splashHp = Math.round(Math.max(0, splashEnemy.stats.hp - splashDmg));
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== splashEnemy.id ? ic : {
+                    ...ic, stats: { ...ic.stats, hp: splashHp }, isAlive: splashHp > 0, respawnTurns: splashHp > 0 ? ic.respawnTurns : 4,
+                  }),
+                }));
+                updated = applyKillPassives(updated, executorId, splashEnemy.isAlive, splashHp <= 0);
+                pushLog(updated, `${executor.name} Trafalgar Square chain — ${splashEnemy.name} for ${splashDmg.toFixed(0)}!`, executor.playerId);
+              }
+            }
 
             // Decoy explosion: if target was a decoy and just died, explode
             if (newHp <= 0 && targetIcon.isDecoy && (targetIcon.decoyExplosionDmg ?? 0) > 0) {
@@ -2667,12 +3125,23 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               }
             }
 
-            // aoeRooted: apply Rooted to all enemies adjacent to the primary target (THIS IS SPARTA!)
+            // aoeRooted: apply Rooted to the primary target AND all adjacent enemies (THIS IS SPARTA!)
             if (card.effect.aoeRooted) {
+              const rootDebuff: Debuff = { type: 'rooted', magnitude: 0, turnsRemaining: 2 };
+              // Root the primary target if still alive
+              if (targetIcon.isAlive || (updated.players.flatMap(p => p.icons).find(ic => ic.id === targetIcon.id)?.stats.hp ?? 0) > 0) {
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'rooted'), rootDebuff],
+                  }),
+                }));
+                pushLog(updated, `${targetIcon.name} is ROOTED by THIS IS SPARTA! (2 turns)`, executor.playerId);
+              }
+              // Root adjacent enemies too
               const adjacentEnemies = updated.players
                 .flatMap(p => p.icons)
                 .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 1);
-              const rootDebuff: Debuff = { type: 'rooted', magnitude: 0, turnsRemaining: 2 };
               for (const adj of adjacentEnemies) {
                 updated.players = updated.players.map(p => ({
                   ...p,
@@ -2817,6 +3286,39 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         // Lookup ability (if any)
         const ability = caster.abilities.find((a) => a.id === abilityId);
 
+        // Directed charge-move ability (Alpine March via ability button)
+        if (ability && (ability as any).chargeMove) {
+          const HEX_DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+          const rawDq = coordinates.q - caster.position.q;
+          const rawDr = coordinates.r - caster.position.r;
+          const chargeDir = HEX_DIRS.reduce((best, d) => {
+            const dot = rawDq * d.q + rawDr * d.r;
+            return dot > (rawDq * best.q + rawDr * best.r) ? d : best;
+          });
+          const maxSteps = (ability as any).chargeDist ?? 6;
+          let currentPos = { ...caster.position };
+          for (let step = 0; step < maxSteps; step++) {
+            const nextPos = { q: currentPos.q + chargeDir.q, r: currentPos.r + chargeDir.r };
+            const nextTile = updated.board.find(t => t.coordinates.q === nextPos.q && t.coordinates.r === nextPos.r);
+            if (!nextTile) break;
+            const occupied = updated.players.flatMap(p => p.icons).some(
+              ic => ic.isAlive && ic.position.q === nextPos.q && ic.position.r === nextPos.r
+            );
+            if (occupied) break;
+            currentPos = nextPos;
+          }
+          const manaCost = ability.manaCost ?? 0;
+          updated.globalMana = updated.globalMana.map((m, idx) => (idx === caster.playerId ? Math.max(0, m - manaCost) : m)) as any;
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== caster.id ? ic : {
+              ...ic, position: currentPos, movedThisTurn: true, cardUsedThisTurn: true,
+            }),
+          }));
+          pushLog(updated, `${caster.name} Alpine March charged!`, caster.playerId);
+          return { ...updated, targetingMode: undefined };
+        }
+
         // HEX target abilities (e.g., teleport)
         if (ability && (ability as any).targetMode === "hex") {
           const tile = state.board.find(
@@ -2854,6 +3356,22 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           };
         }
 
+        // Teddy: Rough Riders' Rally teleport phase (buffs already applied, card consumed)
+        if (abilityId === "rough_riders_teleport") {
+          const tile = state.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
+          const occupied = state.players.flatMap(p => p.icons).some(
+            ic => ic.isAlive && ic.id !== caster.id && ic.position.q === coordinates.q && ic.position.r === coordinates.r
+          );
+          if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== caster.id ? ic : { ...ic, position: coordinates, movedThisTurn: true }),
+          }));
+          pushLog(updated, `${caster.name} teleports to (${coordinates.q},${coordinates.r})!`, caster.playerId);
+          return { ...updated, baseHealth: updatedBaseHealth, objectives: updatedObjectives, targetingMode: undefined };
+        }
+
         // BASIC ATTACK
         if (abilityId === "basic_attack") {
           if (targetIcon) {
@@ -2871,6 +3389,17 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               dmg = Math.max(0.1, atkStats.might * cardMightMult - (defStats.defense ?? 0));
             } else {
               dmg = resolveBasicAttackDamage(updated, caster, targetIcon);
+            }
+            // Hannibal Cannae: +40% damage when attacking a flanked enemy; +70% with Carthaginian Ring
+            if (caster.name.includes("Hannibal")) {
+              const allies = updated.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.playerId === caster.playerId && ic.id !== caster.id);
+              const isFlanked = allies.some(a => hexDistance(a.position, targetIcon.position) === 1);
+              if (isFlanked) {
+                const cannaeMult = caster.itemPassiveTags?.includes('hannibal_cannae_70pct') ? 1.7 : 1.4;
+                dmg = Math.round(dmg * cannaeMult);
+                const cannaeLabel = caster.itemPassiveTags?.includes('hannibal_cannae_70pct') ? '+70%' : '+40%';
+                pushLog(updated, `${caster.name} Cannae — flanked! ${cannaeLabel} dmg`, caster.playerId);
+              }
             }
             pushLog(updated, `${caster.name} basic-attacked ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, caster.playerId);
 
@@ -3355,7 +3884,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             pushLog(state, `${me.name} slides on ice!`, me.playerId);
           } else {
             // Collision: take 5 damage and get stunned
-            const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
+            const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
             state.players = state.players.map(p => ({
               ...p,
               icons: p.icons.map(ic => {
@@ -3419,11 +3948,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       }
 
       const onWater = ['lake', 'river'].includes(prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type ?? '');
-      const isRanged = me.name.includes("Napoleon") || me.name.includes("Da Vinci") || me.name.includes("Beethoven");
       const isBlinded = me.debuffs?.some(d => d.type === 'blinded') ?? false;
       const range = isBlinded ? 1
         : me.name.includes("Sun-sin") && onWater ? 3
-        : isRanged ? 2
         : (me.stats.attackRange ?? 1);
       return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
     });
@@ -3443,7 +3970,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         if (prev.baseHealth[1] <= 0) {
           return { ...prev, phase: 'victory' as any, winner: 0 };
         }
-        if (prev.baseHealth[0] <= 0) {
+        if (prev.baseHealth[0] <= 0 && !(prev as any).isRoguelikeRun) {
           return { ...prev, phase: 'defeat' as any, winner: 1 };
         }
         if (!_p1Alive && (prev as any).encounterObjective !== 'destroy_base') {
@@ -3508,13 +4035,17 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               z => z.ownerId === nextPlayer && hexDistance(ic.position, z.center) <= z.radius
             );
             if (inFreudZone) pushLog(prev as any, `🎵 ${ic.name} gains +5 DEF from Composer's Baton!`, nextPlayer);
+            const hardyCoatActive = ic.name.includes("Nelson") && ic.itemPassiveTags?.includes('nelson_hardy_coat') && (ic.passiveStacks ?? 0) > 0;
+            const newPassiveStacks = hardyCoatActive ? (ic.passiveStacks! - 1) : ic.passiveStacks;
+            if (hardyCoatActive) pushLog(prev as any, `🧥 ${ic.name} Hardy's Coat: +25 DEF (${ic.passiveStacks! - 1} turn${ic.passiveStacks! - 1 !== 1 ? 's' : ''} remaining)`, nextPlayer);
             return {
               ...ic,
               cardBuffAtk: 0,
-              cardBuffDef: inFreudZone ? 5 : 0,
+              cardBuffDef: (inFreudZone ? 5 : 0) + (hardyCoatActive ? 25 : 0),
               cardBuffPow: 0,
               cardsUsedThisTurn: frozen ? 3 : 0,
               movedThisTurn: frozen ? true : false,
+              passiveStacks: newPassiveStacks,
               stats: { ...ic.stats, movement: sunsinOnRiver ? Math.min(1 + zoneBonus, finalMove + zoneBonus) : finalMove + zoneBonus },
             };
           }
@@ -3539,6 +4070,19 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       if (manaCrystalCount > 0) {
         mana[nextPlayer] += manaCrystalCount;
         maxMana[nextPlayer] += manaCrystalCount;
+      }
+
+      // Mansa Salt Road mana zone: allies on zone gain +1 Mana at turn start
+      const manaRegenZones = (prev.activeZones ?? []).filter(z => z.effect === 'manaRegen' && z.ownerId === nextPlayer);
+      if (manaRegenZones.length > 0) {
+        const manaRegenCount = nextPlayerIcons.filter(ic =>
+          manaRegenZones.some(z => hexDistance(ic.position, z.center) <= z.radius)
+        ).length;
+        if (manaRegenCount > 0) {
+          mana[nextPlayer] = Math.min(8, mana[nextPlayer] + manaRegenCount);
+          maxMana[nextPlayer] = Math.min(8, maxMana[nextPlayer] + manaRegenCount);
+          pushLog(prev as any, `Salt Road: +${manaRegenCount} Mana from mana zone!`, nextPlayer);
+        }
       }
 
       // Respawn tick (once per full round, when player 0's turn starts)
@@ -4125,34 +4669,36 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       let winner = prev.winner;
       if (!p0Alive) { newPhase = "defeat";  winner = 1; }
       else if (!p1Alive && extPrev.encounterObjective !== 'destroy_base') { newPhase = "victory"; winner = 0; }
-      if (prev.baseHealth[0] <= 0) { newPhase = "defeat";  winner = 1; }
+      if (prev.baseHealth[0] <= 0 && !extPrev.isRoguelikeRun) { newPhase = "defeat";  winner = 1; }
       if (prev.baseHealth[1] <= 0) { newPhase = "victory"; winner = 0; }
       // Survive objective: win once enough turns have passed
       if (extPrev.encounterObjective === 'survive' && extPrev.survivalTurnsTarget > 0) {
         if (newCurrentTurn > extPrev.survivalTurnsTarget && p0Alive) { newPhase = "victory"; winner = 0; }
       }
 
-      // Tick bleed damage before debuff duration decrement
+      // Tick bleed damage + decrement debuff durations for the side that JUST ended their turn.
+      // Rule: debuffs fire/expire when the OWNER of the debuffed unit ends their turn.
+      //   • Player applies bleed to enemy  → fires when AI ends turn  (nextPlayer === 0)
+      //   • Enemy applies bleed to player  → fires when player ends turn (nextPlayer === 1)
+      // ic.playerId === nextPlayer means "this unit's side is ABOUT TO START" — skip them.
       playersAfter = playersAfter.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
           if (!ic.isAlive || !ic.debuffs?.length) return ic;
+          if (ic.playerId === nextPlayer) return ic; // this side hasn't acted yet — skip
+          // Bleed tick
           const bleed = ic.debuffs.find(d => d.type === 'bleed');
-          if (!bleed) return ic;
-          const newHp = Math.max(0, ic.stats.hp - bleed.magnitude);
-          return { ...ic, stats: { ...ic.stats, hp: Math.round(newHp) }, isAlive: newHp > 0 };
-        }),
-      }));
-
-      // Tick down debuffs on all icons (every turn end; expire at 0)
-      playersAfter = playersAfter.map(p => ({
-        ...p,
-        icons: p.icons.map(ic => {
-          if (!ic.debuffs?.length) return ic;
+          const newHp = bleed ? Math.max(0, ic.stats.hp - bleed.magnitude) : ic.stats.hp;
+          // Duration decrement (all debuffs)
           const newDebuffs = ic.debuffs
             .map(d => ({ ...d, turnsRemaining: d.turnsRemaining - 1 }))
             .filter(d => d.turnsRemaining > 0);
-          return { ...ic, debuffs: newDebuffs };
+          return {
+            ...ic,
+            stats: { ...ic.stats, hp: Math.round(newHp) },
+            isAlive: newHp > 0,
+            debuffs: newDebuffs,
+          };
         }),
       }));
 
@@ -4283,7 +4829,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               icons: p.icons.map(ic => {
                 if (!ic.isAlive || ic.playerId !== endPid) return ic;
                 if (Math.random() < 0.25) {
-                  const stunDebuff: Debuff = { type: 'stun', magnitude: 1, turnsRemaining: 1 };
+                  const stunDebuff: Debuff = { type: 'stun', magnitude: 1, turnsRemaining: 2 };
                   pushLog(prev as any, `☠ Dread: ${ic.name} is STUNNED next turn!`, endPid);
                   return { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), stunDebuff] };
                 }
@@ -4379,6 +4925,19 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             }
           }
         }
+        // Tutorial hand script: override player 0's hand if a script entry exists for this turn
+        const tutScript = (prev as any).tutorialHandScript as string[][] | undefined;
+        const prevTurnIdx = (prev as any).tutorialPlayerTurnIdx as number ?? 0;
+        const nextTurnIdx = prevTurnIdx + 1;
+        if (nextPlayer === 0 && tutScript?.[nextTurnIdx]) {
+          const scriptedCards = tutScript[nextTurnIdx].map((defId: string) => {
+            const def = CARD_DEFS.find((d: any) => d.definitionId === defId);
+            return def ? instantiateCard(def as any) : null;
+          }).filter(Boolean) as import('@/types/game').Card[];
+          finalDrawn = scriptedCards;
+          finalDraw = [];
+          finalDiscard = [];
+        }
         hands[nextPlayer] = { ...startHand, cards: finalDrawn };
         decks[nextPlayer] = { drawPile: finalDraw, discardPile: finalDiscard };
 
@@ -4416,6 +4975,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         });
       }
 
+      // Advance tutorialPlayerTurnIdx when player 0 draws a new hand
+      const newTutTurnIdx = (nextPlayer === 0 && (prev as any).tutorialHandScript)
+        ? ((prev as any).tutorialPlayerTurnIdx as number ?? 0) + 1
+        : ((prev as any).tutorialPlayerTurnIdx as number ?? 0);
+
       return {
         ...prev,
         board: boardAfter,
@@ -4448,6 +5012,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         baseIntents,
         ...(hands && { hands }),
         ...(decks && { decks }),
+        tutorialPlayerTurnIdx: newTutTurnIdx,
       } as ExtState;
     });
   }, []);
@@ -4504,7 +5069,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       toast.error(`${executor.name} is STUNNED and cannot act!`);
       return prev;
     }
-    if (executor.debuffs?.some(d => d.type === 'silence') && card.exclusiveTo !== null) {
+    if (executor.debuffs?.some(d => d.type === 'silence') && card.exclusiveTo !== null && !executor.name.includes("Nelson")) {
       toast.error(`${executor.name} is SILENCED and cannot use abilities!`);
       return prev;
     }
@@ -4704,6 +5269,230 @@ const playCard = useCallback((card: Card, executorId: string) => {
       };
     }
 
+    // Nelson: Crossing the T — directional line shot with scaling damage
+    if (card.effect.lineScaling) {
+      const crossingRange = (card.effect.range ?? 5) + (executor.itemPassiveTags?.includes('nelson_crossing_extend') ? 1 : 0);
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "line_scaling", iconId: executorId, range: crossingRange } };
+    }
+    // Hannibal: Alpine March — directed charge move with line preview
+    if (card.effect.chargeMove) {
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "charge_move", iconId: executorId, range: card.effect.chargeDist ?? 6 } };
+    }
+    // Nelson: Kiss Me Hardy — charge in line pushing enemies sideways
+    if (card.effect.chargeLinePushSide) {
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "charge_line_push", iconId: executorId, range: card.effect.chargeDist ?? 4 } };
+    }
+    // Hannibal: War Elephant — summon on adjacent hex
+    if (card.effect.summonWarElephant) {
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "summon_war_elephant", iconId: executorId, range: card.effect.range ?? 1 } };
+    }
+    // Hannibal: Double Envelopment — target enemy, hit + AoE adjacent
+    if (card.effect.chargeAndPull) {
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "charge_and_pull", iconId: executorId, range: card.effect.range ?? 3 } };
+    }
+    // Picasso: Cubist Mirror — swap with ally or enemy
+    if (card.effect.swapEnemyAlly) {
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "swap_target", iconId: executorId, range: card.effect.range ?? 4 } };
+    }
+    // Mansa: Salt Road — place mana zone
+    if (card.effect.manaZone) {
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "mana_zone", iconId: executorId, range: card.effect.range ?? 3 } };
+    }
+    // Teddy: Rough Riders' Rally — apply team buffs immediately, then enter teleport targeting
+    if (card.effect.selfTeleportAnywhere) {
+      let updated = { ...state } as ExtState;
+      const allyMightBonus = 25;
+      const allyMoveBonus = card.effect.moveBonus ?? 2;
+      const selfExtra = card.effect.selfMightBonus ?? 45;
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive || ic.playerId !== executor.playerId) return ic;
+          const extraMight = ic.id === executorId ? selfExtra : 0;
+          return {
+            ...ic,
+            cardBuffAtk: (ic.cardBuffAtk ?? 0) + allyMightBonus + extraMight,
+            stats: { ...ic.stats, movement: ic.stats.movement + allyMoveBonus },
+          };
+        }),
+      }));
+      pushLog(updated, `${executor.name} Rough Riders' Rally — allies +${allyMightBonus} Might, +${allyMoveBonus} Move! Teddy +${selfExtra} Might & teleports!`, executor.playerId);
+      // Rough Rider's Badge: Rally also removes all ally debuffs
+      if (executor.itemPassiveTags?.includes('teddy_rally_cleanse')) {
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => (!ic.isAlive || ic.playerId !== executor.playerId) ? ic : { ...ic, debuffs: [] }),
+        }));
+        pushLog(updated, `${executor.name} Rough Rider's Badge: all ally debuffs CLEANSED!`, executor.playerId);
+      }
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated, targetingMode: { abilityId: "rough_riders_teleport", iconId: executorId, range: card.effect.selfTeleportAnywhere } };
+    }
+    // Teddy: Speak Softly — taunt all enemies in range + give Teddy DEF bonus (immediate)
+    if (card.effect.globalTauntRange !== undefined) {
+      let updated = { ...state } as ExtState;
+      const tauntRange = card.effect.globalTauntRange;
+      const defBonus = card.effect.defBonus ?? 30;
+      const enemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= tauntRange
+      );
+      if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+      const tauntDebuff: Debuff = { type: 'taunted', magnitude: 0, turnsRemaining: 4, sourceIconId: executorId };
+      for (const enemy of enemies) {
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'taunted'), tauntDebuff],
+          }),
+        }));
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + defBonus }),
+      }));
+      pushLog(updated, `${executor.name} Speak Softly — ${enemies.length} enem${enemies.length !== 1 ? 'ies' : 'y'} TAUNTED! +${defBonus} DEF to Teddy.`, executor.playerId);
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+    // Picasso: Blue Period — scramble all units, heal allies, +DEF (immediate)
+    if (card.effect.scrambleAll) {
+      let updated = { ...state } as ExtState;
+      const allPassableTiles = updated.board.filter(t => t.terrain.effects.movementModifier !== -999 && t.terrain.type !== 'spawn');
+      const allAliveIcons = updated.players.flatMap(p => p.icons).filter(ic => ic.isAlive);
+      const shuffled = [...allPassableTiles].sort(() => Math.random() - 0.5);
+      const assigned: { q: number; r: number }[] = [];
+      for (let i = 0; i < allAliveIcons.length; i++) {
+        const candidate = shuffled.find(t => !assigned.some(a => a.q === t.coordinates.q && a.r === t.coordinates.r));
+        assigned.push(candidate ? candidate.coordinates : allAliveIcons[i].position);
+      }
+      allAliveIcons.forEach((ic, i) => {
+        const pos = assigned[i];
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ii => ii.id !== ic.id ? ii : { ...ii, position: pos }),
+        }));
+      });
+      const healAmt = card.effect.healing ?? 60;
+      const defBonusBlue = card.effect.scrambleAllyDefBonus ?? 20;
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive || ic.playerId !== executor.playerId) return ic;
+          return { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + healAmt) }, cardBuffDef: (ic.cardBuffDef ?? 0) + defBonusBlue };
+        }),
+      }));
+      pushLog(updated, `${executor.name} Blue Period — ALL units scrambled! Allies +${healAmt} HP, +${defBonusBlue} DEF.`, executor.playerId);
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+    // Mansa: Hajj of Gold / Mansa's Bounty — heal all allies + buff (immediate)
+    if (card.effect.hajjOfGold) {
+      let updated = { ...state } as ExtState;
+      const healPct = card.effect.hajjHealPct ?? 0.2;
+      const powerBonusHajj = card.effect.teamPowerFlat ?? 0;
+      const mightBonusHajj = card.effect.teamDmgFlat ?? 0;
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive || ic.playerId !== executor.playerId) return ic;
+          const healAmt = Math.round(ic.stats.maxHp * healPct);
+          return {
+            ...ic,
+            stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + healAmt) },
+            cardBuffPow: (ic.cardBuffPow ?? 0) + powerBonusHajj,
+            cardBuffAtk: (ic.cardBuffAtk ?? 0) + mightBonusHajj,
+          };
+        }),
+      }));
+      const buffDesc = powerBonusHajj > 0 ? ` +${powerBonusHajj} Power` : mightBonusHajj > 0 ? ` +${mightBonusHajj} Might` : '';
+      pushLog(updated, `${executor.name} ${card.name} — allies healed ${Math.round(healPct * 100)}% HP${buffDesc}.`, executor.playerId);
+      // Mansa Treasury: ability cards cost 1 less mana (2 less with Mali Coffers)
+      const mansaDiscount = executor.name.includes("Mansa") && card.definitionId?.startsWith("mansa_")
+        ? (executor.itemPassiveTags?.includes('mansa_discount_2') ? 2 : 1)
+        : 0;
+      const effectiveCostHajj = Math.max(0, card.manaCost - mansaDiscount);
+      if (effectiveCostHajj > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - effectiveCostHajj);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
+    // Mansa: Mansa's Bounty — Golden Stasis (freeze ALL units for 1 turn; upgrade freezes enemies 2 turns)
+    if (card.effect.mansaBounty) {
+      let updated = { ...state } as ExtState;
+      const isUpgrade = card.effect.mansaBountyExtra === true;
+      // turnsRemaining:2 = 1 visible frozen turn (debuffs tick at every endTurn)
+      const allyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
+      const enemyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: isUpgrade ? 3 : 2 };
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive) return ic;
+          const freeze = ic.playerId === executor.playerId ? allyFreeze : enemyFreeze;
+          return { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), freeze] };
+        }),
+      }));
+      const desc = isUpgrade
+        ? `${executor.name} Mansa's Bounty+ — Golden Stasis! All units frozen (enemies 2 turns).`
+        : `${executor.name} Mansa's Bounty — Golden Stasis! All units frozen for 1 turn.`;
+      pushLog(updated, desc, executor.playerId);
+      // Mansa Treasury: ability cards cost 1 less mana (2 less with Mali Coffers)
+      const mansaDiscountBounty = executor.name.includes("Mansa") && card.definitionId?.startsWith("mansa_")
+        ? (executor.itemPassiveTags?.includes('mansa_discount_2') ? 2 : 1)
+        : 0;
+      const effectiveCostBounty = Math.max(0, card.manaCost - mansaDiscountBounty);
+      if (effectiveCostBounty > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - effectiveCostBounty);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
     // Damage / healing / single-target powerMult → enter targeting mode
     const needsTarget =
       card.effect.damage !== undefined ||
@@ -4715,10 +5504,11 @@ const playCard = useCallback((card: Card, executorId: string) => {
       const isBasicAttack = card.definitionId === "shared_basic_attack";
       const executorBlinded = executor.debuffs?.some(d => d.type === 'blinded') ?? false;
       const attackRange = executorBlinded ? 1
-        : executor.name.includes("Napoleon") || executor.name.includes("Da Vinci") || executor.name.includes("Beethoven") ? 2
         : (sunsinOnRiver) ? 3
         : (executor.stats.attackRange ?? 1);
-      const cardRange = executorBlinded ? 1 : (isBasicAttack ? attackRange : (card.effect.range ?? 3));
+      // Carry a Bigger Stick: Big Stick range increased from 1 to 2
+      const bigStickRangeBonus = !executorBlinded && !isBasicAttack && card.definitionId === 'teddy_big_stick' && executor.itemPassiveTags?.includes('teddy_big_stick_range2') ? 1 : 0;
+      const cardRange = executorBlinded ? 1 : (isBasicAttack ? attackRange : (card.effect.range ?? 3) + bigStickRangeBonus);
 
       if (isBasicAttack) {
         // Consume card + mana immediately, then use the simple targetingMode path (avoids cardTargetingMode complexity)
@@ -4886,8 +5676,8 @@ const playCard = useCallback((card: Card, executorId: string) => {
         ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
       );
       if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
-      const stunDuration = (card.effect.debuffDuration ?? 1)
-        + (executor.itemPassiveTags?.includes('beethoven_gotterfunken_stun2') ? 1 : 0);
+      const stunDuration = (card.effect.debuffDuration ?? 2)
+        + (executor.itemPassiveTags?.includes('beethoven_gotterfunken_stun2') ? 2 : 0);
       const aoeDebuff: Debuff = {
         type: card.effect.debuffType,
         magnitude: card.effect.debuffMagnitude ?? 0,
@@ -5020,7 +5810,11 @@ const playCard = useCallback((card: Card, executorId: string) => {
     const execRefreshed = updated.players.flatMap(p => p.icons).find(i => i.id === executorId);
     const cardIsFreeDueToNextFree = execRefreshed?.nextCardFree === true || (execRefreshed?.freeCardsLeft ?? 0) > 0;
     const cardIsFreeDueToFirstAbility = isExclusiveAbility && execRefreshed?.itemPassiveTags?.includes('first_ability_free') && !execRefreshed?.firstAbilityUsed;
-    const effectiveCost = (cardIsFreeDueToNextFree || cardIsFreeDueToFirstAbility) ? 0 : card.manaCost;
+    // Picasso Fractured Perspective: every 3rd card played THIS BATTLE is free (every 2nd with Cubist Lens)
+    const cardsPlayedSoFar = execRefreshed?.cardsPlayedThisBattle ?? 0;
+    const perspectiveMod = execRefreshed?.itemPassiveTags?.includes('picasso_perspective_2nd') ? 2 : 3;
+    const cardIsFreeDueToPicasso = executor.name.includes("Picasso") && cardsPlayedSoFar > 0 && cardsPlayedSoFar % perspectiveMod === perspectiveMod - 1;
+    const effectiveCost = (cardIsFreeDueToNextFree || cardIsFreeDueToFirstAbility || cardIsFreeDueToPicasso) ? 0 : card.manaCost;
     if (effectiveCost > 0) {
       const pid = executor.playerId as 0 | 1;
       const newMana = [...updated.globalMana] as [number, number];
@@ -5029,6 +5823,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
     }
     if (cardIsFreeDueToNextFree) pushLog(updated, `${executor.name} Znyxorga's Eye: card played FREE!`, executor.playerId);
     if (cardIsFreeDueToFirstAbility) pushLog(updated, `${executor.name} Gladiator's Brand: first ability FREE!`, executor.playerId);
+    if (cardIsFreeDueToPicasso) pushLog(updated, `${executor.name} Fractured Perspective: card #${cardsPlayedSoFar + 1} FREE!`, executor.playerId);
 
     // Mark executor as having used a card this turn; track count for 3-card limit (all card types count)
     updated.players = updated.players.map(p => ({
@@ -5037,6 +5832,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
         ...ic,
         cardUsedThisTurn: true,
         cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1,
+        cardsPlayedThisBattle: (ic.cardsPlayedThisBattle ?? 0) + 1,
         abilityUsedThisTurn: isExclusiveAbility ? true : ic.abilityUsedThisTurn,
         nextCardFree: cardIsFreeDueToNextFree ? false : ic.nextCardFree,
         freeCardsLeft: cardIsFreeDueToNextFree && (ic.freeCardsLeft ?? 0) > 0 ? ic.freeCardsLeft! - 1 : ic.freeCardsLeft,
@@ -5063,6 +5859,13 @@ const undoMovement = useCallback(() => {
     if (!stack.length) return prev;
 
     const last = stack.pop()!;
+
+    // Don't allow undo if the previous position is occupied by another alive unit
+    const isBlocked = state.players.flatMap(p => p.icons).some(
+      ic => ic.isAlive && ic.id !== me.id && ic.position.q === last.from.q && ic.position.r === last.from.r
+    );
+    if (isBlocked) return prev;
+
     state.movementStack = { ...(state.movementStack ?? {}), [me.id]: stack };
 
     state.players = state.players.map((p) => ({
@@ -5129,7 +5932,26 @@ const startBattle = useCallback((
     const p1Icons = encounter
       ? buildEnemyIconsFromEncounter(encounter, scaleFactor)
       : buildIconsFromSelection(sel, runChars).filter(i => i.playerId === 1);
-    const allIcons = [...p0Icons, ...p1Icons];
+
+    // Tutorial: override spawn positions so characters start near each other.
+    // Each tutorialForcePositions entry is consumed at most once (first-match),
+    // so duplicate name entries work for multi-count enemies (e.g. 2× Zyx Skitter).
+    const applyForcedPos = <T extends { name: string; position: { q: number; r: number } }>(icons: T[]): T[] => {
+      const fps = encounter?.tutorialForcePositions;
+      if (!fps || fps.length === 0) return icons;
+      const usedIndices = new Set<number>();
+      return icons.map(ic => {
+        const fpIdx = fps.findIndex((f, i) => !usedIndices.has(i) && ic.name.includes(f.nameContains));
+        if (fpIdx >= 0) {
+          usedIndices.add(fpIdx);
+          return { ...ic, position: { q: fps[fpIdx].q, r: fps[fpIdx].r } };
+        }
+        return ic;
+      });
+    };
+    const p0IconsFinal = applyForcedPos(p0Icons);
+    const p1IconsFinal = applyForcedPos(p1Icons);
+    const allIcons = [...p0IconsFinal, ...p1IconsFinal];
 
     const speedQueueRaw = initSpeedQueue(allIcons);
     const speedQueue    = normalizeSpeedQueue(speedQueueRaw, allIcons);
@@ -5148,8 +5970,19 @@ const startBattle = useCallback((
       const maxSize = 7 + handSizeBonus;
       return [{ cards: allCards.slice(0, maxSize), maxSize }, { drawPile: allCards.slice(maxSize), discardPile: [] }];
     };
-    const [hand0, deck0] = buildHand(p0Names, deckCardIds);
+    let [hand0, deck0] = buildHand(p0Names, deckCardIds);
     const [hand1, deck1] = buildHand(p1Names);
+
+    // Tutorial hand script: override player 0's initial hand if turn-0 script present
+    const handScript = encounter?.tutorialHandScript;
+    if (handScript?.[0]) {
+      const scriptedCards = handScript[0].map(defId => {
+        const def = CARD_DEFS.find((d: any) => d.definitionId === defId);
+        return def ? instantiateCard(def as any) : null;
+      }).filter(Boolean) as import('@/types/game').Card[];
+      hand0 = { cards: scriptedCards, maxSize: hand0.maxSize };
+      deck0 = { drawPile: [], discardPile: [] };
+    }
     // Use random map for roguelike battles; act determines biome theme (1=forest, 2=desert, 3=snow/ice)
     const rawBoard = mapSeed != null ? generateRandomBattleBoard(mapSeed, act ?? 1) : createInitialBoard();
     const rogueObjective = (encounter?.objective ?? 'defeat_all') as FightObjective;
@@ -5165,14 +5998,15 @@ const startBattle = useCallback((
           return tile;
         })
       : rawBoard;
+    const actBaseHp = isRoguelikeRun ? (act === 3 ? 400 : act === 2 ? 250 : 150) : 150;
     return {
       currentTurn: 1,
       activePlayerId: 0 as const,
       cardLockActive: false,
       phase: "combat",
       players: [
-        { id: 0, name: "Player 1",                                                icons: p0Icons, color: "blue", isAI: false },
-        { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: p1Icons, color: "red",  isAI: gameMode === "singleplayer" },
+        { id: 0, name: "Player 1",                                                icons: p0IconsFinal, color: "blue", isAI: false },
+        { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: p1IconsFinal, color: "red",  isAI: gameMode === "singleplayer" },
       ],
       board,
       globalMana:   [5, 5],
@@ -5185,7 +6019,8 @@ const startBattle = useCallback((
         beastCamps: { hp: [75, 75], maxHp: 75, defeated: [false, false] },
       },
       teamBuffs:   { mightBonus: [0, 0], powerBonus: [0, 0], homeBaseBonus: [0, 0] },
-      baseHealth:  [150, 150],
+      baseHealth:  [actBaseHp, actBaseHp],
+      baseMaxHealth: [actBaseHp, actBaseHp],
       matchTimer:  600,
       gameMode,
       movementStack: {},
@@ -5198,6 +6033,8 @@ const startBattle = useCallback((
       survivalTurnsTarget: encounter?.survivalTurns ?? 0,
       spawnInterval: encounter?.spawnInterval ?? 0,
       isRoguelikeRun: isRoguelikeRun ?? false,
+      tutorialHandScript: encounter?.tutorialHandScript,
+      tutorialPlayerTurnIdx: 0,
     } as ExtState;
   });
 }, [gameMode]);

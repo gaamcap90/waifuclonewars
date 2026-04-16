@@ -36,7 +36,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 70, maxHp: 70, might: 30, power: 35, defense: 12, moveRange: 3, attackRange: 2 },
     ai: 'ranged',
     abilities: [
-      { id: 'plasma_shot', name: 'Plasma Shot', icon: '⚡', description: 'Fires a concentrated plasma bolt dealing Power×1.2 damage to a single enemy within range 3.', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 1.2 } },
+      { id: 'plasma_shot', name: 'Plasma Shot', icon: '⚡', description: 'Fires a concentrated plasma bolt dealing Power×1.2 damage to a single enemy within range 3.', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 1.2, singleTarget: true } },
     ] as EnemyAbilityDef[],
   },
   vron_crawler: {
@@ -68,7 +68,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 40, maxHp: 40, might: 20, power: 30, defense: 5, moveRange: 1, attackRange: 2 },
     ai: 'ranged',
     abilities: [
-      { id: 'toxic_cloud', name: 'Toxic Cloud', icon: '☣️', description: 'Applies Poison to all enemies within range 2.', cooldown: 2, effect: { type: 'debuff_enemies', range: 2, debuffType: 'poison', magnitude: 5, duration: 99 } },
+      { id: 'toxic_cloud', name: 'Toxic Cloud', icon: '☣️', description: 'Applies Poison to all enemies within range 2.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'poison', magnitude: 5, duration: 99 } },
       { id: 'spore_burst', name: 'Spore Burst', icon: '💥', description: 'Deals 25 damage to all enemies in range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, damage: 25 } },
     ] as EnemyAbilityDef[],
   },
@@ -77,7 +77,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'vexlar', name: 'Vexlar', icon: '🐆', count: 2,
     portrait: '/art/enemies/vexlar_portrait.png',
     description: "Alien apex predators brought in for your opening round. Six-legged and iridescent, they hunt the weakest link with surgical instinct and terrifying speed.",
-    stats: { hp: 80, maxHp: 80, might: 25, power: 30, defense: 30, moveRange: 3, attackRange: 1 },
+    stats: { hp: 80, maxHp: 80, might: 25, power: 30, defense: 22, moveRange: 3, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
       { id: 'predator_leap', name: 'Predator Leap', icon: '🐆', description: 'Launches at the enemy with the lowest Defense — leaps up to range 4 and delivers a savage basic attack on arrival.', cooldown: 3, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.0 } },
@@ -134,7 +134,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 140, maxHp: 140, might: 60, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
-      { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +25 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: -20, duration: 2 } },
+      { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +18 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 18, defenseBonus: -20, duration: 2 } },
       { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals 1.2× Might damage on arrival (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.2 } },
     ] as EnemyAbilityDef[],
   },
@@ -154,11 +154,11 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'twin_terror_a', name: 'Terror Alpha', icon: '🗡️', count: 1,
     portrait: '/art/enemies/terror_alpha_portrait.png',
     description: "The aggressive half of the Twin Terror duo. Built for raw speed and kinetic impact — charges at full sprint and hits like a missile. Kill it first or it will never stop coming.",
-    stats: { hp: 160, maxHp: 160, might: 70, power: 55, defense: 20, moveRange: 4, attackRange: 1 },
+    stats: { hp: 160, maxHp: 160, might: 60, power: 55, defense: 20, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
       { id: 'alpha_rush', name: 'Alpha Rush', icon: '🗡️', description: 'Charges 4 hexes and deals 1.5× Might damage on impact.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.5 } },
-      { id: 'twin_fury', name: 'Twin Fury', icon: '🔥', description: 'Gains +30 Might for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 30, duration: 2 } },
+      { id: 'twin_fury', name: 'Twin Fury', icon: '🔥', description: 'Gains +20 Might for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 20, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
   twin_terror_b: {
@@ -180,10 +180,10 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 400, maxHp: 400, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 },
     ai: 'berserker',
     abilities: [
-      { id: 'arena_collapse', name: 'Arena Collapse', icon: '👑', description: 'The arena itself becomes a weapon — deals 40 damage to ALL player characters simultaneously.', cooldown: 3, effect: { type: 'damage_all_enemies', damage: 40 } },
+      { id: 'arena_collapse', name: 'Arena Collapse', icon: '👑', description: 'The arena itself becomes a weapon — deals 20 damage to ALL player characters simultaneously.', cooldown: 3, effect: { type: 'damage_all_enemies', damage: 20 } },
       { id: 'phase_shift', name: 'Phase Shift', icon: '🛡️', description: 'Becomes invincible for 2 turns and gains +15 Might, +15 Power, and +15 Defense permanently. Triggers ONCE when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'buff_self', mightBonus: 15, defenseBonus: 500, duration: 2 } },
       { id: 'champions_will', name: "Champion's Will", icon: '⭐', description: 'Driven by Znyxorga\'s will — gains +20 Might, +20 Power, and +20 Defense permanently. Triggers ONCE when below 30% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.30, effect: { type: 'buff_self', mightBonus: 20, defenseBonus: 20, duration: 999 } },
-      { id: 'tyrant_strike', name: 'Tyrant Strike', icon: '💥', description: 'Channels Power into a devastating strike — deals Power×1.3 damage to all enemies within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.3 } },
+      { id: 'tyrant_strike', name: 'Tyrant Strike', icon: '💥', description: 'Channels Power into a devastating strike — deals Power×1.0 damage to all enemies within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.0 } },
     ] as EnemyAbilityDef[],
   },
   // ── New Enemies ────────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'magnetic_pull', name: 'Magnetic Pull', icon: '🧲', description: 'Yanks a target 2 hexes closer then deals Power×0.8 damage. Range 3.', cooldown: 2, effect: { type: 'pull_attack', pullRange: 2, range: 3, multiplier: 0.8 } },
-      { id: 'emp_surge', name: 'EMP Surge', icon: '⚡', description: 'Releases an electromagnetic pulse — Silences all enemies within range 1 for 1 turn (prevents ability use).', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'silence', magnitude: 0, duration: 2 } },
+      { id: 'emp_surge', name: 'EMP Surge', icon: '⚡', description: 'Releases an electromagnetic pulse — Silences all enemies within range 1 for 1 turn (prevents ability use).', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'silence', magnitude: 0, duration: 1 } },
     ] as EnemyAbilityDef[],
   },
   // Act 2 Common
@@ -242,17 +242,17 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
 export const ITEMS: RunItem[] = [
   // COMMON
   { id: 'iron_gauntlets', name: 'Iron Gauntlets', icon: '🥊', tier: 'common',
-    description: '+10 Might for this run.',
-    statBonus: { might: 10 } },
+    description: '+5 Might for this run.',
+    statBonus: { might: 5 } },
   { id: 'bone_plate', name: 'Bone Plate', icon: '🦴', tier: 'common',
-    description: '+5 Defense for this run.',
-    statBonus: { defense: 5 } },
+    description: '+3 Defense for this run.',
+    statBonus: { defense: 3 } },
   { id: 'vitality_shard', name: 'Vitality Shard', icon: '💠', tier: 'common',
-    description: '+25 max HP for this run.',
-    statBonus: { hp: 25 } },
+    description: '+12 max HP for this run.',
+    statBonus: { hp: 12 } },
   { id: 'mana_conduit', name: 'Mana Conduit', icon: '🔋', tier: 'common',
-    description: '+10 Power for this run.',
-    statBonus: { power: 10 } },
+    description: '+5 Power for this run.',
+    statBonus: { power: 5 } },
   // UNCOMMON
   { id: 'battle_drum', name: 'Battle Drum', icon: '🥁', tier: 'uncommon',
     description: 'After killing an enemy, draw 1 card.',
@@ -261,8 +261,8 @@ export const ITEMS: RunItem[] = [
     description: 'Heal 25 HP at the start of your turn if below 40% HP.',
     passiveTag: 'regen_low_hp' },
   { id: 'void_shard', name: 'Void Shard', icon: '🔥', tier: 'uncommon',
-    description: 'Basic attacks deal +10 bonus damage.',
-    passiveTag: 'atk_bonus_10', statBonus: { might: 10 } },
+    description: '+10 Might for this run.',
+    statBonus: { might: 10 } },
   { id: 'card_satchel', name: 'Card Satchel', icon: '🎒', tier: 'uncommon',
     description: '+1 starting hand size for this run.',
     passiveTag: 'hand_size_plus_1' },
@@ -351,6 +351,51 @@ export const ITEMS: RunItem[] = [
     targetCharacter: 'huang',
     description: 'Eternal Army lasts 3 turns instead of 2.',
     passiveTag: 'huang_control_extend' },
+  // RARE — Nelson-chan
+  { id: 'nelsons_spyglass', name: "Nelson's Spyglass", icon: '🔭', tier: 'rare',
+    targetCharacter: 'nelson',
+    description: 'Crossing the T range extended by 1 (range 6 total).',
+    passiveTag: 'nelson_crossing_extend' },
+  { id: 'hardy_coat', name: "Hardy's Coat", icon: '🧥', tier: 'rare',
+    targetCharacter: 'nelson',
+    description: 'After using Kiss Me Hardy, Nelson gains +25 Defense for 2 turns.',
+    passiveTag: 'nelson_hardy_coat' },
+  // RARE — Hannibal-chan
+  { id: 'war_elephant_tusk', name: 'War Elephant Tusk', icon: '🦣', tier: 'rare',
+    targetCharacter: 'hannibal',
+    description: 'War Elephant is summoned with +40 HP and +20 Might.',
+    passiveTag: 'hannibal_elephant_buff' },
+  { id: 'carthaginian_ring', name: 'Carthaginian Ring', icon: '💍', tier: 'rare',
+    targetCharacter: 'hannibal',
+    description: 'Cannae bonus damage increased from 40% to 70%.',
+    passiveTag: 'hannibal_cannae_70pct' },
+  // RARE — Picasso-chan
+  { id: 'blue_canvas', name: 'Blue Canvas', icon: '🎨', tier: 'rare',
+    targetCharacter: 'picasso',
+    description: 'Armor Break from Guernica lasts 3 turns instead of 2.',
+    passiveTag: 'picasso_guernica_extend' },
+  { id: 'cubist_lens', name: 'Cubist Lens', icon: '🪟', tier: 'rare',
+    targetCharacter: 'picasso',
+    description: 'Fractured Perspective free-card triggers every 2nd card instead of every 3rd.',
+    passiveTag: 'picasso_perspective_2nd' },
+  // RARE — Teddy-chan
+  { id: 'big_stick_upgrade', name: 'Carry a Bigger Stick', icon: '🏏', tier: 'rare',
+    targetCharacter: 'teddy',
+    description: 'Big Stick range increased to 2 and deals +20 bonus Might damage.',
+    passiveTag: 'teddy_big_stick_range2' },
+  { id: 'rough_rider_badge', name: "Rough Rider's Badge", icon: '🏅', tier: 'rare',
+    targetCharacter: 'teddy',
+    description: "Rough Riders' Rally also removes all debuffs from allied units.",
+    passiveTag: 'teddy_rally_cleanse' },
+  // RARE — Mansa-chan
+  { id: 'golden_throne', name: 'Golden Throne', icon: '👑', tier: 'rare',
+    targetCharacter: 'mansa',
+    description: 'After each battle, earn an additional +50% of the gold reward on top of Treasury.',
+    passiveTag: 'mansa_treasury_double' },
+  { id: 'mali_coffers', name: 'Mali Coffers', icon: '💰', tier: 'rare',
+    targetCharacter: 'mansa',
+    description: "Mansa's ability card Mana discount increased to 2.",
+    passiveTag: 'mansa_discount_2' },
   // LEGENDARY
   { id: 'znyxorgas_eye', name: "Znyxorga's Eye", icon: '👁️', tier: 'legendary',
     description: 'After defeating an enemy, your next 2 cards cost 0 Mana.',
@@ -401,10 +446,10 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'shared_taunt',           name: 'Taunt',            icon: '😤', manaCost: 2, rarity: 'uncommon', description: 'Enemy AI focuses this unit 2 turns. This unit gains +15 Defense.' },
   { definitionId: 'shared_decoy',           name: 'Decoy',            icon: '🎭', manaCost: 2, rarity: 'uncommon', description: 'Place a 30 HP decoy. Enemies target it. Explodes for 20 dmg when destroyed.' },
   // ── Rare shared ───────────────────────────────────────────────────────────
-  { definitionId: 'shared_blood_price', name: 'Blood Price', icon: '🩸', manaCost: 3, rarity: 'rare', description: 'Lose 20% HP. All allies gain +15 Might and +15 Power this turn.' },
+  { definitionId: 'shared_blood_price', name: 'Blood Price', icon: '🩸', manaCost: 2, rarity: 'rare', description: 'Lose 20% HP. All allies gain +15 Might and +15 Power this turn.' },
   // ── Rare — Napoleon ───────────────────────────────────────────────────────
   { definitionId: 'napoleon_artillery_barrage', name: 'Artillery Barrage', icon: '💥', manaCost: 2, rarity: 'rare', description: 'Power×1.3 dmg at range 4.', exclusiveTo: 'Napoleon' },
-  { definitionId: 'napoleon_grande_armee',      name: 'Grande Armée',      icon: '⚔️', manaCost: 3, rarity: 'rare', description: '+20% Might & Power to all allies for 2 turns.', exclusiveTo: 'Napoleon' },
+  { definitionId: 'napoleon_grande_armee',      name: 'Grande Armée',      icon: '⚔️', manaCost: 3, rarity: 'rare', description: '+15% Might & Power to all allies for 2 turns.', exclusiveTo: 'Napoleon' },
   // ── Ultimate — Napoleon ───────────────────────────────────────────────────
   { definitionId: 'napoleon_final_salvo', name: 'Final Salvo', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — 3 shots each dealing Power×0.7 to random enemies. Range 4.', exclusiveTo: 'Napoleon' },
   // ── Rare — Genghis ────────────────────────────────────────────────────────
@@ -433,10 +478,35 @@ export const CARD_REWARD_POOL: CardReward[] = [
   // ── Ultimate — Beethoven ──────────────────────────────────────────────────
   { definitionId: 'beethoven_gotterfunken', name: 'Götterfunken', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Deal 46 dmg and Stun all enemies within range 3 for 1 turn.', exclusiveTo: 'Beethoven' },
   // ── Rare — Huang-chan ─────────────────────────────────────────────────────
-  { definitionId: 'huang_terracotta_summon', name: 'Terracotta Legion',      icon: '🗿', manaCost: 2, rarity: 'rare', description: 'Summon Terracotta Archer or Warrior on a hex. HP 40, scales with stats. Lasts 2 turns.', exclusiveTo: 'Huang-chan' },
-  { definitionId: 'huang_first_emperor',    name: "First Emperor's Command", icon: '⚔️', manaCost: 3, rarity: 'rare', description: 'Summon Terracotta Cavalry adjacent. HP 60, scales with stats. Lasts 2 turns. Gain free Cavalry Charge.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_terracotta_summon', name: 'Terracotta Legion',      icon: '🗿', manaCost: 2, rarity: 'rare', description: 'Summon Terracotta Archer or Warrior on a hex. HP 40, scales with stats. Lasts 2 turns.', exclusiveTo: 'Huang' },
+  { definitionId: 'huang_first_emperor',    name: "First Emperor's Command", icon: '⚔️', manaCost: 3, rarity: 'rare', description: 'Summon Terracotta Cavalry adjacent. HP 60, scales with stats. Lasts 2 turns. Gain free Cavalry Charge.', exclusiveTo: 'Huang' },
   // ── Ultimate — Huang-chan ─────────────────────────────────────────────────
-  { definitionId: 'huang_eternal_army', name: 'Eternal Army', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Control a non-boss enemy for 2 turns. They attack the nearest foe.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_eternal_army', name: 'Eternal Army', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Control a non-boss enemy for 2 turns. They attack the nearest foe.', exclusiveTo: 'Huang' },
+  // ── Rare — Nelson-chan ────────────────────────────────────────────────────
+  { definitionId: 'nelson_crossing_the_t', name: 'Crossing the T',  icon: '⚓', manaCost: 2, rarity: 'rare',    description: 'Fire a line shot at range 5 — ~65 dmg 1st, ~40 2nd, ~26 3rd+. Damage falls off 65% each hit.', exclusiveTo: 'Nelson' },
+  { definitionId: 'nelson_kiss_me_hardy',  name: 'Kiss Me Hardy',   icon: '💨', manaCost: 2, rarity: 'rare',    description: 'Charge up to 4 hexes in a line. Each enemy in path takes ~55 dmg and is pushed sideways 1 hex.', exclusiveTo: 'Nelson' },
+  // ── Ultimate — Nelson-chan ────────────────────────────────────────────────
+  { definitionId: 'nelson_trafalgar_square', name: 'Trafalgar Square', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — ~130 dmg to one target at range 4. If target dies, deal ~50 dmg to all adjacent enemies.', exclusiveTo: 'Nelson' },
+  // ── Rare — Hannibal-chan ──────────────────────────────────────────────────
+  { definitionId: 'hannibal_alpine_march',      name: 'Alpine March',      icon: '🏔️', manaCost: 1, rarity: 'rare',    description: 'Charge up to 6 hexes in a straight line across any terrain.', exclusiveTo: 'Hannibal' },
+  { definitionId: 'hannibal_double_envelopment',name: 'Double Envelopment', icon: '🌀', manaCost: 2, rarity: 'rare',    description: '~55 dmg to a target at range 3, then ~28 dmg to all enemies adjacent to that target.', exclusiveTo: 'Hannibal' },
+  // ── Ultimate — Hannibal-chan ──────────────────────────────────────────────
+  { definitionId: 'hannibal_war_elephant', name: 'War Elephant', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Summon a War Elephant adjacent (HP 120, Might 70, DEF 20, Move 2). Lasts 2 turns.', exclusiveTo: 'Hannibal' },
+  // ── Rare — Picasso-chan ───────────────────────────────────────────────────
+  { definitionId: 'picasso_guernica',     name: 'Guernica',     icon: '💥', manaCost: 2, rarity: 'rare',    description: '~70 dmg to ALL enemies within range 2. Apply Armor Break (−25% DEF, 2 turns).', exclusiveTo: 'Picasso' },
+  { definitionId: 'picasso_cubist_mirror',name: 'Cubist Mirror', icon: '🪞', manaCost: 2, rarity: 'rare',    description: 'Swap positions with any unit in range 4. If an enemy, deal ~35 dmg on swap.', exclusiveTo: 'Picasso' },
+  // ── Ultimate — Picasso-chan ───────────────────────────────────────────────
+  { definitionId: 'picasso_blue_period', name: 'Blue Period', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Scramble all units to random positions. Heal all allies 60 HP, +20 DEF until next turn.', exclusiveTo: 'Picasso' },
+  // ── Rare — Teddy-chan ─────────────────────────────────────────────────────
+  { definitionId: 'teddy_speak_softly', name: 'Speak Softly', icon: '📣', manaCost: 2, rarity: 'rare',    description: 'All enemies in range 2 are Taunted for 2 turns — must target Teddy. Teddy gains +30 DEF.', exclusiveTo: 'Teddy' },
+  { definitionId: 'teddy_big_stick',    name: 'Big Stick',    icon: '🏏', manaCost: 2, rarity: 'rare',    description: '~87 Might dmg at range 1. Doubled (~174) if target is Stunned or Taunted.', exclusiveTo: 'Teddy' },
+  // ── Ultimate — Teddy-chan ─────────────────────────────────────────────────
+  { definitionId: 'teddy_rough_riders_rally', name: "Rough Riders' Rally", icon: '⭐', manaCost: 3, rarity: 'ultimate', description: "ULTIMATE — Allies gain +25 Might and +2 Move. Teddy gains +45 Might and teleports range 5.", exclusiveTo: 'Teddy' },
+  // ── Rare — Mansa-chan ─────────────────────────────────────────────────────
+  { definitionId: 'mansa_salt_road',   name: 'Salt Road',    icon: '⚗️', manaCost: 1, rarity: 'rare',    description: 'Place a 7-hex mana zone within range 3. Allies starting their turn on it restore 1 Mana. Lasts 2 turns.', exclusiveTo: 'Mansa' },
+  { definitionId: 'mansa_hajj_of_gold',name: 'Hajj of Gold', icon: '✨', manaCost: 2, rarity: 'rare',    description: 'Heal all allies for 20% of max HP. All allies gain +10 Power until end of turn.', exclusiveTo: 'Mansa' },
+  // ── Ultimate — Mansa-chan ─────────────────────────────────────────────────
+  { definitionId: 'mansa_bounty', name: "Mansa's Bounty", icon: '⭐', manaCost: 2, rarity: 'ultimate', description: "ULTIMATE — Golden Stasis: freeze all units on the board for 1 turn. Use the pause to reposition and plan.", exclusiveTo: 'Mansa' },
 ];
 
 // ── Encounter Builders ────────────────────────────────────────────────────────
@@ -458,12 +528,17 @@ function buildEncounter(
   const earlyPool = [ENEMIES.zyx_skitter, ENEMIES.glorp_shambler];
   const midPool   = [ENEMIES.naxion_scout, ENEMIES.vron_crawler];
   const latePool  = [ENEMIES.mog_toxin, ENEMIES.qrix_hunter, ENEMIES.void_wraith];
+  const act2EarlyPool = [ENEMIES.vrex_mimic, ENEMIES.crystalline_hive];
   const act2Pool  = [ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar, ENEMIES.vrex_mimic, ENEMIES.crystalline_hive];
   const act2LatePool = [...latePool, ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar];
+  // Act 3: never falls back to Act 1 enemies — late rows spawn only the two hardest Act 2 units
+  const act3LatePool = [ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar];
 
   const enemyPool = act === 1
     ? (row <= 3 ? earlyPool : row <= 6 ? midPool : latePool)
-    : (row <= 5 ? act2Pool : act2LatePool);
+    : act === 2
+      ? (row <= 3 ? act2EarlyPool : row <= 5 ? act2Pool : act2LatePool)
+      : (row <= 3 ? act2EarlyPool : row <= 6 ? act2Pool : act3LatePool);
 
   let enemies: EnemyTemplate[];
   let name: string;
@@ -493,10 +568,14 @@ function buildEncounter(
     name = 'Elite Encounter';
     xp = Math.round((60 + row * 2) * actXpScale); gold = 40 + Math.floor(rng() * 25); dropChance = 0.90;
   } else {
-    // Standard enemy: doubled to 2–4 enemies; later rows more likely to send 4
-    const twoPct = row <= 3 ? 0.30 : row <= 6 ? 0.45 : 0.55;
-    const baseCount = rng() < twoPct ? 2 : 1;
-    const count = baseCount * 2; // always double
+    // Standard enemy: 2 or 4 enemies (early/mid rows); 3 or 5 enemies (late rows — harder fights)
+    // Act 3 pushes toward the higher count more aggressively
+    const isLateRow = (act === 1 && row >= 7) || (act === 2 && row >= 6) || (act === 3 && row >= 7);
+    const highPct = act === 3
+      ? (row <= 3 ? 0.45 : row <= 6 ? 0.65 : 0.85)
+      : (row <= 3 ? 0.30 : row <= 6 ? 0.45 : 0.55);
+    const baseCount = rng() < highPct ? 2 : 1;
+    const count = isLateRow ? baseCount * 2 + 1 : baseCount * 2; // late: 3 or 5; normal: 2 or 4
     enemies = Array.from({ length: count }, () => pick(enemyPool, rng));
     name = `${count} Enemies`;
     xp = Math.round((35 + row * 3) * actXpScale); gold = 18 + Math.floor(rng() * 20) + row; dropChance = 0.60 + row * 0.02;
@@ -776,6 +855,11 @@ export const CHARACTER_STARTING_CARDS: Record<string, string> = {
   sunsin:    'sunsin_hwajeon',
   beethoven: 'beethoven_schallwelle',
   huang:     'huang_terracotta_summon',
+  nelson:    'nelson_crossing_the_t',
+  hannibal:  'hannibal_double_envelopment',
+  picasso:   'picasso_guernica',
+  teddy:     'teddy_speak_softly',
+  mansa:     'mansa_hajj_of_gold',
 };
 
 // ── Starting Characters ───────────────────────────────────────────────────────
@@ -787,49 +871,84 @@ export function buildStartingCharacters(): CharacterRunState[] {
       currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null],
+      items: [null, null, null, null, null, null],
     },
     {
       id: 'genghis', displayName: 'Genghis-chan', portrait: '/art/genghis_portrait.png',
       currentHp: 120, maxHp: 120, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null],
+      items: [null, null, null, null, null, null],
     },
     {
       id: 'davinci', displayName: 'Da Vinci-chan', portrait: '/art/davinci_portrait.png',
       currentHp: 85, maxHp: 85, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null],
+      items: [null, null, null, null, null, null],
     },
     {
       id: 'leonidas', displayName: 'Leonidas-chan', portrait: '/art/leonidas_portrait.png',
       currentHp: 130, maxHp: 130, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null],
+      items: [null, null, null, null, null, null],
     },
     {
       id: 'sunsin', displayName: 'Sun-sin-chan', portrait: '/art/sunsin_portrait.png',
       currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null],
+      items: [null, null, null, null, null, null],
     },
     {
       id: 'beethoven', displayName: 'Beethoven-chan', portrait: '/art/beethoven_portrait.png',
       currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null],
+      items: [null, null, null, null, null, null],
     },
     {
       id: 'huang', displayName: 'Huang-chan', portrait: '/art/huang_portrait.png',
       currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null],
+      items: [null, null, null, null, null, null],
+    },
+    {
+      id: 'nelson', displayName: 'Nelson-chan', portrait: '/art/nelson_portrait.png',
+      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [null, null, null, null, null, null],
+    },
+    {
+      id: 'hannibal', displayName: 'Hannibal-chan', portrait: '/art/hannibal_portrait.png',
+      currentHp: 110, maxHp: 110, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [null, null, null, null, null, null],
+    },
+    {
+      id: 'picasso', displayName: 'Picasso-chan', portrait: '/art/picasso_portrait.png',
+      currentHp: 80, maxHp: 80, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [null, null, null, null, null, null],
+    },
+    {
+      id: 'teddy', displayName: 'Teddy-chan', portrait: '/art/teddy_portrait.png',
+      currentHp: 140, maxHp: 140, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [null, null, null, null, null, null],
+    },
+    {
+      id: 'mansa', displayName: 'Mansa-chan', portrait: '/art/mansa_portrait.png',
+      currentHp: 85, maxHp: 85, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [null, null, null, null, null, null],
     },
   ];
 }
@@ -954,4 +1073,16 @@ export function pickItemReward(tier: 'common' | 'uncommon' | 'rare' | 'legendary
     : ITEMS.filter(i => i.tier === tier && !i.targetCharacter);
   const finalPool = safePool.length > 0 ? safePool : ITEMS.filter(i => !i.targetCharacter);
   return pick(finalPool, rng);
+}
+
+/** Boss reward: pick one exclusive rare item for a specific character, avoiding already-picked IDs. */
+export function pickBossExclusiveItem(charId: string, excludeIds: string[], rng: () => number): RunItem {
+  // Try character-specific rare first
+  const exclusive = ITEMS.filter(i => i.tier === 'rare' && i.targetCharacter === charId && !excludeIds.includes(i.id));
+  if (exclusive.length > 0) return exclusive[Math.floor(rng() * exclusive.length)];
+  // Fallback: any rare not already picked
+  const anyRare = ITEMS.filter(i => i.tier === 'rare' && !excludeIds.includes(i.id));
+  if (anyRare.length > 0) return anyRare[Math.floor(rng() * anyRare.length)];
+  // Last resort
+  return ITEMS.filter(i => !i.targetCharacter)[0] ?? ITEMS[0];
 }

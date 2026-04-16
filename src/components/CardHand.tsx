@@ -14,6 +14,11 @@ function charColor(card: Card): { border: string; ribbon: string; glow: string }
   if (card.exclusiveTo.includes("Sun-sin"))  return { border: "border-cyan-500",   ribbon: "bg-cyan-700",   glow: "shadow-cyan-500/60" };
   if (card.exclusiveTo.includes("Beethoven")) return { border: "border-violet-500", ribbon: "bg-violet-700", glow: "shadow-violet-500/60" };
   if (card.exclusiveTo.includes("Huang"))    return { border: "border-orange-700",  ribbon: "bg-orange-900", glow: "shadow-orange-700/60" };
+  if (card.exclusiveTo.includes("Nelson"))   return { border: "border-blue-500",    ribbon: "bg-blue-800",   glow: "shadow-blue-500/60" };
+  if (card.exclusiveTo.includes("Hannibal")) return { border: "border-red-700",     ribbon: "bg-red-950",    glow: "shadow-red-700/60" };
+  if (card.exclusiveTo.includes("Picasso"))  return { border: "border-violet-500",  ribbon: "bg-violet-900", glow: "shadow-violet-500/60" };
+  if (card.exclusiveTo.includes("Teddy"))    return { border: "border-amber-600",   ribbon: "bg-amber-900",  glow: "shadow-amber-600/60" };
+  if (card.exclusiveTo.includes("Mansa"))    return { border: "border-yellow-500",  ribbon: "bg-yellow-900", glow: "shadow-yellow-500/60" };
   return { border: "border-gray-500", ribbon: "bg-gray-700", glow: "shadow-gray-400/30" };
 }
 
@@ -25,7 +30,12 @@ function charLabel(card: Card): string | null {
   if (card.exclusiveTo.includes("Leonidas")) return "Leonidas";
   if (card.exclusiveTo.includes("Sun-sin"))  return "Sun-sin";
   if (card.exclusiveTo.includes("Beethoven")) return "Beethoven";
-  if (card.exclusiveTo.includes("Huang"))    return "Huang-chan";
+  if (card.exclusiveTo.includes("Huang"))    return "Huang";
+  if (card.exclusiveTo.includes("Nelson"))   return "Nelson";
+  if (card.exclusiveTo.includes("Hannibal")) return "Hannibal";
+  if (card.exclusiveTo.includes("Picasso"))  return "Picasso";
+  if (card.exclusiveTo.includes("Teddy"))    return "Teddy";
+  if (card.exclusiveTo.includes("Mansa"))    return "Mansa";
   return null;
 }
 
@@ -297,7 +307,12 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
     : label === 'Leonidas' ? '#b45309'
     : label === 'Sun-sin'  ? '#0e7490'
     : label === 'Beethoven'? '#6d28d9'
-    : label === 'Huang-chan'? '#c2410c'
+    : label === 'Huang'    ? '#c2410c'
+    : label === 'Nelson'   ? '#1d4ed8'
+    : label === 'Hannibal' ? '#991b1b'
+    : label === 'Picasso'  ? '#6d28d9'
+    : label === 'Teddy'    ? '#b45309'
+    : label === 'Mansa'    ? '#a16207'
     : '#4b5563';
 
   return (
@@ -479,17 +494,23 @@ const CardHand: React.FC<CardHandProps> = ({
   const [flyingCardId, setFlyingCardId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ card: Card; rect: DOMRect } | null>(null);
   const prevCardIdsRef = useRef<Set<string>>(new Set(cards.map(c => c.id)));
-  const [newCardIds, setNewCardIds] = useState<Set<string>>(new Set<string>());
+  // Map: card id → stagger delay in ms (based on position in hand)
+  const [newCardDelays, setNewCardDelays] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     const currentIds = new Set(cards.map(c => c.id));
-    const newIds = new Set<string>();
-    currentIds.forEach(id => {
-      if (!prevCardIdsRef.current.has(id)) newIds.add(id);
+    const delays = new Map<string, number>();
+    let staggerIdx = 0;
+    cards.forEach((card) => {
+      if (!prevCardIdsRef.current.has(card.id)) {
+        delays.set(card.id, staggerIdx * 65); // 65ms between each card
+        staggerIdx++;
+      }
     });
-    if (newIds.size > 0) {
-      setNewCardIds(newIds);
-      const t = setTimeout(() => setNewCardIds(new Set()), 400);
+    if (delays.size > 0) {
+      setNewCardDelays(delays);
+      const maxDelay = (staggerIdx - 1) * 65 + 400;
+      const t = setTimeout(() => setNewCardDelays(new Map()), maxDelay);
       return () => clearTimeout(t);
     }
     prevCardIdsRef.current = currentIds;
@@ -539,10 +560,15 @@ const CardHand: React.FC<CardHandProps> = ({
           className={`flex items-end gap-1 ${cards.length > SCROLL_THRESHOLD ? 'overflow-x-hidden' : ''}`}
           style={cards.length > SCROLL_THRESHOLD ? { maxWidth: `${SCROLL_THRESHOLD * 84}px` } : undefined}
         >
-          {cards.map((card) => (
+          {cards.map((card) => {
+            const drawDelay = newCardDelays.get(card.id);
+            const isNewCard = drawDelay !== undefined;
+            return (
             <div
               key={card.id}
-              className={`relative${newCardIds.has(card.id) ? ' card-draw-in' : ''}`}
+              data-card-def={card.definitionId}
+              className={`relative${isNewCard ? ' card-draw-in' : ''}`}
+              style={isNewCard ? { animationDelay: `${drawDelay}ms`, animationFillMode: 'both' } : undefined}
               onMouseEnter={(e) => {
                 onCardHover?.(card.manaCost ?? 0);
                 // For exclusive cards, use that character as the range-preview executor (not the currently selected character)
@@ -591,7 +617,8 @@ const CardHand: React.FC<CardHandProps> = ({
                 gameState={gameState}
               />
             </div>
-          ))}
+            );
+          })}
         </div>
         {cards.length > SCROLL_THRESHOLD && (
           <button

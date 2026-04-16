@@ -3,7 +3,7 @@
 export type NodeType = 'enemy' | 'elite' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'boss';
 export type FightObjective = 'defeat_all' | 'destroy_base' | 'survive' | 'onslaught';
 export type ItemTier = 'common' | 'uncommon' | 'rare' | 'legendary';
-export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas' | 'sunsin' | 'beethoven' | 'huang';
+export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas' | 'sunsin' | 'beethoven' | 'huang' | 'nelson' | 'hannibal' | 'picasso' | 'teddy' | 'mansa';
 
 export interface RunNode {
   id: string;
@@ -28,6 +28,10 @@ export interface EncounterDef {
   bonusXpFast: number;         // awarded if won in ≤ 4 turns
   itemDropChance: number;      // 0–1
   guaranteedItem: boolean;
+  /** Tutorial-only: override spawn positions by matching icon name substring */
+  tutorialForcePositions?: Array<{ nameContains: string; q: number; r: number }>;
+  /** Tutorial-only: scripted hand per player-0 turn. Index 0 = initial hand, 1 = after first end-turn, etc. */
+  tutorialHandScript?: string[][];
 }
 
 export interface EnemyAbilityEffect {
@@ -118,7 +122,7 @@ export interface CharacterRunState {
   pendingAbilityUpgrades: number;   // normal ability upgrade tokens (levels 2 & 4)
   pendingUltimateUpgrade: number;   // ultimate ability upgrade token (level 6)
   upgradedAbilityIds: string[];     // definitionIds already upgraded (won't be offered again)
-  items: (RunItem | null)[]; // 5 slots
+  items: (RunItem | null)[]; // 6 slots
   passiveStacks?: number;           // persisted passive stacks (e.g. Genghis Bloodlust with Eternal Hunger item)
 }
 
@@ -159,4 +163,6 @@ export interface RunState {
     itemsObtained: number;
     cardsObtained: number;
   };
+  runStartTime: number; // Date.now() timestamp when run began
+  isTutorialRun?: boolean;
 }

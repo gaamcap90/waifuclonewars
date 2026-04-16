@@ -9,7 +9,7 @@ import { Undo2 } from "lucide-react";
 import { TurnQueueBar } from "./TurnQueueBar";
 import { calcEffectiveStats } from "@/combat/buffs";
 import { useT } from "@/i18n";
-import { getCharacterPortrait } from "@/utils/portraits";
+import { getCharacterPortrait, getCharacter3DBust } from "@/utils/portraits";
 import type { EnemyAbilityDef } from "@/types/roguelike";
 
 interface RunItemSlot {
@@ -31,6 +31,7 @@ interface HorizontalGameUIProps {
   onCardHoverRange?: (range: number | null) => void;
   onCardHoverExecutorId?: (id: string | null) => void;
   onEnemyAbilityHoverRange?: (val: { iconId: string; range: number } | null) => void;
+  runStartTime?: number;
 }
 
 const HorizontalGameUI = ({
@@ -46,6 +47,7 @@ const HorizontalGameUI = ({
   onCardHoverExecutorId,
   onToggleHideUI,
   onEnemyAbilityHoverRange,
+  runStartTime,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
   const [hoveredCardCost, setHoveredCardCost] = useState<number | null>(null);
@@ -62,6 +64,11 @@ const HorizontalGameUI = ({
     window.addEventListener("closeCharacterPopup", onGlobalClose);
     return () => window.removeEventListener("closeCharacterPopup", onGlobalClose);
   }, []);
+
+  // Clear stuck ability tooltip when turn changes
+  useEffect(() => {
+    setAbilityTooltip(null);
+  }, [gameState.activePlayerId]);
 
   /* ── Pill button ── */
   const Pill = ({
@@ -88,7 +95,7 @@ const HorizontalGameUI = ({
   /* ── Base HP bar ── */
   const BaseHPBar = ({ pid }: { pid: 0 | 1 }) => {
     const hp = gameState.baseHealth[pid];
-    const maxHp = 150;
+    const maxHp = (gameState as any).baseMaxHealth?.[pid] ?? 150;
     const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
     const barColor = pct > 60 ? '#22c55e'
       : pct > 35 ? '#eab308'
@@ -120,7 +127,7 @@ const HorizontalGameUI = ({
     const mana: number = extState.globalMana?.[pid] ?? 0;
     const maxMana: number = extState.globalMaxMana?.[pid] ?? 5;
     return (
-      <div className="space-y-1">
+      <div data-tut="mana_display" className="space-y-1">
         <div className="flex items-center justify-between">
           <span className="font-orbitron text-[10px] tracking-wider text-blue-400/60">{t.game.mana}</span>
           <span className="font-mono text-[10px] text-blue-300/50">{mana}/{maxMana}</span>
@@ -138,22 +145,26 @@ const HorizontalGameUI = ({
     );
   };
 
-  /* ── Debuff pill meta ── */
-  const DEBUFF_META: Record<string, { icon: string; color: string }> = {
-    mud_throw:   { icon: "🐾", color: "bg-yellow-900/80 border-yellow-600/60 text-yellow-200" },
-    rooted:      { icon: "🌿", color: "bg-green-900/80 border-green-600/60 text-green-200" },
-    blinded:     { icon: "💥", color: "bg-yellow-900/80 border-yellow-600/60 text-yellow-100" },
-    taunted:     { icon: "📢", color: "bg-red-900/80 border-red-600/60 text-red-200" },
-    armor_break: { icon: "🔩", color: "bg-orange-900/80 border-orange-600/60 text-orange-200" },
-    silence:     { icon: "🤫", color: "bg-purple-900/80 border-purple-600/60 text-purple-200" },
-    poison:      { icon: "☠️", color: "bg-green-900/80 border-green-600/60 text-green-200" },
-    stun:        { icon: "⚡", color: "bg-cyan-900/80 border-cyan-600/60 text-cyan-200" },
-    bleed:       { icon: "🩸", color: "bg-red-900/80 border-red-600/60 text-red-200" },
+  /* ── Debuff pill meta (matches board badge design) ── */
+  const DEBUFF_META: Record<string, { label: string; hex: string; urgent?: boolean }> = {
+    stun:        { label: 'STN', hex: '#22d3ee', urgent: true  },
+    poison:      { label: 'PSN', hex: '#4ade80', urgent: true  },
+    silence:     { label: 'SIL', hex: '#c084fc', urgent: true  },
+    armor_break: { label: 'ARM', hex: '#fb923c', urgent: false },
+    rooted:      { label: 'ROT', hex: '#86efac', urgent: false },
+    blinded:     { label: 'BLD', hex: '#fde047', urgent: false },
+    mud_throw:   { label: 'MUD', hex: '#d97706', urgent: false },
+    taunted:     { label: 'TNT', hex: '#fbbf24', urgent: false },
+    bleed:       { label: 'BLT', hex: '#f87171', urgent: false },
   };
 
   /* ── Character row ── */
   const CharacterRow = ({ icon, teamColor, canSelect }: { icon: Icon; teamColor: "blue" | "red"; canSelect: boolean }) => {
-    const portrait = getCharacterPortrait(icon.name);
+    // Player heroes get 3D bust; enemies and summons keep 2D portrait
+    const portrait = icon.playerId === 0
+      ? (getCharacter3DBust(icon.name) ?? getCharacterPortrait(icon.name))
+      : getCharacterPortrait(icon.name);
+    const is3DBust = icon.playerId === 0 && !!getCharacter3DBust(icon.name);
     const isSelected = icon.id === selectedIconId;
     const eff = calcEffectiveStats(gameState, icon);
     const borderHex = teamColor === "blue" ? "#3b82f6" : "#ef4444";
@@ -177,8 +188,13 @@ const HorizontalGameUI = ({
       if (icon.name.includes("Leonidas"))   return t.characters.leonidas.passive.desc;
       if (icon.name.includes("Beethoven"))  return t.characters.beethoven.passive.desc;
       if (icon.name.includes("Huang"))      return t.characters.huang.passive.desc;
+      if (icon.name.includes("Nelson"))      return t.characters.nelson.passive.desc;
+      if (icon.name.includes("Hannibal"))   return t.characters.hannibal.passive.desc;
+      if (icon.name.includes("Picasso"))    return t.characters.picasso.passive.desc;
+      if (icon.name.includes("Teddy"))      return t.characters.teddy.passive.desc;
+      if (icon.name.includes("Mansa"))      return t.characters.mansa.passive.desc;
       if (icon.name === "Combat Drone")     return t.game.hud.combatDronePassive;
-      if (icon.name === "Terracotta Archer" || icon.name === "Terracotta Warrior" || icon.name === "Terracotta Cavalry") return "Terracotta unit — expires after 3 turns.";
+      if (icon.name === "Terracotta Archer" || icon.name === "Terracotta Warrior" || icon.name === "Terracotta Cavalry") return t.game.hud.terracottaPassive;
       if (icon.name.includes("Sun-sin")) {
         const terrainType = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type;
         return (terrainType === 'lake' || terrainType === 'river') ? t.characters.sunsin.passive.waterDesc : t.characters.sunsin.passive.desc;
@@ -222,7 +238,12 @@ const HorizontalGameUI = ({
           title={`${icon.name} — click for details`}
         >
           {portrait ? (
-            <img src={portrait} alt={icon.name} className="w-full h-full object-cover" />
+            <img
+              src={portrait}
+              alt={icon.name}
+              className="w-full h-full object-cover"
+              style={{ objectPosition: is3DBust ? 'center 18%' : 'center center' }}
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
               style={{ background: bgFill }}>
@@ -284,16 +305,55 @@ const HorizontalGameUI = ({
               if (terrainType === 'lake' || terrainType === 'river') pills.push(<span key="turtle" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-cyan-900/80 border-cyan-600/60 text-cyan-200">{t.game.turtle}</span>);
             }
             for (const d of icon.debuffs ?? []) {
-              const meta = DEBUFF_META[d.type] ?? { icon: "❓", color: "bg-gray-800 border-gray-600 text-gray-300" };
-              pills.push(<span key={`${d.type}-${d.turnsRemaining}`} className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] ${meta.color}`}>{meta.icon}{d.turnsRemaining}t</span>);
+              const meta = DEBUFF_META[d.type] ?? { label: '???', hex: '#94a3b8', urgent: false };
+              pills.push(
+                <span
+                  key={`${d.type}-${d.turnsRemaining}`}
+                  title={d.type}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    padding: '2px 5px 2px 4px',
+                    borderRadius: 5,
+                    background: `${meta.hex}18`,
+                    border: `1px solid ${meta.hex}70`,
+                    color: meta.hex,
+                    fontFamily: "'Orbitron', monospace",
+                    fontSize: 8,
+                    fontWeight: 900,
+                    letterSpacing: '0.05em',
+                    boxShadow: meta.urgent ? `0 0 5px ${meta.hex}60` : 'none',
+                    animation: meta.urgent ? 'anim-debuff-pulse 1.6s ease-in-out infinite' : 'none',
+                    '--debuff-color': meta.hex,
+                  } as React.CSSProperties}
+                >
+                  {meta.label}
+                  <span style={{ fontSize: 8, opacity: 0.75 }}>{d.turnsRemaining}t</span>
+                </span>
+              );
             }
             return pills.length > 0 ? <div className="flex flex-wrap gap-0.5 mt-0.5">{pills}</div> : null;
           })()}
 
-          {/* Passive — only show for player characters, not enemies */}
-          {icon.playerId === 0 && (
-            <div className="text-[10px] text-slate-600 mt-0.5 truncate" title={passiveDesc}>
-              ✨ {passiveDesc}
+          {/* Passive — hover tooltip for player characters */}
+          {icon.playerId === 0 && passiveDesc && (
+            <div className="relative group mt-0.5" style={{ cursor: 'default' }}>
+              <div className="text-[10px] text-slate-500 truncate select-none">
+                ✨ {passiveDesc}
+              </div>
+              <div className="absolute bottom-full left-0 mb-1.5 z-[200] hidden group-hover:block pointer-events-none w-52">
+                <div className="rounded-lg px-3 py-2 shadow-2xl text-[10px]"
+                  style={{
+                    background: "rgba(4,2,22,0.97)",
+                    border: "1px solid rgba(120,60,200,0.65)",
+                    boxShadow: "0 0 16px rgba(100,40,180,0.30), 0 4px 18px rgba(0,0,0,0.80)",
+                  }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-base leading-none">✨</span>
+                    <span className="font-bold text-purple-200 text-[11px] leading-tight">{t.game.popup.passive}</span>
+                  </div>
+                  <div className="text-slate-300 leading-snug break-words">{passiveDesc}</div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -422,7 +482,7 @@ const HorizontalGameUI = ({
       {/* TOP: Turn bar + objective */}
       <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
         <div className="pointer-events-auto">
-          <TurnQueueBar gameState={gameState} onEndTurn={onEndTurn} currentTurnTimer={currentTurnTimer} />
+          <TurnQueueBar gameState={gameState} onEndTurn={onEndTurn} currentTurnTimer={currentTurnTimer} runStartTime={runStartTime} />
         </div>
         {objLabel && (
           <div className="pointer-events-none flex items-center gap-2 rounded-full px-4 py-1"
@@ -444,8 +504,8 @@ const HorizontalGameUI = ({
             )}
           </div>
         )}
-        {/* Arena Event banner */}
-        {extGameState.arenaEvent && (
+        {/* Arena Event banner — hidden for fire/flood since the countdown widget below covers them */}
+        {extGameState.arenaEvent && extGameState.arenaEvent.id !== 'forest_fire' && extGameState.arenaEvent.id !== 'alien_tide' && (
           <div className="pointer-events-none flex items-center gap-2 rounded-lg px-4 py-1.5 animate-pulse"
             style={{
               background: "rgba(60,10,10,0.95)",
@@ -455,9 +515,9 @@ const HorizontalGameUI = ({
             <span className="text-lg">{extGameState.arenaEvent.icon}</span>
             <div className="flex flex-col">
               <span className="font-orbitron text-[11px] font-bold tracking-widest" style={{ color: "#fb923c" }}>
-                {t.game.arenaEvent} {extGameState.arenaEvent.name.toUpperCase()}
+                {t.game.arenaEvent} {((t.game as any).arenaEvents?.[extGameState.arenaEvent.id]?.name ?? extGameState.arenaEvent.name).toUpperCase()}
               </span>
-              <span className="text-[10px] text-orange-200/80">{extGameState.arenaEvent.description}</span>
+              <span className="text-[10px] text-orange-200/80">{(t.game as any).arenaEvents?.[extGameState.arenaEvent.id]?.desc ?? extGameState.arenaEvent.description}</span>
             </div>
           </div>
         )}
@@ -533,7 +593,7 @@ const HorizontalGameUI = ({
               {gameState.players[0].name}
             </span>
           </div>
-          <div className="space-y-2 px-3 pb-3 pt-2">
+          <div data-tut="stats_panel" className="space-y-2 px-3 pb-3 pt-2">
             {showBases && <BaseHPBar pid={0} />}
             <div className="space-y-1 pt-1">
               {gameState.players[0].icons.map(icon => (
@@ -609,13 +669,20 @@ const HorizontalGameUI = ({
               const pid = gameState.activePlayerId;
               const aliveIcons = gameState.players[pid]?.icons.filter(i => i.isAlive) ?? [];
               const displayIcon = aliveIcons.find(i => i.id === selectedIconId) ?? aliveIcons[0] ?? null;
-              const portrait = getCharacterPortrait(displayIcon?.name);
+              const isPlayerTurn = pid === 0;
+              const bust3d = isPlayerTurn ? getCharacter3DBust(displayIcon?.name) : null;
+              const portrait = bust3d ?? getCharacterPortrait(displayIcon?.name);
               return (
                 <>
                   <div className="w-10 h-10 rounded-full overflow-hidden shrink-0"
                     style={{ border: "2px solid rgba(250,180,0,0.60)", boxShadow: "0 0 10px rgba(250,180,0,0.22)" }}>
                     {portrait ? (
-                      <img src={portrait} alt={displayIcon?.name} className="w-full h-full object-cover" />
+                      <img
+                        src={portrait}
+                        alt={displayIcon?.name}
+                        className="w-full h-full object-cover"
+                        style={{ objectPosition: bust3d ? 'center 18%' : 'center center' }}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-sm font-bold text-slate-200"
                         style={{ background: "rgba(80,60,120,0.80)" }}>
@@ -686,22 +753,40 @@ const HorizontalGameUI = ({
                       const maxMana: number = (gameState as any).globalMaxMana?.[pid] ?? 5;
                       const cost = hoveredCardCost;
                       const afterMana = cost !== null ? mana - cost : null;
+                      const cantAfford = cost !== null && cost > mana;
                       return (
-                        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
+                        <div className="flex items-center gap-2.5 rounded-lg px-3 py-2"
                           style={{
-                            background: "rgba(10,20,50,0.60)",
-                            border: cost !== null && cost > mana
-                              ? "1px solid rgba(239,68,68,0.55)"
-                              : "1px solid rgba(96,165,250,0.25)",
-                            transition: "border-color 0.15s",
+                            background: cantAfford ? "rgba(40,8,8,0.75)" : "rgba(10,20,55,0.70)",
+                            border: cantAfford
+                              ? "1px solid rgba(239,68,68,0.65)"
+                              : "1px solid rgba(96,165,250,0.30)",
+                            boxShadow: cantAfford
+                              ? "0 0 12px rgba(239,68,68,0.20)"
+                              : "0 0 8px rgba(96,165,250,0.12)",
+                            transition: "all 0.18s",
                           }}>
-                          <span className="text-base">💧</span>
+                          {/* Crystal/gem icon instead of emoji */}
+                          <div style={{
+                            width: 18, height: 18, flexShrink: 0,
+                            background: 'linear-gradient(135deg, #93c5fd 0%, #3b82f6 60%, #1d4ed8 100%)',
+                            clipPath: 'polygon(50% 0%, 100% 35%, 85% 100%, 15% 100%, 0% 35%)',
+                            boxShadow: '0 0 8px rgba(96,165,250,0.7)',
+                            opacity: cantAfford ? 0.5 : 1,
+                          }} />
                           <div>
-                            <div className="flex items-center gap-1 leading-none mb-0.5">
-                              <span className="text-[9px] font-orbitron tracking-wider text-blue-400/70">MANA</span>
+                            <div className="flex items-center gap-1.5 leading-none mb-1">
+                              <span className="text-[9px] font-orbitron tracking-[0.25em] text-blue-400/70">MANA</span>
+                              <span className="font-orbitron font-black text-[11px]"
+                                style={{ color: cantAfford ? "#f87171" : "#93c5fd" }}>
+                                {mana}/{maxMana}
+                              </span>
                               {cost !== null && (
-                                <span className="text-[9px] font-bold ml-1"
-                                  style={{ color: cost > mana ? "#f87171" : "#fbbf24" }}>
+                                <span className="text-[9px] font-bold px-1 py-0.5 rounded"
+                                  style={{
+                                    color: cantAfford ? "#fca5a5" : "#fbbf24",
+                                    background: cantAfford ? "rgba(239,68,68,0.20)" : "rgba(251,191,36,0.15)",
+                                  }}>
                                   -{cost}
                                 </span>
                               )}
@@ -711,12 +796,29 @@ const HorizontalGameUI = ({
                                 const filled = i < mana;
                                 const willSpend = afterMana !== null && i >= afterMana && i < mana;
                                 return (
-                                  <div key={i} className="w-2.5 h-2.5 rounded-full border-2 transition-all"
+                                  <div
+                                    key={i}
                                     style={{
-                                      background: willSpend ? "rgba(251,191,36,0.60)" : filled ? "#60a5fa" : "rgba(255,255,255,0.08)",
-                                      borderColor: willSpend ? "#fde68a" : filled ? "#93c5fd" : "rgba(255,255,255,0.12)",
-                                      boxShadow: willSpend ? "0 0 4px rgba(251,191,36,0.55)" : filled ? "0 0 4px rgba(96,165,250,0.50)" : "none",
-                                    }} />
+                                      width: 11, height: 11,
+                                      borderRadius: '50%',
+                                      border: `2px solid ${willSpend ? "#fde68a" : filled ? "#93c5fd" : "rgba(255,255,255,0.14)"}`,
+                                      background: willSpend
+                                        ? "rgba(251,191,36,0.70)"
+                                        : filled
+                                          ? "radial-gradient(circle at 35% 35%, #bfdbfe, #3b82f6)"
+                                          : "rgba(255,255,255,0.06)",
+                                      boxShadow: willSpend
+                                        ? "0 0 6px rgba(251,191,36,0.70)"
+                                        : filled
+                                          ? "0 0 6px rgba(96,165,250,0.65), inset 0 0 3px rgba(255,255,255,0.3)"
+                                          : "none",
+                                      animation: filled && !willSpend
+                                        ? `anim-mana-glow 2.5s ease-in-out ${i * 0.12}s infinite`
+                                        : "none",
+                                      transition: "background 0.2s, box-shadow 0.2s, border-color 0.2s",
+                                      flexShrink: 0,
+                                    }}
+                                  />
                                 );
                               })}
                             </div>
@@ -767,10 +869,11 @@ const HorizontalGameUI = ({
                 <div className="space-y-2">
                   {targetingActive && (
                     <div className="text-[11px] font-orbitron tracking-wider text-slate-500">
-                      TARGETING — click a target on the board or press <strong className="text-slate-300">ESC</strong> to cancel
+                      {t.turnQueue.targeting}
                     </div>
                   )}
                   {hand && (
+                    <div data-tut="hand_cards">
                     <CardHand
                       cards={hand.cards}
                       drawPileCards={deck?.drawPile ?? []}
@@ -788,6 +891,7 @@ const HorizontalGameUI = ({
                       onCardHoverExecutorId={onCardHoverExecutorId}
                       gameState={gameState}
                     />
+                    </div>
                   )}
                 </div>
               );
@@ -818,11 +922,7 @@ const HorizontalGameUI = ({
         const isReady = cd === 0;
         const isWarn = cd === 1;
         const activeDebuffs = icon.debuffs ?? [];
-        const DEBUFF_NAMES: Record<string, string> = {
-          mud_throw: "Slowed", rooted: "Rooted", armor_break: "Armor Break",
-          silence: "Silenced", poison: "Poisoned", stun: "Stunned", bleed: "Bleeding",
-          blinded: "Blinded", taunted: "Taunted",
-        };
+        const DEBUFF_NAMES: Record<string, string> = t.game.debuffNames as Record<string, string>;
 
         const top = Math.min(rect.bottom + 6, window.innerHeight - 200);
         const left = Math.max(8, rect.left - 200);
@@ -865,23 +965,6 @@ const HorizontalGameUI = ({
               )}
               {ab.oncePerFight && (
                 <div className="text-[9px] text-purple-400/80 mb-1.5">★ Once per fight</div>
-              )}
-              {/* Active debuffs on this enemy */}
-              {activeDebuffs.length > 0 && (
-                <div className="mt-1.5 pt-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-                  <div className="text-[9px] font-orbitron text-slate-500 mb-1">ACTIVE EFFECTS</div>
-                  <div className="flex flex-wrap gap-1">
-                    {activeDebuffs.map((d, i) => {
-                      const meta = DEBUFF_META[d.type] ?? { icon: "❓", color: "bg-gray-800 border-gray-600 text-gray-300" };
-                      const name = DEBUFF_NAMES[d.type] ?? d.type;
-                      return (
-                        <span key={i} className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[9px] ${meta.color}`}>
-                          {meta.icon} {name} {d.turnsRemaining}t
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
               )}
             </div>
           </div>

@@ -26,42 +26,82 @@ function hexCenter(q: number, r: number, ox: number, oy: number) {
 function FloatingNumber({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
   const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
   const isDamage = anim.type === 'damage';
-  const text = isDamage ? `-${anim.value}` : `+${anim.value}`;
-  const color = isDamage ? '#ff4444' : '#44ff88';
+  const val = anim.value ?? 0;
+  const isBig = isDamage && val >= 30;
+  const isMassive = isDamage && val >= 50;
+
+  const text = isDamage ? `-${val}` : `+${val}`;
+  const color  = isDamage ? (isMassive ? '#ff9900' : '#ff4444') : '#44ff88';
   const shadow = isDamage
-    ? '0 0 10px rgba(255,60,60,0.9), 1px 1px 3px #000'
+    ? isMassive
+      ? '0 0 18px rgba(255,140,0,1.0), 0 0 8px rgba(255,60,0,0.8), 2px 2px 4px #000'
+      : '0 0 12px rgba(255,60,60,0.95), 1px 1px 3px #000'
     : '0 0 10px rgba(50,255,100,0.9), 1px 1px 3px #000';
 
-  const val = anim.value ?? 0;
   const fontSize = isDamage
-    ? val < 10  ? '0.95rem'
-    : val < 20  ? '1.15rem'
-    : val < 35  ? '1.45rem'
-    : val < 55  ? '1.8rem'
-    :             '2.2rem'
-    : '1rem';
-  const fontWeight = isDamage && val >= 35 ? 900 : 700;
+    ? val < 10  ? '1.0rem'
+    : val < 20  ? '1.25rem'
+    : val < 35  ? '1.55rem'
+    : val < 50  ? '1.95rem'
+    :             '2.4rem'
+    : '1.05rem';
+
+  // Deterministic horizontal jitter — numbers fan out instead of stacking
+  const hashId = anim.id.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const jitterX = ((hashId % 22) - 11);  // –11 to +11 px
 
   return (
     <div
-      key={anim.id}
       style={{
         position: 'absolute',
-        left: c.x - 18,
-        top: c.y - 18,
-        color,
-        fontWeight,
-        fontSize,
-        textShadow: shadow,
-        animation: 'anim-float-up-fade 1.35s ease-out forwards',
+        left: c.x - 22 + jitterX,
+        top:  c.y - 22,
         pointerEvents: 'none',
         zIndex: 200,
-        whiteSpace: 'nowrap',
-        fontFamily: 'var(--font-orbitron, monospace)',
-        letterSpacing: '0.03em',
+        animation: `${isBig ? 'anim-float-up-big' : 'anim-float-up-fade'} ${isBig ? '1.55s' : '1.35s'} ease-out forwards`,
       }}
     >
-      {text}
+      {/* Chip background for readability — scales with damage tier */}
+      <div style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: isBig ? '2px 7px' : '1px 5px',
+        borderRadius: '6px',
+        background: isDamage
+          ? isMassive
+            ? 'rgba(40,12,0,0.82)'
+            : 'rgba(30,5,5,0.72)'
+          : 'rgba(5,30,10,0.72)',
+        border: `1px solid ${color}55`,
+        boxShadow: isBig ? `0 0 14px ${color}60` : 'none',
+      }}>
+        <span style={{
+          color,
+          fontWeight: isBig ? 900 : 700,
+          fontSize,
+          textShadow: shadow,
+          fontFamily: 'var(--font-orbitron, monospace)',
+          letterSpacing: isBig ? '0.0em' : '0.03em',
+          whiteSpace: 'nowrap',
+          lineHeight: 1,
+        }}>
+          {text}
+        </span>
+        {/* "!!" badge for massive hits */}
+        {isMassive && (
+          <span style={{
+            position: 'absolute',
+            top: '-8px', right: '-6px',
+            fontSize: '0.55rem',
+            fontWeight: 900,
+            color: '#ffaa00',
+            fontFamily: 'var(--font-orbitron, monospace)',
+            textShadow: '0 0 6px rgba(255,160,0,0.9)',
+            letterSpacing: '0.1em',
+          }}>!!</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -150,9 +190,21 @@ function CastBurst({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }
   );
 }
 
+// Death shatter particles — pre-computed burst directions
+const DEATH_PARTICLES = Array.from({ length: 10 }, (_, i) => {
+  const angle = (i / 10) * Math.PI * 2 + (i % 3) * 0.3; // slightly irregular
+  const dist = 38 + (i % 3) * 16; // 38–70px scatter
+  return {
+    x: Math.cos(angle) * dist,
+    y: Math.sin(angle) * dist,
+    size: 3 + (i % 3) * 2,        // 3–7px
+    delay: (i % 4) * 0.04,        // 0–0.12s stagger
+    color: i % 3 === 0 ? '#ff4422' : i % 3 === 1 ? '#ff8833' : '#ffcc44',
+  };
+});
+
 function DeathEffect({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
   const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
-  // Hex shape clip for full-tile flash
   const clipHex = "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)";
   return (
     <>
@@ -171,6 +223,28 @@ function DeathEffect({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number
           zIndex: 199,
         }}
       />
+      {/* Burst sparks */}
+      {DEATH_PARTICLES.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: c.x - p.size / 2,
+            top: c.y - p.size / 2,
+            width: p.size,
+            height: p.size,
+            borderRadius: '50%',
+            background: p.color,
+            boxShadow: `0 0 6px ${p.color}`,
+            animation: `anim-death-spark 0.75s ease-out ${p.delay}s forwards`,
+            '--spark-x': `${p.x}px`,
+            '--spark-y': `${p.y}px`,
+            pointerEvents: 'none',
+            zIndex: 201,
+            opacity: 0,
+          } as React.CSSProperties}
+        />
+      ))}
       {/* Rising skull */}
       <div
         style={{

@@ -24,6 +24,7 @@ export interface Icon {
     maxHp: number;
     moveRange: number;
     speed: number; // For turn queue
+    attackRange?: number; // Basic attack range (default 1; ranged chars use 2+)
     might: number; // Physical attack power
     power: number; // Magical/ability power
     defense: number; // Damage reduction
@@ -52,6 +53,7 @@ export interface Icon {
   passiveStacks?: number;       // Genghis Bloodlust kill stacks (0–3)
   abilityUsedThisTurn?: boolean; // Da Vinci Tinkerer: tracks if an exclusive ability card was played
   cardsUsedThisTurn?: number;   // Cards played this turn (max 3)
+  cardsPlayedThisBattle?: number; // Cumulative cards played this battle (never resets mid-fight; used by Fractured Perspective)
   enemyAbilityCooldowns?: Record<string, number>; // cooldown tracker for enemy boss abilities
   enemyAbilities?: import('@/types/roguelike').EnemyAbilityDef[]; // boss/elite ability definitions
   regens?: { amount: number; turnsRemaining: number }[]; // active regen buffs (Naval Repairs)
@@ -153,13 +155,40 @@ export interface EffectValues {
   decoyHp?: number;             // HP of the spawned decoy unit
   decoyExplosion?: number;      // flat damage dealt to enemies in decoyRange when decoy is destroyed
   decoyRange?: number;          // AoE radius for decoy explosion
+
+  // ── New characters (Nelson, Hannibal, Picasso, Teddy, Mansa) ─────────────
+  lineScaling?: boolean;           // Crossing the T: escalating line-shot (1st target full, 2nd 60%, 3rd+ 40%)
+  chargeDmgMult?: number;          // Kiss Me Hardy: Power multiplier per enemy in charge path
+  chargeLinePushSide?: boolean;    // Kiss Me Hardy: push each hit enemy sideways off charge line
+  summonWarElephant?: boolean;     // Hannibal: summon a War Elephant on adjacent hex
+  chargeAndPull?: boolean;         // Double Envelopment: hit primary target + AoE on adjacent enemies
+  chargeAndPullHitMult?: number;   // multiplier for primary target damage
+  chargeAndPullArrivalMult?: number; // multiplier for adjacent enemies damage
+  chargeAndPullArrivalRange?: number; // AoE radius around primary target
+  swapEnemyAlly?: boolean;         // Cubist Mirror: swap positions with target; enemy takes damage on swap
+  scrambleAll?: boolean;           // Blue Period: scramble all units + heal allies + buff allies DEF
+  scrambleAllyDefBonus?: number;   // Defense bonus granted to allies after scramble
+  globalTauntRange?: number;       // Speak Softly: taunt all enemies within this range + self DEF buff
+  selfMightBonus?: number;         // Rough Riders' Rally: flat Might bonus to executor this turn
+  selfTeleportAnywhere?: number;   // Rough Riders' Rally: teleport executor to any hex within this range
+  executeVsDebuffed?: boolean;     // Big Stick: double damage if target is Stunned or Taunted
+  hajjOfGold?: boolean;            // Hajj of Gold / Mansa's Bounty: heal all allies for % of max HP
+  hajjHealPct?: number;            // percentage of maxHP to heal (0.2 = 20%)
+  manaZone?: boolean;              // Salt Road: place a zone that restores 1 mana to allies each turn
+  singleAllyBuff?: boolean;        // Buff a single target ally (future use)
+  allyMightBonus?: number;         // Might bonus for singleAllyBuff
+  allyPowerBonus?: number;         // Power bonus for singleAllyBuff
+  chargeMove?: boolean;            // Alpine March: directed charge in straight line (no damage, stops at unit/map edge)
+  chargeDist?: number;             // max hexes for charge move
+  mansaBounty?: boolean;           // Mansa's Bounty: Golden Stasis — freeze ALL units (both teams) for 1 turn
+  mansaBountyExtra?: boolean;      // Bounty+: enemies stay frozen 2 turns while allies free after 1
 }
 
 export interface Zone {
   center: Coordinates;
   radius: number;
-  effect: 'moveBonus';
-  magnitude: number;   // e.g. +2 movement
+  effect: 'moveBonus' | 'manaRegen';
+  magnitude: number;   // e.g. +2 movement / +1 mana
   ownerId: number;     // player who placed the zone
   turnsRemaining: number;
 }

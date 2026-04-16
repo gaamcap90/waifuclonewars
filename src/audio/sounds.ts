@@ -44,6 +44,15 @@ export const PLAYLIST: TrackDef[] = [
   { id: 'leonidas',  name: 'Ἢ τᾶν',                          src: '/audio/leonidas_theme.mp3' },
   { id: 'beethoven', name: 'Ode an den Sternensturm',         src: '/audio/beethoven_theme.mp3' },
   { id: 'huang',    name: '女皇始令',                         src: '/audio/huang_theme.mp3' },
+  { id: 'teddy',    name: 'Rough Rider Eternal',              src: '/audio/teddy_theme.mp3' },
+  { id: 'nelson',   name: 'Britannia Rules the Stars',        src: '/audio/nelson_theme.mp3' },
+  { id: 'hannibal', name: 'Hannibal ante Portas',             src: '/audio/hannibal_theme.mp3' },
+  { id: 'nelson2',  name: 'Electric Britannia',               src: '/audio/nelson2_theme.mp3' },
+  { id: 'picasso',  name: 'Guernica Cósmica',                 src: '/audio/picasso_theme.mp3' },
+  { id: 'mansa',    name: 'سلطان الذهب',                     src: '/audio/mansa_theme.mp3' },
+  { id: 'znyxorga', name: 'Gra\'athal Vol\'Krath',            src: '/audio/znyxorga_theme.mp3' },
+  { id: 'sunsin2',  name: '열두 척 별빛',                     src: '/audio/sunsin2_theme.mp3' },
+  { id: 'genghis2', name: 'Тэнгэрийн Охин',                  src: '/audio/genghis2_theme.mp3' },
 ];
 
 // Character theme clips: { src, startSec, endSec } — used only in Historical Archives preview

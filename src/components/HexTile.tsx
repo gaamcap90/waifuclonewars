@@ -3,13 +3,61 @@ import React, { memo, useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { HexTile as HexTileType } from "@/types/game";
 
+// ── TILE ART TOGGLE — flip to false to instantly revert to original flat tiles ──
+const USE_3D_TILES = false;
+
+const TERRAIN_MAP_FLAT: Record<string, string> = {
+  forest:       "/art/tiles/Forest_180.png",
+  mountain:     "/art/tiles/Mountains.png",
+  river:        "/art/tiles/River_180_new.png",
+  plain:        "/art/tiles/Plains_180.png",
+  mana_crystal: "/art/tiles/Mana_Crystal_180.png",
+  base_blue:    "/art/tiles/Blue_Base_180.png",
+  base_red:     "/art/tiles/Red_Base_180.png",
+  spawn_blue:   "/art/tiles/Spawn_Blue_180.png",
+  spawn_red:    "/art/tiles/Spawn_Red_180.png",
+  lake:         "/art/tiles/Lake_180.png",
+  desert:       "/art/tiles/Desert_180_new.png",
+  snow:         "/art/tiles/Snow_180_new.png",
+  ice:          "/art/tiles/Ice_180_new.png",
+  mud:          "/art/tiles/Mud_180_new.png",
+  ash:          "/art/tiles/Plains_180.png",
+  ruins:        "/art/tiles/Plains_180.png",
+};
+const TERRAIN_MAP_3D: Record<string, string> = {
+  forest:       "/art/tiles/3d/Forest_3d.png",
+  mountain:     "/art/tiles/3d/Mountains_3d.png",
+  river:        "/art/tiles/3d/River_3d.png",
+  plain:        "/art/tiles/3d/Plains_3d.png",
+  mana_crystal: "/art/tiles/3d/Mana_Crystal_3d.png",
+  base_blue:    "/art/tiles/3d/Blue_Base_3d.png",
+  base_red:     "/art/tiles/3d/Red_Base_3d.png",
+  spawn_blue:   "/art/tiles/3d/Spawn_Blue_3d.png",
+  spawn_red:    "/art/tiles/3d/Spawn_Red_3d.png",
+  lake:         "/art/tiles/3d/Lake_3d.png",
+  desert:       "/art/tiles/3d/Desert_3d.png",
+  snow:         "/art/tiles/3d/Snow_3d.png",
+  ice:          "/art/tiles/3d/Ice_3d.png",
+  mud:          "/art/tiles/3d/Mud_3d.png",
+  ash:          "/art/tiles/Plains_180.png",
+  ruins:        "/art/tiles/Plains_180.png",
+};
+const TERRAIN_MAP = USE_3D_TILES ? TERRAIN_MAP_3D : TERRAIN_MAP_FLAT;
+
+// Per-character sprite scale overrides (default 1.7)
+const SPRITE_SCALE_OVERRIDES: Record<string, number> = {
+  Genghis: 1.95,
+};
+
 interface HexTileProps {
   tile: HexTileType;
   onClick: () => void;
   onTerrainClick?: (e: React.MouseEvent) => void;
   icon?: string;
   iconPortrait?: string;
+  iconIsSprite?: boolean;
   iconName?: string;
+  spriteAnim?: 'attack' | 'ability' | 'death';
   size?: number;  // hex "radius"
   playerColor?: "blue" | "red";
   isActiveIcon?: boolean;
@@ -30,7 +78,9 @@ function HexTile({
   onTerrainClick,
   icon,
   iconPortrait,
+  iconIsSprite = false,
   iconName,
+  spriteAnim,
   size = 50,
   playerColor,
   isActiveIcon,
@@ -51,11 +101,16 @@ function HexTile({
   const ghostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isHovered, setIsHovered] = useState(false);
 
+  // ── Sprite hit animation — auto-triggered by HP drop ───────────────
+  const [hitAnimKey, setHitAnimKey] = useState(0);
+  const hitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (currentHP === undefined || maxHP === undefined || maxHP === 0) return;
     const prev = prevHPRef.current;
     if (prev !== undefined && currentHP < prev - 0.5) {
       setFlashKey(k => k + 1);
+      setHitAnimKey(k => k + 1);
       const prevPct = Math.max(0, Math.min(100, (prev / maxHP) * 100));
       setGhostPct(prevPct);
       if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
@@ -65,35 +120,31 @@ function HexTile({
   }, [currentHP, maxHP]);
 
   useEffect(() => {
-    return () => { if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current); };
+    return () => {
+      if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
+      if (hitTimerRef.current) clearTimeout(hitTimerRef.current);
+    };
   }, []);
+
+  // Resolve which sprite animation is active (hit takes priority)
+  const isDead = currentHP !== undefined && currentHP <= 0;
+  const activeSpriteAnim: string | null = (() => {
+    if (!iconIsSprite) return null;
+    if (hitAnimKey > 0 && !isDead) return `anim-sprite-hit-${hitAnimKey}`;
+    if (isDead)                     return 'death';
+    if (spriteAnim)                 return spriteAnim;
+    if (isActiveIcon)               return 'active';
+    return null;
+  })();
 
   const isLowHP = currentHP !== undefined && maxHP !== undefined && maxHP > 0
     && currentHP > 0 && (currentHP / maxHP) < 0.25;
 
-  // 1) Terrain → public URL
-  const terrainMap: Record<string,string> = {
-    forest:       "/art/tiles/Forest_180.png",
-    mountain:     "/art/tiles/Mountains.png",
-    river:        "/art/tiles/River_180_new.png",
-    plain:        "/art/tiles/Plains_180.png",
-    mana_crystal: "/art/tiles/Mana_Crystal_180.png",
-    base_blue:    "/art/tiles/Blue_Base_180.png",
-    base_red:     "/art/tiles/Red_Base_180.png",
-    spawn_blue:   "/art/tiles/Spawn_Blue_180.png",
-    spawn_red:    "/art/tiles/Spawn_Red_180.png",
-    lake:         "/art/tiles/Lake_180.png",
-    desert:       "/art/tiles/Desert_180_new.png",
-    snow:         "/art/tiles/Snow_180_new.png",
-    ice:          "/art/tiles/Ice_180_new.png",
-    mud:          "/art/tiles/Mud_180_new.png",
-    ash:          "/art/tiles/Plains_180.png",
-    ruins:        "/art/tiles/Plains_180.png",
-  };
+  // 1) Resolve terrain image URL
   let key: string = tile.terrain.type;
   if (key === "base")  key = tile.coordinates.q < 0 ? "base_blue"  : "base_red";
   if (key === "spawn") key = tile.coordinates.q < 0 ? "spawn_blue" : "spawn_red";
-  const imgSrc = terrainMap[key] || terrainMap.plain;
+  const imgSrc = TERRAIN_MAP[key] || TERRAIN_MAP.plain;
 
   // 2.5D elevation wall height per terrain (px, rendered below hex face)
   const elevMap: Record<string, number> = {
@@ -178,6 +229,19 @@ function HexTile({
             <clipPath id={clipId}>
               <polygon points={pts} />
             </clipPath>
+            {/* Bevel gradient — top-lit surface to give hexes physical depth */}
+            <linearGradient id={`${clipId}-bevel`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="rgba(255,255,255,0.13)" />
+              <stop offset="35%"  stopColor="rgba(255,255,255,0.03)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0.22)" />
+            </linearGradient>
+            {/* Occupied ambient gradient — team colour pools at the bottom */}
+            {playerColor && (
+              <radialGradient id={`${clipId}-occ`} cx="50%" cy="80%" r="60%">
+                <stop offset="0%"   stopColor={playerColor === 'blue' ? 'rgba(37,99,235,0.28)' : 'rgba(185,28,28,0.28)'} />
+                <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+              </radialGradient>
+            )}
           </defs>
           {/* Terrain image, clipped to exactly the hex */}
           <image
@@ -189,9 +253,15 @@ function HexTile({
             clipPath={`url(#${clipId})`}
             style={{ imageRendering: 'high-quality' } as React.CSSProperties}
           />
+          {/* Top-lit bevel overlay */}
+          <polygon points={pts} fill={`url(#${clipId}-bevel)`} clipPath={`url(#${clipId})`} />
+          {/* Occupied ambient colour pool */}
+          {playerColor && (
+            <polygon points={pts} fill={`url(#${clipId}-occ)`} clipPath={`url(#${clipId})`} />
+          )}
 
-          {/* Tile border */}
-          <polygon points={pts} className="fill-transparent stroke-black stroke-[1px]" />
+          {/* Tile border — slightly warm, not pure black */}
+          <polygon points={pts} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth={1} />
 
           {/* Outline & highlight rings */}
           <polygon
@@ -318,6 +388,19 @@ function HexTile({
         </div>
       )}
 
+      {/* ── Ground shadow — soft ellipse under sprite feet, outside clip ── */}
+      {icon && iconIsSprite && (
+        <div className="absolute pointer-events-none" style={{
+          zIndex: 9,
+          bottom: '4%',
+          left: '22%',
+          right: '22%',
+          height: '20%',
+          background: 'radial-gradient(ellipse, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.35) 45%, transparent 72%)',
+          filter: 'blur(3px)',
+        }} />
+      )}
+
       {/* ── Character portrait — counter-rotated to face camera ── */}
       {icon && (
         <div
@@ -327,20 +410,47 @@ function HexTile({
         <div className="absolute inset-0" style={{ clipPath: `url(#${clipId})` }}>
           {iconPortrait ? (
             <>
-              <img
-                src={iconPortrait}
-                alt={icon}
-                className="absolute inset-0 w-full h-full"
-                style={{
-                  objectFit: 'cover',
-                  objectPosition: 'center 20%',
-                  imageRendering: 'auto',
-                  animation: 'anim-idle-bob 3s ease-in-out infinite',
-                }}
-              />
-              {/* Dark vignette to make edges read cleanly against terrain */}
+              {/* Scale wrapper */}
+              <div className="absolute inset-0" style={iconIsSprite ? {
+                transform: `scale(${iconName ? (Object.entries(SPRITE_SCALE_OVERRIDES).find(([k]) => iconName.includes(k))?.[1] ?? 1.7) : 1.7})`,
+                transformOrigin: 'center 42%',
+              } : undefined}>
+                {/* Animation wrapper — hit/attack/ability/death/active */}
+                <div
+                  className="absolute inset-0"
+                  key={iconIsSprite && hitAnimKey > 0 ? hitAnimKey : undefined}
+                  style={iconIsSprite ? {
+                    animation: activeSpriteAnim === `anim-sprite-hit-${hitAnimKey}`
+                      ? 'anim-sprite-hit 0.55s ease-out forwards'
+                      : activeSpriteAnim === 'attack'
+                      ? 'anim-sprite-attack 0.5s ease-out forwards'
+                      : activeSpriteAnim === 'ability'
+                      ? 'anim-sprite-ability 0.7s ease-out forwards'
+                      : activeSpriteAnim === 'death'
+                      ? 'anim-sprite-death 1.1s ease-in forwards'
+                      : activeSpriteAnim === 'active'
+                      ? 'anim-sprite-active 1.8s ease-in-out infinite'
+                      : undefined,
+                  } : undefined}
+                >
+                  <img
+                    src={iconPortrait}
+                    alt={icon}
+                    className="absolute inset-0 w-full h-full"
+                    style={{
+                      objectFit: iconIsSprite ? 'contain' : 'cover',
+                      objectPosition: iconIsSprite ? 'center center' : 'center 20%',
+                      imageRendering: 'high-quality' as React.CSSProperties['imageRendering'],
+                      animation: iconIsSprite ? undefined : 'anim-idle-bob 3s ease-in-out infinite',
+                    }}
+                  />
+                </div>
+              </div>
+              {/* Dark vignette — lighter for sprites so minifig stays bright */}
               <div className="absolute inset-0" style={{
-                background: 'radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,0.55) 100%)',
+                background: iconIsSprite
+                  ? 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.25) 100%)'
+                  : 'radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,0.55) 100%)',
               }} />
               {/* Team colour gradient at bottom for quick ID */}
               <div className="absolute bottom-0 left-0 right-0 h-[30%]" style={{
@@ -394,7 +504,7 @@ function HexTile({
         </div>
       )}
 
-      {/* ── Pedestal base — counter-rotated to face camera ── */}
+      {/* ── Pedestal base — physicalized resin hex base ── */}
       {icon && (
         <div style={{
           position: 'absolute',
@@ -403,7 +513,7 @@ function HexTile({
           transform: isTilted
             ? `translateX(-50%) rotateX(-${BOARD_TILT}deg) scaleY(${tiltCompensate})`
             : 'translateX(-50%)',
-          width: '72%',
+          width: '92%',
           pointerEvents: 'none',
           zIndex: 11,
           display: 'flex',
@@ -411,21 +521,47 @@ function HexTile({
           alignItems: 'center',
           gap: 0,
         }}>
+          {/* Team-colour rim — thin painted edge like a WH40K base edge coat */}
           <div style={{
             width: '100%',
+            height: '3px',
             background: playerColor === 'blue'
-              ? 'linear-gradient(to bottom, #2563eb, #1e3a8a)'
-              : 'linear-gradient(to bottom, #dc2626, #7f1d1d)',
-            borderRadius: '2px 2px 4px 4px',
+              ? 'linear-gradient(90deg, #1d4ed8 0%, #60a5fa 50%, #1d4ed8 100%)'
+              : 'linear-gradient(90deg, #991b1b 0%, #f87171 50%, #991b1b 100%)',
+            borderRadius: '2px 2px 0 0',
             boxShadow: playerColor === 'blue'
-              ? '0 0 10px rgba(59,130,246,0.9), 0 3px 6px rgba(0,0,0,0.8)'
-              : '0 0 10px rgba(239,68,68,0.9), 0 3px 6px rgba(0,0,0,0.8)',
+              ? '0 0 5px rgba(96,165,250,0.7)'
+              : '0 0 5px rgba(248,113,113,0.7)',
+          }} />
+
+          {/* Main base body — dark resin with grid texture and bevel */}
+          <div style={{
+            width: '100%',
+            background: '#0f0e1a',
+            backgroundImage: [
+              'repeating-linear-gradient(0deg,   rgba(255,255,255,0.028) 0px, rgba(255,255,255,0.028) 1px, transparent 1px, transparent 5px)',
+              'repeating-linear-gradient(90deg,  rgba(255,255,255,0.028) 0px, rgba(255,255,255,0.028) 1px, transparent 1px, transparent 5px)',
+            ].join(', '),
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderTop: 'none',
+            borderRadius: '0 0 3px 3px',
+            boxShadow: [
+              'inset 0 1px 0 rgba(255,255,255,0.07)',
+              'inset 0 -2px 5px rgba(0,0,0,0.75)',
+              'inset 1px 0 0 rgba(255,255,255,0.04)',
+              'inset -1px 0 0 rgba(255,255,255,0.04)',
+              '0 4px 10px rgba(0,0,0,0.95)',
+              playerColor === 'blue'
+                ? '0 0 8px rgba(37,99,235,0.35)'
+                : '0 0 8px rgba(185,28,28,0.35)',
+            ].join(', '),
             position: 'relative',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            paddingBottom: '2px',
+            paddingBottom: '4px',
+            paddingTop: '1px',
           }}>
             {/* HP bar strip */}
             {currentHP !== undefined && maxHP !== undefined && maxHP > 0 && (() => {
@@ -435,16 +571,16 @@ function HexTile({
               const fillPct = hasPreview && !isHealPreview ? prevPct : pct;
               const hpColor = fillPct > 75 ? '#22c55e' : fillPct > 50 ? '#eab308' : fillPct > 25 ? '#f97316' : '#ef4444';
               return (
-                <div style={{ width: '90%', height: '4px', background: 'rgba(0,0,0,0.5)', borderRadius: '2px', marginTop: '3px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${fillPct}%`, background: hpColor, borderRadius: '2px', transition: 'width 0.15s' }} />
-                  {/* Ghost HP drain bar (yellow, fades after hit) */}
+                <div style={{ width: '88%', height: '4px', background: 'rgba(0,0,0,0.7)', borderRadius: '1px', marginTop: '2px', position: 'relative', overflow: 'hidden', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ height: '100%', width: `${fillPct}%`, background: hpColor, borderRadius: '1px', transition: 'width 0.15s', boxShadow: `0 0 3px ${hpColor}` }} />
+                  {/* Ghost HP drain bar */}
                   {ghostPct !== null && ghostPct > pct && (
                     <div style={{
                       position: 'absolute', top: 0, left: `${pct}%`,
                       width: `${Math.max(0, ghostPct - pct)}%`, height: '100%',
                       background: 'rgba(250,200,0,0.72)',
                       animation: 'anim-hp-ghost-drain 0.85s ease-out forwards',
-                      borderRadius: '2px',
+                      borderRadius: '1px',
                     }} />
                   )}
                   {hasPreview && !isHealPreview && (
@@ -456,17 +592,17 @@ function HexTile({
                 </div>
               );
             })()}
-            {/* Character name */}
+            {/* Character name — etched into the base */}
             {iconName && (
               <span style={{
                 fontSize: '6px',
                 fontWeight: 700,
-                letterSpacing: '0.12em',
+                letterSpacing: '0.10em',
                 textTransform: 'uppercase',
-                color: playerColor === 'blue' ? 'rgba(210,230,255,0.97)' : 'rgba(255,210,210,0.97)',
+                color: playerColor === 'blue' ? 'rgba(147,197,253,0.92)' : 'rgba(252,165,165,0.92)',
                 textShadow: playerColor === 'blue'
-                  ? '0 0 5px rgba(100,180,255,0.95), 0 1px 2px rgba(0,0,0,0.9)'
-                  : '0 0 5px rgba(255,120,120,0.95), 0 1px 2px rgba(0,0,0,0.9)',
+                  ? '0 0 4px rgba(96,165,250,0.6)'
+                  : '0 0 4px rgba(248,113,113,0.6)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 maxWidth: '90%',
@@ -479,12 +615,14 @@ function HexTile({
               </span>
             )}
           </div>
+
+          {/* Cast shadow — wide flat ellipse like a base sitting on a surface */}
           <div style={{
-            width: '55%', height: '4px',
-            background: 'rgba(0,0,0,0.5)',
+            width: '80%', height: '5px',
+            background: 'rgba(0,0,0,0.6)',
             borderRadius: '50%',
-            filter: 'blur(2px)',
-            marginTop: '2px',
+            filter: 'blur(3px)',
+            marginTop: '1px',
           }} />
         </div>
       )}
@@ -510,5 +648,7 @@ export default memo(HexTile, (prev, next) =>
   prev.isHealPreview         === next.isHealPreview         &&
   prev.icon                  === next.icon                  &&
   prev.iconPortrait          === next.iconPortrait          &&
+  prev.iconIsSprite          === next.iconIsSprite          &&
+  prev.spriteAnim            === next.spriteAnim            &&
   prev.iconName              === next.iconName
 );

@@ -1,24 +1,29 @@
-import { useTheme } from "next-themes"
-import { Toaster as Sonner, toast } from "sonner"
+import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="dark"
       className="toaster group"
+      position="top-center"
+      offset="80px"
       toastOptions={{
+        style: {
+          background: "rgba(4,2,22,0.97)",
+          border: "1px solid rgba(120,60,200,0.55)",
+          color: "#c4b5fd",
+          fontFamily: "'Exo 2', sans-serif",
+          fontSize: "13px",
+          boxShadow: "0 0 18px rgba(100,40,180,0.30), 0 4px 24px rgba(0,0,0,0.75)",
+          borderRadius: "8px",
+          backdropFilter: "blur(8px)",
+        },
         classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          error: "game-toast-error",
+          success: "game-toast-success",
+          warning: "game-toast-warning",
         },
       }}
       {...props}
@@ -26,4 +31,5 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-export { Toaster, toast }
+export { Toaster }
+export { toast } from "sonner"

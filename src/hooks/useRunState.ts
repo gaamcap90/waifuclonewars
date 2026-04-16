@@ -1,13 +1,23 @@
 // src/hooks/useRunState.ts
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   RunState, CharacterId, RunItem, CombatResult, PendingRewards,
 } from "@/types/roguelike";
 import {
   generateActMap, buildStartingCharacters, SHARED_STARTING_CARDS, CHARACTER_STARTING_CARDS,
-  XP_TO_NEXT, pickCardRewards, pickItemReward, rollItemTier,
+  XP_TO_NEXT, pickCardRewards, pickItemReward, rollItemTier, pickBossExclusiveItem,
 } from "@/data/roguelikeData";
+import { TUTORIAL_MAP } from "@/data/tutorialData";
 import { seededRng } from "@/utils/rng";
+
+const LS_RUN_KEY = 'wcw_active_run_v1';
+
+function loadSavedRun(): RunState | null {
+  try {
+    const raw = localStorage.getItem(LS_RUN_KEY);
+    return raw ? (JSON.parse(raw) as RunState) : null;
+  } catch { return null; }
+}
 
 function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
   const map = generateActMap(seed, 1);
@@ -38,18 +48,58 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
     battleCount: 0,
     upgradedCardDefIds: [],
     runStats: { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 },
+    runStartTime: Date.now(),
   };
 }
 
 export function useRunState() {
-  const [runState, setRunState] = useState<RunState | null>(null);
+  const [runState, setRunState] = useState<RunState | null>(() => loadSavedRun());
+
+  // Auto-persist every non-tutorial run to localStorage
+  useEffect(() => {
+    if (runState && !runState.isTutorialRun) {
+      localStorage.setItem(LS_RUN_KEY, JSON.stringify(runState));
+    } else if (!runState) {
+      localStorage.removeItem(LS_RUN_KEY);
+    }
+  }, [runState]);
 
   const startRun = useCallback((selectedIds: string[] = []) => {
     const seed = Date.now() & 0xffffff;
     setRunState(makeInitialRunState(seed, selectedIds));
   }, []);
 
+  const startTutorialRun = useCallback(() => {
+    const allChars = buildStartingCharacters();
+    const characters = allChars.filter(c => ['leonidas', 'napoleon'].includes(c.id));
+    const deckCardIds: string[] = [
+      ...SHARED_STARTING_CARDS,
+      CHARACTER_STARTING_CARDS['leonidas'],
+      CHARACTER_STARTING_CARDS['napoleon'],
+    ].filter(Boolean) as string[];
+
+    setRunState({
+      seed: 0,
+      act: 1,
+      gold: 0,
+      currentNodeId: null,
+      completedNodeIds: [],
+      unlockedNodeIds: ['tut-0'],
+      map: TUTORIAL_MAP as any,
+      characters,
+      deckCardIds,
+      pendingRewards: null,
+      permanentlyDeadIds: [],
+      battleCount: 0,
+      upgradedCardDefIds: [],
+      runStats: { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 },
+      runStartTime: Date.now(),
+      isTutorialRun: true,
+    });
+  }, []);
+
   const abandonRun = useCallback(() => {
+    localStorage.removeItem(LS_RUN_KEY);
     setRunState(null);
   }, []);
 
@@ -89,7 +139,20 @@ export function useRunState() {
       }) ? enc.bonusXpNoHit : 0;
       const fastBonus = result.turnsElapsed <= 4 ? enc.bonusXpFast : 0;
       const totalXp = baseXp + noHitBonus + fastBonus;
-      const goldEarned = result.won ? enc.goldReward : Math.floor(enc.goldReward * 0.3);
+      let goldEarned = result.won ? enc.goldReward : Math.floor(enc.goldReward * 0.3);
+      // Mansa Treasury: bonus gold equal to Mansa's Power% (only on win)
+      if (result.won) {
+        const mansaChar = prev.characters.find(c => c.id === 'mansa' && (result.finalHps[c.id] ?? 0) > 0);
+        if (mansaChar) {
+          const MANSA_BASE_POWER = 60; // from CharacterSelection.tsx stats
+          const mansaItemPowerBonus = mansaChar.items.reduce((acc, item) => acc + (item?.statBonus?.power ?? 0), 0);
+          const mansaEffectivePower = MANSA_BASE_POWER + (mansaChar.statBonuses.power ?? 0) + mansaItemPowerBonus;
+          goldEarned += Math.floor(goldEarned * (mansaEffectivePower / 100));
+          // Golden Throne: flat +50% bonus gold on top of Treasury
+          const hasTreasuryDouble = mansaChar.items.some(item => item?.passiveTag === 'mansa_treasury_double');
+          if (hasTreasuryDouble) goldEarned += Math.floor(goldEarned * 0.5);
+        }
+      }
 
       // Living character IDs used for both item filtering and card choices
       const livingCharIds = prev.characters
@@ -101,7 +164,12 @@ export function useRunState() {
       let bossItems: RunItem[] | undefined;
       if (result.won && node.type === 'boss') {
         const livingChars = prev.characters.filter(c => (result.finalHps[c.id] ?? 0) > 0);
-        bossItems = livingChars.map(() => pickItemReward(rollItemTier('boss', rng), rng, livingCharIds));
+        const pickedIds: string[] = [];
+        bossItems = livingChars.map(char => {
+          const item = pickBossExclusiveItem(char.id, pickedIds, rng);
+          pickedIds.push(item.id);
+          return item;
+        });
       } else if (result.won && enc.guaranteedItem) {
         itemDrop = pickItemReward(rollItemTier('elite', rng), rng, livingCharIds);
       } else if (result.won && rng() < enc.itemDropChance) {
@@ -135,7 +203,7 @@ export function useRunState() {
         const newHp = result.finalHps[c.id] ?? c.currentHp;
         if (newHp <= 0) {
           // Strip all items from dead characters
-          return { ...c, currentHp: 0, items: [null, null, null, null, null], passiveStacks: undefined };
+          return { ...c, currentHp: 0, items: [null, null, null, null, null, null], passiveStacks: undefined };
         }
         // Persist passive stacks for characters with the bloodlust_persist item (Genghis)
         const hasPersist = c.items.some(item => item?.passiveTag === 'genghis_bloodlust_persist');
@@ -473,9 +541,13 @@ export function useRunState() {
     });
   }, []);
 
+  const hasSavedRun = runState !== null && !runState.isTutorialRun;
+
   return {
     runState,
+    hasSavedRun,
     startRun,
+    startTutorialRun,
     abandonRun,
     enterNode,
     completeCombat,
