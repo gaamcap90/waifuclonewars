@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { AIIntent } from "@/types/game";
+import { AIIntent, Icon } from "@/types/game";
 
 interface AIIntentBadgeProps {
   intents: AIIntent[];
+  playerIcons?: Icon[];
   onHoverRange?: (range: number | null) => void;
 }
 
@@ -14,15 +15,18 @@ const intentStyle: Record<string, { bg: string; border: string; color: string; i
   upcoming_ability: { bg: "rgba(60,20,100,0.85)", border: "rgba(167,139,250,0.70)", color: "#c4b5fd", icon: "⏳" },
 };
 
-export default function AIIntentBadge({ intents, onHoverRange }: AIIntentBadgeProps) {
+export default function AIIntentBadge({ intents, playerIcons, onHoverRange }: AIIntentBadgeProps) {
   const [showTip, setShowTip] = useState(false);
 
   // Main intent: exclude upcoming_ability for hover range (use the active ability/attack range)
   const mainIntent = intents.find(i => i.type !== "buff" && i.type !== "upcoming_ability") ?? intents[0];
   // Active intents shown as primary badges
   const activeIntents = intents.filter(i => i.type !== "upcoming_ability");
-  // Upcoming intents shown as countdown badges
-  const upcomingIntents = intents.filter(i => i.type === "upcoming_ability");
+  // Show only the most threatening upcoming ability (lowest turnsUntilReady)
+  const allUpcoming = intents.filter(i => i.type === "upcoming_ability");
+  const upcomingIntents = allUpcoming.length > 0
+    ? [allUpcoming.reduce((best, cur) => (cur.turnsUntilReady ?? 99) < (best.turnsUntilReady ?? 99) ? cur : best)]
+    : [];
 
   return (
     <div
@@ -89,14 +93,20 @@ export default function AIIntentBadge({ intents, onHoverRange }: AIIntentBadgePr
             padding: "8px 10px",
           }}
         >
-          {activeIntents.map((intent, idx) => (
-            <div key={idx} className={idx > 0 ? "mt-1.5 pt-1.5 border-t border-slate-800" : ""}>
-              <div className="font-orbitron font-bold text-[11px] text-white">{intent.abilityName}</div>
-              {intent.damage  !== undefined && <div className="text-[10px] text-red-300 mt-0.5">~{Math.round(intent.damage)} dmg</div>}
-              {intent.healing !== undefined && <div className="text-[10px] text-emerald-300 mt-0.5">Heal {intent.healing}</div>}
-              {intent.range > 0 && <div className="text-[10px] text-slate-500 mt-0.5">Range {intent.range} (hover to preview)</div>}
-            </div>
-          ))}
+          {activeIntents.map((intent, idx) => {
+            const targetName = intent.targetId && playerIcons
+              ? playerIcons.find(i => i.id === intent.targetId)?.name
+              : undefined;
+            return (
+              <div key={idx} className={idx > 0 ? "mt-1.5 pt-1.5 border-t border-slate-800" : ""}>
+                <div className="font-orbitron font-bold text-[11px] text-white">{intent.abilityName}</div>
+                {targetName && <div className="text-[10px] text-yellow-300 mt-0.5">→ {targetName}</div>}
+                {intent.damage  !== undefined && <div className="text-[10px] text-red-300 mt-0.5">~{Math.round(intent.damage)} dmg</div>}
+                {intent.healing !== undefined && <div className="text-[10px] text-emerald-300 mt-0.5">Heal {intent.healing}</div>}
+                {intent.range > 0 && <div className="text-[10px] text-slate-500 mt-0.5">Range {intent.range} (hover to preview)</div>}
+              </div>
+            );
+          })}
           {upcomingIntents.map((intent, idx) => (
             <div key={`ut-${idx}`} className={activeIntents.length + idx > 0 ? "mt-1.5 pt-1.5 border-t border-slate-800" : ""}>
               <div className="font-orbitron font-bold text-[10px]" style={{ color: (intent.turnsUntilReady ?? 0) <= 1 ? "#fca5a5" : "#c4b5fd" }}>

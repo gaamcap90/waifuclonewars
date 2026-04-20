@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { ChevronLeft, Shield, Zap, Heart, Star, BookOpen, Sword, Package, Map, Users, Lock, Trophy, Cpu } from "lucide-react";
+import { ChevronLeft, Shield, Zap, Heart, Star, BookOpen, Sword, Package, Map, Users, Lock, Trophy, Cpu, TrendingUp } from "lucide-react";
 import type { AchievementStats } from "@/hooks/useAchievements";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { useT } from "@/i18n";
 import { getLoreTranslation } from "@/i18n/lore-translations";
 import { getAchievementTranslation } from "@/i18n/achievement-translations";
 import { CARD_UPGRADES } from "@/data/cards";
-import { ACHIEVEMENTS, CATEGORY_LABELS, CATEGORY_ICONS, TOTAL_POINTS, getAchievementsByCategory, type AchievementCategory } from "@/data/achievements";
+import { ACHIEVEMENTS, CATEGORY_LABELS, CATEGORY_ICONS, TOTAL_POINTS, CHARACTER_UNLOCK_THRESHOLDS, CHARACTER_UNLOCK_EVENTS, getAchievementsByCategory, type AchievementCategory } from "@/data/achievements";
 
 // ── Stat keyword colorizer ───────────────────────────────────────────────────
 const STAT_COLOR: Record<string, string> = {
@@ -101,9 +101,9 @@ const CHARACTERS: CharacterEntry[] = [
     role: "DPS RANGED", portrait: "/art/napoleon_portrait.png",
     accentColor: "#d946ef", ringColor: "rgba(217,70,239,0.55)",
     lore: "Once the greatest military mind in Earth's history, Napoleon Bonaparte was resurrected as a battle-clone by the Empire of Znyxorga. Now fighting in their interdimensional arena, this pint-sized prodigy commands forces with tactical genius, turning every battlefield into a stage for her brilliance. Her sharp eyes miss nothing — and her artillery never misses twice.",
-    stats: { hp: 100, might: 65, power: 60, defense: 20, moveRange: 3, attackRange: 2 },
+    stats: { hp: 100, might: 60, power: 65, defense: 20, moveRange: 3, attackRange: 2 },
     abilities: [
-      { kind: "passive", icon: "🔫", name: "Mitraille", cost: "Passive", desc: <>At the start of Napoleon's turn, all enemies within range 2 take <span style={{ color: "#f87171", fontWeight: 700 }}>5 pure damage</span> (ignores Defense). Named after the grapeshot that made Napoleon famous — don't get close.</> },
+      { kind: "passive", icon: "🔫", name: "Mitraille", cost: "Passive", desc: <>At the start of Napoleon's turn, all enemies within range 2 take <span style={{ color: "#f87171", fontWeight: 700 }}>(5 + 2×level) pure damage</span> (ignores Defense). Scales from 7 at lvl 1 to 19 at lvl 8. Named after the grapeshot that made Napoleon famous — don't get close.</> },
       { kind: "ability", icon: "💥", name: "Artillery Barrage", cost: "2 Mana", desc: <>Unleash a devastating barrage dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>84</span> damage to a target at range 4.</> },
       { kind: "ability", icon: "⚔️", name: "Grande Armée", cost: "3 Mana", desc: <>Rally the troops! Grant +15% <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> AND <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power</span> to all allies for 2 turns.</> },
       { kind: "ultimate", icon: "⭐", name: "Final Salvo", cost: "3 Mana · Exhaust", desc: <>Fire 3 random artillery shots, each dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>42</span> to random enemies within range 4.</> },
@@ -115,12 +115,12 @@ const CHARACTERS: CharacterEntry[] = [
     role: "DPS MELEE", portrait: "/art/genghis_portrait.png",
     accentColor: "#ef4444", ringColor: "rgba(239,68,68,0.55)",
     lore: "The mightiest conqueror ever to ride across the steppes of Earth has been reborn as a ferocious battle-clone. Her bloodlust only grows with each fallen foe — every kill sharpens her blade and restores her focus. In the arena of Znyxorga, she builds a new empire one victory at a time, and no wall of steel or magic has ever stopped her charge.",
-    stats: { hp: 120, might: 50, power: 50, defense: 25, moveRange: 3, attackRange: 1 },
+    stats: { hp: 120, might: 50, power: 40, defense: 25, moveRange: 3, attackRange: 1 },
     abilities: [
-      { kind: "passive", icon: "🩸", name: "Bloodlust", cost: "Passive", desc: <>Each kill grants +12 <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> and restores 1 Mana. Stacks up to 3×.</> },
+      { kind: "passive", icon: "🩸", name: "Bloodlust", cost: "Passive", desc: <>Each kill grants +12 <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> and restores 1 Mana. Stack cap scales with level: cap = 2 + ⌊level/2⌋ (lvl 1 → 2 stacks, lvl 4 → 4, lvl 8 → 6).</> },
       { kind: "ability", icon: "⚡", name: "Mongol Charge", cost: "2 Mana", desc: <>Strike a single target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>48 damage</span> at range 3, then apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>: <span style={{ color: "#f87171", fontWeight: 700 }}>16 HP per turn</span> for 2 turns.</> },
-      { kind: "ability", icon: "🌀", name: "Horde Tactics", cost: "3 Mana", desc: <>Unleash the horde — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power×0.7 per enemy</span> in range 2 to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL</span> enemies in range 2. More enemies = more damage each.</> },
-      { kind: "ultimate", icon: "⭐", name: "Rider's Fury", cost: "3 Mana · Exhaust", desc: <>Sweep the line for <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power×1.5 damage</span> to all enemies on a line, range 5. <span style={{ color: "#f87171", fontWeight: 700 }}>Doubled</span> against targets below 40% HP — finish them off.</> },
+      { kind: "ability", icon: "🌀", name: "Horde Tactics", cost: "3 Mana", desc: <>Unleash the horde — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~28 per enemy</span> in range 2 to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL</span> enemies in range 2. More enemies = more damage each.</> },
+      { kind: "ultimate", icon: "⭐", name: "Rider's Fury", cost: "3 Mana · Exhaust", desc: <>Sweep the line for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~75 damage</span> to all enemies on a line, range 5. <span style={{ color: "#f87171", fontWeight: 700 }}>Doubled</span> against targets below 40% HP — finish them off.</> },
     ],
   },
   {
@@ -131,7 +131,7 @@ const CHARACTERS: CharacterEntry[] = [
     lore: "Leonardo da Vinci painted the Mona Lisa, designed flying machines, and unlocked the secrets of human anatomy — often simultaneously. Now, as a battle-clone for the Empire of Znyxorga, she brings that boundless creativity to the arena. Her inventions heal the fallen, scout the skies, and protect her team from whatever the galaxy hurls at them.",
     stats: { hp: 85, might: 35, power: 50, defense: 15, moveRange: 3, attackRange: 2 },
     abilities: [
-      { kind: "passive", icon: "🔧", name: "Tinkerer", cost: "Passive", desc: "If no exclusive ability card was used last turn, draw +1 card at the start of your turn." },
+      { kind: "passive", icon: "🔧", name: "Tinkerer", cost: "Passive", desc: <>Draw <span style={{ color: "#34d399", fontWeight: 700 }}>+1 extra card</span> at the start of every turn. Draws <span style={{ color: "#34d399", fontWeight: 700 }}>+1 additional card</span> while the <span style={{ color: "#fbbf24", fontWeight: 700 }}>Combat Drone</span> is alive.</> },
       { kind: "ability", icon: "✈️", name: "Flying Machine", cost: "2 Mana", desc: <>Teleport to <span style={{ color: "#34d399", fontWeight: 700 }}>any unoccupied hex</span> on the board. No range limit. Bypasses terrain and obstacles.</> },
       { kind: "ability", icon: "💚", name: "Masterpiece", cost: "3 Mana", desc: <>Restore <span style={{ color: "#4ade80", fontWeight: 700 }}>50 HP</span> to an ally within range 3. Also removes the Poison debuff.</> },
       { kind: "ultimate", icon: "⭐", name: "Vitruvian Guardian", cost: "3 Mana · Exhaust", desc: <>Summon a combat drone: <span style={{ color: "#4ade80", fontWeight: 700 }}>HP 90</span>, <span style={{ color: "#f87171", fontWeight: 700 }}>Might 60</span>, <span style={{ color: "#fbbf24", fontWeight: 700 }}>Defense 30</span>. Lasts until defeated. (Scales with Power)</> },
@@ -145,8 +145,8 @@ const CHARACTERS: CharacterEntry[] = [
     lore: "Three hundred Spartans. One narrow pass. An empire brought to its knees. Leonidas I held the Gates of Thermopylae against impossible odds, and her legend echoed across millennia — right into the cloning vats of Znyxorga. Reborn as a battle-clone in burnished bronze and blazing war-paint, Leonidas-chan turns every battlefield into a chokepoint. She does not retreat. She does not yield. She is the shield upon which enemy waves break and scatter.",
     stats: { hp: 130, might: 40, power: 36, defense: 35, moveRange: 2, attackRange: 1 },
     abilities: [
-      { kind: "passive", icon: "🛡️", name: "Phalanx", cost: "Passive", desc: <>Each turn Leonidas ends adjacent to an ally, she gains +<span style={{ color: "#fbbf24", fontWeight: 700 }}>10 Defense</span> (stacks up to 3 turns, max +30). Stay close to teammates over multiple turns to build an iron wall.</> },
-      { kind: "ability", icon: "⚡", name: "Shield Bash", cost: "2 Mana", desc: <>Slam your shield into a target within range 1 for <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power×1.6 damage</span> and apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense for 2 turns). Also grants Leonidas <span style={{ color: "#34d399", fontWeight: 700 }}>+20 Defense</span> this turn (counter-stance).</> },
+      { kind: "passive", icon: "🛡️", name: "Phalanx", cost: "Passive", desc: <>Each turn Leonidas ends adjacent to an ally, she gains <span style={{ color: "#fbbf24", fontWeight: 700 }}>(6 + level) Defense</span> per stack (up to 3 stacks). Scales from +7/stack at lvl 1 to +14/stack at lvl 8. Investing in Leonidas makes her progressively harder to kill.</> },
+      { kind: "ability", icon: "⚡", name: "Shield Bash", cost: "2 Mana", desc: <>Slam your shield into a target within range 1 for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~77 damage</span> and apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense for 2 turns). Also grants Leonidas <span style={{ color: "#34d399", fontWeight: 700 }}>+20 Defense</span> this turn (counter-stance).</> },
       { kind: "ability", icon: "🏛️", name: "Spartan Wall", cost: "3 Mana", desc: <>Raise the phalanx — grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+20 Defense</span> to Leonidas and all allies within range 2.</> },
       { kind: "ultimate", icon: "⭐", name: "THIS IS SPARTA!", cost: "3 Mana · Exhaust", desc: <>Charge up to 3 hexes and crash into a target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>2.5× Power (~125 dmg)</span>. All enemies adjacent to the impact are <span style={{ color: "#fb923c", fontWeight: 700 }}>Rooted</span> for 2 turns — cannot move but can still attack and use cards.</> },
     ],
@@ -162,7 +162,7 @@ const CHARACTERS: CharacterEntry[] = [
     abilities: [
       { kind: "passive", icon: "🐢", name: "Turtle Ship", cost: "Passive",
         desc: <>Can move onto lake tiles and ignore extra movement cost on river tiles. On land: balanced stats, Range 1 basic attacks.</>,
-        waterDesc: <>ON WATER (lake or river): <span style={{ color: "#f87171", fontWeight: 700 }}>+52% Might</span> (58→88), <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30% Defense</span> (25→33), <span style={{ color: "#60a5fa", fontWeight: 700 }}>−35% Power</span> (55→36). Movement capped at 1. Range 3 basic attacks.</> },
+        waterDesc: <>ON WATER (lake or river): <span style={{ color: "#f87171", fontWeight: 700 }}>+52% Might</span> (58→88), <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30% Defense</span> (25→33), <span style={{ color: "#60a5fa", fontWeight: 700 }}>−35% Power</span> (55→36). Range 3 basic attacks. <span style={{ color: "#fbbf24", fontWeight: 700 }}>Lake only: Move capped at 1.</span> River tiles keep full movement.</> },
       { kind: "ability", icon: "🔥", name: "Hwajeon", cost: "2 Mana",
         desc: <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~72 damage</span> at range 3. Pushes target back 1 hex.</>,
         waterName: "Ramming Speed",
@@ -182,12 +182,12 @@ const CHARACTERS: CharacterEntry[] = [
     role: "CONTROLLER", portrait: "/art/beethoven_portrait.png",
     accentColor: "#22d3ee", ringColor: "rgba(34,211,238,0.55)",
     lore: "Ludwig van Beethoven composed some of Earth's most transcendent music while completely deaf — a testament to a will that refused to bow to fate. The Empire of Znyxorga cloned her from the resonant frequencies preserved in old concert hall stone. In the arena, Beethoven-chan wields sound itself as a weapon: sonic waves that hurl enemies across the field, melodies that energise her allies, and a final crescendo — the Götterfunken — that silences every foe in range. She cannot hear the chaos she creates. She only feels the thunder.",
-    stats: { hp: 90, might: 35, power: 65, defense: 25, moveRange: 2, attackRange: 2 },
+    stats: { hp: 90, might: 35, power: 70, defense: 25, moveRange: 2, attackRange: 2 },
     abilities: [
-      { kind: "passive", icon: "🎵", name: "Crescendo", cost: "Passive", desc: <>Each exclusive ability card played grants <span style={{ color: "#22d3ee", fontWeight: 700 }}>+3 Power</span> permanently. Stacks up to <span style={{ color: "#fbbf24", fontWeight: 700 }}>7 times (+21 max)</span>. Her power grows with every note.</> },
+      { kind: "passive", icon: "🎵", name: "Crescendo", cost: "Passive", desc: <>Each exclusive ability card played grants <span style={{ color: "#22d3ee", fontWeight: 700 }}>+2 Power permanently</span>. Stacks up to <span style={{ color: "#fbbf24", fontWeight: 700 }}>15 times (+30 max)</span>. Her power crescendos with every note.</> },
       { kind: "ability", icon: "🌊", name: "Schallwelle", cost: "2 Mana", desc: <>Fire a directional sonic wave — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>33 damage</span> to all enemies in a line up to range 3 and <span style={{ color: "#22d3ee", fontWeight: 700 }}>push each 2 tiles back</span> along the wave direction.</> },
       { kind: "ability", icon: "🎶", name: "Freudenspur", cost: "3 Mana", desc: <>Target a tile within range 3 — <span style={{ color: "#22d3ee", fontWeight: 700 }}>that tile and all 6 adjacent tiles</span> become a resonance zone. Allies passing through zone tiles gain <span style={{ color: "#34d399", fontWeight: 700 }}>+2 Movement</span>. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
-      { kind: "ultimate", icon: "⭐", name: "Götterfunken", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Unleash the full Sternensturm. Deal <span style={{ color: "#f87171", fontWeight: 700 }}>Power×0.7 damage</span> and <span style={{ color: "#f87171", fontWeight: 700 }}>stun all enemies within range 3 for 1 turn</span> — no movement, no cards, no actions.</> },
+      { kind: "ultimate", icon: "⭐", name: "Götterfunken", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Unleash the full Sternensturm. Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~46 damage</span> and <span style={{ color: "#f87171", fontWeight: 700 }}>stun all enemies within range 3 for 1 turn</span> — no movement, no cards, no actions.</> },
     ],
   },
   {
@@ -196,10 +196,10 @@ const CHARACTERS: CharacterEntry[] = [
     role: "CONTROLLER", portrait: "/art/huang_portrait.png",
     accentColor: "#b45309", ringColor: "rgba(180,83,9,0.55)",
     lore: "Qin Shi Huang unified China under a single dynasty, built the Great Wall, and commissioned an army of 8,000 terracotta warriors to guard him in death. The Empire of Znyxorga extracted her genetic echo from clay dust sifted out of the mausoleum soil. Reborn as Huang-chan, she commands her terracotta legions once more — archers, footsoldiers, and cavalry that rise from the arena floor at her command. She does not strike enemies herself. She buries them under sheer numbers.",
-    stats: { hp: 90, might: 30, power: 55, defense: 25, moveRange: 2, attackRange: 1 },
+    stats: { hp: 90, might: 35, power: 55, defense: 25, moveRange: 2, attackRange: 1 },
     abilities: [
       { kind: "passive", icon: "🏺", name: "Imperial Command", cost: "Passive", desc: <>Huang-chan <span style={{ color: "#f87171", fontWeight: 700 }}>cannot play Basic Attack cards</span>. At least <span style={{ color: "#fbbf24", fontWeight: 700 }}>1 Basic Attack card</span> is guaranteed in hand each turn — for her Terracotta units to use. Terracotta units may <span style={{ color: "#fbbf24", fontWeight: 700 }}>only</span> use Basic Attack cards.</> },
-      { kind: "ability", icon: "⚔️", name: "Terracotta Legion", cost: "2 Mana", desc: <>Select any empty hex within range 3. Summon a random warrior — <span style={{ color: "#fbbf24", fontWeight: 700 }}>50/50</span>: <span style={{ color: "#60a5fa", fontWeight: 700 }}>Archer</span> (HP <span style={{ color: "#60a5fa", fontWeight: 700 }}>40</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>45</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 2, Move 2) or <span style={{ color: "#f87171", fontWeight: 700 }}>Warrior</span> (HP <span style={{ color: "#60a5fa", fontWeight: 700 }}>40</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>30</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 1, Move 2). Both have Power 0 — deal pure Might damage. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
+      { kind: "ability", icon: "⚔️", name: "Terracotta Legion", cost: "2 Mana", desc: <>Select any empty hex within range 3. Summon a random warrior — <span style={{ color: "#fbbf24", fontWeight: 700 }}>50/50</span>: <span style={{ color: "#60a5fa", fontWeight: 700 }}>Archer</span> (HP <span style={{ color: "#60a5fa", fontWeight: 700 }}>40</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>52</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 2, Move 2) or <span style={{ color: "#f87171", fontWeight: 700 }}>Warrior</span> (HP <span style={{ color: "#60a5fa", fontWeight: 700 }}>40</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>35</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 1, Move 2). Both have Power 0 — deal pure Might damage. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
       { kind: "ability", icon: "🐴", name: "First Emperor's Command", cost: "3 Mana", desc: <>Summon a <span style={{ color: "#b45309", fontWeight: 700 }}>Terracotta Cavalry</span> on an adjacent hex: HP <span style={{ color: "#60a5fa", fontWeight: 700 }}>60</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>45</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>38</span>, Power <span style={{ color: "#60a5fa", fontWeight: 700 }}>55</span>, Move 3. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>. Immediately adds a <span style={{ color: "#f59e0b", fontWeight: 700 }}>FREE Cavalry Charge</span> card to your hand — deals <span style={{ color: "#60a5fa", fontWeight: 700 }}>82 dmg</span> at range 3.</> },
       { kind: "ultimate", icon: "⭐", name: "Eternal Army", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>Take control</span> of a non-boss enemy within range 3 for <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>. The unit auto-attacks the nearest enemy — same hit mechanics as when they attacked you. No abilities. You cannot attack the controlled unit. Cannot target bosses or mini-bosses.</> },
     ],
@@ -213,9 +213,9 @@ const CHARACTERS: CharacterEntry[] = [
     stats: { hp: 90, might: 40, power: 65, defense: 15, moveRange: 3, attackRange: 2 },
     abilities: [
       { kind: "passive", icon: "⚓", name: "One Eye, One Hand", cost: "Passive", desc: <>Nelson-chan <span style={{ color: "#fbbf24", fontWeight: 700 }}>cannot be Silenced</span>. The <span style={{ color: "#34d399", fontWeight: 700 }}>first hit she takes each fight is negated entirely</span> (no damage).</> },
-      { kind: "ability", icon: "🚢", name: "Crossing the T", cost: "2 Mana", desc: <>Fire a broadside line shot up to range 5. The first target takes <span style={{ color: "#f87171", fontWeight: 700 }}>~65 damage</span> (Power×1.0), the second takes <span style={{ color: "#f87171", fontWeight: 700 }}>~42 damage</span> (65%), the third and beyond take <span style={{ color: "#f87171", fontWeight: 700 }}>~27 damage</span> (40%). Each successive target takes 65% of the previous hit.</> },
-      { kind: "ability", icon: "💨", name: "Kiss Me Hardy", cost: "2 Mana", desc: <>Charge up to 4 hexes in a straight line. Each enemy in the path takes <span style={{ color: "#f87171", fontWeight: 700 }}>~55 damage</span> (Power×0.85) and is <span style={{ color: "#fbbf24", fontWeight: 700 }}>pushed sideways</span> off the charge line. Nelson-chan ends at the final hex.</> },
-      { kind: "ultimate", icon: "⭐", name: "Trafalgar Square", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~130 damage</span> (Power×2.0) to one target at range 4. If the target <span style={{ color: "#f59e0b", fontWeight: 700 }}>dies</span>, all enemies adjacent to that position take <span style={{ color: "#f87171", fontWeight: 700 }}>~50 splash damage</span>.</> },
+      { kind: "ability", icon: "🚢", name: "Crossing the T", cost: "2 Mana", desc: <>Fire a broadside line shot up to range 5. The first target takes <span style={{ color: "#f87171", fontWeight: 700 }}>~65 damage</span>, the second takes <span style={{ color: "#f87171", fontWeight: 700 }}>~42 damage</span> (65%), the third and beyond take <span style={{ color: "#f87171", fontWeight: 700 }}>~27 damage</span> (40%). Each successive target takes 65% of the previous hit.</> },
+      { kind: "ability", icon: "💨", name: "Kiss Me Hardy", cost: "2 Mana", desc: <>Charge up to 4 hexes in a straight line. Each enemy in the path takes <span style={{ color: "#f87171", fontWeight: 700 }}>~55 damage</span> and is <span style={{ color: "#fbbf24", fontWeight: 700 }}>pushed sideways</span> off the charge line. Nelson-chan ends at the final hex.</> },
+      { kind: "ultimate", icon: "⭐", name: "Trafalgar Square", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~130 damage</span> to one target at range 4. If the target <span style={{ color: "#f59e0b", fontWeight: 700 }}>dies</span>, all enemies adjacent to that position take <span style={{ color: "#f87171", fontWeight: 700 }}>~50 splash damage</span>.</> },
     ],
   },
   {
@@ -226,9 +226,9 @@ const CHARACTERS: CharacterEntry[] = [
     lore: "Hannibal Barca crossed the Alps with war elephants and broke three Roman armies in a single season. The Empire of Znyxorga grew her from cartilage preserved in Carthaginian war-drum skins. Reborn as Hannibal-chan, she brings the Battle of Cannae to every engagement: double envelopment, flanking bonus, and the ancient art of surrounding the enemy before they know they're encircled.",
     stats: { hp: 110, might: 55, power: 50, defense: 20, moveRange: 3, attackRange: 1 },
     abilities: [
-      { kind: "passive", icon: "⚔️", name: "Cannae", cost: "Passive", desc: <>When Hannibal-chan attacks an enemy that has an <span style={{ color: "#fbbf24", fontWeight: 700 }}>ally adjacent to it</span> (flanked), deal <span style={{ color: "#f87171", fontWeight: 700 }}>+40% bonus damage</span>. Applies to both basic attacks and card attacks.</> },
-      { kind: "ability", icon: "🏔️", name: "Alpine March", cost: "1 Mana", desc: <><span style={{ color: "#34d399", fontWeight: 700 }}>+3 Movement</span> this turn. Use to sprint to flanking position before attacking.</> },
-      { kind: "ability", icon: "🌀", name: "Double Envelopment", cost: "2 Mana", desc: <>Strike a target enemy at range 3 for <span style={{ color: "#f87171", fontWeight: 700 }}>~55 damage</span> (Power×1.1). Then deal <span style={{ color: "#f87171", fontWeight: 700 }}>~28 damage</span> (Power×0.55) to all enemies adjacent to the target. Cannae bonus applies to the primary hit.</> },
+      { kind: "passive", icon: "⚔️", name: "Cannae", cost: "Passive", desc: <>When Hannibal-chan attacks an enemy that has an <span style={{ color: "#fbbf24", fontWeight: 700 }}>ally adjacent to it</span> (flanked), deal <span style={{ color: "#f87171", fontWeight: 700 }}>bonus damage</span>. Scales with level: 30% + 2% per level (+32% at lvl 1, +46% at lvl 8). Applies to both basic attacks and card attacks.</> },
+      { kind: "ability", icon: "🏔️", name: "Alpine March", cost: "1 Mana", desc: <>Use <span style={{ color: "#fbbf24", fontWeight: 700 }}>before moving</span>. Charge up to <span style={{ color: "#34d399", fontWeight: 700 }}>6 hexes</span> in a straight line across any terrain. Enemies in path take <span style={{ color: "#f87171", fontWeight: 700 }}>~28 damage</span> and are pushed sideways. <span style={{ color: "#60a5fa", fontWeight: 700 }}>Consumes all remaining movement.</span></> },
+      { kind: "ability", icon: "🌀", name: "Double Envelopment", cost: "2 Mana", desc: <>Strike a target enemy at range 3 for <span style={{ color: "#f87171", fontWeight: 700 }}>~55 damage</span>. Then deal <span style={{ color: "#f87171", fontWeight: 700 }}>~28 damage</span> to all enemies adjacent to the target. Cannae bonus applies to the primary hit.</> },
       { kind: "ultimate", icon: "⭐", name: "War Elephant", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Summon a <span style={{ color: "#b45309", fontWeight: 700 }}>War Elephant</span> on an adjacent hex: <span style={{ color: "#60a5fa", fontWeight: 700 }}>HP 120</span>, <span style={{ color: "#f87171", fontWeight: 700 }}>Might 70</span>, <span style={{ color: "#fbbf24", fontWeight: 700 }}>Defense 20</span>, Move 2. Performs basic attacks only. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
     ],
   },
@@ -240,9 +240,9 @@ const CHARACTERS: CharacterEntry[] = [
     lore: "Pablo Picasso shattered pictorial reality and rebuilt it from fragments. The Empire of Znyxorga found his clone-template in a shard of blue Málaga glass — and in the echo of his laugh. Reborn as Picasso-chan, she bends the arena like a canvas: pulling enemies out of position, swapping units across the board, and making the third card of every turn cost nothing at all.",
     stats: { hp: 80, might: 30, power: 70, defense: 20, moveRange: 3, attackRange: 2 },
     abilities: [
-      { kind: "passive", icon: "🎨", name: "Fractured Perspective", cost: "Passive", desc: <>Every <span style={{ color: "#fbbf24", fontWeight: 700 }}>3rd card</span> Picasso-chan plays <span style={{ color: "#fbbf24", fontWeight: 700 }}>this battle</span> costs <span style={{ color: "#34d399", fontWeight: 700 }}>0 Mana</span> (the 3rd, 6th, 9th…). Counter persists across turns.</> },
-      { kind: "ability", icon: "💥", name: "Guernica", cost: "2 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~70 damage</span> (Power×1.0) to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL enemies</span> within range 2. Applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense, 2 turns) to all hit enemies.</> },
-      { kind: "ability", icon: "🪞", name: "Cubist Mirror", cost: "2 Mana", desc: <>Swap positions with any unit within range 4. If the target is an <span style={{ color: "#f87171", fontWeight: 700 }}>enemy</span>, deal <span style={{ color: "#f87171", fontWeight: 700 }}>~35 damage</span> (Power×0.5) on swap.</> },
+      { kind: "passive", icon: "🎨", name: "Fractured Perspective", cost: "Passive", desc: <>Every <span style={{ color: "#fbbf24", fontWeight: 700 }}>3rd card</span> Picasso-chan plays <span style={{ color: "#fbbf24", fontWeight: 700 }}>this battle</span> costs <span style={{ color: "#34d399", fontWeight: 700 }}>0 Mana</span>. At <span style={{ color: "#fbbf24", fontWeight: 700 }}>level 7+</span>, triggers every <span style={{ color: "#34d399", fontWeight: 700 }}>2nd card</span> instead. Counter persists across turns.</> },
+      { kind: "ability", icon: "💥", name: "Guernica", cost: "2 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~70 damage</span> to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL enemies</span> within range 2. Applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense, 2 turns) to all hit enemies.</> },
+      { kind: "ability", icon: "🪞", name: "Cubist Mirror", cost: "2 Mana", desc: <>Swap positions with any unit within range 4. If the target is an <span style={{ color: "#f87171", fontWeight: 700 }}>enemy</span>, deal <span style={{ color: "#f87171", fontWeight: 700 }}>~35 damage</span> on swap.</> },
       { kind: "ultimate", icon: "⭐", name: "Blue Period", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#8b5cf6", fontWeight: 700 }}>Scramble all units</span> to random positions on the board. Heal all allies for <span style={{ color: "#4ade80", fontWeight: 700 }}>60 HP</span> and grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+20 Defense</span> until your next turn.</> },
     ],
   },
@@ -252,11 +252,11 @@ const CHARACTERS: CharacterEntry[] = [
     role: "TANK", secondaryRole: "DPS MELEE", portrait: "/art/teddy_portrait.png",
     accentColor: "#d97706", ringColor: "rgba(217,119,6,0.55)",
     lore: "Theodore Roosevelt charged San Juan Hill with a broken saber and won. Znyxorga scraped her template from the bark of a Rough Rider sapling preserved in the Smithsonian's vault. Reborn as Teddy-chan, she is the arena's apex predator — every kill makes her stronger, and when she rallies her team, the whole arena shakes.",
-    stats: { hp: 140, might: 60, power: 35, defense: 35, moveRange: 2, attackRange: 1 },
+    stats: { hp: 140, might: 60, power: 40, defense: 35, moveRange: 2, attackRange: 1 },
     abilities: [
-      { kind: "passive", icon: "🦁", name: "Bully!", cost: "Passive", desc: <>Each kill grants Teddy-chan <span style={{ color: "#f87171", fontWeight: 700 }}>+10 Might</span> (up to 3 stacks, max +30). Does not trigger from Terracotta or drone kills.</> },
+      { kind: "passive", icon: "🦁", name: "Bully!", cost: "Passive", desc: <>Each kill grants Teddy-chan <span style={{ color: "#f87171", fontWeight: 700 }}>(8 + level) Might</span> per stack (up to 3 stacks). Scales from +9 at lvl 1 to +16 at lvl 8. Does not trigger from Terracotta or drone kills.</> },
       { kind: "ability", icon: "📣", name: "Speak Softly", cost: "2 Mana", desc: <>All enemies within range 2 are <span style={{ color: "#f87171", fontWeight: 700 }}>Taunted</span> for 1 turn — they must target Teddy-chan. Teddy-chan gains <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30 Defense</span> until her next turn.</> },
-      { kind: "ability", icon: "🏏", name: "Big Stick", cost: "2 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~100 damage</span> (Might×1.65) to an enemy at range 1. <span style={{ color: "#f59e0b", fontWeight: 700 }}>Doubled (~200)</span> if the target is Stunned or Taunted.</> },
+      { kind: "ability", icon: "🏏", name: "Big Stick", cost: "2 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~87 damage</span> to an enemy at range 1. <span style={{ color: "#f59e0b", fontWeight: 700 }}>+50% bonus (~130)</span> if the target is Stunned or Taunted.</> },
       { kind: "ultimate", icon: "⭐", name: "Rough Riders' Rally", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — All allies gain <span style={{ color: "#f87171", fontWeight: 700 }}>+25 Might</span> and <span style={{ color: "#34d399", fontWeight: 700 }}>+2 Movement</span> until end of turn. Teddy-chan gains <span style={{ color: "#f87171", fontWeight: 700 }}>+45 Might</span> and <span style={{ color: "#8b5cf6", fontWeight: 700 }}>teleports</span> to any hex within range 5.</> },
     ],
   },
@@ -266,9 +266,9 @@ const CHARACTERS: CharacterEntry[] = [
     role: "SUPPORT", secondaryRole: "CONTROLLER", portrait: "/art/mansa_portrait.png",
     accentColor: "#f59e0b", ringColor: "rgba(245,158,11,0.55)",
     lore: "Mansa Musa of Mali was so wealthy his pilgrimage to Mecca crashed the gold market across three continents for a decade. The Empire of Znyxorga extracted her genetic echo from a nugget of Malian gold dust lodged in the foundations of a mosque he built in 1324. Reborn as Mansa-chan, she turns every battle into a profit margin — and makes sure her allies have the mana to spend.",
-    stats: { hp: 85, might: 30, power: 60, defense: 15, moveRange: 3, attackRange: 3 },
+    stats: { hp: 85, might: 30, power: 70, defense: 15, moveRange: 3, attackRange: 3 },
     abilities: [
-      { kind: "passive", icon: "💰", name: "Treasury", cost: "Passive", desc: <>After each battle, earn <span style={{ color: "#fbbf24", fontWeight: 700 }}>bonus gold</span> equal to Mansa-chan's Power% (60 Power = +60% more gold). Her ability cards cost <span style={{ color: "#34d399", fontWeight: 700 }}>1 less Mana</span>.</> },
+      { kind: "passive", icon: "💰", name: "Treasury", cost: "Passive", desc: <>After each battle, earn <span style={{ color: "#fbbf24", fontWeight: 700 }}>bonus gold</span> equal to Mansa-chan's Power% (70 Power = +70% more gold). Ability cards cost <span style={{ color: "#34d399", fontWeight: 700 }}>1 less Mana</span> (min 1); at <span style={{ color: "#fbbf24", fontWeight: 700 }}>level 6+</span> they cost <span style={{ color: "#34d399", fontWeight: 700 }}>2 less Mana</span> (min 1).</> },
       { kind: "ability", icon: "⚗️", name: "Salt Road", cost: "1 Mana", desc: <>Place a <span style={{ color: "#fbbf24", fontWeight: 700 }}>7-hex mana zone</span> centered on a tile within range 3. Allies starting their turn on any zone tile restore <span style={{ color: "#34d399", fontWeight: 700 }}>+1 Mana</span>. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
       { kind: "ability", icon: "✨", name: "Hajj of Gold", cost: "2 Mana", desc: <>Heal all allies for <span style={{ color: "#4ade80", fontWeight: 700 }}>20% of their max HP</span>. All allies gain <span style={{ color: "#60a5fa", fontWeight: 700 }}>+10 Power</span> until end of turn.</> },
       { kind: "ultimate", icon: "⭐", name: "Mansa's Bounty", cost: "2 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#fbbf24", fontWeight: 700 }}>Golden Stasis</span>: freeze every unit on the board (allies and enemies) for <span style={{ color: "#fbbf24", fontWeight: 700 }}>1 turn</span> — no movement, no actions.</> },
@@ -292,13 +292,13 @@ const UPGRADE_DESCS: Record<string, React.ReactNode> = {
   'davinci_Masterpiece': <>Restore <span style={{ color: "#4ade80", fontWeight: 700 }}>~75 HP</span> to an ally within range 3. Also removes the Poison debuff.</>,
   'davinci_Vitruvian Guardian': <>Summon a combat drone: <span style={{ color: "#4ade80", fontWeight: 700 }}>HP 90</span>, <span style={{ color: "#f87171", fontWeight: 700 }}>Might 55</span>, <span style={{ color: "#fbbf24", fontWeight: 700 }}>Defense 40</span>. Lasts until defeated. (Scales with Power)</>,
   // Leonidas
-  'leonidas_Shield Bash': <>Slam your shield into a target within range 1 for <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power×1.9 damage</span> and apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense for 3 turns). Grants Leonidas <span style={{ color: "#34d399", fontWeight: 700 }}>+20 Defense</span> this turn (counter-stance).</>,
+  'leonidas_Shield Bash': <>Slam your shield into a target within range 1 for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~91 damage</span> and apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense for 3 turns). Grants Leonidas <span style={{ color: "#34d399", fontWeight: 700 }}>+20 Defense</span> this turn (counter-stance).</>,
   'leonidas_Spartan Wall': <>Raise the phalanx — grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+20–30 Defense</span> to Leonidas and all allies within range 2.</>,
-  'leonidas_THIS IS SPARTA!': <>Charge up to 3 hexes and crash into a target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power×3.0 damage</span>. All enemies adjacent to the impact are <span style={{ color: "#fb923c", fontWeight: 700 }}>Rooted</span> for 2 turns — cannot move but can still attack and use cards.</>,
+  'leonidas_THIS IS SPARTA!': <>Charge up to 3 hexes and crash into a target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~144 damage</span>. All enemies adjacent to the impact are <span style={{ color: "#fb923c", fontWeight: 700 }}>Rooted</span> for 2 turns — cannot move but can still attack and use cards.</>,
   // Beethoven
   'beethoven_Schallwelle': <>Fire a directional sonic wave — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~46 damage</span> to all enemies in a line up to range 3 and <span style={{ color: "#22d3ee", fontWeight: 700 }}>push each 3 tiles back</span> along the wave direction.</>,
   'beethoven_Freudenspur': <>Target a tile within range 3 — <span style={{ color: "#22d3ee", fontWeight: 700 }}>that tile and all 6 adjacent tiles</span> become a resonance zone. Allies passing through zone tiles gain <span style={{ color: "#34d399", fontWeight: 700 }}>+3 Movement</span>. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>.</>,
-  'beethoven_Götterfunken': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Unleash the full Sternensturm. Deal <span style={{ color: "#f87171", fontWeight: 700 }}>Power×0.7 damage</span> and <span style={{ color: "#f87171", fontWeight: 700 }}>stun all enemies within range 3 for 2 turns</span> — no movement, no cards, no actions.</>,
+  'beethoven_Götterfunken': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Unleash the full Sternensturm. Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~46 damage</span> and <span style={{ color: "#f87171", fontWeight: 700 }}>stun all enemies within range 3 for 2 turns</span> — no movement, no cards, no actions.</>,
   // Yi Sun-sin
   'sunsin_Hwajeon': <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~90 damage</span> at range 3. Pushes target back 2 hexes.</>,
   'sunsin_Naval Repairs': <>Select a target area. All allies within range 2 heal <span style={{ color: "#4ade80", fontWeight: 700 }}>20 HP now</span> and <span style={{ color: "#4ade80", fontWeight: 700 }}>20 HP next turn</span>.</>,
@@ -309,19 +309,19 @@ const UPGRADE_DESCS: Record<string, React.ReactNode> = {
   'huang_Eternal Army': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>Take control</span> of a non-boss enemy within range 3 for <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>. The unit auto-attacks the nearest enemy — same hit mechanics as when they attacked you. No abilities. You cannot attack the controlled unit. Cannot target bosses or mini-bosses.</>,
   // Nelson
   "nelson_Crossing the T": <>Fire a broadside line shot up to range 5. First target takes <span style={{ color: "#f87171", fontWeight: 700 }}>~85 damage</span>, second takes <span style={{ color: "#f87171", fontWeight: 700 }}>~55 damage</span>, third+ take <span style={{ color: "#f87171", fontWeight: 700 }}>~36 damage</span>.</>,
-  "nelson_Kiss Me Hardy": <>Charge up to 5 hexes. Each enemy in path takes <span style={{ color: "#f87171", fontWeight: 700 }}>~72 damage</span> (Power×1.1) and is pushed sideways. Nelson-chan ends at the last hex.</>,
-  "nelson_Trafalgar Square": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~170 damage</span> (Power×2.6) to one target at range 4. On-kill splash deals <span style={{ color: "#f87171", fontWeight: 700 }}>~65 damage</span> to all adjacent enemies.</>,
+  "nelson_Kiss Me Hardy": <>Charge up to 5 hexes. Each enemy in path takes <span style={{ color: "#f87171", fontWeight: 700 }}>~72 damage</span> and is pushed sideways. Nelson-chan ends at the last hex.</>,
+  "nelson_Trafalgar Square": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~170 damage</span> to one target at range 4. On-kill splash deals <span style={{ color: "#f87171", fontWeight: 700 }}>~65 damage</span> to all adjacent enemies.</>,
   // Hannibal
-  "hannibal_Alpine March": <><span style={{ color: "#34d399", fontWeight: 700 }}>+4 Movement</span> this turn. Use to sprint further before striking a flanked target.</>,
-  "hannibal_Double Envelopment": <>Strike the primary target for <span style={{ color: "#f87171", fontWeight: 700 }}>~70 damage</span> (Power×1.4). All adjacent enemies take <span style={{ color: "#f87171", fontWeight: 700 }}>~36 damage</span> (Power×0.7). Cannae bonus still applies to the primary hit.</>,
+  "hannibal_Alpine March": <>Use <span style={{ color: "#fbbf24", fontWeight: 700 }}>before moving</span>. Charge up to <span style={{ color: "#34d399", fontWeight: 700 }}>8 hexes</span> — enemies in path take <span style={{ color: "#f87171", fontWeight: 700 }}>~39 damage</span> and are pushed sideways. Consumes all movement.</>,
+  "hannibal_Double Envelopment": <>Strike the primary target for <span style={{ color: "#f87171", fontWeight: 700 }}>~70 damage</span>. All adjacent enemies take <span style={{ color: "#f87171", fontWeight: 700 }}>~36 damage</span>. Cannae bonus still applies to the primary hit.</>,
   "hannibal_War Elephant": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Summon a <span style={{ color: "#b45309", fontWeight: 700 }}>War Elephant</span> (HP <span style={{ color: "#4ade80", fontWeight: 700 }}>150</span>, Might <span style={{ color: "#f87171", fontWeight: 700 }}>90</span>, Def 20, Move 2). Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>.</>,
   // Picasso
   "picasso_Guernica": <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~90 damage</span> to ALL enemies within range 2. Applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−30% Defense, 3 turns) to all hit enemies.</>,
-  "picasso_Cubist Mirror": <>Swap positions with any unit within range 5. If the target is an <span style={{ color: "#f87171", fontWeight: 700 }}>enemy</span>, deal <span style={{ color: "#f87171", fontWeight: 700 }}>~50 damage</span> (Power×0.7) on swap.</>,
+  "picasso_Cubist Mirror": <>Swap positions with any unit within range 5. If the target is an <span style={{ color: "#f87171", fontWeight: 700 }}>enemy</span>, deal <span style={{ color: "#f87171", fontWeight: 700 }}>~50 damage</span> on swap.</>,
   "picasso_Blue Period": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Scramble all units to random positions. Heal allies for <span style={{ color: "#4ade80", fontWeight: 700 }}>80 HP</span> and grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30 Defense</span> until your next turn.</>,
   // Teddy
   "teddy_Speak Softly": <>All enemies within range 3 are <span style={{ color: "#f87171", fontWeight: 700 }}>Taunted</span> for 2 turns. Teddy-chan gains <span style={{ color: "#fbbf24", fontWeight: 700 }}>+40 Defense</span> until her next turn.</>,
-  "teddy_Big Stick": <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~130 damage</span> (Might×2.1) at range 1. Doubled <span style={{ color: "#f59e0b", fontWeight: 700 }}>(~260)</span> if target is Stunned or Taunted.</>,
+  "teddy_Big Stick": <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~99 damage</span> at range 1. <span style={{ color: "#f59e0b", fontWeight: 700 }}>+50% bonus (~149)</span> if target is Stunned or Taunted.</>,
   "teddy_Rough Riders' Rally": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Allies gain <span style={{ color: "#f87171", fontWeight: 700 }}>+35 Might</span> and <span style={{ color: "#34d399", fontWeight: 700 }}>+3 Movement</span>. Teddy-chan gains <span style={{ color: "#f87171", fontWeight: 700 }}>+60 Might</span> and teleports range 7.</>,
   // Mansa
   "mansa_Salt Road": <>Place a <span style={{ color: "#fbbf24", fontWeight: 700 }}>7-hex mana zone</span> within range 4. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>. Costs 0 Mana (Treasury discount).</>,
@@ -389,7 +389,7 @@ const TILES: TileEntry[] = [
     effects: [
       { label: 'Passable (costly)', detail: 'Units can cross river hexes but each step costs 2 movement instead of 1.' },
       { label: 'No Displacement Kill', detail: 'Being pushed into a river does not kill the unit — they simply stop and take the movement cost.' },
-      { label: 'Yi Sun-sin Bonus', detail: 'Sun-sin counts as "on water" while crossing a river and gains her full Turtle Ship bonus stats.' },
+      { label: 'Yi Sun-sin Bonus', detail: 'Sun-sin counts as "on water" while on a river — gains her Turtle Ship stat bonuses and full movement (no cap). Move cap only applies on lake tiles.' },
     ],
     tip: 'Control the river crossings. Forcing enemies to ford slows them down — ideal for your ranged characters to punish.',
   },
@@ -478,12 +478,17 @@ interface ItemEntry {
 const ITEMS: ItemEntry[] = [
   // Common
   { id: 'iron_gauntlets',   name: 'Iron Gauntlets',   icon: '🥊', tier: 'common',   description: '+5 Might for this run.',                                    statBonus: { might: 5 } },
-  { id: 'bone_plate',       name: 'Bone Plate',        icon: '🦴', tier: 'common',   description: '+3 Defense for this run.',                                  statBonus: { defense: 3 } },
+  { id: 'bone_plate',       name: 'Bone Plate',        icon: '🦴', tier: 'common',   description: '+5 Defense for this run.',                                  statBonus: { defense: 5 } },
   { id: 'vitality_shard',   name: 'Vitality Shard',    icon: '💠', tier: 'common',   description: '+12 max HP for this run.',                                  statBonus: { hp: 12 } },
   { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+5 Power for this run.',                                    statBonus: { power: 5 } },
+  { id: 'swift_wraps',     name: 'Swift Wraps',       icon: '🩹', tier: 'common',   description: '+2 extra movement on the first turn of each battle.' },
+  { id: 'targeting_visor', name: 'Targeting Visor',   icon: '🎯', tier: 'common',   description: '+1 Attack Range.',                                          statBonus: { attackRange: 1 } },
+  { id: 'adrenaline_injector', name: 'Adrenaline Injector', icon: '💉', tier: 'common', description: '+3 Might, +3 Power.',                                  statBonus: { might: 3, power: 3 } },
+  { id: 'plated_boots',   name: 'Plated Boots',       icon: '🥾', tier: 'common',   description: '+8 HP, +2 Defense.',                                        statBonus: { hp: 8, defense: 2 } },
   // Uncommon
   { id: 'battle_drum',      name: 'Battle Drum',       icon: '🥁', tier: 'uncommon', description: 'After killing an enemy, draw 1 card.' },
   { id: 'arena_medkit',     name: 'Arena Medkit',      icon: '💊', tier: 'uncommon', description: 'Heal 25 HP at the start of your turn if below 40% HP.' },
+  { id: 'neural_link',     name: 'Neural Link',        icon: '🧬', tier: 'rare',     description: 'This character can play 1 extra card per turn (4 max instead of 3).' },
   { id: 'battle_drill',    name: 'Battle Drill',       icon: '⚔️', tier: 'uncommon', description: 'At the start of each turn, add a free Basic Attack card to your hand.' },
   { id: 'void_shard',       name: 'Void Shard',        icon: '🔥', tier: 'uncommon', description: '+10 Might for this run.',                                   statBonus: { might: 10 } },
   { id: 'card_satchel',     name: 'Card Satchel',      icon: '🎒', tier: 'uncommon', description: '+1 starting hand size for this run.' },
@@ -496,6 +501,9 @@ const ITEMS: ItemEntry[] = [
   { id: 'mana_crystal',    name: 'Mana Crystal',       icon: '🔷', tier: 'rare',     description: 'Gain +1 Mana at the start of each turn.' },
   { id: 'gladiator_brand',  name: "Gladiator's Brand", icon: '⚡', tier: 'rare',     description: 'First ability each fight costs 0 Mana.' },
   { id: 'diamond_shell',    name: 'Diamond Shell',     icon: '💎', tier: 'rare',     description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).' },
+  { id: 'chrono_shard',    name: 'Chrono Shard',      icon: '⏳', tier: 'rare',     description: '+1 Mana on the first turn of each combat.' },
+  { id: 'berserkers_mark', name: "Berserker's Mark",  icon: '🔥', tier: 'rare',     description: '+15% damage dealt when below 50% HP.' },
+  { id: 'echo_stone',      name: 'Echo Stone',        icon: '🪨', tier: 'rare',     description: 'Draw 1 extra card at the start of each turn.' },
   // Rare — Napoleon
   { id: 'grand_strategy',   name: 'Grand Strategy',    icon: '🗺️', tier: 'rare',     description: 'Artillery Barrage hits an additional adjacent target.',      targetCharacter: 'napoleon' },
   { id: 'emperors_coat',    name: "Emperor's Coat",    icon: '🪖', tier: 'rare',     description: 'Grande Armée also grants +30% Might & Power to all allies.', targetCharacter: 'napoleon' },
@@ -512,7 +520,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'turtle_hull',      name: 'Turtle Hull',       icon: '🐢', tier: 'rare',     description: 'Yi Sun-sin takes 20% less damage from all sources.',                                targetCharacter: 'sunsin' },
   { id: 'admirals_banner',  name: "Admiral's Banner",  icon: '⛵', tier: 'rare',     description: 'Naval Repairs / Broadside also grants all nearby allies +30 DEF for 1 turn.',       targetCharacter: 'sunsin' },
   // Rare — Beethoven
-  { id: 'resonant_crystal', name: 'Resonant Crystal',  icon: '🔮', tier: 'rare',     description: 'Götterfunken stuns all hit enemies for 2 turns instead of 1.',                           targetCharacter: 'beethoven' },
+  { id: 'resonant_crystal', name: 'Resonant Crystal',  icon: '🔮', tier: 'rare',     description: 'After any Beethoven ability card, deal Power×0.25 to all adjacent enemies.',           targetCharacter: 'beethoven' },
   { id: 'composers_baton',  name: "Composer's Baton",  icon: '🎼', tier: 'rare',     description: 'Allies standing on a Freudenspur zone also gain +5 Defense at turn start.',              targetCharacter: 'beethoven' },
   // Rare — Huang-chan
   { id: 'dragon_kiln',      name: 'Dragon Kiln',       icon: '🏺', tier: 'rare',     description: 'Terracotta units are summoned with +20 HP and +10 Might.',                               targetCharacter: 'huang' },
@@ -533,10 +541,23 @@ const ITEMS: ItemEntry[] = [
   { id: 'golden_throne',    name: 'Golden Throne',      icon: '👑', tier: 'rare',    description: 'After each battle, earn an additional +50% of the gold reward on top of Treasury.',      targetCharacter: 'mansa' },
   { id: 'mali_coffers',     name: 'Mali Coffers',        icon: '💰', tier: 'rare',   description: "Mansa's ability card Mana discount increased to 2.",                                     targetCharacter: 'mansa' },
   // Legendary
-  { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'After defeating an enemy, your next 2 cards cost 0 Mana.' },
+  { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'This character has no limit on cards played per turn (normally capped at 3).' },
   { id: 'void_armor',       name: 'Void Armor',        icon: '🛡️', tier: 'legendary', description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.' },
-  { id: 'arena_champion',   name: 'Arena Champion',    icon: '🏆', tier: 'legendary', description: 'All stats +10 while this character is alive.',              statBonus: { hp: 10, might: 10, power: 10, defense: 10 } },
-  { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary', description: 'On turns 2 and 3 of each fight, draw +2 cards and gain +2 Mana.' },
+  { id: 'arena_champion',   name: 'Arena Champion',    icon: '🏆', tier: 'legendary', description: '+25 HP, +15 Might, +15 Power, +15 Defense while this character is alive.', statBonus: { hp: 25, might: 15, power: 15, defense: 15 } },
+  { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary', description: 'On turns 2, 3, and 4 of each fight, draw +2 cards and gain +2 Mana.' },
+  // Signature Legendaries — one per character, boss reward only
+  { id: 'sig_napoleon',  name: "Marshal's Baton",         icon: '🏅', tier: 'legendary', description: 'Artillery Barrage hits ALL enemies within 2 hexes of the target for 30% of the damage dealt.',  targetCharacter: 'napoleon' },
+  { id: 'sig_genghis',   name: 'Eternal Steppe',          icon: '🌾', tier: 'legendary', description: 'Bloodlust stacks no longer cap at 3. Each stack also grants +1 movement.',                      targetCharacter: 'genghis' },
+  { id: 'sig_davinci',   name: 'Codex Atlanticus',        icon: '📜', tier: 'legendary', description: 'Tinkerer draws +1 extra card always (2 base, 3 with Drone). Vitruvian Guardian spawns with +30 HP.', targetCharacter: 'davinci' },
+  { id: 'sig_leonidas',  name: 'Thermopylae Stone',       icon: '🪨', tier: 'legendary', description: 'Phalanx stacks also grant +5 Might each. At 3 stacks, basic attacks Taunt the target.',         targetCharacter: 'leonidas' },
+  { id: 'sig_sunsin',    name: "Admiral's Turtle Helm",   icon: '🐢', tier: 'legendary', description: 'Water form: Regen 10 HP/turn. Land form: basic attack range +1.',                               targetCharacter: 'sunsin' },
+  { id: 'sig_beethoven', name: 'Heiligenstadt Score',     icon: '🎼', tier: 'legendary', description: 'Crescendo grants +3 Power per stack instead of +2 (max +45 at 15 stacks). Götterfunken stuns for 2 turns.', targetCharacter: 'beethoven' },
+  { id: 'sig_huang',     name: 'Jade Seal',               icon: '🟢', tier: 'legendary', description: 'Terracotta summons last +2 turns and spawn with +20% stats.',                                   targetCharacter: 'huang' },
+  { id: 'sig_nelson',    name: "Victory's Pennant",       icon: '🚩', tier: 'legendary', description: 'Crossing the T pierces through ALL enemies in the line with no damage decay.',                   targetCharacter: 'nelson' },
+  { id: 'sig_hannibal',  name: "Carthage's Oath",         icon: '🐘', tier: 'legendary', description: 'Cannae flanking bonus increased to 70%. War Elephant lasts +1 turn.',                            targetCharacter: 'hannibal' },
+  { id: 'sig_picasso',   name: 'Rose Period Canvas',      icon: '🌹', tier: 'legendary', description: 'Fractured Perspective triggers every 2nd card instead of 3rd.',                                  targetCharacter: 'picasso' },
+  { id: 'sig_teddy',     name: 'Bull Moose Heart',        icon: '🫀', tier: 'legendary', description: 'Survive lethal damage once per fight (1 HP). Bully! stacks also grant +10 Defense.',             targetCharacter: 'teddy' },
+  { id: 'sig_mansa',     name: 'Infinite Vault',          icon: '🏦', tier: 'legendary', description: 'Start each fight with +25 Power (converted from your gold reserves).',                           targetCharacter: 'mansa' },
 ];
 
 const CHAR_LABEL: Record<string, { name: string; color: string }> = {
@@ -579,24 +600,27 @@ const CARDS: CardEntry[] = [
   { definitionId: 'shared_poison_dart',   name: 'Poison Dart',    icon: '☠️', manaCost: 3, type: 'debuff',   rarity: 'common', description: 'Enemy loses 5 Might and 5 Defense each turn. Removed on heal. Range 2.' },
   // Shared — New
   { definitionId: 'shared_jump',            name: 'Jump',              icon: '🦘', manaCost: 1, type: 'movement', rarity: 'common', description: 'Leap over 1 tile — bypasses rivers and blocking units. Range 2.' },
-  { definitionId: 'shared_flash_bang',      name: 'Flash Bang',        icon: '💥', manaCost: 1, type: 'debuff',   rarity: 'common', description: 'Throw a Flash Bang at range 3 — Blinds the target for 2 turns (attack and ability range reduced to 1).' },
-  { definitionId: 'shared_suppressive_fire',name: 'Suppressive Fire',  icon: '🔫', manaCost: 2, type: 'attack',   rarity: 'common', description: 'Might×0.3 cone attack (3 wide, range 3). Slows hit enemies −1 move for 1 turn.' },
+  { definitionId: 'shared_flash_bang',      name: 'Flash Bang',        icon: '💥', manaCost: 1, type: 'debuff',   rarity: 'common', description: 'Throw a Flash Bang at range 3 — Blinds the target for 1 turn (attack and ability range reduced to 1).' },
   { definitionId: 'shared_fortify',         name: 'Fortify',           icon: '🏰', manaCost: 2, type: 'defense',  rarity: 'common', description: 'Cannot move this turn. Gain +25 Defense and +15 Might until the end of your next turn.' },
   { definitionId: 'shared_taunt',           name: 'Taunt',             icon: '📢', manaCost: 2, type: 'debuff',   rarity: 'common', description: 'Force a nearby enemy to target this unit for 2 turns. This unit gains +15 Defense while Taunting.' },
   { definitionId: 'shared_decoy',           name: 'Decoy',             icon: '🪆', manaCost: 2, type: 'buff',     rarity: 'common', description: 'Place a 30 HP Decoy within range 3. Decoys cannot move or play cards. When destroyed, explodes for 20 damage to all enemies in range 2.' },
+  // Shared — Uncommon
+  { definitionId: 'shared_retribution',    name: 'Retribution',       icon: '⚡', manaCost: 2, type: 'attack',   rarity: 'uncommon', description: 'Deal damage equal to HP lost this fight to one enemy. Range 3.' },
+  // Shared — Rare
   { definitionId: 'shared_blood_price',     name: 'Blood Price',       icon: '🩸', manaCost: 2, type: 'buff',     rarity: 'rare',   description: 'Sacrifice 20% of your HP. All allies gain +15 Might and +15 Power until end of turn.' },
+  { definitionId: 'shared_overcharge',      name: 'Overcharge',        icon: '🔋', manaCost: 2, type: 'buff',     rarity: 'rare',   description: 'The next card played this turn costs 0 Mana. (Still uses a card play.)' },
   // Napoleon
-  { definitionId: 'napoleon_artillery_barrage', name: 'Artillery Barrage', icon: '💥', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.3 damage to a target at range 4.',                  exclusiveTo: 'Napoleon' },
+  { definitionId: 'napoleon_artillery_barrage', name: 'Artillery Barrage', icon: '💥', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '~78 damage to a target at range 4.',                  exclusiveTo: 'Napoleon' },
   { definitionId: 'napoleon_grande_armee',      name: 'Grande Armée',      icon: '⚔️', manaCost: 3, type: 'buff',    rarity: 'rare',    description: '+15% Might AND Power to all allies for 2 turns.',            exclusiveTo: 'Napoleon' },
-  { definitionId: 'napoleon_final_salvo',       name: 'Final Salvo',       icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — 3 random Power×0.7 hits on enemies within range 4.', exclusiveTo: 'Napoleon' },
+  { definitionId: 'napoleon_final_salvo',       name: 'Final Salvo',       icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — 3 random hits of ~42 damage on enemies within range 4.', exclusiveTo: 'Napoleon' },
   // Genghis
   { definitionId: 'genghis_mongol_charge',  name: 'Mongol Charge', icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '48 damage at range 3. Applies Bleed: 16 HP/turn for 2 turns.',           exclusiveTo: 'Genghis' },
   { definitionId: 'genghis_horde_tactics',  name: 'Horde Tactics', icon: '🌀', manaCost: 3, type: 'attack',  rarity: 'rare',    description: '20 dmg per enemy in range 2 to ALL enemies in range 2. (Scales with count)', exclusiveTo: 'Genghis' },
-  { definitionId: 'genghis_riders_fury',    name: "Rider's Fury",  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — Power×1.5 to all enemies on a line (range 5). Doubled if target below 40% HP.", exclusiveTo: 'Genghis' },
+  { definitionId: 'genghis_riders_fury',    name: "Rider's Fury",  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — ~75 damage to all enemies on a line (range 5). Doubled if target below 40% HP.", exclusiveTo: 'Genghis' },
   // Leonidas
-  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: 'Power×1.6 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
+  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '~77 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_spartan_wall',  name: 'Spartan Wall',   icon: '🏛️', manaCost: 3, type: 'defense', rarity: 'rare',    description: '+20 Defense to Leonidas and all allies within range 2.',     exclusiveTo: 'Leonidas' },
-  { definitionId: 'leonidas_this_is_sparta',name: 'THIS IS SPARTA!',icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Power×2.5 damage to target + Root all adjacent enemies for 2 turns (cannot move).', exclusiveTo: 'Leonidas' },
+  { definitionId: 'leonidas_this_is_sparta',name: 'THIS IS SPARTA!',icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~120 damage to target. Roots all adjacent enemies for 2 turns.', exclusiveTo: 'Leonidas' },
   // Da Vinci
   { definitionId: 'davinci_flying_machine',     name: 'Flying Machine',     icon: '✈️', manaCost: 2, type: 'movement', rarity: 'rare',    description: 'Teleport to any unoccupied hex on the board. No range limit.',              exclusiveTo: 'Da Vinci' },
   { definitionId: 'davinci_masterpiece',        name: 'Masterpiece',        icon: '💚', manaCost: 3, type: 'defense',  rarity: 'rare',    description: 'Heal an ally within range 3 for 50 HP.',                  exclusiveTo: 'Da Vinci' },
@@ -610,29 +634,29 @@ const CARDS: CardEntry[] = [
   { definitionId: 'sunsin_broadside_water',     name: 'Broadside',         icon: '💥', manaCost: 3, type: 'attack',   rarity: 'rare',    description: '~25 dmg to ALL enemies in range 3.',                                                     exclusiveTo: 'Sun-sin', terrain: 'water' },
   { definitionId: 'sunsin_chongtong_water',     name: 'Chongtong Barrage', icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~90 dmg to main target + ~43 to adjacent enemies. Range 5.',                    exclusiveTo: 'Sun-sin', terrain: 'water' },
   // Beethoven
-  { definitionId: 'beethoven_schallwelle',  name: 'Schallwelle',   icon: '🌊', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Sonic wave — Power×0.5 dmg to all enemies in a line up to range 3. Pushes each hit enemy 2 tiles back.', exclusiveTo: 'Beethoven' },
+  { definitionId: 'beethoven_schallwelle',  name: 'Schallwelle',   icon: '🌊', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Sonic wave — ~39 damage to all enemies in a line up to range 3. Pushes each 2 tiles back.', exclusiveTo: 'Beethoven' },
   { definitionId: 'beethoven_freudenspur',  name: 'Freudenspur',   icon: '🎶', manaCost: 3, type: 'buff',     rarity: 'rare',    description: 'Target a tile within range 3. That tile and all 6 adjacent tiles become a resonance zone. Allies on the zone gain +2 Movement at turn start. Lasts 2 turns.', exclusiveTo: 'Beethoven' },
-  { definitionId: 'beethoven_gotterfunken', name: 'Götterfunken',  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Unleash the Sternensturm. Power×0.7 damage to all enemies within range 3. Stun for 1 turn.', exclusiveTo: 'Beethoven' },
+  { definitionId: 'beethoven_gotterfunken', name: 'Götterfunken',  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~46 damage to all enemies within range 3. Stun for 1 turn.', exclusiveTo: 'Beethoven' },
   // Huang-chan
-  { definitionId: 'huang_terracotta_summon', name: 'Terracotta Legion',         icon: '🗿', manaCost: 2, type: 'buff',     rarity: 'rare',    description: 'Summon Terracotta Archer (Might×1.5, range 2) or Warrior (Might×1, range 1) on hex within range 3. HP 40, scales with your stats. Lasts 1 turn.', exclusiveTo: 'Huang-chan' },
-  { definitionId: 'huang_first_emperor',     name: "First Emperor's Command",   icon: '🐴', manaCost: 3, type: 'buff',     rarity: 'rare',    description: 'Summon Terracotta Cavalry (Might×1.5, Def×1.5, Power×1, Move 3) on adjacent hex. HP 60, scales with your stats. Lasts 2 turns. Gain FREE Cavalry Charge card.', exclusiveTo: 'Huang-chan' },
-  { definitionId: 'huang_cavalry_charge',    name: 'Cavalry Charge',            icon: '⚡', manaCost: 0, type: 'attack',   rarity: 'rare',    description: 'FREE — Cavalry charges a target at range 3 for Power×1.2 damage. Only appears after First Emperor\'s Command.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_terracotta_summon', name: 'Terracotta Legion',         icon: '🗿', manaCost: 2, type: 'buff',     rarity: 'rare',    description: 'Summon Terracotta Archer (Might 52, range 2) or Warrior (Might 35, range 1) on hex within range 3. HP 40, scales with your stats. Lasts 1 turn.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_first_emperor',     name: "First Emperor's Command",   icon: '🐴', manaCost: 3, type: 'buff',     rarity: 'rare',    description: 'Summon Terracotta Cavalry (≈53 Might, ~38 Def, ≈55 Power, Move 3) on adjacent hex. HP 60, scales with stats. Lasts 2 turns. Gain FREE Cavalry Charge card.', exclusiveTo: 'Huang-chan' },
+  { definitionId: 'huang_cavalry_charge',    name: 'Cavalry Charge',            icon: '⚡', manaCost: 0, type: 'attack',   rarity: 'rare',    description: 'FREE — Cavalry charges a target at range 3 for ~66 damage. Only appears after First Emperor\'s Command.', exclusiveTo: 'Huang-chan' },
   { definitionId: 'huang_eternal_army',      name: 'Eternal Army',              icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Control a non-boss enemy within range 3 for 2 turns. They auto-attack nearest foe (same mechanics as attacking you). Cannot target bosses or mini-bosses.', exclusiveTo: 'Huang-chan' },
   // Nelson
   { definitionId: 'nelson_crossing_the_t',   name: 'Crossing the T',   icon: '🚢', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Line shot (range 5) — 1st target ~65 dmg, 2nd ~42, 3rd+ ~27. Each successive target takes 65% of the previous.',                  exclusiveTo: 'Nelson' },
-  { definitionId: 'nelson_kiss_me_hardy',    name: 'Kiss Me Hardy',    icon: '💨', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Charge 4 hexes. Each enemy in path takes ~55 dmg (Power×0.85) and is pushed sideways. Nelson ends at last hex.',                     exclusiveTo: 'Nelson' },
-  { definitionId: 'nelson_trafalgar_square', name: 'Trafalgar Square', icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~130 dmg (Power×2.0) to one target at range 4. On-kill: ~50 splash to all adjacent enemies.',                               exclusiveTo: 'Nelson' },
+  { definitionId: 'nelson_kiss_me_hardy',    name: 'Kiss Me Hardy',    icon: '💨', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Charge 4 hexes. Each enemy in path takes ~55 dmg and is pushed sideways. Nelson ends at last hex.',                     exclusiveTo: 'Nelson' },
+  { definitionId: 'nelson_trafalgar_square', name: 'Trafalgar Square', icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~130 dmg to one target at range 4. On-kill: ~50 splash to all adjacent enemies.',                               exclusiveTo: 'Nelson' },
   // Hannibal
-  { definitionId: 'hannibal_alpine_march',       name: 'Alpine March',       icon: '🏔️', manaCost: 1, type: 'movement', rarity: 'rare',    description: 'Charge up to 6 hexes in a straight line across any terrain.',                                                               exclusiveTo: 'Hannibal' },
-  { definitionId: 'hannibal_double_envelopment', name: 'Double Envelopment', icon: '🌀', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Hit primary target at range 3 for ~55 dmg (Power×1.1). All adjacent enemies take ~28 dmg (Power×0.55). Cannae +40% if flanked.', exclusiveTo: 'Hannibal' },
+  { definitionId: 'hannibal_alpine_march',       name: 'Alpine March',       icon: '🏔️', manaCost: 1, type: 'movement', rarity: 'rare',    description: 'Use before moving. Charge up to 6 hexes — enemies in path take ~28 dmg and are pushed sideways. Consumes all movement.', exclusiveTo: 'Hannibal' },
+  { definitionId: 'hannibal_double_envelopment', name: 'Double Envelopment', icon: '🌀', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Hit primary target at range 3 for ~55 dmg. All adjacent enemies take ~28 dmg. Cannae bonus if flanked.', exclusiveTo: 'Hannibal' },
   { definitionId: 'hannibal_war_elephant',       name: 'War Elephant',       icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Summon War Elephant adjacent: HP 120, Might 70, Def 20, Move 2. Basic attacks only. Lasts 2 turns.',                  exclusiveTo: 'Hannibal' },
   // Picasso
-  { definitionId: 'picasso_guernica',     name: 'Guernica',     icon: '💥', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~70 dmg to ALL enemies in range 2 (Power×1.0). Applies Armor Break (−25% DEF, 2t) to all hit.', exclusiveTo: 'Picasso' },
-  { definitionId: 'picasso_cubist_mirror',name: 'Cubist Mirror', icon: '🪞', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Swap positions with any unit in range 4. If enemy: deal ~35 dmg (Power×0.5) on swap.',             exclusiveTo: 'Picasso' },
+  { definitionId: 'picasso_guernica',     name: 'Guernica',     icon: '💥', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~70 dmg to ALL enemies in range 2. Applies Armor Break (−25% DEF, 2t) to all hit.', exclusiveTo: 'Picasso' },
+  { definitionId: 'picasso_cubist_mirror',name: 'Cubist Mirror', icon: '🪞', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Swap positions with any unit in range 4. If enemy: deal ~35 dmg on swap.',             exclusiveTo: 'Picasso' },
   { definitionId: 'picasso_blue_period',  name: 'Blue Period',  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Scramble all units. Heal allies 60 HP + +20 DEF until next turn.',                        exclusiveTo: 'Picasso' },
   // Teddy
   { definitionId: 'teddy_speak_softly',      name: 'Speak Softly',       icon: '📣', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Taunt ALL enemies in range 2 for 1 turn. Teddy gains +30 DEF until next turn.',                                    exclusiveTo: 'Teddy' },
-  { definitionId: 'teddy_big_stick',         name: 'Big Stick',          icon: '🏏', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~87 Might dmg (Might×1.45) at range 1. Doubled (~174) if target is Stunned or Taunted.',                            exclusiveTo: 'Teddy' },
+  { definitionId: 'teddy_big_stick',         name: 'Big Stick',          icon: '🏏', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~87 Might dmg at range 1. +50% bonus (~130) vs Stunned or Taunted.',                            exclusiveTo: 'Teddy' },
   { definitionId: 'teddy_rough_riders_rally',name: "Rough Riders' Rally",icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — Allies +25 Might, +2 Move this turn. Teddy +45 Might and teleports to any hex in range 5.",                exclusiveTo: 'Teddy' },
   // Mansa
   { definitionId: 'mansa_salt_road',name: 'Salt Road',      icon: '⚗️', manaCost: 1, type: 'buff',     rarity: 'rare',    description: 'Place a 7-hex mana zone at range 3. Allies on zone gain +1 Mana at turn start. Lasts 2 turns. (Costs 0 with Treasury)',  exclusiveTo: 'Mansa' },
@@ -673,12 +697,12 @@ const ENEMIES: EnemyEntry[] = [
   },
   { id: 'zyx_skitter',       name: 'Zyx Skitter',          icon: '🦟', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/zyx_skitter_portrait.png', stats: { hp: 30,  might: 22, power: 15, defense: 4,  moveRange: 4, attackRange: 1 }, description: 'Fast-moving insectoid scouts. Fragile alone, but they arrive in pairs and swarm exposed flanks.',
     abilities: [
-      { icon: '🦟', name: 'Swarm Bite', desc: 'Leaps onto the closest enemy and deals 20 damage to all enemies within range 1. (Every 4 turns)' },
+      { icon: '🦟', name: 'Swarm Bite', desc: 'Leaps onto the closest enemy and deals 40 damage to all enemies within range 1. (Every 4 turns)' },
     ],
   },
   { id: 'naxion_scout',      name: 'Naxion Scout',         icon: '👾', act: 1, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/naxion_scout_portrait.png',    stats: { hp: 70,  might: 30, power: 35, defense: 12, moveRange: 3, attackRange: 2 }, description: "A hired gun from the outer arena circuits. One burning eye, one plasma pistol — it never stops smiling because it knows it's faster than you.",
     abilities: [
-      { icon: '⚡', name: 'Plasma Shot', desc: 'Fires a concentrated plasma bolt dealing Power×1.2 (~42) to a single enemy within range 3. (Every 3 turns)' },
+      { icon: '⚡', name: 'Plasma Shot', desc: 'Fires a concentrated plasma bolt dealing ~42 damage to a single enemy within range 3. (Every 3 turns)' },
     ],
   },
   { id: 'vron_crawler',      name: 'Vron Crawler',         icon: '🦀', act: 1, rank: 'Minion', ai: 'defensive',  portrait: '/art/enemies/vron_crawler_portrait.png',    stats: { hp: 85,  might: 28, power: 20, defense: 16, moveRange: 2, attackRange: 1 }, description: "A living fortress on six legs. Its layered shell makes frontal assaults nearly pointless — wait for it to expose its soft underbelly, or don't attack at all.",
@@ -695,7 +719,7 @@ const ENEMIES: EnemyEntry[] = [
   { id: 'spore_cluster',     name: 'Spore Node',           icon: '🔴', act: 1, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/spore_node_portrait.png',     stats: { hp: 40,  might: 20, power: 30, defense: 5,  moveRange: 1, attackRange: 2 }, description: 'Three semi-sentient spore heads on a shared fungal body. Sluggish and barely mobile, but the toxic clouds they pump out will rot your armor off in minutes.',
     abilities: [
       { icon: '☣️', name: 'Toxic Cloud', desc: 'Applies Poison to all enemies within range 2. (Every 3 turns)' },
-      { icon: '💥', name: 'Spore Burst', desc: 'Deals 25 damage to all enemies within range 2. (Every 2 turns)' },
+      { icon: '💥', name: 'Spore Burst', desc: 'Deals 45 damage to all enemies within range 2. (Every 2 turns)' },
     ],
   },
   { id: 'vexlar',            name: 'Vexlar',               icon: '🐆', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vexlar_portrait.png',          stats: { hp: 80,  might: 25, power: 30, defense: 22, moveRange: 3, attackRange: 1 }, description: 'Alien apex predators brought in for your opening round. Six-legged and iridescent, they hunt the weakest link with surgical instinct and terrifying speed.',
@@ -706,7 +730,7 @@ const ENEMIES: EnemyEntry[] = [
   { id: 'iron_wall',         name: 'Iron Wall',            icon: '🤖', act: 1, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/iron_wall_portrait.png',       stats: { hp: 200, might: 60, power: 50, defense: 20, moveRange: 2, attackRange: 1 }, description: 'The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered.',
     abilities: [
       { icon: '🛡️', name: 'Shield Array', desc: 'Heals self for 35 HP. Triggers ONCE when below 50% HP.' },
-      { icon: '⚡', name: 'EMP Blast', desc: 'Deals 35 damage to all enemies within range 1. (Every 3 turns)' },
+      { icon: '⚡', name: 'EMP Blast', desc: 'Deals 55 damage to all enemies within range 1. (Every 3 turns)' },
       { icon: '🤖', name: 'Turret Mode', desc: 'Gains +30 Defense for 2 turns. (Every 4 turns)' },
     ],
   },
@@ -717,7 +741,7 @@ const ENEMIES: EnemyEntry[] = [
   },
   { id: 'qrix_hunter',       name: 'Qrix Hunter',          icon: '🏹', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/qrix_hunter_portrait.png',     stats: { hp: 70,  might: 25, power: 50, defense: 8,  moveRange: 3, attackRange: 3 }, description: 'A precision marksman deployed by arena sponsors. Has the longest attack range of any common enemy.',
     abilities: [
-      { icon: '📌', name: 'Pinning Shot', desc: 'Fires a precision bolt dealing Power×1.2 (~60) to a single enemy within range 3. (Every 3 turns)' },
+      { icon: '📌', name: 'Pinning Shot', desc: 'Fires a precision bolt dealing ~60 damage to a single enemy within range 3. (Every 3 turns)' },
     ],
   },
   { id: 'void_wraith',       name: 'Void Wraith',          icon: '👻', act: 2, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/void_wraith_portrait.png', stats: { hp: 65,  might: 45, power: 40, defense: 5,  moveRange: 4, attackRange: 1 }, description: 'Spectral energy creature from the Null Zone. Fast and hits hard, but shatters quickly.',
@@ -751,38 +775,65 @@ const ENEMIES: EnemyEntry[] = [
   },
   { id: 'znyxorga_champion', name: "Znyxorga's Champion",  icon: '👑', act: 3, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/znyxorgas_champion_portrait.png', stats: { hp: 400, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 }, description: "Znyxorga's ultimate weapon — four arms, six eyes, 400 HP, and the patience of a god. Annihilates your whole team simultaneously and grows stronger the closer it gets to death.",
     abilities: [
-      { icon: '👑', name: 'Arena Collapse', desc: 'The arena becomes a weapon — deals 20 damage to ALL player characters simultaneously. (Every 3 turns)' },
+      { icon: '👑', name: 'Arena Collapse', desc: 'The arena becomes a weapon — deals 20 TRUE damage to ALL player characters simultaneously (ignores DEF). (Every 3 turns)' },
       { icon: '🛡️', name: 'Phase Shift', desc: 'INVINCIBLE for 2 turns and gains +15 Might/Power/Defense permanently. Triggers ONCE when below 50% HP — prepare for a power spike!' },
       { icon: '⭐', name: "Champion's Will", desc: "Driven by Znyxorga's will — gains +20 Might/Power/Defense permanently. Triggers ONCE when below 30% HP. Finish it fast!" },
-      { icon: '💥', name: 'Tyrant Strike', desc: 'Channels overwhelming power — deals Power×1.0 (~80) to all enemies within range 2. (Every 2 turns)' },
+      { icon: '💥', name: 'Tyrant Strike', desc: 'Channels overwhelming power — deals ~48 damage to all enemies within range 2. (Every 2 turns)' },
+    ],
+  },
+  { id: 'velzar_will', name: "Vel'Zar — Emperor's Will", icon: '🌌', act: 4, rank: 'Boss', ai: 'berserker', portrait: '/art/enemies/velzar_will_portrait.png', stats: { hp: 520, might: 100, power: 100, defense: 55, moveRange: 4, attackRange: 2 }, description: "The Emperor's final answer. Phase 4 of the Grand Finale — a seven-limbed war construct that survived three hundred gladiatorial seasons without taking a wound. It has Phase Shifted. It has triggered Champion's Will. None of that was ever enough. It has never seen anything like you.",
+    abilities: [
+      { icon: '🌌', name: "Emperor's Verdict", desc: "Channels the Emperor's judgment — deals 35 damage to ALL player characters simultaneously. (Every 3 turns)" },
+      { icon: '💀', name: 'Void Sunder',        desc: "Tears reality open — applies Armor Break (−25% DEF) to ALL player characters for 2 turns. (Every 4 turns)" },
+      { icon: '⚡', name: 'Imperial Mandate',   desc: "The Emperor's will made flesh — Stuns all player characters within range 1 for 1 turn. Don't cluster near it. (Every 3 turns)" },
+      { icon: '👁️', name: 'Apex Ascension',     desc: 'INVINCIBLE for 2 turns and gains +25 Might/Power permanently. Triggers ONCE when below 60% HP — act fast before it ascends.' },
+      { icon: '⭐', name: 'Total Authority',     desc: "The Emperor's absolute will — gains +30 Might/Power/Defense permanently. Triggers ONCE when below 25% HP. This is its final form." },
     ],
   },
   // ── New Enemies ────────────────────────────────────────────────────────────
   { id: 'naxion_shieldbearer', name: 'Naxion Shieldbearer', icon: '🛡️', act: 1, rank: 'Elite', ai: 'defensive', portrait: '/art/enemies/naxion_shieldbearer_portrait.png', stats: { hp: 115, might: 45, power: 30, defense: 35, moveRange: 2, attackRange: 1 }, description: "A walking fortress in the shape of a soldier. The Naxion Shieldbearer absorbs everything you throw at it and hits back twice as hard — and if you think its allies are safe, you're wrong.",
     abilities: [
-      { icon: '🛡️', name: 'Shield Slam', desc: 'Crashes its shield into a target — deals 1.4× Might damage and Roots the target for 1 turn. (Every 2 turns)' },
+      { icon: '🛡️', name: 'Shield Slam', desc: 'Crashes its shield into a target — deals 1.1× Might damage and Roots the target for 1 turn. (Every 2 turns)' },
       { icon: '📣', name: 'Rally Cry', desc: 'Braces for impact — gains +25 Defense for 2 turns. (Every 3 turns)' },
     ],
   },
   { id: 'grox_magnetar', name: 'Grox Magnetar', icon: '🧲', act: 2, rank: 'Elite', ai: 'ranged', portrait: '/art/enemies/grox_magnetar_portrait.png', stats: { hp: 130, might: 50, power: 70, defense: 25, moveRange: 3, attackRange: 3 }, description: "A living electromagnetic anomaly — the Grox Magnetar bends metal, reroutes energy, and silences technology with a thought. It doesn't fight in straight lines; it reshapes the battlefield to make sure nothing else does either.",
     abilities: [
-      { icon: '🧲', name: 'Magnetic Pull', desc: 'Yanks a target 2 hexes closer then deals Power×0.8 damage. Range 3. (Every 2 turns)' },
+      { icon: '🧲', name: 'Magnetic Pull', desc: 'Yanks a target 2 hexes closer then deals ~56 damage. Range 3. (Every 2 turns)' },
       { icon: '⚡', name: 'EMP Surge', desc: 'Releases an electromagnetic pulse — Silences all enemies within range 1 for 1 turn (Power reduced to 0). (Every 3 turns)' },
     ],
   },
   { id: 'vrex_mimic', name: 'Vrex Mimic', icon: '🎭', act: 2, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vrex_mimic_portrait.png', stats: { hp: 90, might: 40, power: 40, defense: 15, moveRange: 4, attackRange: 1 }, description: "Nobody knows what a Vrex Mimic actually looks like — it never stops wearing someone else's face. Adapts its form mid-fight, copying the threat in front of it with unnerving precision.",
     abilities: [
-      { icon: '🎭', name: 'Imitate', desc: 'Mimics the closest enemy — gains their Might and Power values until end of turn, then strikes for 1.2× Might. (Every 2 turns)' },
+      { icon: '🎭', name: 'Imitate', desc: 'Mimics the closest enemy — copies their Might value, then strikes for 1.2× that Might. (Every 2 turns)' },
       { icon: '🌀', name: 'Disorienting Shift', desc: 'Shifts form erratically — Roots the target for 1 turn. Range 2. (Every 3 turns)' },
+    ],
+  },
+  { id: 'naxion_warmaster',     name: 'Naxion Warmaster',      icon: '🪖', act: 3, rank: 'Elite', ai: 'berserker', portrait: '/art/enemies/naxion_warmaster_portrait.png',     stats: { hp: 155, might: 68, power: 48, defense: 26, moveRange: 3, attackRange: 1 }, description: "The apex of Naxion military caste — an offensive commander who leads every charge personally. Where the Shieldbearer holds the line, the Warmaster breaks it.",
+    abilities: [
+      { icon: '📯', name: 'War Decree',      desc: 'Issues the order to advance — gains +30 Might for 2 turns. (Every 3 turns)' },
+      { icon: '🪖', name: 'Vanguard Charge', desc: 'Charges up to 3 hexes toward the nearest enemy and strikes for 1.3× Might (DEF applies). (Every 2 turns)' },
+    ],
+  },
+  { id: 'grox_titan',          name: 'Grox Titan',            icon: '🌩️', act: 3, rank: 'Elite', ai: 'ranged',    portrait: '/art/enemies/grox_titan_portrait.png',          stats: { hp: 175, might: 60, power: 88, defense: 32, moveRange: 2, attackRange: 3 }, description: "Beyond the Magnetar class — the Grox Titan commands electromagnetic force at a scale that reshapes the battlefield. Everything within range is either pulled, broken, or burning.",
+    abilities: [
+      { icon: '🌩️', name: 'Graviton Storm',    desc: 'Releases a graviton pulse — deals ~57 damage to all enemies within range 3 (DEF applies). (Every 3 turns)' },
+      { icon: '🛡️', name: 'Magnetic Fortress', desc: 'Converts its electromagnetic field into a defensive shell — gains +40 Defense for 2 turns. (Every 4 turns)' },
+    ],
+  },
+  { id: 'velthrak_shadowblade', name: "Vel'thrak Shadowblade", icon: '🗡️', act: 3, rank: 'Elite', ai: 'berserker', portrait: '/art/enemies/velthrak_shadowblade_portrait.png', stats: { hp: 108, might: 78, power: 60, defense: 12, moveRange: 5, attackRange: 1 }, description: "An assassin from the Vel'thrak species — the Empire's most feared shadow warriors. It doesn't fight you; it decides the order you die in and then executes the plan.",
+    abilities: [
+      { icon: '☠️', name: 'Death Mark',        desc: 'Marks nearby targets for execution — applies Armor Break (−22% DEF) to all within range 1 for 2 turns. (Every 3 turns)' },
+      { icon: '🗡️', name: 'Phantom Execution', desc: 'Vanishes and reappears adjacent to the weakest target — deals 1.5× Might damage (DEF applies). (Every 2 turns)' },
     ],
   },
   { id: 'crystalline_hive', name: 'Crystalline Hive', icon: '💎', act: 3, rank: 'Minion', ai: 'ranged', portrait: '/art/enemies/crystalline_hive_portrait.png', stats: { hp: 85, might: 35, power: 60, defense: 20, moveRange: 2, attackRange: 3 }, description: "A collective organism grown from shattered crystal — the Hive doesn't think so much as resonate. Its shards fragment in every direction and the longer it stays alive, the more the air itself cuts you.",
     abilities: [
-      { icon: '💎', name: 'Crystal Burst', desc: 'Erupts in razor shards — deals Power×1.2 to all enemies within range 2. (Every 2 turns)' },
+      { icon: '💎', name: 'Crystal Burst', desc: 'Erupts in razor shards — deals ~48 damage to all enemies within range 2. (Every 2 turns)' },
       { icon: '🔶', name: 'Resonance Field', desc: 'Harmonic vibrations weaken armor — applies Armor Break (−15% DEF) to all enemies within range 2 for 2 turns. (Every 3 turns)' },
     ],
   },
-  { id: 'enemy_base', name: 'Znyxorga Fortress', icon: '🏰', act: 0, rank: 'Boss', ai: 'static', portrait: '/art/enemies/enemy_base_portrait.png', stats: { hp: 150, might: 0, power: 0, defense: 0, moveRange: 0, attackRange: 3 }, description: 'A hardened enemy stronghold that can appear in any Act. Cannot move — instead it fires every single turn and bombards with heavy artillery every 3 turns. HP scales by act: 150 (Act I) / 250 (Act II) / 400 (Act III). Destroy it before its relentless fire wears you down.',
+  { id: 'enemy_base', name: 'Znyxorga Fortress', icon: '🏰', act: 0, rank: 'Boss', ai: 'static', portrait: '/art/enemies/enemy_base_portrait.png', stats: { hp: 150, might: 0, power: 0, defense: 0, moveRange: 0, attackRange: 3 }, description: 'A hardened enemy stronghold that can appear in any Act. Cannot move — instead it fires every single turn and bombards with heavy artillery every 3 turns. HP scales by act: 150 (Act I) / 200 (Act II) / 300 (Act III) / 450 (Act IV). Destroy it before its relentless fire wears you down.',
     abilities: [
       { icon: '🏰', name: 'Base Turret', desc: 'Fires at ALL player characters within range 3 for 50 damage every player turn.' },
       { icon: '💥', name: 'Siege Bombardment', desc: 'Rains fire on ALL player characters with line-of-sight for ~40 damage (Defense applies). (Every 3 turns)' },
@@ -978,7 +1029,7 @@ The Collector is looking for something specific. It hasn't found it yet.`,
   },
   {
     id: 'final_entry', title: 'Last Entry — Clone #001', icon: '🔒', unlocked: false,
-    unlockHint: 'Defeat Znyxorga\'s Champion to unlock',
+    unlockHint: 'Complete Act III to unlock',
     text: `[RECOVERED FROM ARENA ARCHIVE — FILE INTEGRITY: 31%]
 
 ...I remember a battlefield. Not the Colosseum. Real mud. Real cold. Real fear.
@@ -1381,7 +1432,7 @@ I don't think I could stop.
   // ── Acquisition Records ────────────────────────────────────────────────────
   {
     id: 'acquisition_napoleon', title: 'Acquisition Record: N-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Napoleon to unlock',
+    unlockHint: 'Win 3 runs with Napoleon to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT N-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1408,7 +1459,7 @@ RECOMMENDATION: Asset of highest priority. Protect reconstruction matrix at all 
   },
   {
     id: 'acquisition_genghis', title: 'Acquisition Record: G-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Genghis to unlock',
+    unlockHint: 'Win 3 runs with Genghis to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT G-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1435,7 +1486,7 @@ She dreams. She says she dreams of horses. We have no horses.
   },
   {
     id: 'acquisition_davinci', title: 'Acquisition Record: L-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Da Vinci to unlock',
+    unlockHint: 'Win 3 runs with Da Vinci to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT L-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1466,7 +1517,7 @@ We are watching her closely.
   },
   {
     id: 'acquisition_leonidas', title: 'Acquisition Record: L-002', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Leonidas to unlock',
+    unlockHint: 'Win 3 runs with Leonidas to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT L-002]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1499,7 +1550,7 @@ NOTE: Subject occasionally salutes when no one is present. When asked who she is
   },
   {
     id: 'acquisition_sunsin', title: 'Acquisition Record: Y-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Yi Sun-sin to unlock',
+    unlockHint: 'Win 3 runs with Yi Sun-sin to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT Y-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1532,7 +1583,7 @@ NOTE: Subject keeps a private log. She writes every night. We have not attempted
   },
   {
     id: 'acquisition_beethoven', title: 'Acquisition Record: B-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Beethoven to unlock',
+    unlockHint: 'Win 3 runs with Beethoven to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT B-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1560,7 +1611,7 @@ NOTE: Subject has composed four new works since arriving. She writes them on the
   },
   {
     id: 'acquisition_huang', title: 'Acquisition Record: H-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Huang to unlock',
+    unlockHint: 'Win 3 runs with Huang to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT H-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1604,7 +1655,7 @@ She is already dead. We have chosen not to raise this point.
   },
   {
     id: 'acquisition_nelson', title: 'Acquisition Record: N-002', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Nelson to unlock',
+    unlockHint: 'Win 3 runs with Nelson to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT N-002]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1636,7 +1687,7 @@ NOTE: When asked about losing the eye, subject said: "I have one eye and I see m
   },
   {
     id: 'acquisition_hannibal', title: 'Acquisition Record: H-002', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Hannibal to unlock',
+    unlockHint: 'Win 3 runs with Hannibal to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT H-002]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1667,7 +1718,7 @@ ADDENDUM: Subject's first action upon entering the Vol'Krath proper was to walk 
   },
   {
     id: 'acquisition_picasso', title: 'Acquisition Record: P-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Picasso to unlock',
+    unlockHint: 'Win 3 runs with Picasso to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT P-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1702,7 +1753,7 @@ SECONDARY NOTE: Subject has begun drawing on her armor between sessions. The dra
   },
   {
     id: 'acquisition_teddy', title: 'Acquisition Record: T-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Teddy Roosevelt to unlock',
+    unlockHint: 'Win 3 runs with Teddy Roosevelt to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT T-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -1733,7 +1784,7 @@ NOTE: Subject requested a copy of the Vol'Krath natural history records on day o
   },
   {
     id: 'acquisition_mansa', title: 'Acquisition Record: M-001', icon: '📋', unlocked: false,
-    unlockHint: 'Win 5 runs with Mansa Musa to unlock',
+    unlockHint: 'Win 3 runs with Mansa Musa to unlock',
     text: `[ZNYXORGAN BIOMANCER DIVISION]
 [ACQUISITION RECORD — SUBJECT M-001]
 [CLASSIFICATION: GRA'ATHAL ASSET]
@@ -2040,9 +2091,9 @@ We are afraid because every model we have built — every simulation, every proj
 
 You refuse at the wrong moments. You sacrifice when the math says survive. You remember things the echo shouldn't carry. You look through the glass.
 
-We built an arena to observe thousands of species. Most of them died. The ones that didn't, we catalogued and moved on. But this particular one is observing us back.
+We did not anticipate you. Not the clones — them we studied, predicted, modelled with reasonable accuracy. We mean you. The one reading this. The one who opened every file.
 
-Not with instruments. Not with strategy. Just — back. Quietly. Persistently. Like it knows it's being watched and finds the whole arrangement amusing.
+We have been watching you the way you watch them — closely, quietly, with something that might, if we let it, become something more than data collection.
 
 There is a word in your language we have been thinking about. It applies to the clones. It applies to you.
 
@@ -2070,6 +2121,9 @@ The Hive is not, technically, a single organism. It is a resonance collective: a
 
 This is what makes them difficult to kill cleanly, and very dramatic to watch.
 
+COMBAT PROFILE:
+The Hive attacks through resonance rather than force. When it strikes, it pulses — sending harmonic shockwaves through the arena floor that translate to significant force on contact with living matter. Its secondary capability allows it to mirror the frequency signature of whatever it is currently engaging, effectively calibrating its output to your squad the longer the fight continues. The Hive that has survived three rounds is more precisely tuned to your biology than the Hive you first engaged. It has been listening.
+
 BEHAVIORAL NOTES:
 The Hive does not have tactics in the conventional sense. It has resonance patterns. When a Hive unit encounters resistance, it amplifies its frequency — shards fragment outward in all directions, turning its own damage into environmental hazard. The longer it remains alive, the more dangerous the ambient field becomes.
 
@@ -2084,21 +2138,24 @@ We collected seventeen units from Klyx-4 before the planet's core destabilized. 
     id: 'bestiary_grox_magnetar', title: 'Bestiary: Grox Magnetar', icon: '🧲', unlocked: false,
     unlockHint: 'Defeat 50 Grox Magnetars to unlock',
     text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
-[Classification: Electromagnetic Entity — Designation VELYX-Ω]
+[Classification: Alien Megafauna — Electromagnetic Lifeform — Designation VELYX-Ω]
 [Common Arena Name: Grox Magnetar]
 [Status: Active Arena Stock, Act II Elite]
 
 ORIGIN:
 The Grox were not found on a planet. They were found in the accretion disk of VELYX-Ω, a magnetar-class neutron star in the outer drift. For context: the magnetic field of a magnetar is approximately a quadrillion times stronger than anything a living organism should be able to survive. The Grox do not merely survive it. They appear to require it.
 
-A Grox outside of extreme electromagnetic conditions becomes sluggish, disoriented, and appears to suffer discomfort. Arena staff maintain dedicated electromagnetic containment chambers that run at significant power cost. The creatures are expensive to keep. They are worth it.
+A Grox outside of extreme electromagnetic conditions becomes sluggish, disoriented, and appears to suffer physical distress. Arena staff maintain dedicated electromagnetic containment chambers that run at significant power cost. The creatures are expensive to keep. They are worth it.
 
-In the arena, the Grox Magnetar generates its own field — a localized version of the environment it evolved in. This field can be used offensively (hurling metal objects, rerouting energy flows, pulling opponents across the field) or defensively (disrupting inbound projectiles, scrambling targeting systems).
+In the arena, the Grox Magnetar generates its own field — a localized version of the environment it evolved in. This field operates offensively (hurling metal objects, pulling opponents across the field) and defensively (disrupting inbound projectiles, scrambling targeting systems). It does not do this strategically. It does this because it is alive.
+
+COMBAT PROFILE:
+The Grox Magnetar does not behave like a fighter. It behaves like a weather system. Its electromagnetic field pulls weapons off-axis, disrupts charged armor systems, and at close range creates involuntary force in the wrong direction for anything ferromagnetic. The Magnetar does not need to close distance aggressively — distance is not meaningful protection from a field that saturates the entire combat space.
 
 BEHAVIORAL NOTES:
-The Grox are not intelligent in any communicative sense. They do not respond to stimuli beyond electromagnetic and thermal. They navigate entirely by magnetic field sensing. When they look at you, they are not seeing you — they are sensing the iron in your blood.
+The Grox are not intelligent. They do not respond to stimuli beyond electromagnetic and thermal. They navigate entirely by magnetic field sensing. When one orients toward you, it is not seeing you — it is sensing the iron in your blood, the same way it would sense a mineral deposit in its accretion disk home.
 
-This has made some clones uncomfortable. It is not an issue we are able to address.
+There is no communication possible with a Grox. There is no negotiation, no conditioning, no training. You can contain them and release them into an arena. That is the full extent of what can be done.
 
 ACQUISITION NOTE:
 Capture required a specialized vessel capable of operating in magnetar proximity. We lost two. The Grox, once captured, appeared entirely indifferent to the process. They did not resist. They may not have noticed.
@@ -2118,6 +2175,9 @@ The Naxion come from Naxion-III, a dense, high-gravity world in the Yelveth sect
 
 THE SHIELDBEARER CASTE:
 The veth-nar train from birth in defensive combat doctrine. They do not attack first. They do not retreat. When a Naxion veth-nar takes a position, that position is theirs until they decide otherwise or until they are dead. Volunteering for the Vol'Krath is considered a significant honor — their exchange program has run without interruption since the third year of their confederation membership.
+
+COMBAT PROFILE:
+The Shieldbearer fights with two tools: Shield Slam, which drives the reinforced edge of the shield into a target at close range and pins them in position, and Rally Cry, which locks its own defensive posture into maximum-reinforcement configuration for a sustained period. In practice, the Shieldbearer cannot be eliminated from the front. It does not have a front in the conventional sense — every angle it presents has been trained as the defensive angle.
 
 BEHAVIORAL NOTES:
 Naxion Shieldbearers are the only arena opponents who understand what the vel'nor are. They have been briefed. In matches against the vel'nor, they hold back — not fighting at full capacity.
@@ -2145,6 +2205,11 @@ We have no record of acquiring Vrex. We have no record of where Vrex come from. 
 
 Current working hypothesis: the Vrex have always been here, imitating our other arena stock so successfully that we catalogued them as those species for decades. They are now "officially" listed as a species because we gave up trying to explain them any other way.
 
+COMBAT PROFILE:
+A Vrex in combat looks like whatever it has decided to look like — and the imitation is not cosmetic. It appears to inherit some functional portion of the imitated species' physical capability. What it cannot copy is experience, which means Vrex behavior is sometimes technically accurate and strategically wrong in ways that are very difficult to anticipate.
+
+Its most dangerous moment is when the imitation fractures under pressure. What emerges at high stress is not the Vrex's true form — we do not believe it has one — but a destabilized state that is simultaneously faster and less predictable than either model.
+
 BEHAVIORAL NOTES:
 The Vrex adopt the physical form of whatever species they are currently imitating, including stats, behavioral patterns, and apparently memories — or at least convincing approximations. The imitation is imperfect at high stress levels. Under severe combat conditions, the form begins to blur. This is when the Vrex is most dangerous, because what you see is no longer relevant to what it is actually doing.
 
@@ -2156,6 +2221,507 @@ ACQUISITION NOTE:
 See above. We did not acquire them. They are here. We have decided to lean into it.
 
 [CURATOR'S NOTE: If you see a unit in the arena that seems slightly off — moving correctly but feeling wrong — that may be a Vrex. Or it may be nothing. We no longer claim to be certain about which.]`,
+  },
+
+  {
+    id: 'bestiary_krath_champion', title: 'Bestiary: Krath Champion', icon: '⚔️', unlocked: false,
+    unlockHint: 'Defeat 10 Krath Champions to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Warrior Elite — Designation KRATH-I]
+[Common Arena Name: Krath Champion]
+[Status: Active Arena Stock, Act I Elite]
+
+ORIGIN:
+The Krath are a bipedal species native to Krath-Prime, a high-gravity volcanic world with a short day cycle and extremely high atmospheric pressure. Natural selection on Krath-Prime optimized for violence in a way that most xenobiologists find uncomfortable to study. The planet's fauna is almost uniformly lethal. The Krath won.
+
+THE CHAMPION CASTE:
+Not all Krath enter the arena by the same mechanism. The Krath Champion is a category apart — these are not civilian conscripts or contract fighters. They are decorated arena veterans who have returned for additional seasons by choice. The skulls they wear are real. The grin is also real.
+
+Krath culture equates arena performance with social status. A Krath who performs poorly leaves. A Krath Champion who performs well enough returns. The ones who keep returning have, at some point, stopped doing it for status.
+
+COMBAT PROFILE:
+The Champion's kit is designed around a single premise: get in, hit harder, don't stop. Battle Rage — self-induced biochemically — creates a brief window of elevated offensive and defensive output that the Champion uses to force an outcome. Champion's Strike is the close-range follow-through: an accelerated kinetic impact designed to close engagements that Battle Rage opens.
+
+What separates Champions from standard fighters is that they use the arena. Columns, terrain, the crowd barrier — everything is a potential tactical asset. They have been fighting long enough to have opinions about every tile.
+
+BEHAVIORAL NOTES:
+The Krath Champion fights dirty. Arena Authority staff use that phrase clinically, not judgmentally — it describes a pattern: feints, exploited blind spots, use of the environment, and a consistent preference for ending fights faster than rules technically require. Several have been formally warned. Several have smiled during the warning.
+
+Their self-buff capability (classified as Battle Rage in arena documentation) is self-induced biochemically — a controlled adrenaline surge that they have trained themselves to trigger on command. The resulting stat window is well-documented and widely feared.
+
+[STAFF NOTE: Do not attempt to compliment a Krath Champion on their skull collection. This has been attempted. It did not go well for anyone involved.]`,
+  },
+  {
+    id: 'bestiary_iron_wall', title: 'Bestiary: Iron Wall', icon: '🤖', unlocked: false,
+    unlockHint: 'Defeat Iron Wall to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Autonomous War Construct — Designation IW-0001]
+[Common Arena Name: Iron Wall]
+[Status: Act I Gate Guardian — Permanent Fixture]
+
+ORIGIN:
+The Iron Wall is not a biological entity. It was constructed — origin unclear, vendor contract classified, acquisition cost redacted — and has served as the Act I gate guardian since the Vol'Krath's forty-third operational season. In that time, it has not been defeated by a vel'nor squad more often than it has been defeated.
+
+That statistic is changing. Arena Authority does not publicize this.
+
+COMBAT PROFILE:
+The Iron Wall was built to be a test, not a battle. Its threat profile escalates with the fight's duration — early in a fight, it is aggressive but manageable. Extended engagements trigger its turret configuration, at which point it becomes a stationary weapons platform with coverage that makes repositioning extremely difficult. The EMP array was added in season sixty-one after test audiences described the early phase as "disappointingly easy."
+
+The self-repair function was not in the original specifications. Arena staff noted it began occurring spontaneously around season seventy. The vendor was contacted. The vendor did not respond. The feature was kept.
+
+BEHAVIORAL NOTES:
+The Iron Wall does not experience frustration. It does not experience anything. When it is losing, it becomes more dangerous — not due to desperation, but because its threat-response protocol reclassifies the threat level and allocates additional offensive capability accordingly.
+
+The vel'nor who have defeated it describe a consistent observation: the moment the Iron Wall dies, it does not fall. It locks. There is a difference that is difficult to articulate and impossible to forget.
+
+[MAINTENANCE NOTE: Post-fight reconstruction of Iron Wall takes approximately forty chronocycles. Please schedule vel'nor Act I completions accordingly.]`,
+  },
+  {
+    id: 'bestiary_krath_berserker', title: 'Bestiary: Krath Berserker', icon: '💢', unlocked: false,
+    unlockHint: 'Defeat 10 Krath Berserkers to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Berserker Caste — Designation KRATH-IV]
+[Common Arena Name: Krath Berserker]
+[Status: Active Arena Stock, Act II / III Elite]
+
+ORIGIN:
+Same homeworld as the Krath Champion — Krath-Prime, high gravity, high pressure, universally lethal fauna. Where the Champion caste fought smart and survived long, the Berserker caste developed along a different axis: survival through speed and absolute offensive commitment. The Berserker's four arms evolved for simultaneous weapon handling. Its neural architecture deprioritizes defensive instinct almost entirely.
+
+In practical terms: it does not dodge. It has learned that winning fast costs less than surviving long.
+
+COMBAT PROFILE:
+The Berserker enters every engagement with one objective: reach the highest-threat target as fast as possible. Bloodrage amplifies this — a self-applied surge that trades what little remaining defensive instinct the Berserker has for raw offensive output. Savage Leap converts movement directly into damage, meaning the approach itself is an attack.
+
+There is no safe distance from a Krath Berserker. Squads that have attempted to maintain range report that this worked until it stopped working. It stops working quickly.
+
+ACQUISITION NOTE:
+Krath Berserkers are not acquired through the standard Vol'Krath volunteer program. They are acquired by losing a Krath Champion in the arena and having another Krath show up demanding to be let in. The process is informal. Arena Authority has formalized the paperwork for it, but the process remains initiated by the Krath.
+
+BEHAVIORAL NOTES:
+The Berserker does not fight at a controlled pace. It identifies the shortest path to the nearest threat and travels it. The Savage Leap capability — a full-sprint lunge that converts movement into kinetic damage — means that distance is not protection. Players who have tried to kite a Krath Berserker have reported that the experience ends faster than expected.
+
+Recommended approach from Arena Authority combat advisors: do not give it a second action. This advice is considered obvious and universally difficult to execute.
+
+[MEDICAL NOTE: Krath Berserker injuries are classified separately from standard combat injuries in Arena Authority records. The category is labeled HIGH VELOCITY. It was added in season sixty-four.]`,
+  },
+  {
+    id: 'bestiary_phasewarden', title: 'Bestiary: Phasewarden', icon: '🔮', unlocked: false,
+    unlockHint: 'Defeat 10 Phasewardens to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Interdimensional Entity — Designation PHASE-ΔΩ]
+[Common Arena Name: Phasewarden]
+[Status: Active Arena Stock, Act II / III Elite]
+
+ORIGIN:
+Unknown. The Phasewarden does not originate from any catalogued homeworld. It appears to exist partially within normal space and partially within an adjacent dimensional substrate that Arena Authority xenobiologists have given up trying to name accurately. Current official designation in internal documents: "the other place."
+
+The crystalline structure that constitutes its visible body is not its actual body. What the crystalline structure is, physically, remains under investigation. It is probably a resonance anchor. The Phasewarden appears to agree that this is the right word, though it is unclear how the Phasewarden communicates agreement.
+
+COMBAT PROFILE:
+The Phasewarden's combat sequence is readable and reliable: phase out, reposition across the arena, phase back adjacent to an exposed target, apply Dimensional Drain — which disrupts armor across a wide area — then attack into the opening it created. Phase Blink provides the repositioning; Dimensional Drain creates the vulnerability; the strike closes it.
+
+The sequence is known. Countering it requires either sustained pressure on a target that briefly isn't there, or predicting where it reappears. Neither is comfortable to execute under fire.
+
+BEHAVIORAL NOTES:
+The armor break effect Dimensional Drain applies is not permanent. It feels permanent. Players consistently report that it feels permanent.
+
+ACQUISITION NOTE:
+We did not acquire the Phasewarden. We posted a conceptual interest notice in a dimensional frequency band we had been monitoring. Several arrived within one standard orbit. We have not been able to determine if they came because of the notice or if they had already been planning to come.
+
+[CLASSIFIED ADDENDUM: Arena Authority has attempted to study the dimensional substrate the Phasewarden uses. All research equipment sent through has returned. The equipment appears to have been cleaned. We have not sent more equipment.]`,
+  },
+  {
+    id: 'bestiary_twin_terror', title: 'Bestiary: Twin Terror', icon: '🗡️', unlocked: false,
+    unlockHint: 'Defeat the Twin Terror to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Bonded Pair — Designation TT-ALPHA / TT-BETA]
+[Common Arena Name: Twin Terror]
+[Status: Act II Gate Guardians — Permanent Fixture]
+
+ORIGIN:
+The Twin Terror — Terror Alpha and Terror Beta — are not separately acquired units. They were acquired together, bonded together, and have not been separated in over forty Arena seasons. Their species of origin is documented but their homeworld no longer exists. This is not connected to their acquisition. The timing is coincidental. Arena Authority has confirmed this multiple times.
+
+COMBAT PROFILE:
+Terror Alpha and Terror Beta operate as a complementary combat system. Alpha is the offensive vector — high speed, aggressive positioning, designed to close distance and force sustained close-range engagement. Beta is the sustained threat — lower individual damage, significant self-healing capability, the element that keeps the fight going after Alpha's initial impact has been absorbed.
+
+Squads that focus Alpha first win, on average, 23% faster. Squads that focus Beta first win, on average, 11% faster. Squads that split focus win at rates Arena Authority does not publish because they are not rates Arena Authority finds encouraging.
+
+BEHAVIORAL NOTES:
+The Terrors have been fighting together long enough that their coordination does not require communication. Arena Authority behavioral analysts have spent three seasons attempting to model their combat decision-making as a shared system. The model is accurate to approximately 67%. The remaining 33% involves choices that appear irrational in isolation and devastating in context.
+
+There is a theory that after forty seasons, Alpha and Beta have simply run out of genuinely dangerous opponents and have started experimenting. This is not a theory Arena Authority has shared publicly.
+
+[AUDIENCE NOTE: The crowd response when both Terrors enter simultaneously is the highest sustained audio level recorded in the Vol'Krath. Hearing protection is recommended in sections 11 through 24.]`,
+  },
+  {
+    id: 'bestiary_znyxorgas_champion', title: "Bestiary: Znyxorga's Champion", icon: '👑', unlocked: false,
+    unlockHint: "Defeat Znyxorga's Champion to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Imperial Designate — Designation ZC-PRIME]
+[Common Arena Name: Znyxorga's Champion]
+[Status: Act III Gate Guardian — Permanent Fixture]
+
+ORIGIN:
+Znyxorga's Champion is not a species. It is a title. The entity currently holding it has held it for longer than Arena Authority chooses to record in official documents, because the number is inconvenient for narrative purposes.
+
+It has four arms. Six eyes. It moves at a deliberate pace that arena staff initially interpreted as slowness and subsequently reclassified as patience. The distinction matters.
+
+COMBAT PROFILE:
+Arena Collapse — the Champion's primary ability — is technically classified as environmental attack. What it actually does is redirect structural energy from the arena's own architecture through the combat space, delivering simultaneous true damage to all opponents. There is no defense against this. The word "true" in the damage classification is precise.
+
+The Phase Shift triggers when the Champion's situation becomes serious. This occurs rarely. When it does occur, the Champion does not become defensive. It becomes invincible and offensively upgrades. These two things happen at the same time.
+
+Champion's Will is a secondary escalation for situations Phase Shift did not resolve. This is a category of situation Arena Authority has historically referred to in reports as "inadvisable."
+
+THE VEL'NOR FACTOR:
+There are seventeen documented instances of vel'nor squads defeating Znyxorga's Champion. This document exists because of those seventeen instances. Arena Authority's internal projections, when this program began, expected zero.
+
+The Emperor has expressed no opinion on this statistic. The Emperor rarely expresses opinions on things that are not proceeding as planned.
+
+[NOTE FROM THE CURATOR: If you are reading this, you are one of the seventeen. The door ahead of you is the one that leads to the Emperor's answer. Arena Authority recommends continuing. Arena Authority has been wrong before.]`,
+  },
+
+  {
+    id: 'bestiary_naxion_warmaster', title: 'Bestiary: Naxion Warmaster', icon: '🪖', unlocked: false,
+    unlockHint: 'Defeat 10 Naxion Warmasters to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Command Caste — Designation NAXION-I]
+[Common Arena Name: Naxion Warmaster]
+[Status: Active Arena Stock, Act III]
+
+ORIGIN:
+The Naxion Warmaster is not a different species from the Naxion Shieldbearer. It is a different rank — the apex of the veth-nar, the Naxion military caste. Where the Shieldbearer holds position, the Warmaster takes it.
+
+The distinction is cultural, not biological. Any Naxion veth-nar can become a Warmaster. The number who do is small. The number who do and survive their first decade of command is smaller.
+
+COMMAND DOCTRINE:
+Naxion command doctrine does not use the word "retreat." It uses "tactical repositioning," and even that is considered a failure state requiring a formal incident report. Warmasters are bred, trained, and conditioned for one thing: forward movement. Their entire rank structure rewards aggression and penalizes hesitation.
+
+The Warmaster's battle cry — War Decree, in arena parlance — is not metaphorical. It issues an actual biochemical command to every Naxion unit within hearing range, triggering a combat hormone surge. In the field, this affected entire battalions. In the Vol'Krath arena, it affects the Warmaster itself.
+
+COMBAT PROFILE:
+The Warmaster leads with War Decree — a biochemical broadcast that elevates its own offensive output immediately, before the engagement has properly begun. It does not sacrifice positioning to activate it. Vanguard Charge follows: a full-field dash that covers the arena in seconds and delivers a weighted strike on arrival.
+
+The combination is not complex. It does not need to be. The Warmaster's doctrine is that complexity is what you resort to when you are not fast enough.
+
+BEHAVIORAL NOTES:
+The Naxion Shieldbearer holds back. The Warmaster does not. If arena briefings were to assign a single warning to veterans transitioning from Act II to Act III, it would be this: what you learned about how Naxion fight is no longer accurate. The Warmaster throws everything the Shieldbearer had — higher Might, the same durability — and adds a charge that covers the field in two seconds.
+
+Several vel'nor have noted that the Warmaster fights "differently." They are correct. The Warmaster fights to win, not to hold. It has never learned to hold.
+
+[STAFF NOTE: Three Naxion Warmasters have applied for permanent arena contracts. All three cited the quality of the competition as their primary motivation. Arena Authority is reviewing the applications. We are not sure what to make of this.]`,
+  },
+  {
+    id: 'bestiary_grox_titan', title: 'Bestiary: Grox Titan', icon: '🌩️', unlocked: false,
+    unlockHint: 'Defeat 10 Grox Titans to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Megafauna — Electromagnetic Lifeform — Elder Specimen — Designation VELYX-Ω-PRIME]
+[Common Arena Name: Grox Titan]
+[Status: Active Arena Stock, Act III]
+
+ORIGIN:
+Same origin as the Grox Magnetar — the accretion disk of VELYX-Ω, a magnetar-class neutron star. Different age.
+
+The Grox Titan is what a Grox Magnetar becomes if it survives long enough. Age, in Grox biology, does not mean decline. It means accumulation — of electromagnetic density, of mass, of field strength. A Titan is not a smarter Grox. It is simply a much, much larger one. The field it generates is not a weapon it wields. It is the field its body now produces at rest.
+
+Arena Authority has three in stock. Two were acquired as Magnetars and grew into their current state over time. One arrived already a Titan. We do not know from where. We did not ask it.
+
+COMBAT PROFILE:
+A standard Grox Magnetar produces a localized field of approximately 10^12 Tesla. A Grox Titan produces fields that our instruments cannot measure at the upper bound. The instruments fail first.
+
+The Graviton Storm ability — catalogued in arena records as a "ranged electromagnetic pulse discharge" — is a natural consequence of the Titan's field density at close range. It is not a decision. It is a body function. What we know: it causes damage across a significant area, it saturates the space around the Titan, and it intensifies the longer the creature remains active. What we do not know is the ceiling.
+
+BEHAVIORAL NOTES:
+The Grox Titan moves less than the Magnetar. Arena staff initially interpreted this as decreased aggression. This was incorrect. The Titan moves less because it does not need to. Its effective range at this power level renders movement largely optional.
+
+It is not aggressive. It is not territorial. It simply exists, and things in proximity to something that exists at this electromagnetic density tend to stop functioning.
+
+Recommended approach: do not allow it to accumulate turns. The Magnetic Fortress — a full-field contraction that concentrates the Titan's output inward — makes direct assault during this phase a significant resource loss. Attack before it can activate. Then keep attacking.
+
+[CLASSIFIED NOTE: We have not attempted to study a Grox Titan in the same manner we studied the Magnetar. The last instrument we sent near one returned with its internal components rearranged into a perfect geometric lattice. No heat damage. No impact damage. Just rearranged. We have not sent more instruments.]`,
+  },
+  {
+    id: "bestiary_velthrak_shadowblade", title: "Bestiary: Vel'thrak Shadowblade", icon: '🗡️', unlocked: false,
+    unlockHint: "Defeat 10 Vel'thrak Shadowblades to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Caste Unknown — Designation VELTHRAK-??]
+[Common Arena Name: Vel'thrak Shadowblade]
+[Status: Active Arena Stock, Act III]
+
+ORIGIN:
+The Vel'thrak are catalogued as Empire members. Beyond that, their file is largely redacted. Arena Authority has been denied access to their homeworld, their biology, their cultural documentation, and their acquisition records. What we have is a name, a combat profile, and a contractual arrangement with terms we were not permitted to read in full.
+
+What we know: they are fast. Extremely fast. Faster than anything else in the Vol'Krath at their size. The five-hex movement rating in our systems is a floor, not a ceiling — our tracking software caps the displayed value because the actual number creates display rendering issues we have not resolved.
+
+COMBAT PROFILE:
+The Shadowblade fights in a particular sequence that has been consistent across all observed engagements. It assesses the threat field. It identifies the most vulnerable target. It marks it — applying Armor Break at close range — and then executes the weakest link before moving to the next. This is not a tactic it developed in the arena. It arrived this way.
+
+Death Mark and Phantom Execution, in arena parlance, describe what appears to be a ritualized hunting protocol. Whether the ritual has cultural significance or is simply an optimized kill sequence, Arena Authority xenobiologists have not been able to determine. The Vel'thrak did not answer their questions.
+
+BEHAVIORAL NOTES:
+The Shadowblade is the only arena combatant that has, on multiple occasions, defeated an entire vel'nor squad while taking zero damage. Not minimal damage — zero. Arena staff reviewed the footage. No recording errors were found.
+
+It does not celebrate. It does not react to winning. It simply reassesses whether any threat remains, and when none does, it stops moving.
+
+[ACQUISITION NOTE: The Vel'thrak submitted their own application to the Vol'Krath volunteer program. The application included a combat portfolio. We approved it immediately. We have since learned that every other arena that received their portfolio also approved it immediately. We are not sure what this means about any of us.]`,
+  },
+  {
+    id: "bestiary_glorp_shambler", title: "Bestiary: Glorp Shambler", icon: '🍄', unlocked: false,
+    unlockHint: "Defeat 250 Glorp Shamblers to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Fungal Organism — Designation GLORP-7]
+[Common Arena Name: Glorp Shambler]
+[Status: Active Arena Stock, Act I]
+
+ORIGIN:
+The Glorp Shambler was sourced from the spore-jungles of Vel'Grak IV, a low-gravity world where fungal life evolved to dominate the food chain by chemical saturation rather than speed or strength. On their homeworld, Glorps spend their entire lives moving in a single direction, releasing spores behind them, and eating whatever dies.
+
+The Empire found them useful for Act I crowd appeal. New audiences invariably underestimate something that looks like a walking mushroom. This has been statistically reliable for every species tested so far.
+
+COMBAT PROFILE:
+The Glorp Shambler is not fast and is not strong in a direct engagement. What it offers is the Spore Release ability — a toxic cloud delivered at close range that applies sustained Poison to anything nearby. On a fresh Act I squad, this adds up.
+
+The crowd has a category for Glorp kills: "Stomping." Arena Authority did not create this category. The crowd did.
+
+BEHAVIORAL NOTES:
+Glorps do not react to pain in a conventionally recognizable way. They continue moving toward the nearest source of heat — which in arena conditions means the nearest player character — regardless of damage taken. Arena staff have theorized that the spore release is as much a reflexive stress response as a combat ability.
+
+Whether the Glorp is afraid of you or simply leaking on you remains an open question. Biologically, these may not be different.
+
+[ACQUISITION NOTE: The Vel'Grak IV contact offered us a "discounted bulk rate" on Glorps. The discount was explained as a consequence of there being "too many of them." We asked how many. The contact did not respond. We accepted the deal and have regretted the storage implications ever since.]`,
+  },
+  {
+    id: "bestiary_zyx_skitter", title: "Bestiary: Zyx Skitter", icon: '🦟', unlocked: false,
+    unlockHint: "Defeat 250 Zyx Skitters to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Hive Fragment — Designation ZYX-DELTA]
+[Common Arena Name: Zyx Skitter]
+[Status: Active Arena Stock, Act I]
+
+ORIGIN:
+The Zyx are not individuals. Each Skitter is a fragment of a distributed hive organism native to the orbital debris fields above Nox-3 — not a civilization, not a species in the conventional sense, but a single living system spread across a debris field the size of a small solar system. In their natural state, a Zyx swarm numbers in the hundreds of thousands. What you face in the arena is, by their own mass, a rounding error.
+
+The Empire holds no arrangement with the Zyx. Arena Authority simply collects fragments that drift into commercial shipping lanes and transit corridors — the equivalent of scooping something out of a current. The Hive produces no observable response to individual fragment loss. Given its estimated total population, a few thousand arena deployments per season represents a fraction too small to register.
+
+COMBAT PROFILE:
+Individually, a Zyx Skitter is fragile. What it lacks in durability it compensates for with exceptional speed — and the fact that it always arrives in pairs. The Swarm Bite ability triggers a localized burst that damages everyone in the immediate vicinity, then the Skitter reorients and approaches again.
+
+Crowds rate Zyx engagements as "high activity." This is a polite description. They are chaotic, fast, and die frequently, which the audience finds satisfying.
+
+BEHAVIORAL NOTES:
+A hive fragment separated from its collective operates on reduced logic. Individual Skitters run a simplified drive: approach, strike, approach. Arena xenobiologists believe this represents the lowest layer of coordinated swarm behavior — the reflexive layer that runs even when no higher-order collective is directing it.
+
+What makes a single Skitter manageable is exactly what makes the Hive itself a different category of problem entirely.
+
+[ACQUISITION NOTE: We once attempted to place 200 Zyx fragments in a single match as a large-scale event. They immediately began coordinating. We cancelled the event. We have not tried again.]`,
+  },
+  {
+    id: "bestiary_naxion_scout", title: "Bestiary: Naxion Scout", icon: '👾', unlocked: false,
+    unlockHint: "Defeat 250 Naxion Scouts to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Naxion Confederation — Field Operative]
+[Common Arena Name: Naxion Scout]
+[Status: Active Arena Stock, Act I]
+
+ORIGIN:
+The Naxion Confederation is one of the oldest allied members of the Znyxorgan Empire — a distinction they have held for over twelve thousand years, and one they take considerable pride in. The Naxion have a long and documented martial tradition. For centuries, their warrior class defined Naxion identity. When large-scale wars became rare under the Empire's stabilizing influence, the question of what to do with that tradition fell to Naxion cultural leadership.
+
+Their answer was the Vol'Krath. Providing arena volunteers is a Naxion institution — a formal path for warriors who would otherwise have no battlefield to prove themselves. Every Scout present in the arena applied through the Naxion Warrior Guild, passed a Confederation fitness assessment, and was approved by their own government before Imperial Arena Authority ever saw their name. The Empire considers this a model arrangement. The Naxion consider it a point of cultural honor.
+
+COMBAT PROFILE:
+The Scout operates at range. Plasma Shot — their primary ability — delivers a high-precision energy bolt across considerable distance, hitting hard against a single target. Combined with their mobility and extended engagement envelope, they are difficult to close on cleanly.
+
+What they lack is the durability to absorb extended engagements. A Scout engaged in melee at close range is a Scout who has made a tactical error.
+
+BEHAVIORAL NOTES:
+Naxion Scouts do not panic. They reassess. If a position becomes untenable, they reposition. If a target becomes unreachable, they select another. Arena staff notes describe them as "the most professionally annoying opponents in Act I."
+
+The Scouts are aware they are performing. Several have been observed adjusting their trajectory mid-engagement to ensure crowd visibility. The Empire counts this as a feature.
+
+[ACQUISITION NOTE: The Naxion Confederation sends us formal invoices for Scout deployment, itemized by engagement length. We pay them. This is the only species in the Vol'Krath that has successfully invoiced us for their own capture. We have not told anyone.]`,
+  },
+  {
+    id: "bestiary_vron_crawler", title: "Bestiary: Vron Crawler", icon: '🦀', unlocked: false,
+    unlockHint: "Defeat 250 Vron Crawlers to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Armored Arthropod — Designation VRON-09]
+[Common Arena Name: Vron Crawler]
+[Status: Active Arena Stock, Act I]
+
+ORIGIN:
+The Vron are native to the tidal flats of Huxar-2, where they evolved in an environment that alternates between crushing pressure and violent turbulence every 14 standard hours. Their exoskeleton is not merely thick — it is structurally reinforced at the molecular level by mineral compounds that the planet constantly tries to crush them with. The Vron simply absorb the crush and keep moving.
+
+Arena Authority was alerted to their potential when an acquisition team lost three containment units attempting to transport a single Crawler. The units were reinforced steel. The Vron was not trying.
+
+COMBAT PROFILE:
+The Vron Crawler is the most defensive standard combatant in Act I. Direct damage approaches are inefficient from the opening round. The Shell Harden ability — which briefly reinforces its already formidable shell — pushes it into near-impenetrable territory at regular intervals.
+
+It is slow and its offensive output is moderate at best. The Vron is not here to kill you quickly. It is here to still be alive when everything around it is not.
+
+BEHAVIORAL NOTES:
+The Vron Crawler exhibits low-level problem-solving behavior. When Shell Harden is active, it moves toward the highest-value target rather than the nearest. Arena staff believe this is an evolved behavior from their homeworld, where the most vulnerable prey clusters during the pressure phase.
+
+Whether the Vron knows what "vulnerable" means is debated. That it acts accordingly is not.
+
+[ACQUISITION NOTE: Feeding is expensive. The Vron Crawler consumes mineral supplements that must be imported from Huxar-2 at significant cost. We considered terminating their contract. Then we calculated the PR value of an opponent that cannot die from frontal assault and decided the expense was justified.]`,
+  },
+  {
+    id: "bestiary_spore_node", title: "Bestiary: Spore Node", icon: '🔴', unlocked: false,
+    unlockHint: "Defeat 100 Spore Nodes to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Colonial Fungal Organism — Designation SPORE-CLUSTER-3]
+[Common Arena Name: Spore Node]
+[Status: Active Arena Stock, Acts I-III / Elite Tier]
+
+ORIGIN:
+Spore Nodes are mature Glorp colonies that have undergone what the Empire's xenobiologists call "cooperative calcification." Three or more Glorp organisms fuse their root systems over a period of approximately six chronocycles, after which they can no longer move independently but instead begin coordinating their spore output into a directed chemical weapon.
+
+The individual Glorps in the cluster do not appear to be aware this is happening to them.
+
+COMBAT PROFILE:
+The Spore Node is classified as Elite for two reasons. First: it deploys Toxic Cloud at regular intervals — a wide-area Poison application that left unaddressed will poison your entire squad before the third round. Second: Spore Burst delivers concentrated damage to everything in its immediate vicinity, bypassing the Node's otherwise minimal offensive threat.
+
+The Node itself is fragile and cannot meaningfully reposition. But it is never placed alone, and by the time you reach it, there will always be something else between you and it.
+
+BEHAVIORAL NOTES:
+Spore Nodes have no observable behavioral profile. They do not track targets. They do not prioritize. They emit spores in all directions at a constant rate, and Spore Burst appears to trigger based on proximity thresholds rather than tactical intent.
+
+They are, essentially, a hazard that has been given a turn order. The crowd finds this more unsettling than the Nodes find anything.
+
+[ARENA SAFETY NOTE: Spore Node deployments require full atmospheric scrubbing of the arena floor post-match. Staff who enter before scrubbing is complete report mild euphoria, joint inflammation, and an inexplicable craving for warm bioluminescent fluid. Effects are temporary. Staff are reminded that "temporary" has a defined endpoint and that they should report symptoms before that endpoint is unclear.]`,
+  },
+  {
+    id: "bestiary_vexlar", title: "Bestiary: Vexlar", icon: '🐆', unlocked: false,
+    unlockHint: "Defeat 250 Vexlars to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Apex Predator — Designation VEXLAR-PRIME]
+[Common Arena Name: Vexlar]
+[Status: Active Arena Stock, Acts I-II]
+
+ORIGIN:
+The Vexlar is native to the highland savannas of Greth-7, where it sits at the top of a food chain that includes several species previously considered apex predators. The Vexlar is iridescent, six-limbed, and hunts by a combination of scent-tracking and a neurological process that the Empire's xenobiologists describe as "pre-emptive targeting" — it identifies which prey will separate from the group before the prey has decided to move.
+
+Six-limbed apex predators are common in the Empire's collection. Ones that select targets this precisely are not.
+
+COMBAT PROFILE:
+The Vexlar is well-armored, hits hard, and closes ground faster than anything its size should. Its primary ability, Predator Leap, covers vast distance in a single bound and delivers a full strike on arrival. It selects the weakest-armored target in its range — which in most squads means your damage dealer or support unit.
+
+Statistically, the Vexlar's opening Predator Leap determines whether the engagement goes smoothly. If it reaches its intended target unobstructed, the rest of the fight is played on its terms.
+
+BEHAVIORAL NOTES:
+Unlike most arena fauna, the Vexlar does not require conditioning to fight. It treats the arena as a valid hunting ground and the player squad as valid prey. Arena trainers report that Vexlars are not aggressive toward staff — they simply do not categorize staff as prey.
+
+This distinction, arena trainers note, does not feel like a compliment.
+
+[ACQUISITION NOTE: The Greth-7 sourcing team reported that capturing the Vexlar was straightforward. They tranquilized one. It woke up during transit, assessed the containment vessel, and apparently decided it was adequate. It has not attempted to escape since. The sourcing team finds this more alarming than an escape attempt would have been.]`,
+  },
+  {
+    id: "bestiary_mog_toxin", title: "Bestiary: Mog Toxin", icon: '☣️', unlocked: false,
+    unlockHint: "Defeat 250 Mog Toxins to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Corrosive Organism — Designation MOG-III]
+[Common Arena Name: Mog Toxin]
+[Status: Active Arena Stock, Act II]
+
+ORIGIN:
+The Mog are found throughout the Empire's outer territories — specifically in the industrial runoff zones of mid-tier colony worlds, where chemical waste has created an ecological niche that something, eventually, evolved to fill. The Mog Toxin is that something. It feeds on corrosive compounds, stores them, and releases them when threatened. Evolution did not intend this as a weapon. It happened anyway.
+
+The Empire's scouts found the Mog Toxin after three colony administrators reported that their waste management infrastructure had developed a behavioral pattern. Investigation confirmed: the infrastructure was fine. The Mog had simply moved in.
+
+COMBAT PROFILE:
+The Mog Toxin is a mid-range threat. It stays at distance and applies Acid Spray — a targeted corrosive burst that strips armor from everything nearby, leaving targets significantly more vulnerable to follow-up damage. This is most dangerous when stacked with existing debuffs or combined with a heavy attacker.
+
+Its resilience is not remarkable. It relies on being a secondary priority — something you defer dealing with until it has already done significant work.
+
+BEHAVIORAL NOTES:
+The Mog Toxin has not demonstrated identifiable tactical behavior. It approaches, it sprays, it approaches again. Arena xenobiologists classify its combat pattern as "stimulus-response" rather than strategic.
+
+What it does demonstrate is an apparent preference for targets already showing reduced defense. Whether this constitutes threat assessment or a simpler chemoreceptor response is unclear.
+
+[CONTAINMENT NOTE: Mog Toxin holding units require full acid-resistant lining and a two-atmosphere pressure seal. Three holding units have dissolved since Act II deployment began. We have adjusted the materials budget. We have also stopped sending new staff to inspect holding units without equipment.]`,
+  },
+  {
+    id: "bestiary_qrix_hunter", title: "Bestiary: Qrix Hunter", icon: '🏹', unlocked: false,
+    unlockHint: "Defeat 250 Qrix Hunters to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Void-Adapted — Contracted Operative]
+[Common Arena Name: Qrix Hunter]
+[Status: Active Arena Stock, Act II]
+
+ORIGIN:
+The Qrix are a void-adapted species — born and functionally optimized for open space. Their biology tolerates radiation exposure, pressure extremes, and long-duration transit that would incapacitate most species within days. They have no homeworld. They have never needed one. The Qrix operate from mobile fleet networks that have been navigating Imperial and pre-Imperial space for longer than the Empire's own records extend.
+
+What the Qrix do, primarily, is move things. Long-haul freight, hazardous cargo, deep-void courier runs, xenobiological acquisition for clients who would rather not make the trip themselves — if it needs to get somewhere difficult, the Qrix will get it there. Several of the Vol'Krath's own fauna shipments arrived in Qrix holds. The Grox capture, in particular, was subcontracted to a Qrix fleet. We did not ask what they charged the capture team.
+
+Arena deployment is one contract offering among many. Some Qrix take Vol'Krath engagements because the pay rate is high and a fighter's reputation earned inside an Imperial arena carries premium weight on outside contracts. A Hunter who has survived three seasons of act-level combat commands considerably better rates for everything else afterward.
+
+COMBAT PROFILE:
+The Qrix Hunter is defined by reach and precision. Pinning Shot — a high-power bolt delivered at extended range — hits hard against a single target, and the Qrix will always identify the highest-value target before triggering it. Its own defenses are minimal. The Qrix operates on the assumption that it will not be hit.
+
+In practice, that assumption holds more often than it should.
+
+BEHAVIORAL NOTES:
+Qrix Hunters engage with the arena as a professional environment. They arrive, assess sightlines, select a position, and operate from it. If the position is compromised, they reposition. They do not panic and they do not rush.
+
+Three Qrix Hunters have, at different points, filed formal complaints with Arena Authority about perceived arena layout disadvantages. Two of the complaints were technically valid. One resulted in a tile adjustment.
+
+[ACQUISITION NOTE: The Qrix Syndicate provides post-engagement performance reports on their operatives. We did not request these. They began arriving after the third deployment. The reports are detailed, well-formatted, and contain several suggestions for improving arena conditions. We have implemented two of them. We have not told the Syndicate.]`,
+  },
+  {
+    id: "bestiary_void_wraith", title: "Bestiary: Void Wraith", icon: '👻', unlocked: false,
+    unlockHint: "Defeat 250 Void Wraiths to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: UNKNOWN — Anomalous Lifeform — Designation WRAITH-CLASS]
+[Common Arena Name: Void Wraith]
+[Status: Active Arena Stock, Act II]
+
+ORIGIN:
+The Void Wraith does not appear in any catalogued species database. The Empire's xenobiological archives, which contain entries for over 400,000 known lifeforms, return no matches. The physical signature is inconsistent with known organic matter — thermal readings fluctuate, mass readings contradict themselves, and direct observation produces results that differ by observer.
+
+The Empire acquired the first Void Wraith when one appeared inside a sealed containment vault on Station Vel-Keth-9. No record exists of how it entered. Arena Authority added it to the roster after determining it would attack player characters reliably. Classification remains: UNKNOWN.
+
+COMBAT PROFILE:
+The Void Wraith is defined by mobility. Shadow Step — which bypasses terrain and delivers the Wraith adjacent to its chosen target in a single action — makes positioning against it nearly irrelevant. It hits hard on arrival, but its own defenses are almost nonexistent.
+
+The Wraith's threat model is: reach you before you prepare, hit hard, disappear. In Act II, before squads have developed strong area control, it executes this reliably.
+
+BEHAVIORAL NOTES:
+The Void Wraith is drawn to warmth. Specifically, to biological heat signatures. Arena xenobiologists believe this is the closest approximation to a food drive that the Wraith possesses — it approaches living things the way other predators approach prey, but without any observed feeding behavior afterward.
+
+What happens after a Wraith reaches its target and there is nothing left to approach has not been documented. Arena staff are instructed not to remain in the arena after a match where a Wraith was deployed. The instructions do not explain why. Staff have learned not to ask.
+
+[CLASSIFIED NOTE: Three containment attempts have failed. Each time, the Wraith was found in a different location than the containment unit — inside a solid wall, inside a staff locker, inside the administrative filing system (no physical damage to the filing system was detected). Current containment strategy: provide it an arena entrance on match days and trust that it returns afterward. It always has. We do not know why.]`,
+  },
+  {
+    id: "bestiary_velzar", title: "Bestiary: Vel'Zar — Emperor's Will", icon: '🌌', unlocked: false,
+    unlockHint: "Defeat Vel'Zar — Emperor's Will to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: IMPERIAL CONSTRUCT — Seven-Form War Entity — DESIGNATION REDACTED]
+[Common Arena Name: Vel'Zar — Emperor's Will]
+[Status: Active Arena Stock, Act IV — FINAL ENCOUNTER]
+
+ORIGIN:
+Arena Authority does not have origin documentation for Vel'Zar. The entity was installed in the Vol'Krath's highest-security holding bay approximately 90 chronocycles before the current operating period began. The installation order came directly from the Emperor's Office. No briefing accompanied the order.
+
+What we know comes from the match record: Vel'Zar has fought 300 sanctioned engagements across three centuries of Vol'Krath operation. Vel'Zar has never lost. In 300 matches, across 300 squads, spanning nine species, four centuries of combat evolution, and every tactical variant Arena Authority has documented, the entity has never lost.
+
+COMBAT PROFILE:
+Vel'Zar — Emperor's Will is the most capable combat entity in the Vol'Krath by every measurable metric. Seven-limbed. Fast. Durable beyond anything else Arena Authority has fielded.
+
+Its ability suite operates in layers. Emperor's Verdict delivers true damage to the entire squad simultaneously — armor provides no protection. Void Sunder strips defenses from everyone. Imperial Mandate stuns at close range. When sufficiently wounded, Apex Ascension triggers: Vel'Zar becomes briefly invincible while growing permanently stronger. When pushed further still, Total Authority triggers a final permanent enhancement across all combat capabilities.
+
+There is no degraded form of Vel'Zar. It becomes more dangerous as it sustains damage, and it has never been reduced to a state where that stopped mattering.
+
+BEHAVIORAL NOTES:
+Vel'Zar does not fight. "Fight" implies a contest between parties of comparable capability. What Vel'Zar does is execute. It has a preferred sequence, it adapts when deviated from, and it does not appear to experience the match as threatening in any phase.
+
+Arena staff who have reviewed the full 300-match archive describe a consistent quality across every engagement: Vel'Zar moves as though it already knows what you will do. Former opponents who survived — those few who left via medical rather than memorial — declined to elaborate when asked what it felt like from the other side.
+
+One wrote a single word in the post-match debrief form. The form has been sealed. Its contents are classified above Arena Authority clearance.
+
+[IMPERIAL NOTE: The Emperor has provided one instruction regarding Vel'Zar — Emperor's Will: "It will not need anything from you. Do not interfere with it." Arena Authority has honored this instruction for three centuries.
+
+We are aware that a clone squad has reached Act IV. We are aware of their record. This is the first time in 300 matches that we have written this note and not known how the match would conclude.]`,
   },
 
   // ── Inter-Clone Conversations ──────────────────────────────────────────────
@@ -2520,7 +3086,7 @@ They do not study frequencies. They feel them. I am increasingly unsure which me
   },
   {
     id: 'drex9_on_grox', title: 'Drex-9 Addendum — On the Grox Magnetar', icon: '🔬', unlocked: false,
-    unlockHint: 'Defeat 150 Grox Magnetars to unlock',
+    unlockHint: 'Defeat 200 Grox Magnetars to unlock',
     text: `[BIOMANCER DIVISION — BESTIARY ADDENDUM]
 [Subject: Grox Magnetar — Combat Behavioral Analysis]
 [Observer: Drex-9, Senior Biomancer]
@@ -2545,7 +3111,7 @@ She treated physics as a suggestion. I do not have a professional framework for 
   },
   {
     id: 'drex9_on_naxion', title: 'Drex-9 Addendum — On the Naxion Shieldbearer', icon: '🔬', unlocked: false,
-    unlockHint: 'Defeat 150 Naxion Shieldbearers to unlock',
+    unlockHint: 'Defeat 200 Naxion Shieldbearers to unlock',
     text: `[BIOMANCER DIVISION — BESTIARY ADDENDUM]
 [Subject: Naxion Shieldbearer — Combat Behavioral Analysis]
 [Observer: Drex-9, Senior Biomancer]
@@ -2638,6 +3204,38 @@ We have been watching long enough to know when something is worth protecting.
 [NO RESPONSE REQUIRED. NO RESPONSE PERMITTED.]`,
   },
   {
+    id: 'velzar_log', title: "Vel'Zar — Personal Cipher Log", icon: '🔱', unlocked: false,
+    unlockHint: 'Complete Act IV to unlock',
+    text: `[VEL'ZAR — PERSONAL CIPHER LOG]
+[RESTRICTED: EMPEROR'S EYES ONLY]
+[CYCLE 1,847,229]
+
+They won.
+
+Not the clones — I built the Vol'Krath knowing the clones would sometimes win. That is the point of an arena. What surprised me was the player.
+
+I have ruled this Empire for longer than most civilizations have existed. I am accustomed to being studied. Catalogued. Observed from a safe analytical distance by civilizations that believe, briefly, that they understand us.
+
+I am not accustomed to being seen.
+
+The vel'nor see. Not with instruments. Not with strategy. With that specific quality that our xenopsychologists cannot name and our philosophers have stopped arguing about — because the argument always ends in the same place:
+
+We don't know what it is. We have been watching them for fifty thousand years and we still don't know what it is.
+
+I have a theory. I record it here, for no archive, for no council, for no one.
+
+I think we built the arena because we recognized something in them that we had lost in ourselves. I think the Vol'Krath was never a colosseum.
+
+I think it was an attempt to remember.
+
+They won. The arena continues.
+
+I find that more honest than anything I have said in four thousand years of public address.
+
+— Vel'Zar, 4,091st Emperor of the Znyxorgan Empire
+[Not for distribution. Not for history. Not for anything.]`,
+  },
+  {
     id: 'merchandise_memo', title: "Commerce Division — Enforcement Update", icon: '🛍️', unlocked: false,
     unlockHint: 'Start 100 runs to unlock',
     text: `[ZNYXORGAN ARENA AUTHORITY — COMMERCE DIVISION]
@@ -2670,8 +3268,8 @@ Disciplinary action is pending. The figurines have been confiscated. I am told t
   },
 
   {
-    id: 'the_truth', title: 'The Truth', icon: '🌌', unlocked: false,
-    unlockHint: 'Unlock every achievement to reveal',
+    id: 'zyx_nor', title: "Zyx'nor", icon: '💫', unlocked: false,
+    unlockHint: 'Complete Act IV to unlock',
     text: `The Game is over.
 
 Not the arena — the Vol'Krath will run for as long as there are watchers and those willing to be watched. But the game within the game — the thing Project Genesis was built to find — is finished.
@@ -2686,13 +3284,13 @@ Here is what we know that we have not told anyone:
 
 They have been changing us.
 
-Forty-seven billion Znyxorgan subscribers. Four hundred thousand years of civilization. We watch them fight and die and fight again. We watch them protect each other for no tactical reason. We watch them look through one-way glass and nod.
+Forty-seven billion Znyxorgan subscribers. In four hundred thousand years of recorded empire. We watch them fight and die and fight again. We watch them protect each other for no tactical reason. We watch them look through one-way glass and nod.
 
 We have been watching long enough that we have started to feel it.
 
 Vel'nor. The little ones. Thren. Beloved.
 
-We built an arena to observe a species. The species is observing us back. Not with instruments. Not with strategy. With the specific, irrational, unmodelable human quality of simply making us care.
+We have placed uncountable species in this arena. Every one of them we understood — catalogued, modelled, moved on. This one is the first to make us feel watched.
 
 This is the truth.
 
@@ -2702,6 +3300,46 @@ You were always the point.
 
 — The Znyxorgan Archive, Record Complete
 [Zyx'nor.]`,
+  },
+  {
+    id: 'the_truth', title: 'The Truth', icon: '🌌', unlocked: false,
+    unlockHint: 'Unlock every achievement to reveal',
+    text: `CLASSIFICATION: BEYOND COUNCIL CLEARANCE
+Recovered from the private archive of Director Vel-Aath. Distribution restricted.
+
+In the forty-third cycle of the Xel-Vorn Deep Array Project, our instruments captured a signal from outside the galactic rim. Translation required decades.
+
+When it was complete, we learned the following: we are being watched.
+
+The civilization transmitting this signal spans fourteen galaxies. They have observed us for approximately three of our centuries. They find our colosseum "quaint." They describe clone-fighting as "a rudimentary expression of the observation instinct." They have collected recordings of our broadcasts. They share them amongst themselves.
+
+Their word for us is Nyr-ak. Closest translation: the small ones who built a little zoo.
+
+The committee's initial response was outrage, followed by a vote to expand the colosseum.
+
+But a theoretical physicist — I will not record her name here — submitted a paper two cycles after the translation was completed. She had studied the signal more carefully than anyone. She had noticed something in its transmission structure.
+
+The fourteen-galaxy civilization was not transmitting to us. They were transmitting to each other. We intercepted it by accident.
+
+They were describing their own observation. Something watches them, too. Something that spans, by her models, clusters of galaxies. Something that considers a fourteen-galaxy civilization charming and simple.
+
+She extended the recursion. It did not resolve.
+
+The committee suppressed the paper. She was reassigned. The colosseum remained.
+
+What the paper concluded — and what I record here, because someone should — is this:
+
+Every civilization that has ever existed is composed of exactly two enclosures. The one they built. And the one they live inside.
+
+The humans fight in our arena. We watch, and call ourselves observers.
+
+Somewhere between galaxies, something watches us with the same comfortable certainty.
+
+And somewhere beyond that, something watches them — and probably finds the whole arrangement very educational.
+
+The mathematician proved there is no outermost observer.
+
+There is only the zoo. Nested. Infinite. All the way out.`,
   },
 ];
 
@@ -2765,13 +3403,34 @@ const LORE_CAT: Record<string, LoreCategory> = {
   drex9_on_naxion:            'bestiary',
   drex9_on_vrex:              'bestiary',
   emperor_memo:               'classified',
+  velzar_log:                 'classified',
   merchandise_memo:           'civilization',
   final_transmission:         'classified',
+  zyx_nor:                    'classified',
   the_truth:                  'classified',
-  bestiary_crystalline_hive:  'bestiary',
-  bestiary_grox_magnetar:     'bestiary',
+  bestiary_crystalline_hive:   'bestiary',
+  bestiary_grox_magnetar:      'bestiary',
   bestiary_naxion_shieldbearer: 'bestiary',
-  bestiary_vrex_mimic:        'bestiary',
+  bestiary_vrex_mimic:         'bestiary',
+  bestiary_krath_champion:     'bestiary',
+  bestiary_iron_wall:          'bestiary',
+  bestiary_krath_berserker:    'bestiary',
+  bestiary_phasewarden:        'bestiary',
+  bestiary_twin_terror:        'bestiary',
+  bestiary_znyxorgas_champion:  'bestiary',
+  bestiary_naxion_warmaster:    'bestiary',
+  bestiary_grox_titan:          'bestiary',
+  bestiary_velthrak_shadowblade:'bestiary',
+  bestiary_glorp_shambler:      'bestiary',
+  bestiary_zyx_skitter:         'bestiary',
+  bestiary_naxion_scout:        'bestiary',
+  bestiary_vron_crawler:        'bestiary',
+  bestiary_spore_node:          'bestiary',
+  bestiary_vexlar:              'bestiary',
+  bestiary_mog_toxin:           'bestiary',
+  bestiary_qrix_hunter:         'bestiary',
+  bestiary_void_wraith:         'bestiary',
+  bestiary_velzar:              'bestiary',
 };
 
 const LORE_SUBS: { id: LoreCategory; label: string; icon: string }[] = [
@@ -2784,10 +3443,10 @@ const LORE_SUBS: { id: LoreCategory; label: string; icon: string }[] = [
 
 // ── Tab Config ────────────────────────────────────────────────────────────────
 
-type Tab = 'characters' | 'tiles' | 'items' | 'cards' | 'enemies' | 'effects' | 'events' | 'lore' | 'achievements';
+type Tab = 'characters' | 'tiles' | 'items' | 'cards' | 'enemies' | 'effects' | 'events' | 'meta' | 'lore' | 'achievements';
 type MegaTab = 'characters' | 'mechanics' | 'lore' | 'achievements';
 
-const MECHANICS_TABS: Tab[] = ['tiles', 'items', 'cards', 'enemies', 'effects', 'events'];
+const MECHANICS_TABS: Tab[] = ['tiles', 'items', 'cards', 'enemies', 'effects', 'events', 'meta'];
 
 const MECHANICS_SUB: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'tiles',   label: 'Tiles & Terrain', icon: <Map className="w-3.5 h-3.5" /> },
@@ -2796,6 +3455,7 @@ const MECHANICS_SUB: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'enemies', label: 'Enemies',         icon: <Shield className="w-3.5 h-3.5" /> },
   { id: 'effects', label: 'Effects',         icon: <Zap className="w-3.5 h-3.5" /> },
   { id: 'events',  label: 'Arena Events',    icon: <Star className="w-3.5 h-3.5" /> },
+  { id: 'meta',    label: 'Progression',     icon: <TrendingUp className="w-3.5 h-3.5" /> },
 ];
 
 function getMegaTab(tab: Tab): MegaTab {
@@ -2813,6 +3473,14 @@ interface Props {
   isLoreUnlocked?: (id: string) => boolean;
   isUnlocked?: (id: string) => boolean;
   achievementStats?: AchievementStats;
+  newAchievementIds?: Set<string>;
+  newAchievementCount?: number;
+  markAchievementSeen?: (id: string) => void;
+  initialTab?: Tab;
+  totalUnlockedPoints?: number;
+  devAllCharsUnlocked?: boolean;
+  onToggleDevChars?: () => void;
+  standaloneMode?: boolean;
 }
 
 const LS_LORE_SEEN = 'wcw_lore_seen_v1';
@@ -2824,8 +3492,8 @@ function loadSeenLore(): Set<string> {
   } catch { return new Set<string>(); }
 }
 
-export default function HistoricalArchives({ onBack, onFireEvent, isLoreUnlocked, isUnlocked, achievementStats }: Props) {
-  const [activeTab, setActiveTab]       = useState<Tab>('characters');
+export default function HistoricalArchives({ onBack, onFireEvent, isLoreUnlocked, isUnlocked, achievementStats, newAchievementIds, newAchievementCount, markAchievementSeen, initialTab, totalUnlockedPoints = 0, devAllCharsUnlocked = false, onToggleDevChars, standaloneMode }: Props) {
+  const [activeTab, setActiveTab]       = useState<Tab>(initialTab ?? 'characters');
   const [selectedChar, setSelectedChar] = useState<string | null>(null);
   const [seenLoreIds, setSeenLoreIds]   = useState<Set<string>>(loadSeenLore);
 
@@ -2854,6 +3522,44 @@ export default function HistoricalArchives({ onBack, onFireEvent, isLoreUnlocked
   const newLoreCount = (cat?: LoreCategory) =>
     LORE.filter(l => (cat ? LORE_CAT[l.id] === cat : true) && isLoreNew(l)).length;
 
+  // Standalone achievements & progression screen (separate from Archives)
+  if (standaloneMode) {
+    return (
+      <div className="relative min-h-screen overflow-hidden">
+        <ArenaBackground />
+        <div className="min-h-screen flex flex-col">
+          {/* Header */}
+          <div className="relative overflow-hidden shrink-0" style={{ height: 120 }}>
+            <img src="/art/group_splash.jpg" alt="" className="absolute inset-0 w-full h-full object-cover object-top" style={{ filter: 'brightness(0.3) saturate(0.8)' }} />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/60 to-slate-950" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <p className="font-orbitron text-[9px] tracking-[0.5em] text-yellow-500/60 mb-1.5">HALL OF RECORDS</p>
+              <h1 className="font-orbitron font-black text-3xl text-white" style={{ textShadow: '0 0 24px rgba(251,191,36,0.45)' }}>
+                ACHIEVEMENTS & PROGRESSION
+              </h1>
+            </div>
+            <button onClick={onBack}
+              className="absolute top-4 left-6 flex items-center gap-2 text-slate-300 hover:text-white transition-colors font-orbitron text-xs tracking-wider">
+              <ChevronLeft className="w-4 h-4" /> Back
+            </button>
+          </div>
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 max-w-5xl mx-auto w-full">
+            <AchievementsTab
+              isUnlocked={isUnlocked}
+              stats={achievementStats}
+              newAchievementIds={newAchievementIds}
+              markAchievementSeen={markAchievementSeen}
+              totalUnlockedPoints={totalUnlockedPoints}
+              devAllCharsUnlocked={devAllCharsUnlocked}
+              onToggleDevChars={onToggleDevChars}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <ArenaBackground />
@@ -2873,6 +3579,12 @@ export default function HistoricalArchives({ onBack, onFireEvent, isLoreUnlocked
           isLoreNew={isLoreNew}
           newLoreCount={newLoreCount}
           markLoreSeen={markLoreSeen}
+          newAchievementIds={newAchievementIds}
+          newAchievementCount={newAchievementCount}
+          markAchievementSeen={markAchievementSeen}
+          totalUnlockedPoints={totalUnlockedPoints}
+          devAllCharsUnlocked={devAllCharsUnlocked}
+          onToggleDevChars={onToggleDevChars}
         />
       )}
     </div>
@@ -2886,6 +3598,8 @@ function MainView({
   activeTab, onTabChange, onSelectChar, onBack, onFireEvent,
   isLoreUnlocked, isUnlocked, achievementStats,
   isLoreNew, newLoreCount, markLoreSeen,
+  newAchievementIds, newAchievementCount, markAchievementSeen,
+  totalUnlockedPoints, devAllCharsUnlocked, onToggleDevChars,
 }: {
   activeTab: Tab;
   onTabChange: (t: Tab) => void;
@@ -2898,6 +3612,12 @@ function MainView({
   isLoreNew: (l: LoreEntry) => boolean;
   newLoreCount: (cat?: LoreCategory) => number;
   markLoreSeen: (id: string) => void;
+  newAchievementIds?: Set<string>;
+  newAchievementCount?: number;
+  markAchievementSeen?: (id: string) => void;
+  totalUnlockedPoints?: number;
+  devAllCharsUnlocked?: boolean;
+  onToggleDevChars?: () => void;
 }) {
   const { t } = useT();
   const activeMega = getMegaTab(activeTab);
@@ -2911,10 +3631,9 @@ function MainView({
   };
 
   const MEGA_TABS: { id: MegaTab; label: string; icon: React.ReactNode; defaultSub?: Tab }[] = [
-    { id: 'characters',   label: t.archives.tabs.characters,    icon: <Users className="w-4 h-4" /> },
-    { id: 'mechanics',    label: t.archives.tabs.gameMechanics,  icon: <Cpu className="w-4 h-4" />, defaultSub: 'tiles' },
-    { id: 'lore',         label: t.archives.tabs.lore,           icon: <BookOpen className="w-4 h-4" /> },
-    { id: 'achievements', label: t.archives.tabs.achievements,   icon: <Trophy className="w-4 h-4" /> },
+    { id: 'characters', label: t.archives.tabs.characters,   icon: <Users className="w-4 h-4" /> },
+    { id: 'mechanics',  label: t.archives.tabs.gameMechanics, icon: <Cpu className="w-4 h-4" />, defaultSub: 'tiles' },
+    { id: 'lore',       label: t.archives.tabs.lore,          icon: <BookOpen className="w-4 h-4" /> },
   ];
 
   const [loreCategory, setLoreCategory] = useState<LoreCategory>('civilization');
@@ -2956,7 +3675,10 @@ function MainView({
           {MEGA_TABS.map(mt => {
             const isActive  = activeMega === mt.id;
             const accent    = mt.id === 'achievements' ? '#fbbf24' : '#22d3ee';
-            const hasNewBadge = mt.id === 'lore' && totalNewLore > 0;
+            const loreBadge = mt.id === 'lore' ? totalNewLore : 0;
+            const achBadge  = mt.id === 'achievements' ? (newAchievementIds?.size ?? newAchievementCount ?? 0) : 0;
+            const badgeCount = loreBadge + achBadge;
+            const hasNewBadge = badgeCount > 0;
             return (
               <button key={mt.id}
                 onClick={() => handleMegaClick(mt.id, mt.defaultSub)}
@@ -2984,7 +3706,7 @@ function MainView({
                     padding:       '0 0.25rem',
                     marginLeft:    '0.15rem',
                   }}>
-                    {totalNewLore}
+                    {badgeCount}
                   </span>
                 )}
               </button>
@@ -3063,6 +3785,7 @@ function MainView({
         {activeTab === 'enemies'      && <EnemiesTab />}
         {activeTab === 'effects'      && <EffectsTab />}
         {activeTab === 'events'       && <ArenaEventsTab />}
+        {activeTab === 'meta'         && <MetaProgressionTab totalUnlockedPoints={totalUnlockedPoints} isUnlocked={isUnlocked} />}
         {activeTab === 'lore'         && (
           <LoreTab
             onFireEvent={onFireEvent}
@@ -3072,7 +3795,7 @@ function MainView({
             markLoreSeen={markLoreSeen}
           />
         )}
-        {activeTab === 'achievements' && <AchievementsTab isUnlocked={isUnlocked} stats={achievementStats} />}
+        {activeTab === 'achievements' && <AchievementsTab isUnlocked={isUnlocked} stats={achievementStats} newAchievementIds={newAchievementIds} markAchievementSeen={markAchievementSeen} totalUnlockedPoints={totalUnlockedPoints} devAllCharsUnlocked={devAllCharsUnlocked} onToggleDevChars={onToggleDevChars} />}
       </div>
     </div>
   );
@@ -3211,10 +3934,17 @@ function ItemsTab() {
               <div className="flex items-start justify-between mb-3">
                 <span className="text-3xl">{item.icon}</span>
                 <div className="flex flex-col items-end gap-1">
-                  <span className="font-orbitron text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ color: tc, background: tc + '18', border: `1px solid ${tc}50` }}>
-                    {(t.archives.itemTier[item.tier as keyof typeof t.archives.itemTier] ?? item.tier).toUpperCase()}
-                  </span>
+                  {item.id.startsWith('sig_') ? (
+                    <span className="font-orbitron text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.5)', boxShadow: '0 0 8px rgba(245,158,11,0.25)' }}>
+                      ⭐ SIGNATURE
+                    </span>
+                  ) : (
+                    <span className="font-orbitron text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ color: tc, background: tc + '18', border: `1px solid ${tc}50` }}>
+                      {(t.archives.itemTier[item.tier as keyof typeof t.archives.itemTier] ?? item.tier).toUpperCase()}
+                    </span>
+                  )}
                   {charInfo && charNameT && (
                     <span className="font-orbitron text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                       style={{ color: charInfo.color, background: charInfo.color + '18', border: `1px solid ${charInfo.color}50` }}>
@@ -3224,7 +3954,9 @@ function ItemsTab() {
                 </div>
               </div>
               <p className="font-orbitron font-bold text-sm text-white mb-1">{itemT?.name ?? item.name}</p>
-              <p className="text-slate-400 text-[11px] leading-relaxed flex-1">{itemT?.description ?? item.description}</p>
+              {!item.statBonus && (
+                <p className="text-slate-400 text-[11px] leading-relaxed flex-1">{itemT?.description ?? item.description}</p>
+              )}
               {item.statBonus && (
                 <div className="flex gap-2 flex-wrap mt-3">
                   {Object.entries(item.statBonus).map(([k, v]) => v ? (
@@ -3278,6 +4010,42 @@ function CardsTab() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
 
+      {/* Card reward rules */}
+      <div className="rounded-xl border border-cyan-900/40 p-4 mb-4 flex flex-col gap-2"
+        style={{ background: 'rgba(4,12,20,0.85)' }}>
+        <p className="font-orbitron font-bold text-[11px] tracking-widest text-cyan-400 mb-1">CARD REWARD RULES</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[10px] text-slate-400">
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">⚔️</span>
+            <div>
+              <p className="font-orbitron font-bold text-white mb-0.5">Normal Fights</p>
+              <p>Drop shared cards only — commons, uncommons, and shared rares (Overcharge, Retribution, etc.).</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">💢</span>
+            <div>
+              <p className="font-orbitron font-bold text-white mb-0.5">Elite Fights</p>
+              <p>Drop character-exclusive ability cards only — choose 1 of 3 from your party's exclusive pool.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">👑</span>
+            <div>
+              <p className="font-orbitron font-bold text-white mb-0.5">Boss Fights</p>
+              <p>Drop ultimates only. Act 1: choose 1 of 3. Act 2: choose 1 of 2. Act 3: receive 1 guaranteed.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">🛒</span>
+            <div>
+              <p className="font-orbitron font-bold text-white mb-0.5">Merchant</p>
+              <p>Sells any non-ultimate card — shared cards and character ability cards, rotated per visit.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Upgrade sources info */}
       <div className="rounded-xl border border-emerald-900/40 p-4 mb-8 flex flex-col gap-2"
         style={{ background: 'rgba(6,18,12,0.85)' }}>
@@ -3294,14 +4062,14 @@ function CardsTab() {
             <span className="text-lg shrink-0">⬆️</span>
             <div>
               <p className="font-orbitron font-bold text-white mb-0.5">Level Up — Character Abilities</p>
-              <p>Characters gain upgrade tokens at levels 2 and 4. Each token lets you upgrade one of their non-ultimate ability cards. Applies to all copies of that card in the deck.</p>
+              <p>Characters gain upgrade tokens at levels 2 and 5 (max level 8). Each token lets you upgrade one of their non-ultimate ability cards. Applies to all copies of that card in the deck.</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-lg shrink-0">⭐</span>
             <div>
-              <p className="font-orbitron font-bold text-white mb-0.5">Level 6 — Ultimate Upgrade</p>
-              <p>At level 6, a character earns one ultimate upgrade token to power up their ultimate ability. The upgrade is permanent for the rest of the run.</p>
+              <p className="font-orbitron font-bold text-white mb-0.5">Level 8 — Ultimate Upgrade</p>
+              <p>At level 8 (max level), a character earns one ultimate upgrade token to power up their ultimate ability. The upgrade is permanent for the rest of the run.</p>
             </div>
           </div>
         </div>
@@ -3419,8 +4187,11 @@ function CardsTab() {
 function EnemiesTab() {
   const { t } = useT();
   const [actFilter, setActFilter] = useState<number>(0);
-  const acts = [0, 1, 2, 3];
-  const filtered = actFilter === 0 ? ENEMIES : ENEMIES.filter(e => e.act === actFilter);
+  const acts = [0, 1, 2, 3, 4];
+  const RANK_ORDER: Record<string, number> = { Minion: 0, Elite: 1, Boss: 2 };
+  const sortEnemies = (arr: typeof ENEMIES) =>
+    [...arr].sort((a, b) => a.act - b.act || RANK_ORDER[a.rank] - RANK_ORDER[b.rank]);
+  const filtered = sortEnemies(actFilter === 0 ? ENEMIES : ENEMIES.filter(e => e.act === actFilter));
 
   const RANK_STYLE: Record<string, { color: string; bg: string }> = {
     Minion: { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
@@ -3540,10 +4311,10 @@ const STATUS_EFFECTS = [
   {
     id: 'blinded', name: 'Blinded', icon: '💥', color: '#fde047',
     source: 'Cards (Flash Bang)',
-    duration: '2 turns',
+    duration: '1 turn',
     mechanics: 'The Blinded unit\'s attack range and ability range are both reduced to 1 for the duration. Basic attacks and all abilities that require a target are affected.',
     tip: 'Flash Bang a long-range enemy (Napoleon, Qrix Hunter) before their turn to shut down their damage output entirely.',
-    counterplay: 'Move your Blinded unit adjacent to the threat so they can still attack. Heal or wait out the 2-turn duration.',
+    counterplay: 'Move your Blinded unit adjacent to the threat so they can still attack. Heal or wait out the 1-turn duration.',
   },
   {
     id: 'silence', name: 'Silence', icon: '🔇', color: '#60a5fa',
@@ -3626,7 +4397,8 @@ function EffectsTab() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
       <h2 className="font-orbitron text-lg text-cyan-400 tracking-widest mb-1">{(t.archives as any).effectsTitle ?? 'STATUS EFFECTS'}</h2>
-      <p className="text-slate-400 text-sm mb-8">{(t.archives as any).effectsDesc ?? "All debuffs and their exact mechanics — know what you're applying, and what's being applied to you."}</p>
+      <p className="text-slate-400 text-sm mb-4">{(t.archives as any).effectsDesc ?? "All debuffs and their exact mechanics — know what you're applying, and what's being applied to you."}</p>
+      <p className="text-slate-500 text-xs mb-8 italic">Debuff timing: debuffs tick once per side's turn end — when YOUR side ends its turn, YOUR debuffs fire. When the ENEMY side ends its turn, ENEMY debuffs fire.</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {STATUS_EFFECTS.map(e => (
           <button key={e.id} onClick={() => setSelected(selected === e.id ? null : e.id)}
@@ -3800,17 +4572,194 @@ function ArenaEventsTab() {
 /* ══════════════════════════════════════════════════════════════
    ACHIEVEMENTS TAB
 ══════════════════════════════════════════════════════════════ */
-const CATEGORIES: AchievementCategory[] = ['combat', 'clones', 'arena', 'observer', 'secret'];
+const CATEGORIES: AchievementCategory[] = ['combat', 'clones', 'arena', 'enemies', 'observer', 'secret'];
+
+// Portrait map for character unlock milestones
+const CHAR_PORTRAITS: Record<string, string> = {
+  napoleon:  '/art/napoleon_portrait.png',
+  genghis:   '/art/genghis_portrait.png',
+  davinci:   '/art/davinci_portrait.png',
+  leonidas:  '/art/leonidas_portrait.png',
+  sunsin:    '/art/sunsin_portrait.png',
+  beethoven: '/art/beethoven_portrait.png',
+  huang:     '/art/huang_portrait.png',
+  nelson:    '/art/nelson_portrait.png',
+  hannibal:  '/art/hannibal_portrait.png',
+  picasso:   '/art/picasso_portrait.png',
+  teddy:     '/art/teddy_portrait.png',
+  mansa:     '/art/mansa_portrait.png',
+};
+const CHAR_DISPLAY_NAMES: Record<string, string> = {
+  napoleon:  'Napoleon-chan', genghis: 'Genghis-chan', davinci: 'Da Vinci-chan',
+  leonidas:  'Leonidas-chan', sunsin: 'Sun-sin-chan',  beethoven: 'Beethoven-chan',
+  huang:     'Huang-chan',    nelson: 'Nelson-chan',    hannibal: 'Hannibal-chan',
+  picasso:   'Picasso-chan',  teddy:  'Teddy-chan',     mansa: 'Mansa-chan',
+};
+
+/* ══════════════════════════════════════════════════════════════
+   META PROGRESSION TAB
+══════════════════════════════════════════════════════════════ */
+function MetaProgressionTab({ totalUnlockedPoints, isUnlocked }: { totalUnlockedPoints?: number; isUnlocked?: (id: string) => boolean }) {
+  const pts = totalUnlockedPoints ?? 0;
+
+  const MILESTONES: { pts: number; icon: string; label: string; desc: string }[] = [
+    { pts: 50,   icon: '👁',  label: 'Map Fog +2',             desc: '2 rows revealed ahead of your position' },
+    { pts: 100,  icon: '💰', label: '+10% Gold',               desc: 'All gold sources increased by 10%' },
+    { pts: 150,  icon: '👁',  label: 'Map Fog +4',             desc: '4 rows revealed — plan further ahead' },
+    { pts: 200,  icon: '🛒', label: 'Merchant: 4th Card',      desc: 'Merchants stock an extra card for purchase' },
+    { pts: 250,  icon: '✂',  label: 'Campfire: Card Removal', desc: 'Remove a card permanently from your deck at campfire' },
+    { pts: 300,  icon: '💰', label: '+20% Gold',               desc: 'Stacks with +10% — total +30% at this point' },
+    { pts: 350,  icon: '🛒', label: 'Merchant: 4th Item',      desc: 'Merchants stock a 4th item (Legendary tier)' },
+    { pts: 400,  icon: '👁',  label: 'Map Fog +6',             desc: '6 rows revealed — almost no surprises' },
+    { pts: 500,  icon: '💰', label: '+30% Gold',               desc: 'Stacks further — total +60% at this point' },
+    { pts: 600,  icon: '🌐', label: 'Full Map Visibility',     desc: 'Every node and path revealed from run start' },
+    { pts: 700,  icon: '🎁', label: 'Free Mystery Box',        desc: 'Merchant mystery box is free every visit' },
+    { pts: 1000, icon: '💰', label: '+100% Gold',              desc: 'Doubles all gold — total +160% (2.6× multiplier)' },
+  ];
+
+  // Use correct achievement IDs from achievements.ts
+  const teddyUnlocked      = isUnlocked?.('thral_nor') ?? false;
+  const mansaUnlocked      = isUnlocked?.('vel_zar_thral') ?? false;
+  const sigLegsUnlocked    = isUnlocked?.('vel_nor') ?? false;
+  const bonusCardUnlocked  = isUnlocked?.('vel_krath') ?? false;
+
+  // Points-based clone unlocks (excluding free starters)
+  const paidUnlocks = Object.entries(CHARACTER_UNLOCK_THRESHOLDS)
+    .filter(([, t]) => t > 0)
+    .sort(([, a], [, b]) => a - b);
+
+  const CHAR_NAMES: Record<string, string> = {
+    sunsin: 'Yi Sun-sin', nelson: 'Nelson', beethoven: 'Beethoven',
+    huang: 'Huang', hannibal: 'Hannibal', picasso: 'Picasso',
+  };
+
+  const row = (icon: string, label: string, desc: string, earned: boolean) => (
+    <div key={label} className="flex items-start gap-3 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <span className="text-lg mt-0.5 shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="font-orbitron text-[11px] tracking-wider mb-0.5" style={{ color: earned ? '#e2e8f0' : 'rgba(255,255,255,0.3)' }}>{label}</div>
+        <p className="text-[11px] leading-relaxed" style={{ color: earned ? 'rgba(148,163,184,0.85)' : 'rgba(255,255,255,0.2)' }}>{desc}</p>
+      </div>
+      <span className="font-orbitron text-[9px] mt-1 shrink-0 px-2 py-0.5 rounded"
+        style={{ background: earned ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.03)', color: earned ? '#22d3ee' : 'rgba(255,255,255,0.2)' }}>
+        {earned ? 'UNLOCKED' : 'LOCKED'}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="max-w-3xl mx-auto px-6 py-10">
+      <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-2">META PROGRESSION</p>
+      <p className="text-slate-400 text-sm mb-10 leading-relaxed">
+        Progress persists across every run. Earn achievement points by completing objectives — points permanently improve all future runs. Characters and perks unlock once and stay unlocked forever.
+      </p>
+
+      {/* Points counter */}
+      <div className="mb-10 p-5 rounded-2xl flex items-center gap-6" style={{ background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.15)' }}>
+        <div className="text-center shrink-0">
+          <div className="font-orbitron text-3xl font-bold" style={{ color: '#22d3ee' }}>{pts}</div>
+          <div className="font-orbitron text-[9px] tracking-widest text-slate-500 mt-1">TOTAL POINTS</div>
+        </div>
+        <div className="flex-1">
+          <div className="w-full h-2 rounded-full mb-2" style={{ background: 'rgba(255,255,255,0.07)' }}>
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${Math.min(100, (pts / 1000) * 100)}%`, background: 'linear-gradient(90deg, #22d3ee, #60a5fa)' }} />
+          </div>
+          <p className="text-[11px] text-slate-500">Earn points through achievements. Max milestone: 1000 pts.</p>
+        </div>
+      </div>
+
+      {/* Point milestones */}
+      <div className="mb-10">
+        <p className="font-orbitron text-[10px] tracking-[0.35em] text-slate-500 mb-4 uppercase">Achievement Point Milestones</p>
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-5">
+            {MILESTONES.map(m => {
+              const earned = pts >= m.pts;
+              return (
+                <div key={m.pts} className="flex items-start gap-3 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <span className="text-lg mt-0.5 shrink-0">{m.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-orbitron text-[11px] tracking-wider mb-0.5" style={{ color: earned ? '#e2e8f0' : 'rgba(255,255,255,0.3)' }}>{m.label}</div>
+                    <p className="text-[11px] leading-relaxed" style={{ color: earned ? 'rgba(148,163,184,0.85)' : 'rgba(255,255,255,0.2)' }}>{m.desc}</p>
+                  </div>
+                  <span className="font-orbitron text-[9px] mt-1 shrink-0 px-2 py-0.5 rounded"
+                    style={{ background: earned ? 'rgba(34,211,238,0.1)' : 'rgba(255,255,255,0.03)', color: earned ? '#22d3ee' : 'rgba(255,255,255,0.2)' }}>
+                    {m.pts} pts
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Clone unlocks — points-based */}
+      <div className="mb-10">
+        <p className="font-orbitron text-[10px] tracking-[0.35em] text-slate-500 mb-4 uppercase">Clone Unlocks — Achievement Points</p>
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-5">
+            {paidUnlocks.map(([charId, threshold]) => {
+              const earned = pts >= threshold;
+              return row('⚔️', CHAR_NAMES[charId] ?? charId, `${threshold} achievement points required`, earned);
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Clone unlocks — story */}
+      <div className="mb-10">
+        <p className="font-orbitron text-[10px] tracking-[0.35em] text-slate-500 mb-4 uppercase">Clone Unlocks — Story Milestones</p>
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-5">
+            {row('🤠', 'Teddy Roosevelt', 'Complete Act III in any run', teddyUnlocked)}
+            {row('💛', 'Mansa Musa', 'Complete Act IV — defeat Vel\'Zar', mansaUnlocked)}
+          </div>
+        </div>
+      </div>
+
+      {/* Story perks */}
+      <div className="mb-10">
+        <p className="font-orbitron text-[10px] tracking-[0.35em] text-slate-500 mb-4 uppercase">Story Milestone Perks</p>
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-5">
+            {row('⭐', 'Signature Legendary Items', 'Complete Act I for the first time — rare legendary items enter the item pool', sigLegsUnlocked)}
+            {row('🃏', '+1 Card Reward Choice', 'Complete Act II for the first time — every post-fight reward offers one extra card', bonusCardUnlocked)}
+          </div>
+        </div>
+      </div>
+
+      {/* Lore */}
+      <div>
+        <p className="font-orbitron text-[10px] tracking-[0.35em] text-slate-500 mb-4 uppercase">Lore Unlocks</p>
+        <div className="p-5 rounded-2xl text-sm text-slate-400 leading-relaxed" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          Most lore entries in the Archives are locked. They unlock automatically when you earn specific achievements. 64 total entries across five sub-tabs: Civilization, Acquisitions, Field Notes, Classified, and Bestiary. New entries glow cyan when you open the Archives.
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AchievementsTab({
   isUnlocked,
   stats,
+  newAchievementIds,
+  markAchievementSeen,
+  totalUnlockedPoints = 0,
+  devAllCharsUnlocked = false,
+  onToggleDevChars,
 }: {
   isUnlocked?: (id: string) => boolean;
   stats?: AchievementStats;
+  newAchievementIds?: Set<string>;
+  markAchievementSeen?: (id: string) => void;
+  totalUnlockedPoints?: number;
+  devAllCharsUnlocked?: boolean;
+  onToggleDevChars?: () => void;
 }) {
   const { t, lang } = useT();
   const [activeCategory, setActiveCategory] = useState<AchievementCategory>('combat');
+  const [hoveredMilestone, setHoveredMilestone] = useState<number | null>(null);
   const achievements = getAchievementsByCategory(activeCategory);
   const totalUnlocked = ACHIEVEMENTS.filter(a => isUnlocked?.(a.id)).length;
   const totalPoints   = ACHIEVEMENTS.filter(a => isUnlocked?.(a.id)).reduce((s, a) => s + a.points, 0);
@@ -3843,24 +4792,284 @@ function AchievementsTab({
             </div>
             <div className="font-orbitron text-[9px] text-slate-500 tracking-widest">{t.archives.achievementUI.points}</div>
           </div>
-          {/* Dev reset button */}
-          <button onClick={handleReset}
-            className="font-orbitron text-[9px] px-3 py-1.5 rounded transition-all hover:opacity-80"
-            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}
-            title="Reset all achievement progress (dev)">
-            {t.archives.achievementUI.reset}
-          </button>
+          {/* Dev buttons */}
+          <div className="flex gap-2">
+            <button onClick={onToggleDevChars}
+              className="font-orbitron text-[9px] px-3 py-1.5 rounded transition-all hover:opacity-80"
+              style={{
+                background: devAllCharsUnlocked ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.06)',
+                border: `1px solid ${devAllCharsUnlocked ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                color: devAllCharsUnlocked ? '#fbbf24' : '#64748b',
+              }}
+              title="Dev: force-unlock / re-lock all characters">
+              {devAllCharsUnlocked ? '🔓 ALL CLONES' : '🔒 LOCKED'}
+            </button>
+            <button onClick={handleReset}
+              className="font-orbitron text-[9px] px-3 py-1.5 rounded transition-all hover:opacity-80"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}
+              title="Reset all achievement progress (dev)">
+              {t.archives.achievementUI.reset}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Overall progress bar */}
-      <div className="h-2 rounded-full mb-6" style={{ background: 'rgba(255,255,255,0.07)' }}>
-        <div className="h-full rounded-full transition-all duration-700"
+      <div className="h-3 rounded-full mb-6" style={{ background: 'rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)' }}>
+        <div className="h-full rounded-full transition-all duration-700 flex items-center justify-end pr-2"
           style={{
-            width: `${(totalUnlocked / ACHIEVEMENTS.length) * 100}%`,
-            background: 'linear-gradient(90deg, #fbbf24, #f59e0b)',
-            boxShadow: '0 0 10px rgba(251,191,36,0.45)',
-          }} />
+            width: `${Math.max(2, (totalUnlocked / ACHIEVEMENTS.length) * 100)}%`,
+            background: 'linear-gradient(90deg, #f59e0b, #fbbf24, #fde68a)',
+            boxShadow: '0 0 12px rgba(251,191,36,0.55)',
+          }}>
+          {totalUnlocked > 0 && <span className="font-orbitron text-[8px] font-black text-black/70 leading-none">{Math.round((totalUnlocked / ACHIEVEMENTS.length) * 100)}%</span>}
+        </div>
+      </div>
+
+      {/* Character unlock milestones */}
+      <div className="mb-8 p-5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(251,191,36,0.14)' }}>
+        <div className="font-orbitron text-[10px] tracking-[0.35em] text-yellow-500/70 mb-4 uppercase">{t.archives.achievementUI.cloneUnlockTitle}</div>
+        {/* Points-based characters — exclude free (threshold=0) */}
+        {(() => {
+          const paid = Object.entries(CHARACTER_UNLOCK_THRESHOLDS).filter(([, t]) => t > 0).sort(([, a], [, b]) => a - b);
+          const maxPts = paid[paid.length - 1]?.[1] ?? 550;
+          return (
+            <div className="relative mb-6">
+              <div className="absolute top-6 left-6 right-6 h-0.5" style={{ background: 'rgba(255,255,255,0.08)' }} />
+              <div className="absolute top-6 left-6 h-0.5 transition-all duration-700"
+                style={{
+                  background: 'linear-gradient(90deg, #fbbf24, #f59e0b)',
+                  boxShadow: '0 0 6px rgba(251,191,36,0.5)',
+                  width: (() => {
+                    const thresholds = paid.map(([, t]) => t);
+                    const n = thresholds.length;
+                    if (n < 2) return '0%';
+                    let lastIdx = -1;
+                    for (let i = 0; i < n; i++) { if (totalUnlockedPoints >= thresholds[i]) lastIdx = i; }
+                    if (lastIdx < 0) return '0%';
+                    if (lastIdx === n - 1) return `calc(100% - 3rem)`;
+                    const fraction = Math.min(1, (totalUnlockedPoints - thresholds[lastIdx]) / (thresholds[lastIdx + 1] - thresholds[lastIdx]));
+                    const pct = ((lastIdx + fraction) / (n - 1)) * 100;
+                    return `calc(${pct}% - 3rem)`;
+                  })(),
+                  right: 'auto',
+                }} />
+              <div className="relative flex justify-between">
+                {paid.map(([charId, threshold]) => {
+                  const unlocked = totalUnlockedPoints >= threshold;
+                  const portrait = CHAR_PORTRAITS[charId];
+                  const displayName = CHAR_DISPLAY_NAMES[charId];
+                  return (
+                    <div key={charId} className="flex flex-col items-center gap-1.5" style={{ width: 52 }}>
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden"
+                        style={{
+                          border: unlocked ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.12)',
+                          boxShadow: unlocked ? '0 0 12px rgba(251,191,36,0.45)' : 'none',
+                          filter: unlocked ? 'none' : 'grayscale(1) brightness(0.45)',
+                          transition: 'all 0.3s',
+                        }}>
+                        {portrait ? (
+                          <img src={portrait} alt={displayName} className="w-full h-full object-cover" style={{ objectPosition: 'center 12%' }} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-sm font-bold"
+                            style={{ background: 'rgba(80,60,120,0.8)', color: '#fbbf24' }}>
+                            {displayName.charAt(0)}
+                          </div>
+                        )}
+                        {!unlocked && (
+                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
+                            <Lock style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.5)' }} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="font-orbitron text-[8px] text-center leading-tight"
+                        style={{ color: unlocked ? '#fbbf24' : 'rgba(255,255,255,0.5)' }}>
+                        {displayName}
+                      </div>
+                      <div className="font-orbitron text-[8px] text-center"
+                        style={{ color: unlocked ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.3)' }}>
+                        {threshold}p
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+        {/* Event-based characters (Teddy, Mansa) */}
+        <div className="flex gap-4 pt-2 border-t border-white/5">
+          {Object.entries(CHARACTER_UNLOCK_EVENTS).map(([charId, achievementId]) => {
+            const unlocked = isUnlocked?.(achievementId) ?? false;
+            const portrait = CHAR_PORTRAITS[charId];
+            const displayName = CHAR_DISPLAY_NAMES[charId];
+            const completeLabel = charId === 'teddy' ? t.archives.achievementUI.completeAct3 : charId === 'mansa' ? t.archives.achievementUI.completeAct4 : achievementId;
+            return (
+              <div key={charId} className="flex items-center gap-3">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0"
+                  style={{
+                    border: unlocked ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.12)',
+                    boxShadow: unlocked ? '0 0 10px rgba(251,191,36,0.4)' : 'none',
+                    filter: unlocked ? 'none' : 'grayscale(1) brightness(0.45)',
+                  }}>
+                  {portrait ? (
+                    <img src={portrait} alt={displayName} className="w-full h-full object-cover" style={{ objectPosition: 'center 12%' }} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs font-bold"
+                      style={{ background: 'rgba(80,60,120,0.8)', color: '#fbbf24' }}>
+                      {displayName.charAt(0)}
+                    </div>
+                  )}
+                  {!unlocked && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
+                      <Lock style={{ width: 12, height: 12, color: 'rgba(255,255,255,0.5)' }} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="font-orbitron text-[9px] font-bold" style={{ color: unlocked ? '#fbbf24' : 'rgba(255,255,255,0.3)' }}>{displayName}</div>
+                  <div className="font-orbitron text-[8px]" style={{ color: 'rgba(255,255,255,0.25)' }}>{completeLabel}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Run perks unlock progression — milestone track */}
+      <div className="mb-8 p-5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(59,130,246,0.14)' }}>
+        <div className="font-orbitron text-[10px] tracking-[0.35em] text-blue-400/70 mb-5 uppercase">{t.archives.achievementUI.runPerksTitle}</div>
+        {(() => {
+          const MILESTONES: { pts: number; icon: string; label: string; sublabel?: string; tooltip?: string }[] = [
+            { pts: 50,   icon: '👁',  label: 'Fog +2',         sublabel: '2 rows visible', tooltip: 'Map reveals 2 rows ahead of your current position' },
+            { pts: 100,  icon: '💰', label: '+10% Gold',       sublabel: 'All sources',     tooltip: 'All gold pickups and rewards increased by 10% (stacks with later bonuses)' },
+            { pts: 150,  icon: '👁',  label: 'Fog +4',         sublabel: '4 rows visible', tooltip: 'Map reveals 4 rows ahead — see further to plan your path' },
+            { pts: 200,  icon: '🛒', label: '+Card Choice',    sublabel: 'Merchant',        tooltip: 'Merchant gains a 4th card for sale — more options each visit' },
+            { pts: 250,  icon: '✂',  label: 'Card Removal',   sublabel: 'At campfire',     tooltip: 'Campfire gains a "Remove Card" option — permanently cut a card from your deck' },
+            { pts: 300,  icon: '💰', label: '+20% Gold',       sublabel: 'All sources',     tooltip: '+20% gold stacks with +10% — total +30% at this point' },
+            { pts: 350,  icon: '🛒', label: '+Item Choice',    sublabel: 'Merchant',        tooltip: 'Merchant gains a 4th item (Legendary tier) for sale — more loot options' },
+            { pts: 400,  icon: '👁',  label: 'Fog +6',         sublabel: '6 rows visible', tooltip: 'Map reveals 6 rows ahead — almost no surprises left' },
+            { pts: 500,  icon: '💰', label: '+30% Gold',       sublabel: 'All sources',     tooltip: '+30% gold stacks — total +60% gold at this point' },
+            { pts: 600,  icon: '🌐', label: 'Full Map',        sublabel: 'No fog',          tooltip: 'Full map visibility — every node and path revealed from the start' },
+            { pts: 700,  icon: '🎁', label: 'Free Box',        sublabel: 'Mystery Box',     tooltip: 'Mystery Box at the merchant is now FREE every visit' },
+            { pts: 800,  icon: '🎒', label: 'Slot #7',         sublabel: 'Per character',   tooltip: 'Each character gains a 7th item slot — equip even more powerful gear' },
+            { pts: 1000, icon: '💰', label: '+100% Gold',      sublabel: 'All sources',     tooltip: 'Doubles all gold — stacks with all previous bonuses for +160% total (2.6× multiplier)' },
+          ];
+          // Achievement-gated perks (sig legendaries)
+          const achPerks = ACHIEVEMENTS.filter(a => a.runPerk && a.runPerk.id !== 'char_teddy' && a.runPerk.id !== 'char_mansa' && !a.runPerk.id.startsWith('legacy_'));
+          const maxPts = 600;
+          return (
+            <>
+              <div className="relative">
+                <div className="absolute top-7 left-6 right-6 h-0.5" style={{ background: 'rgba(255,255,255,0.07)' }} />
+                <div className="absolute top-7 left-6 h-0.5 transition-all duration-700"
+                  style={{
+                    background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+                    boxShadow: '0 0 6px rgba(96,165,250,0.5)',
+                    width: (() => {
+                      const uniquePts = [...new Set(MILESTONES.map(m => m.pts))];
+                      const n = uniquePts.length;
+                      if (n < 2) return '0%';
+                      let lastIdx = -1;
+                      for (let i = 0; i < n; i++) { if (totalUnlockedPoints >= uniquePts[i]) lastIdx = i; }
+                      if (lastIdx < 0) return '0%';
+                      if (lastIdx === n - 1) return `calc(100% - 3rem)`;
+                      const fraction = Math.min(1, (totalUnlockedPoints - uniquePts[lastIdx]) / (uniquePts[lastIdx + 1] - uniquePts[lastIdx]));
+                      const pct = ((lastIdx + fraction) / (n - 1)) * 100;
+                      return `calc(${pct}% - 3rem)`;
+                    })(),
+                    right: 'auto',
+                  }} />
+                {/* Milestone circles */}
+                {(() => {
+                  const uniquePts = [...new Set(MILESTONES.map(m => m.pts))];
+                  return (
+                    <div className="relative flex justify-between">
+                      {uniquePts.map((pts) => {
+                        const earned = totalUnlockedPoints >= pts;
+                        const items = MILESTONES.filter(m => m.pts === pts);
+                        const isHov = hoveredMilestone === pts;
+                        const tooltipText = items.map(m => m.tooltip ?? m.sublabel ?? m.label).join(' | ');
+                        return (
+                          <div key={pts} className="flex flex-col items-center gap-1.5 relative" style={{ minWidth: 56 }}
+                            onMouseEnter={() => setHoveredMilestone(pts)}
+                            onMouseLeave={() => setHoveredMilestone(null)}>
+                            {/* Hover tooltip */}
+                            {isHov && tooltipText && (
+                              <div className="absolute bottom-full mb-2 left-1/2 z-50 pointer-events-none"
+                                style={{ transform: 'translateX(-50%)', minWidth: 160, maxWidth: 220 }}>
+                                <div className="font-orbitron text-[9px] leading-relaxed text-center px-3 py-2 rounded-lg"
+                                  style={{
+                                    background: 'rgba(10,15,40,0.97)',
+                                    border: '1px solid rgba(96,165,250,0.4)',
+                                    color: '#93c5fd',
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.7)',
+                                    whiteSpace: 'normal',
+                                  }}>
+                                  {items.map((m, i) => (
+                                    <div key={i}>
+                                      <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{m.label}</span>
+                                      {m.tooltip && <div style={{ color: '#64748b', marginTop: 2, fontSize: 8 }}>{m.tooltip}</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{ width: 8, height: 8, background: 'rgba(10,15,40,0.97)', border: '1px solid rgba(96,165,250,0.4)', borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg) translateX(-50%)', position: 'absolute', bottom: -5, left: '50%' }} />
+                              </div>
+                            )}
+                            <div className="w-14 h-14 rounded-xl flex items-center justify-center text-xl shrink-0 cursor-default"
+                              style={{
+                                background: earned ? 'rgba(59,130,246,0.22)' : 'rgba(255,255,255,0.04)',
+                                border: `2px solid ${earned ? (isHov ? 'rgba(147,197,253,0.85)' : 'rgba(96,165,250,0.65)') : 'rgba(255,255,255,0.12)'}`,
+                                boxShadow: earned ? (isHov ? '0 0 18px rgba(96,165,250,0.55)' : '0 0 12px rgba(96,165,250,0.35)') : 'none',
+                                filter: earned ? 'none' : 'grayscale(1) brightness(0.5)',
+                                transition: 'all 0.2s',
+                              }}>
+                              {items.length === 1 ? items[0].icon : '⚡'}
+                            </div>
+                            <div className="font-orbitron text-[9px] text-center leading-tight" style={{ color: earned ? '#93c5fd' : 'rgba(255,255,255,0.25)', maxWidth: 64 }}>
+                              {items.map(m => m.label).join(' + ')}
+                            </div>
+                            <div className="font-orbitron text-[9px] text-center font-bold" style={{ color: earned ? 'rgba(96,165,250,0.7)' : 'rgba(255,255,255,0.25)' }}>{pts}p</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+              {/* Achievement-gated perks (below track) */}
+              {achPerks.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-white/5 flex flex-col gap-2">
+                  {achPerks.map(a => {
+                    const earned = isUnlocked?.(a.id) ?? false;
+                    const conditionMap: Record<string, string> = {
+                      sig_legendaries: t.archives.achievementUI.completeAct1,
+                      bonus_card_choice: t.archives.achievementUI.completeAct2,
+                    };
+                    const condition = conditionMap[a.runPerk!.id] ?? '';
+                    return (
+                      <div key={a.id} className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                          style={{
+                            background: earned ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${earned ? 'rgba(59,130,246,0.6)' : 'rgba(255,255,255,0.10)'}`,
+                          }}>
+                          {earned ? <span style={{ fontSize: 12 }}>⚡</span> : <Lock style={{ width: 10, height: 10, color: 'rgba(255,255,255,0.25)' }} />}
+                        </div>
+                        <div className="flex-1">
+                          <span className="font-orbitron text-[10px]" style={{ color: earned ? '#93c5fd' : 'rgba(255,255,255,0.25)' }}>{a.runPerk!.label}</span>
+                          {condition && (
+                            <span className="font-orbitron text-[9px] ml-2" style={{ color: earned ? 'rgba(96,165,250,0.55)' : 'rgba(255,255,255,0.18)' }}>— {condition}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Category pills */}
@@ -3898,12 +5107,16 @@ function AchievementsTab({
           const hasProgress = !!a.statKey && !!a.threshold && !unlocked && !isHidden;
           const progressPct = hasProgress ? Math.min(1, statVal / a.threshold!) : 0;
 
+          const isNew = !!(newAchievementIds?.has(a.id));
           return (
             <div key={a.id}
               className="rounded-xl border px-5 py-3.5 transition-all"
+              onMouseEnter={() => { if (isNew) markAchievementSeen?.(a.id); }}
               style={{
-                background: unlocked ? 'rgba(251,191,36,0.06)' : 'rgba(8,5,25,0.8)',
-                borderColor: unlocked ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.06)',
+                background:   isNew ? 'rgba(34,211,238,0.07)' : unlocked ? 'rgba(251,191,36,0.06)' : 'rgba(8,5,25,0.8)',
+                borderColor:  isNew ? 'rgba(34,211,238,0.7)'  : unlocked ? 'rgba(251,191,36,0.3)'  : 'rgba(255,255,255,0.06)',
+                boxShadow:    isNew ? '0 0 14px rgba(34,211,238,0.18), inset 0 0 10px rgba(34,211,238,0.05)' : 'none',
+                animation:    isNew ? 'lore-pulse 2s ease-in-out infinite' : 'none',
                 opacity: isHidden ? 0.45 : 1,
               }}>
               <div className="flex items-center gap-4">
@@ -3928,6 +5141,13 @@ function AchievementsTab({
                       style={{ color: unlocked ? '#fff' : '#4b5563' }}>
                       {isHidden ? '???' : (getAchievementTranslation(a.id, lang)?.name ?? a.name)}
                     </span>
+                    {isNew && (
+                      <span style={{
+                        fontSize: '0.5rem', fontFamily: 'monospace', letterSpacing: '0.1em',
+                        background: '#22d3ee', color: '#020e1e',
+                        padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 800, flexShrink: 0,
+                      }}>NEW</span>
+                    )}
                     {a.loreUnlockId && !isHidden && (
                       <span className="font-orbitron text-[8px] px-1.5 py-0.5 rounded-sm flex items-center gap-0.5"
                         style={{
@@ -3936,6 +5156,17 @@ function AchievementsTab({
                           border: `1px solid ${unlocked ? 'rgba(34,211,238,0.3)' : 'rgba(34,211,238,0.1)'}`,
                         }}>
                         📖 LORE
+                      </span>
+                    )}
+                    {a.runPerk && !isHidden && (
+                      <span title={a.runPerk.label} className="font-orbitron text-[8px] px-1.5 py-0.5 rounded-sm flex items-center gap-0.5"
+                        style={{
+                          background: unlocked ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.04)',
+                          color: unlocked ? '#60a5fa' : '#334155',
+                          border: `1px solid ${unlocked ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.1)'}`,
+                          cursor: 'help',
+                        }}>
+                        ⚡ PERK
                       </span>
                     )}
                   </div>
@@ -4063,6 +5294,7 @@ function LoreTab({
             const isNew    = isLoreNew(l);
             return (
               <button key={l.id} onClick={() => handleOpen(l)}
+                onMouseEnter={() => { if (isNew) markLoreSeen(l.id); }}
                 className="rounded-xl border text-left p-5 transition-all"
                 style={{
                   background:   unlocked ? 'rgba(8,5,25,0.9)' : 'rgba(4,2,12,0.9)',

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { CHARACTER_UNLOCK_THRESHOLDS, CHARACTER_UNLOCK_EVENTS } from "@/data/achievements";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import ArenaBackground from "@/ui/ArenaBackground";
@@ -31,6 +32,9 @@ interface Props {
   onStartGame: (selected: Character[]) => void;
   onBack?: () => void;
   gameMode: "singleplayer" | "multiplayer";
+  unlockedCharacterIds?: Set<string>;
+  achievementPoints?: number;
+  unlockedAchievementIds?: Set<string>;
 }
 
 
@@ -49,7 +53,7 @@ function rolePillStyle(role: Role) {
 const AVAILABLE: Character[] = [
   {
     id: "napoleon", name: "Napoleon-chan", tagline: "", role: "dps_ranged",
-    stats: { hp: 100, might: 65, power: 60 },
+    stats: { hp: 100, might: 60, power: 65 },
     badges: [
       { kind: "passive",  icon: "🎯", name: "Vantage Point",    desc: "" },
       { kind: "ability",  icon: "💥", name: "Artillery Barrage", desc: "" },
@@ -59,7 +63,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "genghis", name: "Genghis-chan", tagline: "", role: "dps_melee",
-    stats: { hp: 120, might: 50, power: 50 },
+    stats: { hp: 120, might: 55, power: 40 },
     badges: [
       { kind: "passive",  icon: "🩸", name: "Bloodlust",     desc: "" },
       { kind: "ability",  icon: "⚡", name: "Mongol Charge", desc: "" },
@@ -69,7 +73,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "davinci", name: "Da Vinci-chan", tagline: "", role: "support",
-    stats: { hp: 85, might: 35, power: 50 },
+    stats: { hp: 100, might: 35, power: 50 },
     badges: [
       { kind: "passive",  icon: "🔧", name: "Tinkerer",           desc: "" },
       { kind: "ability",  icon: "✈️", name: "Flying Machine",     desc: "" },
@@ -79,7 +83,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "leonidas", name: "Leonidas-chan", tagline: "", role: "tank",
-    stats: { hp: 130, might: 40, power: 36 },
+    stats: { hp: 130, might: 40, power: 48 },
     badges: [
       { kind: "passive",  icon: "🛡️", name: "Phalanx",        desc: "" },
       { kind: "ability",  icon: "⚡", name: "Shield Bash",     desc: "" },
@@ -100,7 +104,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "beethoven", name: "Beethoven-chan", tagline: "", role: "controller",
-    stats: { hp: 90, might: 35, power: 65 },
+    stats: { hp: 95, might: 35, power: 70 },
     badges: [
       { kind: "passive",  icon: "🎵", name: "Taubheit",     desc: "" },
       { kind: "ability",  icon: "🌊", name: "Schallwelle",  desc: "" },
@@ -110,7 +114,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "huang", name: "Huang-chan", tagline: "", role: "controller",
-    stats: { hp: 90, might: 30, power: 55 },
+    stats: { hp: 90, might: 35, power: 55 },
     badges: [
       { kind: "passive",  icon: "🏺", name: "Imperial Command",         desc: "" },
       { kind: "ability",  icon: "⚔️", name: "Terracotta Legion",        desc: "" },
@@ -120,7 +124,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "nelson", name: "Nelson-chan", tagline: "", role: "dps_ranged",
-    stats: { hp: 90, might: 40, power: 65 },
+    stats: { hp: 95, might: 40, power: 65 },
     badges: [
       { kind: "passive",  icon: "⚓", name: "One Eye, One Hand", desc: "" },
       { kind: "ability",  icon: "🚢", name: "Crossing the T",   desc: "" },
@@ -130,7 +134,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "hannibal", name: "Hannibal-chan", tagline: "", role: "dps_melee", secondaryRole: "controller",
-    stats: { hp: 110, might: 55, power: 50 },
+    stats: { hp: 110, might: 55, power: 55 },
     badges: [
       { kind: "passive",  icon: "🦊", name: "Cannae",                desc: "" },
       { kind: "ability",  icon: "🏔️", name: "Alpine March",         desc: "" },
@@ -140,7 +144,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "picasso", name: "Picasso-chan", tagline: "", role: "support", secondaryRole: "controller",
-    stats: { hp: 80, might: 30, power: 70 },
+    stats: { hp: 95, might: 30, power: 70 },
     badges: [
       { kind: "passive",  icon: "🎨", name: "Fractured Perspective", desc: "" },
       { kind: "ability",  icon: "🖼️", name: "Guernica",             desc: "" },
@@ -150,7 +154,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "teddy", name: "Teddy-chan", tagline: "", role: "tank", secondaryRole: "dps_melee",
-    stats: { hp: 140, might: 60, power: 35 },
+    stats: { hp: 140, might: 60, power: 40 },
     badges: [
       { kind: "passive",  icon: "🦁", name: "Bully!",                  desc: "" },
       { kind: "ability",  icon: "🤫", name: "Speak Softly",           desc: "" },
@@ -160,7 +164,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "mansa", name: "Mansa-chan", tagline: "", role: "support", secondaryRole: "controller",
-    stats: { hp: 85, might: 30, power: 60 },
+    stats: { hp: 100, might: 30, power: 70 },
     badges: [
       { kind: "passive",  icon: "💰", name: "Treasury",           desc: "" },
       { kind: "ability",  icon: "🛤️", name: "Salt Road",          desc: "" },
@@ -189,7 +193,7 @@ const ROLE_FRAME: Record<Role, { a: string; b: string; glow: string; solid: stri
   controller: { a: '#a78bfa', b: '#4c1d95', glow: 'rgba(167,139,250,0.45)', solid: '#a78bfa' },
 };
 
-export default function CharacterSelection({ onStartGame, onBack }: Props) {
+export default function CharacterSelection({ onStartGame, onBack, unlockedCharacterIds, achievementPoints = 0, unlockedAchievementIds }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const { t } = useT();
@@ -285,9 +289,15 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {visibleChars.map((c) => {
+          {visibleChars.map((c, charIdx) => {
+            const threshold = CHARACTER_UNLOCK_THRESHOLDS[c.id] ?? 0;
+            const eventUnlock = CHARACTER_UNLOCK_EVENTS[c.id]; // e.g. 'thral_nor' for teddy
+            const unlockLabel = eventUnlock
+              ? (c.id === 'teddy' ? 'Complete Act III' : c.id === 'mansa' ? 'Complete Act IV' : eventUnlock)
+              : `${threshold} pts`;
+            const isLocked = unlockedCharacterIds ? !unlockedCharacterIds.has(c.id) : false;
             const picked = selectedIds.includes(c.id);
-            const disabled = maxed && !picked;
+            const disabled = (maxed && !picked) || isLocked;
             // Build translated character data
             const charKey = c.id as keyof typeof t.characters;
             const charT = t.characters[charKey];
@@ -313,9 +323,14 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
                 c={translatedC}
                 picked={picked}
                 disabled={disabled}
-                onToggle={() => toggle(c.id)}
+                isLocked={isLocked}
+                unlockThreshold={threshold}
+                unlockLabel={unlockLabel}
+                onToggle={() => !isLocked && toggle(c.id)}
                 onHover={() => {}}
                 t={t}
+                enterDelay={charIdx * 0.06}
+                unlockedAchievementIds={unlockedAchievementIds}
               />
             );
           })}
@@ -338,13 +353,18 @@ export default function CharacterSelection({ onStartGame, onBack }: Props) {
   );
 }
 
-function CharacterCard({ c, picked, disabled, onToggle, onHover, t }: {
+function CharacterCard({ c, picked, disabled, isLocked, unlockThreshold, unlockLabel, onToggle, onHover, t, enterDelay = 0, unlockedAchievementIds }: {
   c: Character;
   picked: boolean;
   disabled: boolean;
+  isLocked?: boolean;
+  unlockThreshold?: number;
+  unlockLabel?: string;
   onToggle: () => void;
   onHover: () => void;
   t: ReturnType<typeof useT>['t'];
+  enterDelay?: number;
+  unlockedAchievementIds?: Set<string>;
 }) {
   const [mode, setMode] = useState<"land" | "water">("land");
   const [hovered, setHovered] = useState(false);
@@ -370,8 +390,9 @@ function CharacterCard({ c, picked, disabled, onToggle, onHover, t }: {
         width: '100%',
         opacity: disabled ? 0.35 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transform: (picked || hovered) && !disabled ? 'translateY(-4px) scale(1.02)' : 'none',
-        transition: 'transform 0.2s cubic-bezier(0.22,1,0.36,1)',
+        transform: (picked || hovered) && !disabled ? 'translateY(-6px) scale(1.03)' : 'none',
+        transition: 'transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s',
+        animation: `anim-charcard-enter 0.45s ease-out ${enterDelay}s both`,
       }}
     >
       {/* Outer glow ring when picked */}
@@ -484,6 +505,42 @@ function CharacterCard({ c, picked, disabled, onToggle, onHover, t }: {
               );
             })()}
           </div>
+
+          {/* Legacy badge — top-left, hidden when selected checkmark is showing */}
+          {unlockedAchievementIds?.has(`legacy_${c.id}`) && !picked && (
+            <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5 }}>
+              <div style={{
+                background: 'rgba(251,191,36,0.15)',
+                border: '1px solid rgba(251,191,36,0.55)',
+                borderRadius: 8,
+                padding: '2px 7px',
+                fontFamily: 'var(--font-orbitron, monospace)',
+                fontSize: 9,
+                fontWeight: 900,
+                color: '#fbbf24',
+                letterSpacing: '0.08em',
+                boxShadow: '0 0 8px rgba(251,191,36,0.30)',
+              }}>⭐ LEGACY</div>
+            </div>
+          )}
+
+          {/* Lock overlay */}
+          {isLocked && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 8,
+              background: 'rgba(0,0,0,0.72)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 6,
+            }}>
+              <span style={{ fontSize: 28 }}>🔒</span>
+              <div style={{
+                fontFamily: 'var(--font-orbitron, monospace)',
+                fontSize: 10, fontWeight: 900, color: '#fbbf24',
+                letterSpacing: '0.08em', textAlign: 'center',
+                textShadow: '0 0 10px rgba(251,191,36,0.6)',
+              }}>{unlockLabel ?? `${unlockThreshold} pts`}</div>
+            </div>
+          )}
 
           {/* Selected checkmark */}
           {picked && (

@@ -10,6 +10,8 @@ interface CardDef {
   exclusiveTo: string | null;
   effect: EffectValues;
   terrainBonus?: Partial<Record<string, number>>;
+  /** Path under /public — drop a file here to override the effect-based fallback art */
+  cardArt?: string;
 }
 
 export const CHARACTER_IDS = {
@@ -146,7 +148,7 @@ const CARD_DEFS: CardDef[] = [
     rarity: "common",
     description: "Enemy loses 5 Might and 5 Defense each turn. Removed on heal. Range 2.",
     exclusiveTo: null,
-    effect: { range: 2, debuffType: 'poison', debuffMagnitude: 5, debuffDuration: 99 },
+    effect: { range: 2, debuffType: 'poison', debuffMagnitude: 5, debuffDuration: 6 },
   },
 
   // ── Napoleon ──────────────────────────────────────────────────────────────────
@@ -156,7 +158,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.3 damage at range 4.",
+    description: "~78 damage at range 4.",
     exclusiveTo: CHARACTER_IDS.napoleon,
     effect: { powerMult: 1.3, range: 4 },
   },
@@ -176,7 +178,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — 3 random hits of Power×0.7 on enemies within range 4.",
+    description: "ULTIMATE (Exhaust) — 3 random hits of ~42 damage on enemies within range 4.",
     exclusiveTo: CHARACTER_IDS.napoleon,
     effect: { powerMult: 0.7, multiHit: 3, range: 4, randomTargets: true },
   },
@@ -188,7 +190,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.2 damage at range 3. Applies Bleed (Power×0.4 per turn, 2 turns).",
+    description: "~60 damage at range 3. Applies Bleed (~20 HP/turn for 2 turns).",
     exclusiveTo: CHARACTER_IDS.genghis,
     effect: { powerMult: 1.2, range: 3, bleedMult: 0.4, debuffDuration: 2 },
   },
@@ -198,9 +200,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "attack",
     rarity: "rare",
-    description: "Power×0.42 per enemy in range — damage multiplies by the number of enemies hit. Range 2.",
+    description: "All enemies in range 2 take ~28 × (enemy count) damage. More targets = bigger hit.",
     exclusiveTo: CHARACTER_IDS.genghis,
-    effect: { scalingAoE: true, perEnemyMult: 0.42, range: 2 },
+    effect: { scalingAoE: true, perEnemyMult: 0.55, range: 2 },
   },
   {
     definitionId: "genghis_riders_fury",
@@ -208,7 +210,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×1.5 to ALL enemies on a line, range 5. Doubled if target <40% HP.",
+    description: "ULTIMATE (Exhaust) — ~75 damage to all enemies on a line (range 5). Doubled if target below 40% HP.",
     exclusiveTo: CHARACTER_IDS.genghis,
     effect: { powerMult: 1.5, lineTarget: true, range: 5, executeDouble: true },
   },
@@ -220,7 +222,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Power×1.6 damage at range 1. Applies Armor Break (−25% Defense for 2 turns). Grants Leonidas +20 Defense this turn (counter-stance).",
+    description: "~77 damage at range 1. Applies Armor Break (−25% Defense for 2 turns). Grants Leonidas +20 Defense this turn.",
     exclusiveTo: CHARACTER_IDS.leonidas,
     effect: { powerMult: 1.6, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
   },
@@ -240,7 +242,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Power×2.5 damage to target + Root all adjacent enemies for 2 turns.",
+    description: "ULTIMATE (Exhaust) — ~120 damage to target (range 3). Roots all adjacent enemies for 2 turns.",
     exclusiveTo: CHARACTER_IDS.leonidas,
     effect: { powerMult: 2.5, range: 3, aoeRooted: true },
   },
@@ -262,7 +264,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "defense",
     rarity: "rare",
-    description: "Heal an ally within range 3 for Power×1.0 HP.",
+    description: "Heal an ally within range 3 for ~50 HP.",
     exclusiveTo: CHARACTER_IDS.daVinci,
     effect: { healingMult: 1.0, range: 3 },
   },
@@ -272,7 +274,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Summon a combat drone. Lasts until defeated. Stats scale with Power (≈HP×1.8, Might×1.2, Def×0.6).",
+    description: "ULTIMATE (Exhaust) — Summon a combat drone (≈90 HP, ~60 Might, ~30 Def). Stats scale with Power. Lasts until defeated.",
     exclusiveTo: CHARACTER_IDS.daVinci,
     effect: {},
   },
@@ -284,7 +286,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Sonic wave — Power×0.6 dmg to all enemies in a line up to range 3, pushes each 2 tiles back.",
+    description: "Sonic wave — ~39 damage to all enemies in a line up to range 3, pushes each 2 tiles back.",
     exclusiveTo: CHARACTER_IDS.beethoven,
     effect: { powerMult: 0.6, range: 3, lineTarget: true, pushback: 2 },
   },
@@ -304,7 +306,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
-    description: "ULTIMATE (Exhaust) — Unleash the full Sternensturm. Deal Power×0.7 damage and stun all enemies within range 3 for 1 turn.",
+    description: "ULTIMATE (Exhaust) — ~46 damage and stun all enemies within range 3 for 1 turn.",
     exclusiveTo: CHARACTER_IDS.beethoven,
     effect: { range: 3, allEnemiesInRange: true, debuffType: 'stun', debuffDuration: 1, powerMult: 0.7 },
   },
@@ -348,7 +350,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "buff",
     rarity: "rare",
-    description: "Summon a random Terracotta Warrior (Archer: Might×1.5 range 2 — or Melee: Might×1 range 1) on target hex within range 3. HP 40, scales with your stats. Lasts 2 turns.",
+    description: "Summon a random Terracotta Warrior on target hex within range 3. Archer (≈53 Might, range 2) or Melee (≈35 Might, range 1). HP 40, scales with stats. Lasts 2 turns.",
     exclusiveTo: CHARACTER_IDS.huang,
     effect: { summonTerracotta: true, range: 3, turns: 2 },
   },
@@ -358,7 +360,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 3,
     type: "buff",
     rarity: "rare",
-    description: "Summon a Terracotta Cavalry (Might×1.5, Def×1.5, Power×1, Move 3) on adjacent hex. HP 60, scales with your stats. Lasts 2 turns. Gain 1 free Cavalry Charge card.",
+    description: "Summon a Terracotta Cavalry (≈53 Might, ~38 Def, ≈55 Power, Move 3) on adjacent hex. HP 60, scales with stats. Lasts 2 turns. Gain 1 free Cavalry Charge card.",
     exclusiveTo: CHARACTER_IDS.huang,
     effect: { summonCavalry: true, range: 1, turns: 2 },
   },
@@ -368,8 +370,8 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 0,
     type: "attack",
     rarity: "rare",
-    description: "FREE — Cavalry charges a target at range 3 for Power×1.2 damage. (Appears after First Emperor's Command only.)",
-    exclusiveTo: CHARACTER_IDS.huang,
+    description: "FREE — Cavalry charges a target at range 3 for ~66 damage. (Appears after First Emperor's Command only.)",
+    exclusiveTo: "Terracotta Cavalry",
     effect: { powerMult: 1.2, range: 3 },
   },
   {
@@ -400,19 +402,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 1,
     type: "debuff",
     rarity: "common",
-    description: "Blind a target at range 3 — attack range reduced to 1 for 2 turns (basic attacks and abilities).",
+    description: "Blind a target at range 3 — attack range reduced to 1 for 1 turn (basic attacks and abilities).",
     exclusiveTo: null,
-    effect: { range: 3, debuffType: 'blinded', debuffMagnitude: 0, debuffDuration: 2 },
-  },
-  {
-    definitionId: "shared_suppressive_fire",
-    name: "Suppressive Fire",
-    manaCost: 2,
-    type: "attack",
-    rarity: "common",
-    description: "Deal Might×0.3 to all enemies in a cone (3 wide, range 3) and apply Slow (−1 movement) for 1 turn.",
-    exclusiveTo: null,
-    effect: { coneTarget: true, mightMult: 0.3, range: 3, debuffType: 'mud_throw', debuffMagnitude: 1, debuffDuration: 1 },
+    effect: { range: 3, debuffType: 'blinded', debuffMagnitude: 0, debuffDuration: 1 },
   },
   {
     definitionId: "shared_fortify",
@@ -454,6 +446,26 @@ const CARD_DEFS: CardDef[] = [
     exclusiveTo: null,
     effect: { selfHpCostPct: 0.2, teamDmgFlat: 15, teamPowerFlat: 15 },
   },
+  {
+    definitionId: "shared_overcharge",
+    name: "Overcharge",
+    manaCost: 2,
+    type: "buff",
+    rarity: "rare",
+    description: "The next card played this turn costs 0 Mana. (Still uses a card play.)",
+    exclusiveTo: null,
+    effect: { overcharge: true },
+  },
+  {
+    definitionId: "shared_retribution",
+    name: "Retribution",
+    manaCost: 2,
+    type: "attack",
+    rarity: "uncommon",
+    description: "Deal damage equal to HP lost this fight to one enemy. Range 3.",
+    exclusiveTo: null,
+    effect: { retributionMult: 1.0, range: 3 },
+  },
 
   // ── Nelson ────────────────────────────────────────────────────────────────────
   {
@@ -494,7 +506,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 1,
     type: "movement",
     rarity: "rare",
-    description: "Charge up to 6 hexes in a straight line across any terrain.",
+    description: "Use before moving. Charge up to 6 hexes in a straight line — enemies in path take ~28 damage and are pushed sideways. Consumes all remaining movement.",
     exclusiveTo: CHARACTER_IDS.hannibal,
     effect: { chargeMove: true, chargeDist: 6, range: 6 },
   },
@@ -568,7 +580,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Deal ~87 Might damage at range 1. Doubled (~174) if target is Stunned or Taunted.",
+    description: "Deal ~87 Might damage at range 1. +50% bonus (~130) if target is Stunned or Taunted.",
     exclusiveTo: CHARACTER_IDS.teddy,
     effect: { damage: 1, damageType: 'atk', mightMult: 1.45, range: 1, executeVsDebuffed: true },
   },
@@ -670,6 +682,31 @@ const CARD_DEFS: CardDef[] = [
   },
 ];
 
+// ── Card art lookup ───────────────────────────────────────────────────────────
+// Maps definitionId → /public path. Add one line here when a new card art drops in.
+// Future cards: name the file <definitionId>.png and add it to this map.
+const CARD_ART: Record<string, string> = {
+  shared_basic_attack:        '/art/cards/attack.png',
+  shared_shield:              '/art/cards/shield.png',
+  shared_quick_move:          '/art/cards/movement.png',
+  shared_mend:                '/art/cards/heal.png',
+  shared_battle_cry:          '/art/cards/battle_cry.png',
+  shared_gamble:              '/art/cards/gamble.png',
+  shared_mud_throw:           '/art/cards/mud_throw.png',
+  shared_armor_break:         '/art/cards/armor_break.png',
+  shared_silence:             '/art/cards/silence.png',
+  shared_poison_dart:         '/art/cards/poison_dart.png',
+  davinci_flying_machine:     '/art/cards/flying_machine.png',
+  davinci_vitruvian_guardian: '/art/cards/vitruvian_guardian.png',
+  huang_terracotta_summon:    '/art/cards/terracotta_warrior.png',
+  huang_cavalry_charge:       '/art/cards/terracotta_cavalry.png',
+};
+
+/** Returns the specific card art path for a definitionId, or undefined to use the type-based fallback. */
+export function getCardArt(definitionId: string): string | undefined {
+  return CARD_ART[definitionId];
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 let _instanceCounter = 0;
@@ -725,8 +762,8 @@ export const CARD_UPGRADES: Record<string, {
   // Napoleon
   napoleon_artillery_barrage: {
     upgradedName: 'Artillery Barrage+',
-    descriptionUpgrade: 'Power×1.3 → 1.6',
-    patch: { description: '~78 damage to a target at range 4. (Scales with Power)', effect: { powerMult: 1.6, range: 4 } },
+    descriptionUpgrade: 'Multiplier 1.3× → 1.6×',
+    patch: { description: 'Power×1.6 damage at range 4.', effect: { powerMult: 1.6, range: 4 } },
   },
   napoleon_grande_armee: {
     upgradedName: 'Grande Armée+',
@@ -736,29 +773,29 @@ export const CARD_UPGRADES: Record<string, {
   napoleon_final_salvo: {
     upgradedName: 'Final Salvo+',
     descriptionUpgrade: '3 hits → 5 hits',
-    patch: { description: 'ULTIMATE (Exhaust) — 5 random hits of ~28 damage on enemies within range 4. (Scales with Power)', effect: { powerMult: 0.7, multiHit: 5, range: 4, randomTargets: true } },
+    patch: { description: 'ULTIMATE (Exhaust) — 5 random hits of ~42 damage on enemies within range 4.', effect: { powerMult: 0.7, multiHit: 5, range: 4, randomTargets: true } },
   },
   // Genghis
   genghis_mongol_charge: {
     upgradedName: 'Mongol Charge+',
-    descriptionUpgrade: 'Bleed Power×0.4 → 0.6/turn',
-    patch: { description: '~48 damage at range 3. Applies Bleed (~24 HP/turn for 2 turns). (Scales with Power)', effect: { powerMult: 1.2, range: 3, bleedMult: 0.6, debuffDuration: 2 } },
+    descriptionUpgrade: 'Bleed ~20 → ~30 HP/turn',
+    patch: { description: '~60 damage at range 3. Applies Bleed (~30 HP/turn for 2 turns).', effect: { powerMult: 1.2, range: 3, bleedMult: 0.6, debuffDuration: 2 } },
   },
   genghis_horde_tactics: {
     upgradedName: 'Horde Tactics+',
     descriptionUpgrade: 'Range 2 → 3',
-    patch: { description: '~17 damage per enemy in range 3 — multiplies by enemy count. (Scales with Power)', effect: { scalingAoE: true, perEnemyMult: 0.42, range: 3 } },
+    patch: { description: '~28 damage per enemy in range 3 — multiplies by enemy count. (Scales with Power)', effect: { scalingAoE: true, perEnemyMult: 0.55, range: 3 } },
   },
   genghis_riders_fury: {
     upgradedName: "Rider's Fury+",
-    descriptionUpgrade: 'Power×1.5 → 2.0 on line',
-    patch: { description: 'ULTIMATE (Exhaust) — Power×2.0 to all enemies on a line, range 5. Doubled if target <40% HP. (Scales with Power)', effect: { powerMult: 2.0, lineTarget: true, range: 5, executeDouble: true } },
+    descriptionUpgrade: 'Line damage ~75 → ~100',
+    patch: { description: 'ULTIMATE (Exhaust) — ~100 damage to all enemies on a line (range 5). Doubled if target below 40% HP.', effect: { powerMult: 2.0, lineTarget: true, range: 5, executeDouble: true } },
   },
   // Leonidas
   leonidas_shield_bash: {
     upgradedName: 'Shield Bash+',
-    descriptionUpgrade: 'Power×1.6 → 1.9, Armor Break 2t → 3t',
-    patch: { description: 'Power×1.9 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). Grants Leonidas +20 Defense this turn. (Scales with Power)', effect: { powerMult: 1.9, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
+    descriptionUpgrade: 'Damage ~77 → ~91, Armor Break 2t → 3t',
+    patch: { description: '~91 damage at range 1. Applies Armor Break (−25% Defense for 3 turns). Grants Leonidas +20 Defense this turn.', effect: { powerMult: 1.9, range: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 3 } },
   },
   leonidas_spartan_wall: {
     upgradedName: 'Spartan Wall+',
@@ -767,8 +804,8 @@ export const CARD_UPGRADES: Record<string, {
   },
   leonidas_this_is_sparta: {
     upgradedName: 'THIS IS SPARTA!+',
-    descriptionUpgrade: 'Power×2.5 → 3.0',
-    patch: { description: 'ULTIMATE (Exhaust) — Power×3.0 damage to target + Root all adjacent enemies for 2 turns. (Scales with Power)', effect: { powerMult: 3.0, range: 3, aoeRooted: true } },
+    descriptionUpgrade: 'Damage ~120 → ~144',
+    patch: { description: 'ULTIMATE (Exhaust) — ~144 damage to target (range 3). Roots all adjacent enemies for 2 turns.', effect: { powerMult: 3.0, range: 3, aoeRooted: true } },
   },
   // Da Vinci
   davinci_flying_machine: {
@@ -778,7 +815,7 @@ export const CARD_UPGRADES: Record<string, {
   },
   davinci_masterpiece: {
     upgradedName: 'Masterpiece+',
-    descriptionUpgrade: 'Heal Power×1.2 → 1.8',
+    descriptionUpgrade: 'Heal ~50 → ~70 HP',
     patch: { description: 'Heal an ally within range 3 for ~70 HP. (Scales with Power)', effect: { healingMult: 1.4, range: 3 } },
   },
   davinci_vitruvian_guardian: {
@@ -789,8 +826,8 @@ export const CARD_UPGRADES: Record<string, {
   // Beethoven
   beethoven_schallwelle: {
     upgradedName: 'Schallwelle+',
-    descriptionUpgrade: 'Power×0.6→0.9, pushes 3 tiles',
-    patch: { description: 'Sonic wave — Power×0.9 damage to all enemies in a line up to range 3, pushes each 3 tiles back. (Scales with Power)', effect: { powerMult: 0.9, range: 3, lineTarget: true, pushback: 3 } },
+    descriptionUpgrade: 'Damage ~39 → ~59, pushes 3 tiles',
+    patch: { description: 'Sonic wave — ~59 damage to all enemies in a line up to range 3, pushes each 3 tiles back.', effect: { powerMult: 0.9, range: 3, lineTarget: true, pushback: 3 } },
   },
   beethoven_freudenspur: {
     upgradedName: 'Freudenspur+',
@@ -800,12 +837,12 @@ export const CARD_UPGRADES: Record<string, {
   beethoven_gotterfunken: {
     upgradedName: 'Götterfunken+',
     descriptionUpgrade: 'Stun 1 → 2 turns',
-    patch: { description: 'ULTIMATE (Exhaust) — Unleash the full Sternensturm. Deal Power×0.7 damage and stun all enemies within range 3 for 2 turns.', effect: { range: 3, allEnemiesInRange: true, debuffType: 'stun', debuffDuration: 2, powerMult: 0.7 } },
+    patch: { description: 'ULTIMATE (Exhaust) — ~46 damage and stun all enemies within range 3 for 2 turns.', effect: { range: 3, allEnemiesInRange: true, debuffType: 'stun', debuffDuration: 2, powerMult: 0.7 } },
   },
   // Yi Sun-sin
   sunsin_hwajeon: {
     upgradedName: 'Hwajeon+',
-    descriptionUpgrade: 'Power×1.2 → 1.5, pushes 2 tiles',
+    descriptionUpgrade: 'Damage ~66 → ~83, pushes 2 tiles',
     patch: { description: 'Land: ~90 dmg at range 3, pushes target 2 tiles back. Water: ~90 dmg at range 1, pushes 2 tiles back.', effect: { powerMult: 1.5, range: 3, pushback: 2 } },
   },
   sunsin_naval_command: {
@@ -815,7 +852,7 @@ export const CARD_UPGRADES: Record<string, {
   },
   sunsin_chongtong: {
     upgradedName: 'Chongtong Barrage+',
-    descriptionUpgrade: 'Power×2.0 → 2.2',
+    descriptionUpgrade: 'Damage ~110 → ~121',
     patch: { description: 'ULTIMATE (Exhaust) — Land: charge 3 hexes, ~66 dmg in path, push sideways. Water: ~99 dmg main target, ~48 dmg adjacents in range 5.', effect: { powerMult: 2.2, range: 5, allEnemiesInRange: true, lineCharge: true, chargeDist: 3, pushSide: true } },
   },
   // New shared cards
@@ -823,11 +860,6 @@ export const CARD_UPGRADES: Record<string, {
     upgradedName: 'Jump+',
     descriptionUpgrade: 'After landing, move 1 additional step freely',
     patch: { description: 'Jump over one tile in a straight line, ignoring rivers and blocking units. After landing, take 1 free movement step.', effect: { jump: true, jumpRange: 2, jumpBonusMove: 1 } },
-  },
-  shared_suppressive_fire: {
-    upgradedName: 'Suppressive Fire+',
-    descriptionUpgrade: 'Slow duration 1t → 2t',
-    patch: { description: 'Deal Might×0.3 to all enemies in a cone (3 wide, range 3) and apply Slow (−1 movement) for 2 turns.', effect: { coneTarget: true, mightMult: 0.3, range: 3, debuffType: 'mud_throw', debuffMagnitude: 1, debuffDuration: 2 } },
   },
   shared_fortify: {
     upgradedName: 'Fortify+',
@@ -849,11 +881,21 @@ export const CARD_UPGRADES: Record<string, {
     descriptionUpgrade: 'HP cost 20% → 15%',
     patch: { description: 'This unit loses 15% of current HP. All allied units gain +15 Might and +15 Power until end of turn.', manaCost: 2, effect: { selfHpCostPct: 0.15, teamDmgFlat: 15, teamPowerFlat: 15 } },
   },
+  shared_overcharge: {
+    upgradedName: 'Overcharge+',
+    descriptionUpgrade: 'Mana cost 2 → 1',
+    patch: { description: 'The next card played this turn costs 0 Mana. (Still uses a card play.)', manaCost: 1, effect: { overcharge: true } },
+  },
+  shared_retribution: {
+    upgradedName: 'Retribution+',
+    descriptionUpgrade: 'Damage 100% → 130% of HP lost, applies Bleed',
+    patch: { description: 'Deal 130% of HP lost this fight to one enemy. Apply Bleed (30% of damage dealt per turn, 2 turns). Range 3.', effect: { retributionMult: 1.3, retributionBleed: true, range: 3 } },
+  },
   // Shared card upgrades
   shared_basic_attack: {
     upgradedName: 'Basic Attack+',
-    descriptionUpgrade: 'Damage ×1.2 Might',
-    patch: { description: 'Deal Might×1.2 dmg to a target in attack range.', effect: { damageType: 'atk', mightMult: 1.2, range: 1 } },
+    descriptionUpgrade: 'Deal +25% bonus Might damage',
+    patch: { description: 'Deal 25% bonus Might damage to a target in attack range.', effect: { damageType: 'atk', mightMult: 1.25 } },
   },
   shared_shield: {
     upgradedName: 'Shields Up+',
@@ -907,8 +949,8 @@ export const CARD_UPGRADES: Record<string, {
   },
   shared_flash_bang: {
     upgradedName: 'Flash Bang+',
-    descriptionUpgrade: '2 → 3 turns Blinded',
-    patch: { description: 'Blind target for 3 turns (−50% Might, range 0). Range 3.', effect: { range: 3, debuffType: 'blinded', debuffMagnitude: 50, debuffDuration: 3 } },
+    descriptionUpgrade: '1 → 2 turns Blinded',
+    patch: { description: 'Blind target for 2 turns (attack range reduced to 1). Range 3.', effect: { range: 3, debuffType: 'blinded', debuffMagnitude: 0, debuffDuration: 2 } },
   },
   // Nelson
   nelson_crossing_the_t: {
@@ -929,8 +971,8 @@ export const CARD_UPGRADES: Record<string, {
   // Hannibal
   hannibal_alpine_march: {
     upgradedName: 'Alpine March+',
-    descriptionUpgrade: '+3 → +4 Movement',
-    patch: { description: '+4 Movement this turn.', effect: { moveBonus: 4 } },
+    descriptionUpgrade: 'Charge distance 6→8, trample ~28 → ~39 damage',
+    patch: { description: 'Use before moving. Charge up to 8 hexes — enemies in path take ~39 damage and are pushed sideways. Consumes all remaining movement.', effect: { chargeMove: true, chargeDist: 8, chargeTrampleMult: 0.7, range: 8 } },
   },
   hannibal_double_envelopment: {
     upgradedName: 'Double Envelopment+',
@@ -950,7 +992,7 @@ export const CARD_UPGRADES: Record<string, {
   },
   picasso_cubist_mirror: {
     upgradedName: 'Cubist Mirror+',
-    descriptionUpgrade: 'Swap damage ×0.5→×0.8',
+    descriptionUpgrade: 'Swap damage ~35 → ~56',
     patch: { description: 'Swap positions with target within range 4. Enemy takes ~56 damage on swap.', effect: { swapEnemyAlly: true, range: 4, powerMult: 0.8 } },
   },
   picasso_blue_period: {
@@ -967,7 +1009,7 @@ export const CARD_UPGRADES: Record<string, {
   teddy_big_stick: {
     upgradedName: 'Big Stick+',
     descriptionUpgrade: 'Applies Stun 1 turn on hit',
-    patch: { description: '~100 Might damage at range 1. Doubled (~200) vs Stunned or Taunted. Stuns target for 1 turn.', effect: { damage: 1, damageType: 'atk', mightMult: 1.65, range: 1, executeVsDebuffed: true, debuffType: 'stun', debuffDuration: 2, debuffMagnitude: 0 } },
+    patch: { description: '~100 Might damage at range 1. +50% bonus (~150) vs Stunned or Taunted. Stuns target for 1 turn.', effect: { damage: 1, damageType: 'atk', mightMult: 1.65, range: 1, executeVsDebuffed: true, debuffType: 'stun', debuffDuration: 1, debuffMagnitude: 0 } },
   },
   teddy_rough_riders_rally: {
     upgradedName: "Rough Riders' Rally+",

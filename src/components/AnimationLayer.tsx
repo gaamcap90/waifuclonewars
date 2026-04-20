@@ -150,17 +150,23 @@ function AuraRing({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number })
   );
 }
 
+// Arcane rune glyphs — alien-looking Unicode characters used as cast symbols
+const RUNE_GLYPHS = ['⬡', '⟁', '✦', '◈', '⬢', '⟐'];
+
 function CastBurst({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
   const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
   const color = anim.color ?? 'rgba(255,215,0,0.9)';
+  // Pick a deterministic glyph from the anim id
+  const glyphIdx = anim.id.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) % RUNE_GLYPHS.length;
+  const glyph = RUNE_GLYPHS[glyphIdx];
   return (
     <>
       {/* Outer star burst */}
       <div
         style={{
           position: 'absolute',
-          left: c.x,
-          top: c.y,
+          left: c.x - 25,
+          top: c.y - 25,
           width: 50,
           height: 50,
           borderRadius: '50%',
@@ -170,19 +176,58 @@ function CastBurst({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }
           zIndex: 195,
         }}
       />
+      {/* Rune glyph flash */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x - 20,
+          top: c.y - 22,
+          width: 40,
+          height: 40,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '1.5rem',
+          color,
+          textShadow: `0 0 14px ${color}, 0 0 28px ${color}`,
+          fontFamily: 'monospace',
+          animation: 'anim-cast-burst 0.75s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 197,
+        }}
+      >
+        {glyph}
+      </div>
+      {/* Expanding hex ring */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x - 30,
+          top: c.y - 30,
+          width: 60,
+          height: 60,
+          borderRadius: '4px',
+          clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+          border: `2px solid ${color}`,
+          boxShadow: `0 0 12px ${color}`,
+          animation: 'anim-aura-ring 0.65s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 196,
+        }}
+      />
       {/* Inner core flash */}
       <div
         style={{
           position: 'absolute',
-          left: c.x,
-          top: c.y,
+          left: c.x - 10,
+          top: c.y - 10,
           width: 20,
           height: 20,
           borderRadius: '50%',
           background: 'white',
           animation: 'anim-impact 0.3s ease-out forwards',
           pointerEvents: 'none',
-          zIndex: 196,
+          zIndex: 198,
           filter: 'blur(1px)',
         }}
       />
@@ -485,6 +530,76 @@ function DespawnEffect({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: numb
   );
 }
 
+function KnockbackBurst({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: number }) {
+  const c = hexCenter(anim.position.q, anim.position.r, ox, oy);
+  const color = anim.color ?? 'rgba(100,220,255,0.9)';
+
+  let streakEl: React.ReactNode = null;
+  if (anim.fromPosition) {
+    const from = hexCenter(anim.fromPosition.q, anim.fromPosition.r, ox, oy);
+    const dx = c.x - from.x;
+    const dy = c.y - from.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    streakEl = (
+      <div
+        style={{
+          position: 'absolute',
+          left: from.x,
+          top: from.y - 3,
+          width: dist,
+          height: 6,
+          transformOrigin: '0 50%',
+          transform: `rotate(${angle}deg)`,
+          background: `linear-gradient(90deg, transparent 0%, ${color} 100%)`,
+          animation: 'anim-knockback-streak 0.5s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 191,
+          borderRadius: 3,
+          filter: `blur(0.5px) drop-shadow(0 0 4px ${color})`,
+        }}
+      />
+    );
+  }
+
+  return (
+    <>
+      {streakEl}
+      {/* Expanding shockwave ring */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x,
+          top: c.y,
+          width: 72,
+          height: 72,
+          borderRadius: '50%',
+          border: `3px solid ${color}`,
+          boxShadow: `0 0 22px ${color}, inset 0 0 10px ${color}40`,
+          animation: 'anim-knockback-ring 0.55s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 192,
+        }}
+      />
+      {/* Center flash */}
+      <div
+        style={{
+          position: 'absolute',
+          left: c.x,
+          top: c.y,
+          width: 30,
+          height: 30,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, white 0%, ${color} 45%, transparent 100%)`,
+          animation: 'anim-knockback-flash 0.5s ease-out forwards',
+          pointerEvents: 'none',
+          zIndex: 193,
+        }}
+      />
+    </>
+  );
+}
+
 // ── main component ───────────────────────────────────────────────────
 
 const AnimationLayer: React.FC<AnimationLayerProps> = ({ animations, offsetX, offsetY }) => {
@@ -527,6 +642,8 @@ const AnimationLayer: React.FC<AnimationLayerProps> = ({ animations, offsetX, of
             return <HealRing key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
           case 'despawn':
             return <DespawnEffect key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
+          case 'knockback':
+            return <KnockbackBurst key={anim.id} anim={anim} ox={offsetX} oy={offsetY} />;
           default:
             return null;
         }

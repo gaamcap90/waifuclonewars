@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import { RunState, RunItem, CharacterId, CardReward } from "@/types/roguelike";
 import { CARD_REWARD_POOL, pickCardRewards, pickItemReward } from "@/data/roguelikeData";
 import { seededRng } from "@/utils/rng";
-import { CARD_DEFS, CARD_UPGRADES } from "@/data/cards";
+import { CARD_DEFS, CARD_UPGRADES, getCardArt } from "@/data/cards";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { useT } from "@/i18n";
 
@@ -55,14 +55,15 @@ function HpBar({ current, max }: { current: number; max: number }) {
 export interface CampfireScreenProps {
   runState: RunState;
   onHealAll: () => void;
-  onRemoveCard: (cardId: string) => void;
   onUpgradeSharedCard: (defId: string) => void;
+  onRemoveCard?: (defId: string) => void;
+  hasCardRemove?: boolean;
   onLeave: () => void;
 }
 
-type CampfirePhase = 'choose' | 'remove_card' | 'upgrade_shared';
+type CampfirePhase = 'choose' | 'upgrade_shared' | 'remove_card';
 
-export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSharedCard, onLeave }: CampfireScreenProps) {
+export function CampfireScreen({ runState, onHealAll, onUpgradeSharedCard, onRemoveCard, hasCardRemove, onLeave }: CampfireScreenProps) {
   const { t } = useT();
   const [phase, setPhase] = useState<CampfirePhase>('choose');
 
@@ -100,32 +101,10 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
     return result;
   }, [runState.deckCardIds, runState.upgradedCardDefIds]);
 
-  // Build grouped deck list: definitionId → { name, manaCost, count }
-  const deckList = useMemo(() => {
-    const counts: Record<string, { name: string; manaCost: number; icon: string; count: number; isCurse: boolean }> = {};
-    for (const id of runState.deckCardIds) {
-      if (!counts[id]) {
-        const def = CARD_DEFS.find(d => d.definitionId === id);
-        counts[id] = {
-          name: def?.name ?? id,
-          manaCost: def?.manaCost ?? 0,
-          icon: def?.type === 'attack' ? '⚔️' : def?.type === 'defense' ? '🛡️' : def?.type === 'movement' ? '💨' : def?.type === 'ultimate' ? '✨' : def?.type === 'debuff' ? '☠️' : '⬆️',
-          isCurse: id.startsWith('curse_'),
-          count: 0,
-        };
-      }
-      counts[id].count++;
-    }
-    return Object.entries(counts).map(([id, v]) => ({ id, ...v }));
-  }, [runState.deckCardIds]);
+
 
   const handleHealAll = () => {
     onHealAll();
-    onLeave();
-  };
-
-  const handleRemoveCard = (cardId: string) => {
-    onRemoveCard(cardId);
     onLeave();
   };
 
@@ -137,12 +116,41 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
   // ── Phase: choose ──
   if (phase === 'choose') {
     const allFull = runState.characters.every(c => c.currentHp <= 0 || c.currentHp >= c.maxHp);
-    const canRemove = runState.deckCardIds.length > 1;
     return (
       <ScreenWrapper>
-        <div className="rounded-2xl p-8" style={PANEL_STYLE}>
+        {/* Campfire warm wash — amber glow over entire screen */}
+        <div className="fixed inset-0 pointer-events-none z-0" style={{
+          background: 'radial-gradient(ellipse 60% 50% at 50% 55%, rgba(245,158,11,0.08) 0%, transparent 70%)',
+          animation: 'anim-campfire-glow 3s ease-in-out infinite',
+        }} />
+        {/* Floating embers */}
+        {Array.from({ length: 14 }, (_, i) => {
+          const left = 20 + ((i * 41 + 13) % 60);
+          const sz = 2 + (i % 3);
+          const dur = 3 + (i % 4) * 1.2;
+          const delay = -(i * 0.7);
+          const hue = i % 3 === 0 ? 'rgba(255,160,40,0.9)' : i % 3 === 1 ? 'rgba(255,100,30,0.8)' : 'rgba(255,200,80,0.7)';
+          return (
+            <div key={`ember-${i}`} className="fixed pointer-events-none z-0" style={{
+              left: `${left}%`,
+              bottom: '30%',
+              width: sz, height: sz,
+              borderRadius: '50%',
+              background: hue,
+              boxShadow: `0 0 ${sz + 3}px ${hue}`,
+              animation: `anim-campfire-ember ${dur}s ease-out ${delay}s infinite`,
+              opacity: 0,
+            }} />
+          );
+        })}
+        <div className="rounded-2xl p-8 relative" style={PANEL_STYLE}>
+          {/* Panel flicker overlay */}
+          <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{
+            boxShadow: 'inset 0 0 60px rgba(245,158,11,0.08)',
+            animation: 'anim-campfire-glow 2.2s ease-in-out infinite',
+          }} />
           <div className="text-center mb-6">
-            <div className="text-5xl mb-3">🔥</div>
+            <div className="text-5xl mb-3" style={{ animation: 'anim-campfire-glow 1.5s ease-in-out infinite', display: 'inline-block' }}>🔥</div>
             <h1 className="font-orbitron font-black text-3xl text-white mb-1" style={{ textShadow: '0 0 30px rgba(245,158,11,0.5)' }}>
               {t.campfire.title}
             </h1>
@@ -184,25 +192,6 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
               </div>
             </button>
 
-            {/* Remove Card */}
-            <button
-              onClick={() => setPhase('remove_card')}
-              disabled={!canRemove}
-              className="rounded-xl border p-4 text-left transition-all hover:scale-[1.02] flex items-center gap-4"
-              style={{
-                background: 'rgba(8,5,25,0.85)',
-                borderColor: !canRemove ? 'rgba(80,80,100,0.25)' : 'rgba(234,179,8,0.55)',
-                cursor: !canRemove ? 'not-allowed' : 'pointer',
-                opacity: !canRemove ? 0.55 : 1,
-              }}
-            >
-              <span className="text-2xl">🗑️</span>
-              <div>
-                <p className="font-orbitron font-bold text-[13px] text-yellow-400">{t.campfire.removeCard}</p>
-                <p className="text-slate-400 text-[11px]">{t.campfire.removeCardDesc}</p>
-              </div>
-            </button>
-
             {/* Upgrade Shared Card */}
             {(() => {
               const canUpgrade = upgradeableShared.length > 0;
@@ -230,6 +219,24 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
                 </button>
               );
             })()}
+
+            {/* Remove Card — only visible when perk is active */}
+            {hasCardRemove && (
+              <button
+                onClick={() => setPhase('remove_card')}
+                className="rounded-xl border p-4 text-left transition-all hover:scale-[1.02] flex items-center gap-4"
+                style={{
+                  background: 'rgba(8,5,25,0.85)',
+                  borderColor: 'rgba(239,68,68,0.55)',
+                }}
+              >
+                <span className="text-2xl">🗑️</span>
+                <div>
+                  <p className="font-orbitron font-bold text-[13px] text-red-400">{t.campfire.removeCard}</p>
+                  <p className="text-slate-400 text-[11px]">{t.campfire.removeCardDesc}</p>
+                </div>
+              </button>
+            )}
           </div>
 
           <button
@@ -243,61 +250,6 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
           >
             {t.campfire.skip}
           </button>
-        </div>
-      </ScreenWrapper>
-    );
-  }
-
-  // ── Phase: remove_card ──
-  if (phase === 'remove_card') {
-    return (
-      <ScreenWrapper>
-        <div className="rounded-2xl p-8" style={PANEL_STYLE}>
-          <div className="text-center mb-6">
-            <div className="text-4xl mb-3">🗑️</div>
-            <h1 className="font-orbitron font-black text-2xl text-white mb-1">{t.campfire.removeCardTitle}</h1>
-            <p className="text-slate-400 text-sm">{t.campfire.removeCardSub}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-6 max-h-80 overflow-y-auto pr-1">
-            {deckList.map(entry => (
-              <button
-                key={entry.id}
-                onClick={() => handleRemoveCard(entry.id)}
-                className="rounded-xl border p-3 text-left transition-all hover:scale-[1.02]"
-                style={{
-                  background: entry.isCurse ? 'rgba(127,29,29,0.25)' : 'rgba(8,5,25,0.85)',
-                  borderColor: entry.isCurse ? 'rgba(239,68,68,0.55)' : 'rgba(80,50,140,0.45)',
-                }}
-              >
-                <div className="flex items-start justify-between mb-1.5">
-                  <span className="text-xl">{entry.icon}</span>
-                  <div className="flex gap-1.5 items-center">
-                    {entry.isCurse && (
-                      <span className="text-[8px] font-orbitron font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ color: '#ef4444', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)' }}>
-                        CURSE
-                      </span>
-                    )}
-                    {entry.count > 1 && (
-                      <span className="text-[9px] font-orbitron text-slate-400">×{entry.count}</span>
-                    )}
-                  </div>
-                </div>
-                <p className="font-orbitron font-bold text-[11px] text-white leading-tight">{entry.name}</p>
-                <p className="text-[9px] text-slate-500 mt-0.5">{entry.manaCost} mana</p>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex justify-center">
-            <button
-              onClick={() => setPhase('choose')}
-              className="font-orbitron text-[11px] text-slate-500 hover:text-slate-300 underline transition-colors"
-            >
-              {t.campfire.back}
-            </button>
-          </div>
         </div>
       </ScreenWrapper>
     );
@@ -358,6 +310,62 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
     );
   }
 
+  // ── Phase: remove_card ──
+  if (phase === 'remove_card') {
+    const removableCards = runState.deckCardIds.map((defId, idx) => {
+      const def = CARD_DEFS.find(d => d.definitionId === defId);
+      if (!def) return null;
+      const icon = def.type === 'attack' ? '⚔️' : def.type === 'defense' ? '🛡️' : def.type === 'movement' ? '💨' : def.type === 'debuff' ? '☠️' : '⬆️';
+      return { defId, name: def.name, icon, manaCost: def.manaCost, rarity: def.rarity, idx };
+    }).filter(Boolean) as { defId: string; name: string; icon: string; manaCost: number; rarity: string; idx: number }[];
+
+    return (
+      <ScreenWrapper>
+        <div className="rounded-2xl p-8" style={PANEL_STYLE}>
+          <div className="text-center mb-6">
+            <div className="text-4xl mb-3">🗑️</div>
+            <h1 className="font-orbitron font-black text-2xl text-white mb-1">{t.campfire.removeCardTitle}</h1>
+            <p className="text-slate-400 text-sm">{t.campfire.removeCardSub}</p>
+          </div>
+
+          <div className="flex flex-col gap-3 mb-6 max-h-96 overflow-y-auto pr-1">
+            {removableCards.map((entry) => (
+              <button
+                key={`remove-${entry.defId}-${entry.idx}`}
+                onClick={() => { onRemoveCard?.(entry.defId); onLeave(); }}
+                className="rounded-xl border p-4 text-left transition-all hover:scale-[1.01] flex items-center gap-4"
+                style={{
+                  background: 'rgba(18,6,6,0.95)',
+                  borderColor: 'rgba(239,68,68,0.35)',
+                }}
+              >
+                <span className="text-2xl shrink-0">{entry.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-orbitron font-bold text-[13px] text-white">{entry.name}</span>
+                    <span className="font-orbitron text-[9px] uppercase" style={{
+                      color: entry.rarity === 'rare' ? '#f59e0b' : entry.rarity === 'uncommon' ? '#34d399' : '#94a3b8',
+                    }}>{entry.rarity}</span>
+                    <span className="ml-auto font-orbitron text-[10px] text-slate-500 shrink-0">{entry.manaCost} Mana</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              onClick={() => setPhase('choose')}
+              className="font-orbitron text-[11px] text-slate-500 hover:text-slate-300 underline transition-colors"
+            >
+              {t.campfire.back}
+            </button>
+          </div>
+        </div>
+      </ScreenWrapper>
+    );
+  }
+
   // Fallthrough (shouldn't happen)
   return null;
 }
@@ -366,12 +374,19 @@ export function CampfireScreen({ runState, onHealAll, onRemoveCard, onUpgradeSha
 
 export interface MerchantScreenProps {
   runState: RunState;
+  nodeId?: string;                 // current node ID — used to seed shop items per-visit
+  purchasedCardDefs?: Set<string>; // card defIds bought this visit (persists across remounts)
+  onCardPurchased?: (defId: string) => void; // notify parent of card purchase
   onBuyCard: (cardId: string, cost: number) => void;
   onBuyHeal: (cost: number) => void;
   onBuyItem: (item: RunItem, cost: number) => void;
   onDuplicateItem: (item: RunItem, characterId: CharacterId, slotIndex: number, cost: number) => void;
   onSellItem: (item: RunItem, characterId: CharacterId, slotIndex: number, goldGained: number) => void;
   onMysteryBox: (cost: number) => 'item' | 'gold' | 'damage' | 'curse';
+  onRemoveCard: (cardId: string, cost: number) => void;
+  hasMerchant4th?: boolean;
+  hasMerchant4thItem?: boolean;
+  hasMysteryBoxFree?: boolean;
   onLeave: () => void;
 }
 
@@ -388,7 +403,7 @@ const BUY_ITEM_PRICE: Record<string, number> = {
   common: 115, uncommon: 190, rare: 295, legendary: 460,
 };
 
-export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDuplicateItem, onSellItem, onMysteryBox, onLeave }: MerchantScreenProps) {
+export function MerchantScreen({ runState, nodeId, purchasedCardDefs, onCardPurchased, onBuyCard, onBuyHeal, onBuyItem, onDuplicateItem, onSellItem, onMysteryBox, onRemoveCard, hasMerchant4th, hasMerchant4thItem, hasMysteryBoxFree, onLeave }: MerchantScreenProps) {
   const { t } = useT();
   const [purchased, setPurchased] = useState<Set<string>>(new Set());
   const [boughtItemIds, setBoughtItemIds] = useState<Set<number>>(new Set()); // shop item indices
@@ -396,42 +411,52 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
   const [soldSlots, setSoldSlots] = useState<Set<string>>(new Set()); // "charId:slotIdx"
   const [healPurchased, setHealPurchased] = useState(false);
   const [mysteryResult, setMysteryResult] = useState<'item' | 'gold' | 'damage' | 'curse' | null>(null);
+  const [removedCard, setRemovedCard] = useState(false);
+  const [showRemovePicker, setShowRemovePicker] = useState(false);
   const [pendingDuplicate, setPendingDuplicate] = useState<RunItem | null>(null);
   const [pendingSell, setPendingSell] = useState<{ item: RunItem; charId: string; slotIdx: number; price: number } | null>(null);
   const [hoveredItem, setHoveredItem] = useState<{ item: RunItem; x: number; y: number } | null>(null);
 
-  // 3 random cards priced 50–80 gold, stable on mount
+  const removalCost = 75 + (runState.cardRemovalsThisRun ?? 0) * 25;
+
+  // 3 random cards priced by rarity, stable on mount
   const shopCards = useMemo<{ card: CardReward; price: number }[]>(() => {
     const rng = seededRng(runState.seed ^ 0xC0FFEE);
     const runCharIds = runState.characters.map(c => c.id);
-    const picks = pickCardRewards(runState.deckCardIds, rng, runCharIds, 'merchant');
+    const picks = pickCardRewards(runState.deckCardIds, rng, runCharIds, 'merchant', 1, hasMerchant4th ? 4 : 3);
     const priceRng = seededRng(runState.seed ^ 0xABCDE);
-    return picks.map(card => ({
-      card,
-      price: 50 + Math.floor(priceRng() * 31),
-    }));
-  }, []);
-
-  // 3 items for sale: common, uncommon, rare — seeded and stable
-  const shopItems = useMemo<{ item: RunItem; price: number }[]>(() => {
-    const rng = seededRng(runState.seed ^ 0xDEAD7);
-    const deadIds = (runState.permanentlyDeadIds ?? []) as string[];
-    const teamCharIds = runState.characters.filter(c => c.currentHp > 0).map(c => c.id);
-    const tiers = ['common', 'uncommon', 'rare'] as const;
-    return tiers.map(tier => {
-      let item = pickItemReward(tier, rng, teamCharIds);
-      // Re-roll if exclusive to a dead character
-      for (let i = 0; i < 6 && item?.targetCharacter && deadIds.includes(item.targetCharacter); i++) {
-        item = pickItemReward(tier, rng, teamCharIds);
-      }
-      return { item, price: BUY_ITEM_PRICE[tier] ?? 190 };
+    const BASE_PRICE: Record<string, [number, number]> = {
+      common:   [45,  70],
+      uncommon: [80,  120],
+      rare:     [150, 210],
+    };
+    return picks.map(card => {
+      const [lo, hi] = BASE_PRICE[card.rarity ?? 'common'];
+      return { card, price: lo + Math.floor(priceRng() * (hi - lo + 1)) };
     });
   }, []);
 
-  const handleBuyCard = (cardId: string, price: number) => {
+  // 3 (or 4) items for sale — seeded per node so different each merchant visit
+  const shopItems = useMemo<{ item: RunItem; price: number }[]>(() => {
+    const nodeHash = (nodeId ?? '').split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
+    const rng = seededRng((runState.seed ^ 0xDEAD7) ^ nodeHash);
+    const deadIds = (runState.permanentlyDeadIds ?? []) as string[];
+    const teamCharIds = runState.characters.filter(c => c.currentHp > 0).map(c => c.id);
+    const tiers: string[] = hasMerchant4thItem ? ['common', 'uncommon', 'rare', 'legendary'] : ['common', 'uncommon', 'rare'];
+    return tiers.map(tier => {
+      let item = pickItemReward(tier as 'common' | 'uncommon' | 'rare' | 'legendary', rng, teamCharIds);
+      for (let i = 0; i < 6 && item?.targetCharacter && deadIds.includes(item.targetCharacter); i++) {
+        item = pickItemReward(tier as 'common' | 'uncommon' | 'rare' | 'legendary', rng, teamCharIds);
+      }
+      return { item, price: BUY_ITEM_PRICE[tier] ?? 190 };
+    });
+  }, [hasMerchant4thItem]);
+
+  const handleBuyCard = (cardId: string, price: number, defId: string) => {
     if (runState.gold < price) return;
     onBuyCard(cardId, price);
-    setPurchased(prev => new Set([...prev, cardId]));
+    setPurchased(prev => new Set([...prev, defId]));
+    onCardPurchased?.(defId);
   };
 
   const handleBuyHeal = () => {
@@ -440,9 +465,10 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
     setHealPurchased(true);
   };
 
+  const mysteryBoxCost = hasMysteryBoxFree ? 0 : MYSTERY_BOX_COST;
   const handleMysteryBox = () => {
-    if (runState.gold < MYSTERY_BOX_COST || mysteryResult !== null) return;
-    const result = onMysteryBox(MYSTERY_BOX_COST);
+    if (runState.gold < mysteryBoxCost || mysteryResult !== null) return;
+    const result = onMysteryBox(mysteryBoxCost);
     setMysteryResult(result);
   };
 
@@ -453,15 +479,46 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
 
   return (
     <ScreenWrapper>
-      <div className="rounded-2xl p-8" style={PANEL_STYLE}>
+      {/* ── Floating coin particles ── */}
+      {Array.from({ length: 12 }, (_, i) => {
+        const left = 4 + ((i * 19 + 7) % 90);
+        const dur  = 2.8 + (i % 5) * 0.6;
+        const delay = (i * 0.4) % 3.5;
+        return (
+          <div key={i} style={{
+            position: 'fixed', bottom: -16, left: `${left}%`,
+            width: 8, height: 8, borderRadius: '50%',
+            background: i % 3 === 0 ? '#f59e0b' : i % 3 === 1 ? '#fbbf24' : '#fcd34d',
+            boxShadow: '0 0 6px rgba(245,158,11,0.8), 0 0 12px rgba(245,158,11,0.4)',
+            animation: `anim-merchant-coin ${dur}s ease-in-out ${delay}s infinite`,
+            pointerEvents: 'none', zIndex: 1,
+          }} />
+        );
+      })}
+
+      <div className="rounded-2xl p-8 relative" style={PANEL_STYLE}>
+        {/* Holographic top bar */}
+        <div style={{
+          position: 'absolute', top: 0, left: '10%', right: '10%', height: 2,
+          background: 'linear-gradient(to right, transparent, rgba(34,197,94,0.8), rgba(245,158,11,0.6), transparent)',
+          boxShadow: '0 0 10px rgba(34,197,94,0.4)',
+          animation: 'anim-holo-banner 3s ease-in-out infinite',
+          borderRadius: '0 0 2px 2px',
+        }} />
+        {/* Subtle inner flicker overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: 'inherit', pointerEvents: 'none',
+          background: 'linear-gradient(135deg, rgba(34,197,94,0.03) 0%, transparent 50%, rgba(245,158,11,0.02) 100%)',
+          animation: 'anim-campfire-glow 4s ease-in-out infinite',
+        }} />
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="text-5xl mb-3">🛒</div>
-          <h1 className="font-orbitron font-black text-3xl text-white mb-1" style={{ textShadow: '0 0 30px rgba(34,197,94,0.4)' }}>
+        <div className="text-center mb-6 relative z-10">
+          <div className="text-5xl mb-3" style={{ filter: 'drop-shadow(0 0 16px rgba(245,158,11,0.7))' }}>🛒</div>
+          <h1 className="font-orbitron font-black text-3xl text-white mb-1" style={{ textShadow: '0 0 30px rgba(34,197,94,0.5), 0 0 60px rgba(245,158,11,0.2)' }}>
             {t.merchant.title}
           </h1>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-yellow-400 font-orbitron font-bold text-lg">💰 {runState.gold}</span>
+            <span className="text-yellow-400 font-orbitron font-bold text-lg" style={{ textShadow: '0 0 10px rgba(245,158,11,0.6)' }}>💰 {runState.gold}</span>
             <span className="text-slate-500 text-sm">{t.merchant.goldAvailable}</span>
           </div>
         </div>
@@ -471,7 +528,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
           <p className="font-orbitron text-[10px] tracking-[0.4em] text-cyan-400 mb-3">{t.merchant.cardsForSale}</p>
           <div className="grid grid-cols-3 gap-4">
             {shopCards.map(({ card, price }) => {
-              const bought = purchased.has(card.definitionId);
+              const bought = purchased.has(card.definitionId) || (purchasedCardDefs?.has(card.definitionId) ?? false);
               const canAfford = runState.gold >= price && !bought;
               const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : '#4b5563';
               const artMap: Record<string, string> = {
@@ -479,7 +536,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
                 movement: '/art/cards/movement.png', ultimate: '/art/cards/ultimate.png',
                 buff: '/art/cards/battle_cry.png', debuff: '/art/cards/poison_dart.png',
               };
-              const artSrc = artMap[card.type ?? 'attack'] ?? '/art/cards/attack.png';
+              const artSrc = getCardArt(card.definitionId) ?? artMap[card.type ?? 'attack'] ?? '/art/cards/attack.png';
               return (
                 <div key={card.definitionId} className="flex flex-col items-center" style={{ opacity: bought ? 0.6 : 1 }}>
                   <div className="relative rounded-xl overflow-hidden flex flex-col w-full"
@@ -510,7 +567,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
                         })()}
                       </div>
                       <p className="text-slate-400 text-[10px] leading-snug flex-1 mb-2.5">{card.description}</p>
-                      <button onClick={() => handleBuyCard(card.definitionId, price)} disabled={!canAfford}
+                      <button onClick={() => handleBuyCard(card.definitionId, price, card.definitionId)} disabled={!canAfford}
                         className="font-orbitron text-[10px] font-bold py-1.5 rounded-lg border transition-all w-full hover:scale-[1.02] active:scale-95"
                         style={{
                           background: bought ? 'transparent' : canAfford ? `${exColor}18` : 'rgba(20,15,35,0.6)',
@@ -531,21 +588,24 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
         {/* Items for Sale */}
         <div className="mb-5">
           <p className="font-orbitron text-[10px] tracking-[0.4em] text-amber-400 mb-3">{t.merchant.itemsForSale}</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className={`grid ${hasMerchant4thItem ? 'grid-cols-4' : 'grid-cols-3'} gap-3`}>
             {shopItems.map(({ item, price }, i) => {
               const bought = boughtItemIds.has(i);
               const canAfford = runState.gold >= price && !bought;
               const tc = TIER_COLOR[item.tier] ?? '#94a3b8';
+              const isRare = item.tier === 'rare';
               return (
                 <div key={i} className="rounded-xl flex flex-col"
                   style={{
-                    background: 'rgba(6,3,22,0.92)',
-                    border: `1px solid ${tc}${bought ? '22' : '45'}`,
-                    boxShadow: canAfford ? `0 0 12px ${tc}18, 0 4px 14px rgba(0,0,0,0.6)` : 'none',
+                    background: isRare ? `rgba(12,6,35,0.96)` : 'rgba(6,3,22,0.92)',
+                    border: `${isRare ? 2 : 1}px solid ${tc}${bought ? '22' : isRare ? '70' : '45'}`,
+                    boxShadow: bought ? 'none' : isRare
+                      ? `0 0 22px ${tc}35, 0 0 8px ${tc}20, 0 6px 18px rgba(0,0,0,0.7)`
+                      : canAfford ? `0 0 12px ${tc}18, 0 4px 14px rgba(0,0,0,0.6)` : 'none',
                     opacity: bought ? 0.55 : 1,
                   }}>
-                  {/* Tier accent bar */}
-                  <div className="h-[3px] rounded-t-xl" style={{ background: `linear-gradient(90deg, transparent, ${tc}, transparent)` }} />
+                  {/* Tier accent bar — thicker for rare */}
+                  <div className={`${isRare ? 'h-[5px]' : 'h-[3px]'} rounded-t-xl`} style={{ background: `linear-gradient(90deg, transparent, ${tc}, transparent)` }} />
                   <div className="px-3 pt-3 pb-2 flex flex-col flex-1">
                     {/* Icon + name row */}
                     <div className="flex items-start gap-2 mb-2">
@@ -624,17 +684,41 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
                   </p>
                 )}
               </div>
-              <button onClick={handleMysteryBox} disabled={runState.gold < MYSTERY_BOX_COST || mysteryResult !== null}
+              <button onClick={handleMysteryBox} disabled={runState.gold < mysteryBoxCost || mysteryResult !== null}
                 className="font-orbitron text-[10px] font-bold px-5 py-2 rounded-lg border transition-all ml-3"
                 style={{
-                  background: mysteryResult !== null ? 'transparent' : runState.gold >= MYSTERY_BOX_COST ? 'rgba(168,85,247,0.12)' : 'rgba(20,15,35,0.6)',
-                  borderColor: mysteryResult !== null ? '#475569' : runState.gold >= MYSTERY_BOX_COST ? 'rgba(168,85,247,0.55)' : 'rgba(60,50,80,0.4)',
-                  color: mysteryResult !== null ? '#475569' : runState.gold >= MYSTERY_BOX_COST ? '#c084fc' : '#64748b',
-                  cursor: (runState.gold >= MYSTERY_BOX_COST && mysteryResult === null) ? 'pointer' : 'not-allowed',
+                  background: mysteryResult !== null ? 'transparent' : runState.gold >= mysteryBoxCost ? 'rgba(168,85,247,0.12)' : 'rgba(20,15,35,0.6)',
+                  borderColor: mysteryResult !== null ? '#475569' : hasMysteryBoxFree ? 'rgba(34,211,238,0.55)' : runState.gold >= mysteryBoxCost ? 'rgba(168,85,247,0.55)' : 'rgba(60,50,80,0.4)',
+                  color: mysteryResult !== null ? '#475569' : hasMysteryBoxFree ? '#22d3ee' : runState.gold >= mysteryBoxCost ? '#c084fc' : '#64748b',
+                  cursor: (runState.gold >= mysteryBoxCost && mysteryResult === null) ? 'pointer' : 'not-allowed',
                 }}>
-                {mysteryResult !== null ? t.merchant.opened : t.merchant.goldPrice.replace('{n}', String(MYSTERY_BOX_COST))}
+                {mysteryResult !== null ? t.merchant.opened : hasMysteryBoxFree ? '🎁 FREE' : t.merchant.goldPrice.replace('{n}', String(mysteryBoxCost))}
               </button>
             </div>
+
+            {/* Remove Card */}
+            {(() => {
+              const canRemove = !removedCard && runState.gold >= removalCost && runState.deckCardIds.length > 1;
+              return (
+                <div className="rounded-xl border border-slate-700/40 p-4 flex items-center justify-between"
+                  style={{ background: 'rgba(6,3,22,0.85)' }}>
+                  <div>
+                    <p className="font-orbitron font-bold text-[12px] text-white mb-0.5">{t.merchant.removeCard}</p>
+                    <p className="text-slate-400 text-[11px]">{t.merchant.removeCardDesc}</p>
+                  </div>
+                  <button onClick={() => canRemove && setShowRemovePicker(true)} disabled={!canRemove}
+                    className="font-orbitron text-[10px] font-bold px-5 py-2 rounded-lg border transition-all ml-3"
+                    style={{
+                      background: removedCard ? 'transparent' : canRemove ? 'rgba(239,68,68,0.12)' : 'rgba(20,15,35,0.6)',
+                      borderColor: removedCard ? '#475569' : canRemove ? 'rgba(239,68,68,0.55)' : 'rgba(60,50,80,0.4)',
+                      color: removedCard ? '#475569' : canRemove ? '#f87171' : '#64748b',
+                      cursor: canRemove ? 'pointer' : 'not-allowed',
+                    }}>
+                    {removedCard ? t.merchant.done : t.merchant.goldPrice.replace('{n}', String(removalCost))}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -665,7 +749,8 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
                       const duped = duplicatedIds.has(slotItem.id);
                       const sellPrice = SELL_ITEM_PRICE[slotItem.tier] ?? 15;
                       const dupeCost = DUPLICATE_ITEM_BASE_COST[slotItem.tier] ?? 60;
-                      const canDupe = runState.gold >= dupeCost && !duped && !sold;
+                      const isLegendaryOrSig = slotItem.tier === 'legendary' || slotItem.isSignature;
+                      const canDupe = runState.gold >= dupeCost && !duped && !sold && !isLegendaryOrSig;
                       const tc = TIER_COLOR[slotItem.tier] ?? '#94a3b8';
                       const isSellPending = pendingSell?.item.id === slotItem.id && pendingSell.charId === char.id && pendingSell.slotIdx === idx;
 
@@ -771,6 +856,61 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
         </div>
       )}
 
+      {/* Remove Card picker */}
+      {showRemovePicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
+          <div className="rounded-2xl p-6 w-full max-w-lg" style={PANEL_STYLE}>
+            <div className="text-center mb-5">
+              <span className="text-3xl">🗑️</span>
+              <p className="font-orbitron font-bold text-white text-lg mt-2">{t.merchant.removeCardTitle}</p>
+              <p className="text-slate-400 text-[11px] mt-1">{t.merchant.removeCardSub}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-4 max-h-80 overflow-y-auto pr-1">
+              {runState.deckCardIds.map((cardId, idx) => {
+                const def = CARD_DEFS.find(d => d.definitionId === cardId);
+                if (!def) return null;
+                const icon = def.type === 'attack' ? '⚔️' : def.type === 'defense' ? '🛡️' : def.type === 'movement' ? '💨' : def.type === 'debuff' ? '☠️' : def.type === 'ultimate' ? '🌟' : '⬆️';
+                const exColor = def.exclusiveTo ? EXCLUSIVE_COLOR[def.exclusiveTo] ?? '#94a3b8' : '#4b5563';
+                return (
+                  <button
+                    key={`${cardId}-${idx}`}
+                    onClick={() => {
+                      onRemoveCard(cardId, removalCost);
+                      setRemovedCard(true);
+                      setShowRemovePicker(false);
+                    }}
+                    className="rounded-xl border p-3 text-left transition-all hover:scale-[1.02] hover:border-red-500/60"
+                    style={{
+                      background: 'rgba(8,5,25,0.90)',
+                      borderColor: `${exColor}40`,
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-base">{icon}</span>
+                      <span className="font-orbitron font-bold text-[10px] text-white truncate">{def.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[8px] font-orbitron text-slate-500">{def.manaCost} Mana</span>
+                      {def.exclusiveTo && (
+                        <span className="text-[7px] font-orbitron font-bold px-1 py-0.5 rounded"
+                          style={{ color: exColor, background: exColor + '18' }}>
+                          {def.exclusiveTo}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-center">
+              <button onClick={() => setShowRemovePicker(false)} className="text-slate-500 hover:text-slate-300 text-[10px] font-orbitron underline">
+                {t.merchant.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Duplicate item — choose who equips it */}
       {pendingDuplicate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
@@ -784,7 +924,7 @@ export function MerchantScreen({ runState, onBuyCard, onBuyHeal, onBuyItem, onDu
               {runState.characters
                 .filter(c => c.currentHp > 0)
                 .map(char => {
-                  const alreadyOwns = char.items.some(s => s?.name === pendingDuplicate.name);
+                  const alreadyOwns = char.items.some(s => s?.id === pendingDuplicate.id);
                   return (
                     <div key={char.id} className="rounded-xl border border-slate-700/50 p-4" style={{ background: 'rgba(8,5,25,0.9)' }}>
                       <div className="flex items-center gap-3 mb-3">

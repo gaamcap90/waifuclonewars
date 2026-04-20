@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, Volume2, VolumeX, Monitor, Gamepad2, Globe } from "lucide-react";
+import { ChevronLeft, Volume2, VolumeX, Monitor, Gamepad2, Globe, BookOpen } from "lucide-react";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { useAudio } from "@/hooks/useAudio";
 import { useT, LANG_LABELS, Language } from "@/i18n";
@@ -17,10 +17,10 @@ const SCALE_PRESETS_BASE = [
   { scale: 0 },
 ] as const;
 
-type SettingsTab = 'general' | 'controls';
+type SettingsTab = 'general' | 'controls' | 'rules';
 
 export default function GameSettings({ onBack, onReplayTutorial }: Props) {
-  const { settings, setMusicVolume, setSfxVolume, toggleMute } = useAudio();
+  const { settings, setMusicVolume, setSfxVolume, toggleMute, setVoiceVolume, setVoiceEnabled, setDialogueEnabled } = useAudio();
   const { t, lang, setLang } = useT();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
@@ -43,8 +43,9 @@ export default function GameSettings({ onBack, onReplayTutorial }: Props) {
   };
 
   const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'general',  label: t.settings.tabs.general,   icon: <Monitor className="w-4 h-4" /> },
+    { id: 'general',  label: t.settings.tabs.general,   icon: <Monitor  className="w-4 h-4" /> },
     { id: 'controls', label: t.settings.tabs.controls,  icon: <Gamepad2 className="w-4 h-4" /> },
+    { id: 'rules',    label: t.settings.tabs.rules,     icon: <BookOpen className="w-4 h-4" /> },
   ];
 
   const CONTROLS_DATA = [
@@ -197,6 +198,7 @@ export default function GameSettings({ onBack, onReplayTutorial }: Props) {
                   <div className="rounded-xl border border-slate-700/40 p-6 space-y-6"
                     style={{ background: "rgba(2,4,14,0.7)" }}>
 
+                    {/* Mute toggle */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {settings.muted
@@ -221,6 +223,7 @@ export default function GameSettings({ onBack, onReplayTutorial }: Props) {
                       </button>
                     </div>
 
+                    {/* Music volume */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-orbitron text-xs text-slate-300 tracking-wider">{t.settings.audio.music}</span>
@@ -236,6 +239,7 @@ export default function GameSettings({ onBack, onReplayTutorial }: Props) {
                       />
                     </div>
 
+                    {/* SFX volume */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-orbitron text-xs text-slate-300 tracking-wider">{t.settings.audio.sfx}</span>
@@ -251,9 +255,71 @@ export default function GameSettings({ onBack, onReplayTutorial }: Props) {
                       />
                     </div>
 
-                    <p className="text-slate-700 text-[11px] font-orbitron tracking-wider text-center pt-1">
-                      {t.settings.audio.hint}
-                    </p>
+                    {/* Voice & Dialogue divider */}
+                    <div className="h-px bg-slate-700/50" />
+
+                    {/* Voice lines toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-orbitron text-xs tracking-wider"
+                          style={{ color: settings.voiceEnabled ? '#fde68a' : '#64748b' }}>
+                          {t.settings.audio.voiceLines}
+                        </span>
+                        <p className="text-[10px] text-slate-600 mt-0.5">{t.settings.audio.voiceLinesDesc}</p>
+                      </div>
+                      <button onClick={() => setVoiceEnabled(!settings.voiceEnabled)}
+                        className="w-12 h-6 rounded-full border transition-all relative overflow-hidden shrink-0"
+                        style={{
+                          background: settings.voiceEnabled ? 'rgba(251,191,36,0.7)' : 'rgba(51,65,85,0.9)',
+                          borderColor: settings.voiceEnabled ? '#fbbf24' : '#475569',
+                          boxShadow: settings.voiceEnabled ? '0 0 10px rgba(251,191,36,0.3)' : 'none',
+                        }}>
+                        <span className={[
+                          "absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all duration-200",
+                          settings.voiceEnabled ? "left-[25px]" : "left-[3px]",
+                        ].join(" ")} />
+                      </button>
+                    </div>
+
+                    {/* Voice volume */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-orbitron text-xs text-slate-300 tracking-wider">{t.settings.audio.voiceVolume}</span>
+                        <span className="text-xs font-mono"
+                          style={{ color: (!settings.voiceEnabled || settings.muted) ? '#475569' : '#94a3b8' }}>
+                          {Math.round(settings.voiceVolume * 100)}%
+                        </span>
+                      </div>
+                      <input type="range" min={0} max={1} step={0.01}
+                        value={settings.voiceVolume}
+                        onChange={e => setVoiceVolume(parseFloat(e.target.value))}
+                        disabled={!settings.voiceEnabled || settings.muted}
+                        className="w-full accent-yellow-400 disabled:opacity-30 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Dialogue bubbles toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-orbitron text-xs tracking-wider"
+                          style={{ color: settings.dialogueEnabled ? '#86efac' : '#64748b' }}>
+                          {t.settings.audio.dialogueBubbles}
+                        </span>
+                        <p className="text-[10px] text-slate-600 mt-0.5">{t.settings.audio.dialogueBubblesDesc}</p>
+                      </div>
+                      <button onClick={() => setDialogueEnabled(!settings.dialogueEnabled)}
+                        className="w-12 h-6 rounded-full border transition-all relative overflow-hidden shrink-0"
+                        style={{
+                          background: settings.dialogueEnabled ? 'rgba(74,222,128,0.7)' : 'rgba(51,65,85,0.9)',
+                          borderColor: settings.dialogueEnabled ? '#4ade80' : '#475569',
+                          boxShadow: settings.dialogueEnabled ? '0 0 10px rgba(74,222,128,0.3)' : 'none',
+                        }}>
+                        <span className={[
+                          "absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all duration-200",
+                          settings.dialogueEnabled ? "left-[25px]" : "left-[3px]",
+                        ].join(" ")} />
+                      </button>
+                    </div>
                   </div>
                 </section>
 
@@ -316,6 +382,36 @@ export default function GameSettings({ onBack, onReplayTutorial }: Props) {
                     {t.settings.controls.note}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* ── RULES TAB ── */}
+            {activeTab === 'rules' && (
+              <div className="space-y-3">
+                {(() => {
+                  const categories = Array.from(new Set(t.settings.rules.entries.map(e => e.category)));
+                  return categories.map(cat => (
+                    <div key={cat}>
+                      <h2 className="font-orbitron text-[10px] tracking-[0.4em] uppercase mb-3"
+                        style={{ color: '#a78bfa' }}>{cat}</h2>
+                      <div className="space-y-2">
+                        {t.settings.rules.entries.filter(e => e.category === cat).map(entry => (
+                          <details key={entry.title}
+                            className="group rounded-xl border border-slate-700/40 overflow-hidden"
+                            style={{ background: 'rgba(2,4,14,0.7)' }}>
+                            <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none select-none hover:bg-white/[0.02] transition-colors">
+                              <span className="font-orbitron text-xs text-slate-200 tracking-wider">{entry.title}</span>
+                              <span className="text-slate-500 text-lg leading-none group-open:rotate-180 transition-transform duration-200">›</span>
+                            </summary>
+                            <div className="px-5 pb-4 pt-1 text-[12px] text-slate-400 leading-relaxed border-t border-slate-700/40">
+                              {entry.text}
+                            </div>
+                          </details>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
             )}
 

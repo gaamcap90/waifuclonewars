@@ -348,6 +348,6 @@ export const TUTORIAL_MAP: TutorialRunNode[] = [
 // Minimal shape needed by buildIconsFromSelection + buildStartingCharacters
 
 export const TUTORIAL_CHARS = [
-  { id: 'leonidas', name: 'Leonidas-chan', role: 'tank',      stats: { hp: 130, might: 40, power: 36 } },
+  { id: 'leonidas', name: 'Leonidas-chan', role: 'tank',      stats: { hp: 130, might: 40, power: 48 } },
   { id: 'napoleon', name: 'Napoleon-chan', role: 'dps_ranged', stats: { hp: 100, might: 65, power: 60 } },
 ];

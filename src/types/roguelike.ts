@@ -32,16 +32,21 @@ export interface EncounterDef {
   tutorialForcePositions?: Array<{ nameContains: string; q: number; r: number }>;
   /** Tutorial-only: scripted hand per player-0 turn. Index 0 = initial hand, 1 = after first end-turn, etc. */
   tutorialHandScript?: string[][];
+  /** Multi-phase boss: additional waves to spawn after each phase is cleared. Phase 1 = encounter.enemies; phases[0] = Phase 2 enemies, etc. */
+  phases?: EnemyTemplate[][];
 }
 
 export interface EnemyAbilityEffect {
   type:
     | 'buff_self'          // stat buff on self
     | 'heal_self'          // restore own HP
-    | 'aoe_damage'         // hits all player icons in range
+    | 'aoe_damage'         // hits all player icons in range (DEF applies)
     | 'debuff_enemies'     // applies debuff to all player icons in range
-    | 'damage_all_enemies' // hits ALL player icons anywhere (boss nuke)
-    | 'dash_attack';       // teleport adjacent to closest enemy and hit
+    | 'damage_all_enemies' // hits ALL player icons anywhere; DEF applies unless trueDamage
+    | 'dash_attack'        // teleport adjacent to closest enemy and hit (DEF applies)
+    | 'melee_debuff'       // melee hit (DEF applies) + debuff the target
+    | 'pull_attack'        // pull target closer then strike for Power×multiplier (DEF applies)
+    | 'copy_attack';       // copy target's Might, strike for multiplier× (DEF applies)
   mightBonus?: number;
   powerBonus?: number;     // permanent Power increase (buff_self)
   defenseBonus?: number;
@@ -53,6 +58,10 @@ export interface EnemyAbilityEffect {
   magnitude?: number;
   damage?: number;
   dashRange?: number;
+  pullRange?: number;      // pull_attack: hexes to yank target toward attacker before striking
+  trueDamage?: boolean;    // damage bypasses DEF entirely (environmental / cosmic abilities)
+  useMight?: boolean;      // aoe_damage: use Might instead of default Power for multiplier calc
+  singleTarget?: boolean;  // aoe_damage: only hit nearest enemy in range
 }
 
 export interface EnemyAbilityDef {
@@ -94,8 +103,9 @@ export interface RunItem {
   tier: ItemTier;
   targetCharacter?: CharacterId; // undefined = equippable by any
   description: string;
-  statBonus?: Partial<{ hp: number; might: number; power: number; defense: number }>;
+  statBonus?: Partial<{ hp: number; might: number; power: number; defense: number; moveRange: number; attackRange: number }>;
   passiveTag?: string; // e.g. 'on_kill_heal', 'draw_on_kill', 'void_armor' — handled by game engine
+  isSignature?: boolean; // Signature Legendary — one per character, boss reward only
 }
 
 export interface CardReward {
@@ -119,8 +129,8 @@ export interface CharacterRunState {
   xpToNext: number;
   statBonuses: { hp: number; might: number; power: number; defense: number };
   pendingStatPoints: number;
-  pendingAbilityUpgrades: number;   // normal ability upgrade tokens (levels 2 & 4)
-  pendingUltimateUpgrade: number;   // ultimate ability upgrade token (level 6)
+  pendingAbilityUpgrades: number;   // normal ability upgrade tokens (levels 2 & 5)
+  pendingUltimateUpgrade: number;   // ultimate ability upgrade token (level 8)
   upgradedAbilityIds: string[];     // definitionIds already upgraded (won't be offered again)
   items: (RunItem | null)[]; // 6 slots
   passiveStacks?: number;           // persisted passive stacks (e.g. Genghis Bloodlust with Eternal Hunger item)
@@ -133,6 +143,7 @@ export interface CombatResult {
   finalHps: Record<CharacterId, number>; // HP each character ended with
   finalPassiveStacks?: Record<string, number>; // passive stacks to persist (e.g. Genghis bloodlust)
   enemiesKilled?: number;
+  killBlowsByName?: Record<string, number>; // display name → kill count (for bonus XP)
 }
 
 export interface PendingRewards {
@@ -142,11 +153,12 @@ export interface PendingRewards {
   itemDrop?: RunItem;           // optional item reward (normal fights)
   bossItems?: RunItem[];        // boss fights: one item per living character, auto-equipped
   completedNodeId?: string;     // the node that was just completed (used to unlock correct next nodes)
+  killBlowsByName?: Record<string, number>; // display name → kill count (for per-char bonus XP)
 }
 
 export interface RunState {
   seed: number;
-  act: 1 | 2 | 3;
+  act: 1 | 2 | 3 | 4;
   gold: number;
   currentNodeId: string | null;
   completedNodeIds: string[];
@@ -163,6 +175,10 @@ export interface RunState {
     itemsObtained: number;
     cardsObtained: number;
   };
+  signatureLegendaryCharIds: CharacterId[];  // chars who already received their signature legendary this run
   runStartTime: number; // Date.now() timestamp when run began
+  cardRemovalsThisRun?: number;  // how many cards removed at merchants this run (affects removal cost)
   isTutorialRun?: boolean;
+  permanentManaBonus?: number;   // +1 per completed act (act 1 boss → +1, act 2 boss → +2, etc.)
+  pendingActBonusNotice?: number; // set when act advances, cleared after notification display
 }

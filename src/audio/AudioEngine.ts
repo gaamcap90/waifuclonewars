@@ -1,9 +1,12 @@
 import { SFX, PLAYLIST, CHARACTER_THEMES, TrackDef } from './sounds';
 
 export interface AudioSettings {
-  musicVolume: number; // 0–1
-  sfxVolume:   number; // 0–1
-  muted:       boolean;
+  musicVolume:     number;  // 0–1
+  sfxVolume:       number;  // 0–1
+  voiceVolume:     number;  // 0–1  (clone dialogue voice lines)
+  muted:           boolean;
+  voiceEnabled:    boolean; // play character voice audio
+  dialogueEnabled: boolean; // show speech bubbles on screen
   // Playlist state (read-only from UI perspective)
   currentTrackIndex: number;
   isPlaying: boolean;
@@ -12,9 +15,12 @@ export interface AudioSettings {
 const STORAGE_KEY = 'wcw:audioSettings';
 
 const DEFAULT_SETTINGS: Omit<AudioSettings, 'currentTrackIndex' | 'isPlaying'> = {
-  musicVolume: 0.5,
-  sfxVolume:   0.7,
-  muted:       false,
+  musicVolume:     0.5,
+  sfxVolume:       0.7,
+  voiceVolume:     0.85,
+  muted:           false,
+  voiceEnabled:    true,
+  dialogueEnabled: true,
 };
 
 // One-time migration: clear any stale muted:true left from broken sessions
@@ -86,10 +92,13 @@ class AudioEngine {
     this.notify();
   }
 
-  setMusicVolume(v: number) { this.updatePersisted({ musicVolume: Math.max(0, Math.min(1, v)) }); }
-  setSfxVolume(v: number)   { this.updatePersisted({ sfxVolume: Math.max(0, Math.min(1, v)) }); }
-  setMuted(muted: boolean)  { this.updatePersisted({ muted }); }
-  toggleMute()              { this.updatePersisted({ muted: !this.settings.muted }); }
+  setMusicVolume(v: number)        { this.updatePersisted({ musicVolume: Math.max(0, Math.min(1, v)) }); }
+  setSfxVolume(v: number)          { this.updatePersisted({ sfxVolume: Math.max(0, Math.min(1, v)) }); }
+  setVoiceVolume(v: number)        { this.updatePersisted({ voiceVolume: Math.max(0, Math.min(1, v)) }); }
+  setMuted(muted: boolean)         { this.updatePersisted({ muted }); }
+  toggleMute()                     { this.updatePersisted({ muted: !this.settings.muted }); }
+  setVoiceEnabled(v: boolean)      { this.updatePersisted({ voiceEnabled: v }); }
+  setDialogueEnabled(v: boolean)   { this.updatePersisted({ dialogueEnabled: v }); }
 
   // ── Playlist ─────────────────────────────────────────────────────────────────
 

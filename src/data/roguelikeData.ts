@@ -26,7 +26,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 30, maxHp: 30, might: 22, power: 15, defense: 4, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
-      { id: 'swarm_bite', name: 'Swarm Bite', icon: '🦟', description: 'Leaps onto the closest enemy and deals 20 damage to all enemies within range 1.', cooldown: 4, effect: { type: 'aoe_damage', range: 1, damage: 20 } },
+      { id: 'swarm_bite', name: 'Swarm Bite', icon: '🦟', description: 'Leaps onto the closest enemy and deals 40 damage to all enemies within range 1 (DEF applies).', cooldown: 4, effect: { type: 'aoe_damage', range: 1, damage: 40 } },
     ] as EnemyAbilityDef[],
   },
   naxion_scout: {
@@ -58,7 +58,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'berserker',
     abilities: [
       { id: 'battle_rage', name: 'Battle Rage', icon: '🔥', description: 'Gains +25 Might and +10 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: 10, duration: 2 } },
-      { id: 'champion_strike', name: "Champion's Strike", icon: '⚔️', description: 'Deals 1× Might damage to the nearest enemy within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.0, singleTarget: true } },
+      { id: 'champion_strike', name: "Champion's Strike", icon: '⚔️', description: 'Deals 1× Might damage to the nearest enemy within range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.0, singleTarget: true, useMight: true } },
     ] as EnemyAbilityDef[],
   },
   spore_cluster: {
@@ -69,7 +69,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'toxic_cloud', name: 'Toxic Cloud', icon: '☣️', description: 'Applies Poison to all enemies within range 2.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'poison', magnitude: 5, duration: 99 } },
-      { id: 'spore_burst', name: 'Spore Burst', icon: '💥', description: 'Deals 25 damage to all enemies in range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, damage: 25 } },
+      { id: 'spore_burst', name: 'Spore Burst', icon: '💥', description: 'Deals 45 damage to all enemies in range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, damage: 45 } },
     ] as EnemyAbilityDef[],
   },
   // Act 1 starter — alien beast (first encounter only)
@@ -92,7 +92,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'defensive',
     abilities: [
       { id: 'shield_array', name: 'Shield Array', icon: '🛡️', description: 'Heals self for 35 HP. Triggers once when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'heal_self', amount: 35 } },
-      { id: 'emp_blast', name: 'EMP Blast', icon: '⚡', description: 'Deals 35 damage to all enemies within range 1, and silences them for 1 turn.', cooldown: 3, effect: { type: 'aoe_damage', range: 1, damage: 35 } },
+      { id: 'emp_blast', name: 'EMP Blast', icon: '⚡', description: 'Deals 55 damage to all enemies within range 1 (DEF applies).', cooldown: 3, effect: { type: 'aoe_damage', range: 1, damage: 55 } },
       { id: 'turret_mode', name: 'Turret Mode', icon: '🤖', description: 'Gains +30 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 30, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
@@ -101,7 +101,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'mog_toxin', name: 'Mog Toxin', icon: '☣️', count: 1,
     portrait: '/art/enemies/mog_toxin_portrait.png',
     description: 'A bloated sack of corrosive biology that hasn\'t stopped smiling since it learned what fear tastes like. Every tentacle drips acid; every grin means someone\'s armor is already melting.',
-    stats: { hp: 75, maxHp: 75, might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 },
+    stats: { hp: 95, maxHp: 95, might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 },
     ai: 'ranged',
     abilities: [
       { id: 'acid_spray', name: 'Acid Spray', icon: '🧪', description: 'Launches a corrosive burst — applies Armor Break (−20% DEF) to all enemies within range 1 for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'armor_break', magnitude: 20, duration: 2 } },
@@ -111,7 +111,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'qrix_hunter', name: 'Qrix Hunter', icon: '🏹', count: 1,
     portrait: '/art/enemies/qrix_hunter_portrait.png',
     description: 'A cold-blooded Qrix assassin born to hunt. Its shifting camouflage makes it nearly invisible until the trigger is pulled — and it never misses twice.',
-    stats: { hp: 70, maxHp: 70, might: 25, power: 50, defense: 8, moveRange: 3, attackRange: 3 },
+    stats: { hp: 90, maxHp: 90, might: 25, power: 50, defense: 8, moveRange: 3, attackRange: 3 },
     ai: 'ranged',
     abilities: [
       { id: 'pinning_shot', name: 'Pinning Shot', icon: '📌', description: 'Fires a precision bolt at the closest target — deals Power×1.2 damage to enemies within range 3.', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 1.2, singleTarget: true } },
@@ -121,7 +121,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'void_wraith', name: 'Void Wraith', icon: '👻', count: 1,
     portrait: '/art/enemies/void_wraith_portrait.png',
     description: 'A remnant of something that should no longer exist. It phases through walls and armor alike, drawn to the warmth of the living like a moth to flame. Only pain can make it corporeal.',
-    stats: { hp: 65, maxHp: 65, might: 45, power: 40, defense: 5, moveRange: 4, attackRange: 1 },
+    stats: { hp: 85, maxHp: 85, might: 40, power: 40, defense: 5, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
       { id: 'shadow_step', name: 'Shadow Step', icon: '🌑', description: 'Phases through reality — teleports adjacent to the closest enemy and strikes for 1× Might (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.0 } },
@@ -131,22 +131,22 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'krath_berserker', name: 'Krath Berserker', icon: '💢', count: 1,
     portrait: '/art/enemies/krath_berserker_portrait.png',
     description: 'A Krath warrior who has abandoned all sense of self-preservation. Four bladed arms moving faster than the eye can follow. It doesn\'t fight to win — it fights until nothing is left standing.',
-    stats: { hp: 140, maxHp: 140, might: 60, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
+    stats: { hp: 155, maxHp: 155, might: 52, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
-      { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +18 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 18, defenseBonus: -20, duration: 2 } },
-      { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals 1.2× Might damage on arrival (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.2 } },
+      { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +15 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 15, defenseBonus: -20, duration: 2 } },
+      { id: 'savage_leap', name: 'Savage Leap', icon: '🦘', description: 'Teleports adjacent to the closest enemy and deals Might damage on arrival (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 5, multiplier: 1.0 } },
     ] as EnemyAbilityDef[],
   },
   phasewarden: {
     id: 'phasewarden', name: 'Phasewarden', icon: '🔮', count: 1,
     portrait: '/art/enemies/phasewarden_portrait.png',
     description: "A guardian from between dimensions — its crystalline armor flickers between planes of existence. It blinks away, strips your defenses, then closes in when you're most exposed.",
-    stats: { hp: 110, maxHp: 110, might: 55, power: 65, defense: 20, moveRange: 4, attackRange: 2 },
+    stats: { hp: 125, maxHp: 125, might: 48, power: 65, defense: 20, moveRange: 4, attackRange: 2 },
     ai: 'ranged',
     abilities: [
       { id: 'dimensional_drain', name: 'Dimensional Drain', icon: '🔮', description: 'Applies Armor Break (−20% Defense) to all enemies within range 2 for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'armor_break', magnitude: 20, duration: 2 } },
-      { id: 'phase_blink', name: 'Phase Blink', icon: '✨', description: 'Teleports to a position far from all enemies, then attacks the closest from range.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 6, multiplier: 1.2 } },
+      { id: 'phase_blink', name: 'Phase Blink', icon: '✨', description: 'Teleports to a position far from all enemies, then attacks the closest from range.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 6, multiplier: 1.0 } },
     ] as EnemyAbilityDef[],
   },
   // Act 2 boss
@@ -180,10 +180,25 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 400, maxHp: 400, might: 80, power: 80, defense: 40, moveRange: 3, attackRange: 2 },
     ai: 'berserker',
     abilities: [
-      { id: 'arena_collapse', name: 'Arena Collapse', icon: '👑', description: 'The arena itself becomes a weapon — deals 20 damage to ALL player characters simultaneously.', cooldown: 3, effect: { type: 'damage_all_enemies', damage: 20 } },
-      { id: 'phase_shift', name: 'Phase Shift', icon: '🛡️', description: 'Becomes invincible for 2 turns and gains +15 Might, +15 Power, and +15 Defense permanently. Triggers ONCE when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'buff_self', mightBonus: 15, defenseBonus: 500, duration: 2 } },
+      { id: 'arena_collapse', name: 'Arena Collapse', icon: '👑', description: 'The arena itself becomes a weapon — deals 15 TRUE damage to ALL player characters (ignores DEF).', cooldown: 3, effect: { type: 'damage_all_enemies', damage: 15, trueDamage: true } },
+      { id: 'phase_shift', name: 'Phase Shift', icon: '🛡️', description: 'Becomes invincible for 2 turns and gains +15 Might, +15 Power, and +15 Defense permanently. Triggers ONCE when below 50% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.5, effect: { type: 'buff_self', mightBonus: 15, powerBonus: 15, defenseBonus: 500, duration: 2 } },
       { id: 'champions_will', name: "Champion's Will", icon: '⭐', description: 'Driven by Znyxorga\'s will — gains +20 Might, +20 Power, and +20 Defense permanently. Triggers ONCE when below 30% HP.', cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.30, effect: { type: 'buff_self', mightBonus: 20, defenseBonus: 20, duration: 999 } },
-      { id: 'tyrant_strike', name: 'Tyrant Strike', icon: '💥', description: 'Channels Power into a devastating strike — deals Power×1.0 damage to all enemies within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.0 } },
+      { id: 'tyrant_strike', name: 'Tyrant Strike', icon: '💥', description: 'Channels Power into a sweeping strike — deals Power×0.6 damage to all enemies within range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 0.6 } },
+    ] as EnemyAbilityDef[],
+  },
+  // Act 4 boss
+  velzar_will: {
+    id: 'velzar_will', name: "Vel'Zar — Emperor's Will", icon: '🌌', count: 1,
+    portrait: '/art/enemies/velzar_will_portrait.png',
+    description: "The Emperor's final answer — a seven-limbed war construct that survived three hundred gladiatorial seasons without taking a wound. It has Phase Shifted. It has triggered Champion's Will. None of that was ever enough. It has never seen anything like you.",
+    stats: { hp: 520, maxHp: 520, might: 100, power: 100, defense: 55, moveRange: 4, attackRange: 2 },
+    ai: 'berserker',
+    abilities: [
+      { id: 'emperors_verdict',  name: "Emperor's Verdict",  icon: '🌌', description: "Channels the Emperor's judgment — deals 25 TRUE damage to ALL player characters simultaneously (ignores DEF).",                                                                                                      cooldown: 3, effect: { type: 'damage_all_enemies', damage: 25, trueDamage: true } },
+      { id: 'void_sunder',       name: 'Void Sunder',        icon: '💀', description: 'Tears reality open — applies Armor Break (−25% DEF) to ALL player characters for 2 turns.',                                                                                                                          cooldown: 4, effect: { type: 'debuff_enemies', range: 10, debuffType: 'armor_break', magnitude: 25, duration: 2 } },
+      { id: 'imperial_mandate',  name: 'Imperial Mandate',   icon: '⚡', description: "The Emperor's will made flesh — Stuns all player characters within range 1 for 1 turn. Stay spread out.",                                                                                                            cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'stun', magnitude: 0, duration: 1 } },
+      { id: 'apex_ascension',    name: 'Apex Ascension',     icon: '👁️', description: 'Transcends physical limits — becomes INVINCIBLE for 2 turns and gains +25 Might and +25 Power permanently. Triggers ONCE when below 60% HP.',                                                                        cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.60, effect: { type: 'buff_self', mightBonus: 25, powerBonus: 25, defenseBonus: 500, duration: 2 } },
+      { id: 'total_authority',   name: 'Total Authority',    icon: '⭐', description: "The Emperor's absolute will — gains +30 Might, +30 Power, and +30 Defense permanently. Triggers ONCE when below 25% HP.",                                                                                             cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.25, effect: { type: 'buff_self', mightBonus: 30, powerBonus: 30, defenseBonus: 30, duration: 999 } },
     ] as EnemyAbilityDef[],
   },
   // ── New Enemies ────────────────────────────────────────────────────────────
@@ -195,7 +210,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 115, maxHp: 115, might: 45, power: 30, defense: 35, moveRange: 2, attackRange: 1 },
     ai: 'defensive',
     abilities: [
-      { id: 'shield_slam', name: 'Shield Slam', icon: '🛡️', description: 'Crashes its shield into a target — deals 1.4× Might damage and Roots the target for 1 turn.', cooldown: 2, effect: { type: 'melee_debuff', multiplier: 1.4, debuffType: 'rooted', magnitude: 0, duration: 1 } },
+      { id: 'shield_slam', name: 'Shield Slam', icon: '🛡️', description: 'Crashes its shield into a target — deals 1.1× Might damage (DEF applies) and Roots the target for 1 turn.', cooldown: 2, effect: { type: 'melee_debuff', multiplier: 1.1, debuffType: 'rooted', magnitude: 0, duration: 1 } },
       { id: 'rally_cry', name: 'Rally Cry', icon: '📣', description: 'Braces for impact — gains +25 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', defenseBonus: 25, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
@@ -204,7 +219,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'grox_magnetar', name: 'Grox Magnetar', icon: '🧲', count: 1,
     portrait: '/art/enemies/grox_magnetar_portrait.png',
     description: "A living electromagnetic anomaly — the Grox Magnetar bends metal, reroutes energy, and silences technology with a thought. It doesn't fight in straight lines; it reshapes the battlefield to make sure nothing else does either.",
-    stats: { hp: 130, maxHp: 130, might: 50, power: 70, defense: 25, moveRange: 3, attackRange: 3 },
+    stats: { hp: 130, maxHp: 130, might: 50, power: 60, defense: 25, moveRange: 3, attackRange: 3 },
     ai: 'ranged',
     abilities: [
       { id: 'magnetic_pull', name: 'Magnetic Pull', icon: '🧲', description: 'Yanks a target 2 hexes closer then deals Power×0.8 damage. Range 3.', cooldown: 2, effect: { type: 'pull_attack', pullRange: 2, range: 3, multiplier: 0.8 } },
@@ -219,8 +234,42 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 90, maxHp: 90, might: 40, power: 40, defense: 15, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
-      { id: 'imitate', name: 'Imitate', icon: '🎭', description: 'Mimics the closest enemy — gains their Might and Power values until end of turn, then strikes for 1.2× Might.', cooldown: 2, effect: { type: 'copy_attack', multiplier: 1.2 } },
+      { id: 'imitate', name: 'Imitate', icon: '🎭', description: "Mimics the closest enemy — copies their Might and Power, then strikes for 0.5× their Might + 0.5× their Power.", cooldown: 2, effect: { type: 'copy_attack', multiplier: 1.0 } },
       { id: 'disorienting_shift', name: 'Disorienting Shift', icon: '🌀', description: 'Shifts form erratically — Roots the target for 1 turn. Range 2.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'rooted', magnitude: 0, duration: 1 } },
+    ] as EnemyAbilityDef[],
+  },
+  // Act 3 Champions — the best warriors the Empire's member species have to offer
+  naxion_warmaster: {
+    id: 'naxion_warmaster', name: 'Naxion Warmaster', icon: '🪖', count: 1,
+    portrait: '/art/enemies/naxion_warmaster_portrait.png',
+    description: "The apex of the Naxion military caste. Where Shieldbearers hold the line, the Warmaster breaks it — charging across the field to lead the assault personally.",
+    stats: { hp: 135, maxHp: 135, might: 60, power: 48, defense: 26, moveRange: 3, attackRange: 1 },
+    ai: 'berserker',
+    abilities: [
+      { id: 'war_decree', name: 'War Decree', icon: '📯', description: 'Issues the order to advance — gains +20 Might for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 20, duration: 2 } },
+      { id: 'vanguard_charge', name: 'Vanguard Charge', icon: '🪖', description: 'Leads from the front — charges up to 3 hexes toward the nearest enemy and strikes for 1.1× Might (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 3, multiplier: 1.1 } },
+    ] as EnemyAbilityDef[],
+  },
+  grox_titan: {
+    id: 'grox_titan', name: 'Grox Titan', icon: '🌩️', count: 1,
+    portrait: '/art/enemies/grox_titan_portrait.png',
+    description: "Beyond the Magnetar class — the Grox Titan commands electromagnetic force on a scale that reshapes the battlefield. Everything within range is either pulled, broken, or burning.",
+    stats: { hp: 150, maxHp: 150, might: 60, power: 72, defense: 32, moveRange: 2, attackRange: 3 },
+    ai: 'ranged',
+    abilities: [
+      { id: 'graviton_storm', name: 'Graviton Storm', icon: '🌩️', description: 'Releases a graviton pulse — deals Power×0.55 damage to all enemies within range 3 (DEF applies).', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 0.55 } },
+      { id: 'magnetic_fortress', name: 'Magnetic Fortress', icon: '🛡️', description: 'Converts its own electromagnetic field into a defensive shell — gains +25 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 25, duration: 2 } },
+    ] as EnemyAbilityDef[],
+  },
+  velthrak_shadowblade: {
+    id: 'velthrak_shadowblade', name: "Vel'thrak Shadowblade", icon: '🗡️', count: 1,
+    portrait: '/art/enemies/velthrak_shadowblade_portrait.png',
+    description: "An assassin from the Vel'thrak species — the Empire's most feared shadow warriors. It doesn't fight you; it decides which order you die in and then executes the plan.",
+    stats: { hp: 95, maxHp: 95, might: 65, power: 60, defense: 12, moveRange: 5, attackRange: 1 },
+    ai: 'berserker',
+    abilities: [
+      { id: 'death_mark', name: 'Death Mark', icon: '☠️', description: "Marks nearby targets for execution — applies Armor Break (−18% DEF) to all enemies within range 1 for 2 turns.", cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'armor_break', magnitude: 18, duration: 2 } },
+      { id: 'phantom_execution', name: 'Phantom Execution', icon: '🗡️', description: 'Vanishes and reappears adjacent to the weakest target — deals 0.9× Might damage (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 6, multiplier: 0.9 } },
     ] as EnemyAbilityDef[],
   },
   // Act 3 Common
@@ -231,7 +280,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 85, maxHp: 85, might: 35, power: 60, defense: 20, moveRange: 2, attackRange: 3 },
     ai: 'ranged',
     abilities: [
-      { id: 'crystal_burst', name: 'Crystal Burst', icon: '💎', description: 'Erupts in razor shards — deals Power×1.2 to all enemies within range 2.', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.2 } },
+      { id: 'crystal_burst', name: 'Crystal Burst', icon: '💎', description: 'Erupts in razor shards — deals Power×0.8 to all enemies within range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 0.8 } },
       { id: 'resonance_field', name: 'Resonance Field', icon: '🔶', description: 'Harmonic vibrations weaken armor — applies Armor Break (−15% DEF) to all enemies within range 2 for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'armor_break', magnitude: 15, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
@@ -245,14 +294,26 @@ export const ITEMS: RunItem[] = [
     description: '+5 Might for this run.',
     statBonus: { might: 5 } },
   { id: 'bone_plate', name: 'Bone Plate', icon: '🦴', tier: 'common',
-    description: '+3 Defense for this run.',
-    statBonus: { defense: 3 } },
+    description: '+5 Defense for this run.',
+    statBonus: { defense: 5 } },
   { id: 'vitality_shard', name: 'Vitality Shard', icon: '💠', tier: 'common',
     description: '+12 max HP for this run.',
     statBonus: { hp: 12 } },
   { id: 'mana_conduit', name: 'Mana Conduit', icon: '🔋', tier: 'common',
     description: '+5 Power for this run.',
     statBonus: { power: 5 } },
+  { id: 'swift_wraps', name: 'Swift Wraps', icon: '🩹', tier: 'common',
+    description: '+2 extra movement on the first turn of each battle.',
+    passiveTag: 'swift_wraps_burst' },
+  { id: 'targeting_visor', name: 'Targeting Visor', icon: '🎯', tier: 'common',
+    description: '+1 Attack Range for this run.',
+    statBonus: { attackRange: 1 } },
+  { id: 'adrenaline_injector', name: 'Adrenaline Injector', icon: '💉', tier: 'common',
+    description: '+3 Might and +3 Power for this run.',
+    statBonus: { might: 3, power: 3 } },
+  { id: 'plated_boots', name: 'Plated Boots', icon: '🥾', tier: 'common',
+    description: '+8 HP and +2 Defense for this run.',
+    statBonus: { hp: 8, defense: 2 } },
   // UNCOMMON
   { id: 'battle_drum', name: 'Battle Drum', icon: '🥁', tier: 'uncommon',
     description: 'After killing an enemy, draw 1 card.',
@@ -288,6 +349,15 @@ export const ITEMS: RunItem[] = [
   { id: 'diamond_shell', name: 'Diamond Shell', icon: '💎', tier: 'rare',
     description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).',
     passiveTag: 'negate_first_hit' },
+  { id: 'chrono_shard', name: 'Chrono Shard', icon: '⏳', tier: 'rare',
+    description: '+1 Mana on the first turn of each combat.',
+    passiveTag: 'chrono_shard_t1' },
+  { id: 'berserker_mark', name: "Berserker's Mark", icon: '🔥', tier: 'rare',
+    description: '+15% damage dealt when below 50% HP.',
+    passiveTag: 'berserker_mark' },
+  { id: 'echo_stone', name: 'Echo Stone', icon: '🪨', tier: 'rare',
+    description: 'Draw 1 extra card at the start of each turn.',
+    passiveTag: 'echo_stone_draw' },
   // RARE — Napoleon
   { id: 'grand_strategy', name: 'Grand Strategy', icon: '🗺️', tier: 'rare',
     targetCharacter: 'napoleon',
@@ -336,8 +406,8 @@ export const ITEMS: RunItem[] = [
   // RARE — Beethoven
   { id: 'resonant_crystal', name: 'Resonant Crystal', icon: '🔮', tier: 'rare',
     targetCharacter: 'beethoven',
-    description: 'Götterfunken stuns all hit enemies for 2 turns instead of 1.',
-    passiveTag: 'beethoven_gotterfunken_stun2' },
+    description: 'After any Beethoven ability card, deal Power×0.25 to all adjacent enemies.',
+    passiveTag: 'beethoven_resonance_aoe' },
   { id: 'composers_baton', name: "Composer's Baton", icon: '🎼', tier: 'rare',
     targetCharacter: 'beethoven',
     description: 'Allies standing on a Freudenspur zone also gain +5 Defense at turn start.',
@@ -398,18 +468,21 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'mansa_discount_2' },
   // LEGENDARY
   { id: 'znyxorgas_eye', name: "Znyxorga's Eye", icon: '👁️', tier: 'legendary',
-    description: 'After defeating an enemy, your next 2 cards cost 0 Mana.',
-    passiveTag: 'next_2_cards_free_on_kill' },
+    description: 'This character has no limit on cards played per turn (normally capped at 3).',
+    passiveTag: 'cards_per_turn_unlimited' },
   { id: 'void_armor', name: 'Void Armor', icon: '🛡️', tier: 'legendary',
     description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.',
     passiveTag: 'once_survive_lethal' },
   { id: 'arena_champion', name: 'Arena Champion', icon: '🏆', tier: 'legendary',
-    description: 'All stats +10 while this character is alive.',
-    statBonus: { hp: 10, might: 10, power: 10, defense: 10 } },
+    description: '+25 HP, +15 Might, +15 Power, +15 Defense while this character is alive.',
+    statBonus: { hp: 25, might: 15, power: 15, defense: 15 } },
   { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary',
-    description: 'On turns 2 and 3 of each fight, draw +2 cards and gain +2 Mana.',
+    description: 'On turns 2, 3, and 4 of each fight, draw +2 cards and gain +2 Mana.',
     passiveTag: 'grimoire_early_surge' },
-  { id: 'battle_drill', name: 'Battle Drill', icon: '⚔️', tier: 'uncommon',
+  { id: 'neural_link', name: 'Neural Link', icon: '🧬', tier: 'rare',
+    description: 'This character can play 1 extra card per turn (4 max instead of 3).',
+    passiveTag: 'cards_per_turn_plus_1' },
+  { id: 'battle_drill', name: 'Battle Drill', icon: '⚔️', tier: 'rare',
     description: 'At the start of each turn, add a free Basic Attack card to your hand.',
     passiveTag: 'free_basic_each_turn' },
   { id: 'mana_crystal', name: 'Mana Crystal', icon: '🔷', tier: 'rare',
@@ -417,13 +490,93 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'mana_plus_1_per_turn' },
 ];
 
+// ── Signature Legendaries ─────────────────────────────────────────────────────
+// One per character. Awarded after Act 1 and Act 2 boss kills (player picks which
+// character receives theirs). These are NOT in the regular ITEMS pool.
+
+export const SIGNATURE_LEGENDARIES: Record<CharacterId, RunItem> = {
+  napoleon: {
+    id: 'sig_napoleon', name: "Marshal's Baton", icon: '🏅', tier: 'legendary',
+    targetCharacter: 'napoleon', isSignature: true,
+    description: 'Artillery Barrage hits ALL enemies within 2 hexes of the target for 30% of the damage dealt.',
+    passiveTag: 'sig_napoleon_barrage_splash',
+  },
+  genghis: {
+    id: 'sig_genghis', name: 'Eternal Steppe', icon: '🌾', tier: 'legendary',
+    targetCharacter: 'genghis', isSignature: true,
+    description: 'Bloodlust stacks no longer cap at 3. Each stack also grants +1 movement.',
+    passiveTag: 'sig_genghis_uncapped_bloodlust',
+  },
+  davinci: {
+    id: 'sig_davinci', name: 'Codex Atlanticus', icon: '📜', tier: 'legendary',
+    targetCharacter: 'davinci', isSignature: true,
+    description: 'Tinkerer draws +1 extra card always (base 2, 3 with Drone). Vitruvian Guardian spawns with +30 HP.',
+    passiveTag: 'sig_davinci_codex',
+  },
+  leonidas: {
+    id: 'sig_leonidas', name: 'Thermopylae Stone', icon: '🪨', tier: 'legendary',
+    targetCharacter: 'leonidas', isSignature: true,
+    description: 'Phalanx stacks also grant +5 Might each. At 3 stacks, basic attacks Taunt the target.',
+    passiveTag: 'sig_leonidas_thermopylae',
+  },
+  sunsin: {
+    id: 'sig_sunsin', name: "Admiral's Turtle Helm", icon: '🐢', tier: 'legendary',
+    targetCharacter: 'sunsin', isSignature: true,
+    description: 'Water form: Regen 10 HP/turn. Land form: basic attack range +1.',
+    passiveTag: 'sig_sunsin_turtle_helm',
+  },
+  beethoven: {
+    id: 'sig_beethoven', name: 'Heiligenstadt Score', icon: '🎼', tier: 'legendary',
+    targetCharacter: 'beethoven', isSignature: true,
+    description: 'Crescendo grants +3 Power per stack instead of +2 (max +45 at 15 stacks). Götterfunken stuns for 2 turns.',
+    passiveTag: 'sig_beethoven_heiligenstadt',
+  },
+  huang: {
+    id: 'sig_huang', name: 'Jade Seal', icon: '🟢', tier: 'legendary',
+    targetCharacter: 'huang', isSignature: true,
+    description: 'Terracotta summons last +2 turns and spawn with +20% stats.',
+    passiveTag: 'sig_huang_jade_seal',
+  },
+  nelson: {
+    id: 'sig_nelson', name: "Victory's Pennant", icon: '🚩', tier: 'legendary',
+    targetCharacter: 'nelson', isSignature: true,
+    description: 'Crossing the T pierces through ALL enemies in the line with no damage decay.',
+    passiveTag: 'sig_nelson_no_decay',
+  },
+  hannibal: {
+    id: 'sig_hannibal', name: "Carthage's Oath", icon: '🐘', tier: 'legendary',
+    targetCharacter: 'hannibal', isSignature: true,
+    description: 'Cannae flanking bonus increased to 70%. War Elephant lasts +1 turn.',
+    passiveTag: 'sig_hannibal_carthage',
+  },
+  picasso: {
+    id: 'sig_picasso', name: 'Rose Period Canvas', icon: '🌹', tier: 'legendary',
+    targetCharacter: 'picasso', isSignature: true,
+    description: 'Fractured Perspective triggers every 2nd card instead of 3rd.',
+    passiveTag: 'sig_picasso_rose_period',
+  },
+  teddy: {
+    id: 'sig_teddy', name: 'Bull Moose Heart', icon: '🫀', tier: 'legendary',
+    targetCharacter: 'teddy', isSignature: true,
+    description: 'Survive lethal damage once per fight (1 HP). Bully! stacks also grant +10 Defense.',
+    passiveTag: 'sig_teddy_bull_moose',
+  },
+  mansa: {
+    id: 'sig_mansa', name: 'Infinite Vault', icon: '🏦', tier: 'legendary',
+    targetCharacter: 'mansa', isSignature: true,
+    description: 'Start each fight with +25 Power (converted from your gold reserves).',
+    statBonus: { power: 25 },
+    passiveTag: 'sig_mansa_vault',
+  },
+};
+
 // ── Card Reward Pool ──────────────────────────────────────────────────────────
 //
-// Rarity tiers control when cards can appear as rewards:
-//   common   — normal fights, elite, boss, merchant
-//   uncommon — normal fights, elite, boss, merchant
-//   rare     — elite fights, boss, merchant only (no normal-fight drops)
-//   ultimate — elite fights (40% chance one slot), boss (guaranteed ≥1)
+// Card drop rules by encounter type:
+//   enemy    — shared cards only (exclusiveTo === null, non-ultimate)
+//   elite    — character-exclusive ability cards only (3 choices from party pool)
+//   boss     — ultimates only (Act 1: 3 choices, Act 2: 2 choices, Act 3: 1 choice)
+//   merchant — all non-ultimate cards (shared + exclusive abilities)
 
 export const CARD_REWARD_POOL: CardReward[] = [
   // ── Common shared ─────────────────────────────────────────────────────────
@@ -441,12 +594,13 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'shared_armor_break',     name: 'Armor Break',      icon: '🔨', manaCost: 2, rarity: 'uncommon', description: 'Target enemy loses 25% Defense for 2 turns. Range 2.' },
   { definitionId: 'shared_silence',         name: 'Silence',          icon: '🔇', manaCost: 3, rarity: 'uncommon', description: 'Silences target — prevents ability use for 2 turns. Range 2.' },
   { definitionId: 'shared_poison_dart',     name: 'Poison Dart',      icon: '☠️', manaCost: 3, rarity: 'uncommon', description: 'Apply Poison — target loses Might/DEF each turn. Range 2.' },
-  { definitionId: 'shared_suppressive_fire',name: 'Suppressive Fire', icon: '🔫', manaCost: 2, rarity: 'uncommon', description: 'Might×0.3 cone (3 wide, range 3) + Slow −1 move for 1 turn.' },
   { definitionId: 'shared_fortify',         name: 'Fortify',          icon: '🏰', manaCost: 2, rarity: 'uncommon', description: 'Cannot move this turn. +25 DEF, +15 Might until end of next turn.' },
   { definitionId: 'shared_taunt',           name: 'Taunt',            icon: '😤', manaCost: 2, rarity: 'uncommon', description: 'Enemy AI focuses this unit 2 turns. This unit gains +15 Defense.' },
   { definitionId: 'shared_decoy',           name: 'Decoy',            icon: '🎭', manaCost: 2, rarity: 'uncommon', description: 'Place a 30 HP decoy. Enemies target it. Explodes for 20 dmg when destroyed.' },
+  { definitionId: 'shared_retribution',    name: 'Retribution',      icon: '⚡', manaCost: 2, rarity: 'uncommon', description: 'Deal damage equal to HP lost this fight to one enemy. Range 3.' },
   // ── Rare shared ───────────────────────────────────────────────────────────
   { definitionId: 'shared_blood_price', name: 'Blood Price', icon: '🩸', manaCost: 2, rarity: 'rare', description: 'Lose 20% HP. All allies gain +15 Might and +15 Power this turn.' },
+  { definitionId: 'shared_overcharge',  name: 'Overcharge',  icon: '🔋', manaCost: 2, rarity: 'rare', description: 'Next card played this turn costs 0 Mana. (Still uses a card play.)' },
   // ── Rare — Napoleon ───────────────────────────────────────────────────────
   { definitionId: 'napoleon_artillery_barrage', name: 'Artillery Barrage', icon: '💥', manaCost: 2, rarity: 'rare', description: 'Power×1.3 dmg at range 4.', exclusiveTo: 'Napoleon' },
   { definitionId: 'napoleon_grande_armee',      name: 'Grande Armée',      icon: '⚔️', manaCost: 3, rarity: 'rare', description: '+15% Might & Power to all allies for 2 turns.', exclusiveTo: 'Napoleon' },
@@ -515,9 +669,30 @@ function pick<T>(arr: T[], rng: () => number): T {
   return arr[Math.floor(rng() * arr.length)];
 }
 
+// ── Grand Finale (Act 4 Boss) ─────────────────────────────────────────────────
+// 4-phase fight: Iron Wall → Twin Terrors → Znyxorga's Champion → Vel'Zar
+// Each phase spawns fresh when the previous wave is wiped. Mana refills between phases.
+export const GRAND_FINALE_ENCOUNTER: EncounterDef = {
+  name: "Grand Finale — Emperor's Gauntlet",
+  objective: 'defeat_all',
+  objectiveLabel: 'Defeat all enemies',
+  enemies: [ENEMIES.iron_wall],  // Phase 1
+  phases: [
+    [ENEMIES.twin_terror_a, ENEMIES.twin_terror_b],  // Phase 2
+    [ENEMIES.znyxorga_champion],                      // Phase 3
+    [ENEMIES.velzar_will],                            // Phase 4
+  ],
+  goldReward: 120,
+  xpReward: 560,       // 160 × 3.5 (Act 4 scale)
+  bonusXpNoHit: 210,   //  60 × 3.5
+  bonusXpFast: 140,    //  40 × 3.5
+  itemDropChance: 1.0,
+  guaranteedItem: true,
+};
+
 function buildEncounter(
   type: 'enemy' | 'elite' | 'boss',
-  act: 1 | 2 | 3,
+  act: 1 | 2 | 3 | 4,
   rng: () => number,
   row: number = 1,
 ): EncounterDef {
@@ -531,14 +706,32 @@ function buildEncounter(
   const act2EarlyPool = [ENEMIES.vrex_mimic, ENEMIES.crystalline_hive];
   const act2Pool  = [ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar, ENEMIES.vrex_mimic, ENEMIES.crystalline_hive];
   const act2LatePool = [...latePool, ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar];
-  // Act 3: never falls back to Act 1 enemies — late rows spawn only the two hardest Act 2 units
-  const act3LatePool = [ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar];
+  // Act 3 Champion's Gauntlet: rows 1-3 ease in with Act 2 faces, then empire champions take over
+  const act3Pool     = [ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade];
+  const act3LatePool = [ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade];
+  // Act 4: total chaos — every enemy from Acts 1-3 thrown together.
+  // Act 1 units are weaker in base stats but the scaleFactor (~1.7-1.9) closes the gap.
+  // krath_berserker, phasewarden, and Act 3 champions are elite-tier; kept out of normal pools, elite pool only.
+  const act4Pool = [
+    // Act 1 originals (familiar faces, now upgraded by scale factor)
+    ENEMIES.glorp_shambler, ENEMIES.zyx_skitter,
+    ENEMIES.naxion_scout,   ENEMIES.vron_crawler,
+    ENEMIES.mog_toxin,      ENEMIES.qrix_hunter,   ENEMIES.void_wraith,
+    // Act 2 threats
+    ENEMIES.vrex_mimic,     ENEMIES.crystalline_hive,
+    // Act 2/3 heavies (normal encounter filler in Act 4)
+    ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar,
+    // Act 3 champions (these hit hard — Act 4 scaleFactor makes them brutal)
+    ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade,
+  ];
 
   const enemyPool = act === 1
     ? (row <= 3 ? earlyPool : row <= 6 ? midPool : latePool)
     : act === 2
       ? (row <= 3 ? act2EarlyPool : row <= 5 ? act2Pool : act2LatePool)
-      : (row <= 3 ? act2EarlyPool : row <= 6 ? act2Pool : act3LatePool);
+      : act === 3
+        ? (row <= 3 ? act2EarlyPool : row <= 6 ? act3Pool : act3LatePool)
+        : act4Pool;
 
   let enemies: EnemyTemplate[];
   let name: string;
@@ -546,32 +739,69 @@ function buildEncounter(
   let gold: number;
   let dropChance: number;
 
-  // XP scales with act: Act 1 = ×1.0 (base), Act 2 = ×1.5, Act 3 = ×2.0.
-  // Designed so chars reach level 4 entering Act 2, and level 6 entering Act 3.
-  const actXpScale = act === 1 ? 1.0 : act === 2 ? 1.5 : 2.0;
+  // XP scales with act: Act 1 = ×1.0, Act 2 = ×1.5, Act 3 = ×2.5, Act 4 = ×3.5.
+  // Designed so chars reach level 4 entering Act 2, level 6 entering Act 3, level 8 mid-Act 4.
+  const actXpScale = act === 1 ? 1.0 : act === 2 ? 1.5 : act === 3 ? 2.5 : 3.5;
 
   if (type === 'boss') {
     if (act === 1)      enemies = [ENEMIES.iron_wall];
     else if (act === 2) enemies = [ENEMIES.twin_terror_a, ENEMIES.twin_terror_b];
-    else                enemies = [ENEMIES.znyxorga_champion];
+    else if (act === 3) enemies = [ENEMIES.znyxorga_champion];
+    else                return GRAND_FINALE_ENCOUNTER; // Act 4: 4-phase Grand Finale
     name = `Act ${act} Boss`;
     xp = Math.round(160 * actXpScale); gold = 90 + Math.floor(rng() * 30); dropChance = 1.0;
   } else if (type === 'elite') {
     // Late-row elites (rows 9-10) get the harder pair — doubled enemy count
     const useToughElite = row >= 9;
+    // Act 4: any elite from Acts 1-2 can appear (total chaos)
+    const act3EliteOptions: EnemyTemplate[][] = [
+      [ENEMIES.krath_berserker],
+      [ENEMIES.phasewarden],
+      [ENEMIES.naxion_warmaster],
+      [ENEMIES.grox_titan],
+      [ENEMIES.velthrak_shadowblade],
+    ];
+    const act4EliteOptions: EnemyTemplate[][] = [
+      [ENEMIES.krath_champion],
+      [ENEMIES.spore_cluster, ENEMIES.spore_cluster, ENEMIES.spore_cluster],
+      [ENEMIES.krath_berserker],
+      [ENEMIES.phasewarden],
+      [ENEMIES.naxion_warmaster],
+      [ENEMIES.grox_titan],
+      [ENEMIES.velthrak_shadowblade],
+      [ENEMIES.naxion_shieldbearer],
+      [ENEMIES.grox_magnetar],
+    ];
     const baseElites = act === 1
       ? (useToughElite || rng() < 0.5 ? [ENEMIES.krath_champion] : [ENEMIES.spore_cluster, ENEMIES.spore_cluster, ENEMIES.spore_cluster])
-      : (rng() < 0.5 ? [ENEMIES.krath_berserker] : [ENEMIES.phasewarden]);
-    // Double up: add one extra enemy from the late pool alongside the elite
-    const extraEnemy = pick(latePool, rng);
-    enemies = [...baseElites, extraEnemy];
+      : act === 3
+        ? pick(act3EliteOptions, rng)
+        : act === 4
+          ? pick(act4EliteOptions, rng)
+          : (rng() < 0.5 ? [ENEMIES.krath_berserker] : [ENEMIES.phasewarden]);
+    // Add extra enemies alongside the elite. Act 3 gets 2 extras from the champion pool.
+    const eliteExtraPool = act === 3 ? act3Pool : act === 4 ? act4Pool : latePool;
+    const extraCount = act <= 3 ? 2 : 1;
+    const extraEnemies = Array.from({ length: extraCount }, () => pick(eliteExtraPool, rng));
+    enemies = [...baseElites, ...extraEnemies];
     name = 'Elite Encounter';
     xp = Math.round((60 + row * 2) * actXpScale); gold = 40 + Math.floor(rng() * 25); dropChance = 0.90;
+  } else if (act === 4) {
+    // Act 4: more enemies than Acts 1-3, but capped to keep fights winnable.
+    // krath_berserker and phasewarden only appear in elite fights (too strong for normal pools).
+    const act4Count = row <= 3
+      ? (rng() < 0.5 ? 4 : 3)
+      : row <= 7
+        ? (rng() < 0.65 ? 5 : 4)
+        : (rng() < 0.70 ? 6 : 5);
+    enemies = Array.from({ length: act4Count }, () => pick(act4Pool, rng));
+    name = `${act4Count} Enemies`;
+    xp = Math.round((40 + row * 3) * actXpScale); gold = 20 + Math.floor(rng() * 22) + row; dropChance = 0.65 + row * 0.02;
   } else {
     // Standard enemy: 2 or 4 enemies (early/mid rows); 3 or 5 enemies (late rows — harder fights)
-    // Act 3 pushes toward the higher count more aggressively
-    const isLateRow = (act === 1 && row >= 7) || (act === 2 && row >= 6) || (act === 3 && row >= 7);
-    const highPct = act === 3
+    // Act 3+ pushes toward the higher count more aggressively
+    const isLateRow = (act === 1 && row >= 7) || (act === 2 && row >= 6) || (act >= 3 && row >= 7);
+    const highPct = act >= 3
       ? (row <= 3 ? 0.45 : row <= 6 ? 0.65 : 0.85)
       : (row <= 3 ? 0.30 : row <= 6 ? 0.45 : 0.55);
     const baseCount = rng() < highPct ? 2 : 1;
@@ -687,7 +917,7 @@ export const FIRST_ENCOUNTER: EncounterDef = {
 // monotone constraint, so paths can cross, branch, and merge freely. All paths
 // converge to the single boss node (row 14, col 2).
 
-export function generateActMap(seed: number, act: 1 | 2 | 3): RunNode[] {
+export function generateActMap(seed: number, act: 1 | 2 | 3 | 4): RunNode[] {
   const rng = seededRng(seed + act * 997);
   const ROWS = 15; // rows 0–14; row 13 = pre-boss campfire, row 14 = boss
   const COLS = 5;
@@ -864,97 +1094,99 @@ export const CHARACTER_STARTING_CARDS: Record<string, string> = {
 
 // ── Starting Characters ───────────────────────────────────────────────────────
 
-export function buildStartingCharacters(): CharacterRunState[] {
+export function buildStartingCharacters(itemSlots = 6): CharacterRunState[] {
+  const emptyItems = Array(itemSlots).fill(null) as null[];
   return [
     {
       id: 'napoleon', displayName: 'Napoleon-chan', portrait: '/art/napoleon_portrait.png',
       currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'genghis', displayName: 'Genghis-chan', portrait: '/art/genghis_portrait.png',
       currentHp: 120, maxHp: 120, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'davinci', displayName: 'Da Vinci-chan', portrait: '/art/davinci_portrait.png',
-      currentHp: 85, maxHp: 85, level: 1, xp: 0, xpToNext: 100,
+      currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'leonidas', displayName: 'Leonidas-chan', portrait: '/art/leonidas_portrait.png',
       currentHp: 130, maxHp: 130, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'sunsin', displayName: 'Sun-sin-chan', portrait: '/art/sunsin_portrait.png',
       currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'beethoven', displayName: 'Beethoven-chan', portrait: '/art/beethoven_portrait.png',
-      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
+      currentHp: 95, maxHp: 95, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'huang', displayName: 'Huang-chan', portrait: '/art/huang_portrait.png',
       currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'nelson', displayName: 'Nelson-chan', portrait: '/art/nelson_portrait.png',
-      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
+      currentHp: 95, maxHp: 95, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'hannibal', displayName: 'Hannibal-chan', portrait: '/art/hannibal_portrait.png',
       currentHp: 110, maxHp: 110, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'picasso', displayName: 'Picasso-chan', portrait: '/art/picasso_portrait.png',
-      currentHp: 80, maxHp: 80, level: 1, xp: 0, xpToNext: 100,
+      currentHp: 95, maxHp: 95, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'teddy', displayName: 'Teddy-chan', portrait: '/art/teddy_portrait.png',
       currentHp: 140, maxHp: 140, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
     {
       id: 'mansa', displayName: 'Mansa-chan', portrait: '/art/mansa_portrait.png',
-      currentHp: 85, maxHp: 85, level: 1, xp: 0, xpToNext: 100,
+      currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
-      items: [null, null, null, null, null, null],
+      items: [...emptyItems],
     },
   ];
 }
 
-// XP thresholds per level (cumulative)
-export const XP_TO_NEXT = [0, 100, 220, 380, 580, 830, 9999];
+// XP thresholds per level (index = current level; value = XP needed to reach next level)
+// Level cap is 8. Upgrade tokens at levels 2 & 5; ultimate upgrade at level 8.
+export const XP_TO_NEXT = [0, 100, 220, 380, 580, 830, 1130, 1490, 9999];
 
 // Pick 3 card choices for the reward screen, gated by encounter type:
 //   enemy    — common + uncommon only (no rare, no ultimate)
@@ -968,8 +1200,11 @@ export function pickCardRewards(
   rng: () => number,
   characterIds: string[] = [],
   encounterType: 'enemy' | 'elite' | 'boss' | 'merchant' = 'enemy',
+  act: 1 | 2 | 3 | 4 = 1,
+  merchantCount = 3,
+  extraChoiceCount = 0,
 ): CardReward[] {
-  // Check character filter + block owned ultimates (can only have one copy per character)
+  // Block owned ultimates (one per character); filter exclusives by current party
   function eligible(c: CardReward): boolean {
     if (c.exclusiveTo) {
       const norm = c.exclusiveTo.toLowerCase().replace(/[\s-]/g, '');
@@ -988,54 +1223,38 @@ export function pickCardRewards(
     return a;
   }
 
-  const byRarity = (r: CardReward['rarity']) =>
-    CARD_REWARD_POOL.filter(c => c.rarity === r && eligible(c));
+  // Shared cards: no exclusiveTo, not ultimate
+  const sharedPool = CARD_REWARD_POOL.filter(c => !c.exclusiveTo && c.rarity !== 'ultimate' && eligible(c));
 
-  const commons   = byRarity('common');
-  const uncommons = byRarity('uncommon');
-  const rares     = byRarity('rare');
-  const ultimates = byRarity('ultimate');
+  // Character-exclusive ability cards: has exclusiveTo, not ultimate (these are 'rare' tier)
+  const exclusiveAbilities = CARD_REWARD_POOL.filter(c => !!c.exclusiveTo && c.rarity !== 'ultimate' && eligible(c));
 
-  // Non-ultimate base pool for filling remaining slots
-  const normalPool   = [...commons, ...uncommons];           // enemy
-  const elitePool    = [...commons, ...uncommons, ...rares]; // elite / merchant / boss filler
+  // Ultimates: rarity === 'ultimate', filtered by party + not already owned
+  const ultimates = CARD_REWARD_POOL.filter(c => c.rarity === 'ultimate' && eligible(c));
 
   if (encounterType === 'boss') {
-    // Guarantee exactly 1 ultimate; fill the other 2 from elite pool
-    const [ult] = shuffle(ultimates);
-    const filler = shuffle(elitePool).slice(0, 2);
-    const choices = ult ? shuffle([ult, ...filler]) : shuffle(elitePool).slice(0, 3);
-    return choices.slice(0, 3);
+    // Ultimates only — choice count decreases each act: 3 in Act 1, 2 in Act 2, 1 in Acts 3+
+    const choiceCount = Math.max(1, 4 - act);
+    return shuffle(ultimates).slice(0, choiceCount);
   }
 
   if (encounterType === 'elite') {
-    // 40% chance one of the 3 slots is an ultimate
-    if (ultimates.length > 0 && rng() < 0.40) {
-      const [ult] = shuffle(ultimates);
-      const filler = shuffle(elitePool).slice(0, 2);
-      return shuffle([ult, ...filler]).slice(0, 3);
-    }
-    return shuffle(elitePool).slice(0, 3);
+    return shuffle(exclusiveAbilities).slice(0, 3 + extraChoiceCount);
   }
 
   if (encounterType === 'merchant') {
-    return shuffle(elitePool).slice(0, 3);
+    return shuffle([...sharedPool, ...exclusiveAbilities]).slice(0, merchantCount);
   }
 
-  // Default: normal enemy fight — common + uncommon; 25% chance one slot is rare
-  if (rares.length > 0 && rng() < 0.25) {
-    const [rare] = shuffle(rares);
-    const filler = shuffle(normalPool).slice(0, 2);
-    return shuffle([rare, ...filler]).slice(0, 3);
-  }
-  return shuffle(normalPool).slice(0, 3);
+  // Normal enemy fight: shared cards only
+  return shuffle(sharedPool).slice(0, 3 + extraChoiceCount);
 }
 
 /**
  * Roll an item tier based on encounter type.
  *
- * Normal:  Common 55% | Uncommon 33% | Rare 10% | Legendary 2%
- * Elite:   Common 20% | Uncommon 50% | Rare 25% | Legendary 5%
+ * Normal:  Common 49% | Uncommon 33% | Rare 14% | Legendary 4%
+ * Elite:   Common 12% | Uncommon 50% | Rare 30% | Legendary 8%
  * Boss:    Uncommon 10% | Rare 65% | Legendary 25%
  */
 export function rollItemTier(
@@ -1049,21 +1268,29 @@ export function rollItemTier(
     return 'uncommon';
   }
   if (encounterType === 'elite') {
-    if (r < 0.05) return 'legendary';
-    if (r < 0.30) return 'rare';
-    if (r < 0.80) return 'uncommon';
+    if (r < 0.08) return 'legendary';
+    if (r < 0.38) return 'rare';
+    if (r < 0.88) return 'uncommon';
     return 'common';
   }
   // normal enemy
-  if (r < 0.02) return 'legendary';
-  if (r < 0.12) return 'rare';
-  if (r < 0.45) return 'uncommon';
+  if (r < 0.04) return 'legendary';
+  if (r < 0.18) return 'rare';
+  if (r < 0.51) return 'uncommon';
   return 'common';
 }
 
 export function pickItemReward(tier: 'common' | 'uncommon' | 'rare' | 'legendary', rng: () => number, teamCharIds?: string[]): RunItem {
+  // Signature legendaries only available once the sig_legendaries run perk is unlocked
+  const sigLegendariesUnlocked = (() => {
+    try {
+      const raw = localStorage.getItem('wcw_run_perks_v1');
+      return raw ? (JSON.parse(raw) as string[]).includes('sig_legendaries') : false;
+    } catch { return false; }
+  })();
   // Strict tier match — character-specific items only if that character is alive on the team
   const pool = ITEMS.filter(i => i.tier === tier).filter(i => {
+    if (i.isSignature && !sigLegendariesUnlocked) return false;
     if (!i.targetCharacter || !teamCharIds || teamCharIds.length === 0) return true;
     return teamCharIds.some(id => id.toLowerCase().includes(i.targetCharacter!));
   });

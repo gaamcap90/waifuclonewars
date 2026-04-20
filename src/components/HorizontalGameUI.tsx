@@ -18,6 +18,23 @@ interface RunItemSlot {
   description: string;
 }
 
+function DeathFlash({ isAlive }: { isAlive: boolean }) {
+  const prevRef = useRef(isAlive);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (prevRef.current && !isAlive) {
+      setFlash(true);
+      setTimeout(() => setFlash(false), 700);
+    }
+    prevRef.current = isAlive;
+  }, [isAlive]);
+  if (!flash) return null;
+  return (
+    <div className="absolute inset-0 rounded-lg pointer-events-none"
+      style={{ animation: 'anim-row-death-flash 0.7s ease-out forwards' }} />
+  );
+}
+
 interface HorizontalGameUIProps {
   gameState: GameState;
   onEndTurn: () => void;
@@ -32,6 +49,7 @@ interface HorizontalGameUIProps {
   onCardHoverExecutorId?: (id: string | null) => void;
   onEnemyAbilityHoverRange?: (val: { iconId: string; range: number } | null) => void;
   runStartTime?: number;
+  timerPaused?: boolean;
 }
 
 const HorizontalGameUI = ({
@@ -48,14 +66,28 @@ const HorizontalGameUI = ({
   onToggleHideUI,
   onEnemyAbilityHoverRange,
   runStartTime,
+  timerPaused,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
   const [hoveredCardCost, setHoveredCardCost] = useState<number | null>(null);
   const [abilityTooltip, setAbilityTooltip] = useState<{ ab: EnemyAbilityDef; icon: Icon; rect: DOMRect } | null>(null);
+  const [itemTooltip, setItemTooltip] = useState<{ item: RunItemSlot; rect: DOMRect } | null>(null);
   const [pinnedAbilityRange, setPinnedAbilityRange] = useState<{ iconId: string; abilityId: string; range: number } | null>(null);
+  const [bossPhaseFlash, setBossPhaseFlash] = useState<{ phase: number; total: number } | null>(null);
 
   const { t } = useT();
   const extGameState = gameState as any;
+  const currentBossPhase: number = extGameState.currentBossPhase ?? 1;
+  const totalBossPhases: number = extGameState.totalBossPhases ?? 1;
+
+  // Flash the phase announcement whenever the phase number advances
+  useEffect(() => {
+    if (totalBossPhases <= 1 || currentBossPhase <= 1) return;
+    setBossPhaseFlash({ phase: currentBossPhase, total: totalBossPhases });
+    const timer = setTimeout(() => setBossPhaseFlash(null), 3500);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBossPhase]);
   const selectedIconId: string | undefined = extGameState.selectedIcon;
   const targetingActive = Boolean(gameState.targetingMode);
 
@@ -132,9 +164,9 @@ const HorizontalGameUI = ({
           <span className="font-orbitron text-[10px] tracking-wider text-blue-400/60">{t.game.mana}</span>
           <span className="font-mono text-[10px] text-blue-300/50">{mana}/{maxMana}</span>
         </div>
-        <div className="flex gap-1">
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(maxMana, 5)}, 1fr)`, gap: 3 }}>
           {Array.from({ length: maxMana }).map((_, i) => (
-            <div key={i} className="flex-1 h-1.5 rounded-full transition-colors"
+            <div key={i} className="h-1.5 rounded-full transition-colors"
               style={{
                 background: i < mana ? "#60a5fa" : "rgba(255,255,255,0.08)",
                 boxShadow: i < mana ? "0 0 4px rgba(96,165,250,0.55)" : "none",
@@ -170,16 +202,6 @@ const HorizontalGameUI = ({
     const borderHex = teamColor === "blue" ? "#3b82f6" : "#ef4444";
     const bgFill = teamColor === "blue" ? "rgba(37,99,235,0.9)" : "rgba(185,28,28,0.9)";
 
-    // Death flash
-    const prevAliveRef = useRef(icon.isAlive);
-    const [flashDeath, setFlashDeath] = useState(false);
-    useEffect(() => {
-      if (prevAliveRef.current && !icon.isAlive) {
-        setFlashDeath(true);
-        setTimeout(() => setFlashDeath(false), 700);
-      }
-      prevAliveRef.current = icon.isAlive;
-    }, [icon.isAlive]);
 
     const passiveDesc = (() => {
       if (icon.name.includes("Napoleon")) return t.characters.napoleon.passive.desc;
@@ -214,10 +236,7 @@ const HorizontalGameUI = ({
         }}
         onClick={() => { if (canSelect && icon.isAlive && icon.playerId === 0) onSelectIcon(icon.id); }}
       >
-        {flashDeath && (
-          <div className="absolute inset-0 rounded-lg pointer-events-none"
-            style={{ animation: 'anim-row-death-flash 0.7s ease-out forwards' }} />
-        )}
+        <DeathFlash isAlive={icon.isAlive} />
         {/* Portrait */}
         <button
           onClick={(e) => {
@@ -428,24 +447,25 @@ const HorizontalGameUI = ({
               : icon.name.includes("Da Vinci") ? "davinci"
               : icon.name.includes("Leonidas") ? "leonidas"
               : icon.name.includes("Sun-sin") ? "sunsin"
+              : icon.name.includes("Beethoven") ? "beethoven"
+              : icon.name.includes("Huang") ? "huang"
+              : icon.name.includes("Nelson") ? "nelson"
+              : icon.name.includes("Hannibal") ? "hannibal"
+              : icon.name.includes("Picasso") ? "picasso"
+              : icon.name.includes("Teddy") ? "teddy"
+              : icon.name.includes("Mansa") ? "mansa"
               : null;
             const items = nameKey ? runItemsByCharacter?.[nameKey]?.filter(Boolean) : null;
             if (!items?.length) return null;
             return (
               <div className="flex gap-0.5 mt-0.5 flex-wrap">
                 {items.map((item, i) => (
-                  <div key={i} className="relative group">
-                    <span className="text-sm cursor-default">{item.icon}</span>
-                    <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block pointer-events-none w-44">
-                      <div className="rounded-lg px-3 py-2 shadow-2xl text-[10px]"
-                        style={{ background: "rgba(4,2,22,0.97)", border: "1px solid rgba(120,60,200,0.65)", boxShadow: "0 0 12px rgba(100,30,180,0.35), 0 4px 16px rgba(0,0,0,0.8)" }}>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-base leading-none">{item.icon}</span>
-                          <span className="font-bold text-purple-200 text-[11px] leading-tight">{item.name}</span>
-                        </div>
-                        <div className="text-slate-400 leading-snug break-words">{item.description}</div>
-                      </div>
-                    </div>
+                  <div key={i} className="relative">
+                    <span
+                      className="text-sm cursor-default"
+                      onMouseEnter={e => setItemTooltip({ item, rect: e.currentTarget.getBoundingClientRect() })}
+                      onMouseLeave={() => setItemTooltip(null)}
+                    >{item.icon}</span>
                   </div>
                 ))}
               </div>
@@ -482,7 +502,7 @@ const HorizontalGameUI = ({
       {/* TOP: Turn bar + objective */}
       <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
         <div className="pointer-events-auto">
-          <TurnQueueBar gameState={gameState} onEndTurn={onEndTurn} currentTurnTimer={currentTurnTimer} runStartTime={runStartTime} />
+          <TurnQueueBar gameState={gameState} onEndTurn={onEndTurn} currentTurnTimer={currentTurnTimer} runStartTime={runStartTime} timerPaused={timerPaused} />
         </div>
         {objLabel && (
           <div className="pointer-events-none flex items-center gap-2 rounded-full px-4 py-1"
@@ -504,6 +524,40 @@ const HorizontalGameUI = ({
             )}
           </div>
         )}
+        {/* Boss phase progress badge — always visible during multi-phase boss fights */}
+        {totalBossPhases > 1 && (
+          <div className="pointer-events-none flex items-center gap-1.5 rounded-lg px-3 py-1"
+            style={{
+              background: "rgba(20,5,40,0.95)",
+              border: "1px solid rgba(180,50,220,0.65)",
+              boxShadow: "0 0 12px rgba(180,50,220,0.30)",
+            }}>
+            <span className="text-sm">👁️</span>
+            <span className="font-orbitron text-[10px] font-bold tracking-widest" style={{ color: "#d946ef" }}>
+              PHASE {currentBossPhase}/{totalBossPhases}
+            </span>
+          </div>
+        )}
+
+        {/* Phase transition flash announcement */}
+        {bossPhaseFlash && (
+          <div className="pointer-events-none flex items-center gap-2 rounded-lg px-4 py-2"
+            style={{
+              background: "rgba(50,0,70,0.97)",
+              border: "2px solid rgba(220,50,255,0.80)",
+              boxShadow: "0 0 28px rgba(220,50,255,0.50)",
+              animation: "pulse 0.6s ease-in-out infinite alternate",
+            }}>
+            <span className="text-lg">⚡</span>
+            <div className="flex flex-col">
+              <span className="font-orbitron text-[13px] font-bold tracking-widest" style={{ color: "#e879f9" }}>
+                PHASE {bossPhaseFlash.phase}/{bossPhaseFlash.total} BEGINS
+              </span>
+              <span className="font-orbitron text-[9px] text-purple-300/80 tracking-wider">NEW ENEMIES HAVE ENTERED THE ARENA</span>
+            </div>
+          </div>
+        )}
+
         {/* Arena Event banner — hidden for fire/flood since the countdown widget below covers them */}
         {extGameState.arenaEvent && extGameState.arenaEvent.id !== 'forest_fire' && extGameState.arenaEvent.id !== 'alien_tide' && (
           <div className="pointer-events-none flex items-center gap-2 rounded-lg px-4 py-1.5 animate-pulse"
@@ -725,7 +779,9 @@ const HorizontalGameUI = ({
                     {/* Card usage pips */}
                     {(() => {
                       const cardsUsed = displayIcon?.cardsUsedThisTurn ?? 0;
-                      const maxCards = 3;
+                      const maxCards = displayIcon?.itemPassiveTags?.includes('cards_per_turn_unlimited')
+                        ? 5
+                        : 3 + (displayIcon?.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
                       return (
                         <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
                           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -791,7 +847,11 @@ const HorizontalGameUI = ({
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: `repeat(${Math.min(maxMana, 5)}, 11px)`,
+                              gap: 4,
+                            }}>
                               {Array.from({ length: maxMana }).map((_, i) => {
                                 const filled = i < mana;
                                 const willSpend = afterMana !== null && i >= afterMana && i < mana;
@@ -816,7 +876,6 @@ const HorizontalGameUI = ({
                                         ? `anim-mana-glow 2.5s ease-in-out ${i * 0.12}s infinite`
                                         : "none",
                                       transition: "background 0.2s, box-shadow 0.2s, border-color 0.2s",
-                                      flexShrink: 0,
                                     }}
                                   />
                                 );
@@ -966,6 +1025,34 @@ const HorizontalGameUI = ({
               {ab.oncePerFight && (
                 <div className="text-[9px] text-purple-400/80 mb-1.5">★ Once per fight</div>
               )}
+            </div>
+          </div>
+        );
+      })(), document.body)}
+
+      {/* In-combat item hover tooltip portal */}
+      {itemTooltip && createPortal((() => {
+        const { item, rect } = itemTooltip;
+        const left = Math.min(Math.max(rect.left + rect.width / 2, 90), window.innerWidth - 90);
+        const above = rect.top > 180;
+        const top = above ? rect.top - 8 : rect.bottom + 8;
+        return (
+          <div
+            className="fixed z-[9999] pointer-events-none"
+            style={{
+              top,
+              left,
+              width: 176,
+              transform: above ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+            }}
+          >
+            <div className="rounded-lg px-3 py-2 shadow-2xl text-[10px]"
+              style={{ background: "rgba(4,2,22,0.97)", border: "1px solid rgba(120,60,200,0.65)", boxShadow: "0 0 12px rgba(100,30,180,0.35), 0 4px 16px rgba(0,0,0,0.8)" }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-base leading-none">{item.icon}</span>
+                <span className="font-bold text-purple-200 text-[11px] leading-tight">{item.name}</span>
+              </div>
+              <div className="text-slate-400 leading-snug break-words">{item.description}</div>
             </div>
           </div>
         );

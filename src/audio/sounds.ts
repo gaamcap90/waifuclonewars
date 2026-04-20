@@ -52,7 +52,9 @@ export const PLAYLIST: TrackDef[] = [
   { id: 'mansa',    name: 'سلطان الذهب',                     src: '/audio/mansa_theme.mp3' },
   { id: 'znyxorga', name: 'Gra\'athal Vol\'Krath',            src: '/audio/znyxorga_theme.mp3' },
   { id: 'sunsin2',  name: '열두 척 별빛',                     src: '/audio/sunsin2_theme.mp3' },
-  { id: 'genghis2', name: 'Тэнгэрийн Охин',                  src: '/audio/genghis2_theme.mp3' },
+  { id: 'genghis2',       name: 'Тэнгэрийн Охин',    src: '/audio/genghis2_theme.mp3' },
+  { id: 'nonsumosclones', name: 'Non Sumos Clones', src: '/audio/nonsumosclones_theme.mp3' },
+  { id: 'thesamesoul',    name: 'The Same Soul',   src: '/audio/thesamesoul_theme.mp3' },
 ];
 
 // Character theme clips: { src, startSec, endSec } — used only in Historical Archives preview

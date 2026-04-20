@@ -147,6 +147,15 @@ All colors MUST be HSL.
   50%       { box-shadow: 0 0 22px rgba(34,211,238,0.45), inset 0 0 16px rgba(34,211,238,0.1); }
 }
 
+@keyframes dialogue-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes dialogue-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+}
+
 @keyframes pulseSoft {
   0%,100% { opacity: .65; filter: saturate(100%); }
   50%     { opacity: .95; filter: saturate(120%); }
@@ -156,6 +165,38 @@ All colors MUST be HSL.
 .animate-drift-slower { animation: driftX 48s linear infinite; }
 .animate-float-slower { animation: floatY 14s ease-in-out infinite; }
 .animate-pulse-soft   { animation: pulseSoft 6s ease-in-out infinite; }
+
+@keyframes targeting-march {
+  to { stroke-dashoffset: -28; }
+}
+
+@keyframes intent-march {
+  to { stroke-dashoffset: -20; }
+}
+
+@keyframes intent-pulse {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 0.25; }
+}
+
+@keyframes card-glow-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(96,165,250,0.20), 0 0 10px rgba(96,165,250,0.12), 0 2px 8px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 0 1px rgba(96,165,250,0.50), 0 0 22px rgba(96,165,250,0.32), 0 2px 8px rgba(0,0,0,0.5); }
+}
+.card-glow-pulse { animation: card-glow-breathe 2.5s ease-in-out infinite; }
+
+@keyframes card-flip-in {
+  0%   { transform: perspective(700px) rotateY(90deg); opacity: 0.3; }
+  100% { transform: perspective(700px) rotateY(0deg);  opacity: 1; }
+}
+.card-flip-reveal { animation: card-flip-in 0.40s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+
+@keyframes card-ult-flash {
+  0%   { box-shadow: 0 0 0px rgba(245,158,11,0); }
+  30%  { box-shadow: 0 0 35px rgba(245,158,11,0.8), 0 0 70px rgba(245,158,11,0.35); }
+  100% { box-shadow: 0 0 0px rgba(245,158,11,0); }
+}
+.card-ult-flash { animation: card-ult-flash 1.4s ease-out both; }
 
 @layer base {
   * {
@@ -174,9 +215,38 @@ All colors MUST be HSL.
   50%       { transform: translateY(-3px); }
 }
 
+/* Sprite idle float — subtle up/down bob for character sprites on tiles */
+@keyframes anim-sprite-idle-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+
+/* Mana crystal tile pulse ring */
+@keyframes anim-mana-ring-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(0.80); opacity: 0.25; }
+  50%       { transform: translate(-50%, -50%) scale(1.15); opacity: 0.75; }
+}
+@keyframes anim-mana-core-glow {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.50; }
+}
+
+/* Victory screen flash — fires at phase 2 */
+@keyframes anim-victory-flash {
+  0%   { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+/* Low-HP border urgent pulse on CharacterPanel */
+@keyframes anim-hp-urgent-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  50%       { box-shadow: 0 0 18px rgba(239,68,68,0.9), 0 0 4px rgba(255,100,100,0.6); }
+}
+
 @keyframes anim-float-up-fade {
-  0%   { transform: translateY(0px) scale(1);     opacity: 1; }
-  18%  { transform: translateY(-10px) scale(1.12); opacity: 1; }
+  0%   { transform: translateY(0px)  scale(0.7);  opacity: 0; }
+  10%  { transform: translateY(-6px) scale(1.22); opacity: 1; }
+  22%  { transform: translateY(-12px) scale(1.08); opacity: 1; }
   100% { transform: translateY(-64px) scale(0.85); opacity: 0; }
 }
 /* Big-hit variant: punchy scale-pop before rising */
@@ -260,6 +330,25 @@ All colors MUST be HSL.
   33%  { transform: translateX(4px) translateY(-3px); }
   66%  { transform: translateX(-3px) translateY(4px); }
   100% { transform: translateX(0px) translateY(0px); }
+}
+/* ── Arena crowd life — flicker, wave, banners, spotlights ─────────── */
+@keyframes anim-crowd-flicker {
+  0%, 100% { opacity: 0.85; transform: scale(1.0); }
+  25%      { opacity: 0.45; transform: scale(0.8); }
+  50%      { opacity: 1.0;  transform: scale(1.15); }
+  75%      { opacity: 0.6;  transform: scale(0.9); }
+}
+@keyframes anim-crowd-wave {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes anim-holo-banner {
+  0%, 100% { opacity: 0.7; transform: rotate(var(--rot, 0deg)) translateY(0px); }
+  50%      { opacity: 1.0; transform: rotate(var(--rot, 0deg)) translateY(-3px); }
+}
+@keyframes anim-spotlight-sweep {
+  0%, 100% { opacity: 0.5; transform: skewX(-5deg) translateX(0px); }
+  50%      { opacity: 1.0; transform: skewX(-5deg) translateX(15px); }
 }
 
 @keyframes anim-phase-banner {
@@ -612,6 +701,18 @@ All colors MUST be HSL.
   0%, 100% { opacity: 0.70; }
   50%       { opacity: 1.0; }
 }
+@keyframes anim-map-node-breathe {
+  0%, 100% { opacity: 0.30; }
+  50%      { opacity: 0.55; }
+}
+@keyframes anim-map-done-shimmer {
+  0%, 100% { opacity: 0.25; stroke-width: 1; }
+  50%      { opacity: 0.60; stroke-width: 1.5; }
+}
+@keyframes anim-map-boss-locked-throb {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.75; }
+}
 
 /* ── Despawn crumble (terracotta / summoned unit expiry) ──────────── */
 
@@ -633,6 +734,22 @@ All colors MUST be HSL.
   100% { transform: translate(-50%, -110%) scale(0.7); opacity: 0; }
 }
 
+/* ── Knockback landing burst ─────────────────────────────────────────── */
+@keyframes anim-knockback-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.8); opacity: 0; }
+}
+@keyframes anim-knockback-flash {
+  0%   { opacity: 0.95; transform: translate(-50%, -50%) scale(0.5); }
+  35%  { opacity: 1;    transform: translate(-50%, -50%) scale(1.35); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(2.2); filter: blur(4px); }
+}
+@keyframes anim-knockback-streak {
+  0%   { opacity: 0.85; }
+  60%  { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
 /* ── 10: Debuff badge pulse — high urgency ───────────────────────────── */
 @keyframes anim-debuff-pulse {
   0%, 100% { box-shadow: 0 0 4px var(--debuff-color), 0 1px 4px rgba(0,0,0,0.8); transform: scale(1.0); }
@@ -640,26 +757,41 @@ All colors MUST be HSL.
 }
 
 /* ── 4: Screen transition veil — directional wipe ──────────────────── */
-@keyframes anim-veil-out {
-  0%   { opacity: 0; }
-  100% { opacity: 1; }
-}
-@keyframes anim-veil-in {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
-}
 @keyframes anim-veil-wipe-out {
   0%   { clip-path: inset(0 100% 0 0); }
-  100% { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 0% 0 0); }
 }
 @keyframes anim-veil-wipe-in {
-  0%   { clip-path: inset(0 0 0 0); }
+  0%   { clip-path: inset(0 0 0 0%); }
   100% { clip-path: inset(0 0 0 100%); }
 }
-@keyframes anim-veil-emblem {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
-  40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
-  100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.0); }
+/* Scanline sweeps left→right during wipe-out, right→left during wipe-in */
+@keyframes anim-veil-scanline-out {
+  0%   { left: -3px; }
+  100% { left: calc(100% - 3px); }
+}
+@keyframes anim-veil-scanline-in {
+  0%   { right: -3px; }
+  100% { right: calc(100% - 3px); }
+}
+@keyframes anim-veil-glow-out {
+  0%   { left: -80px; }
+  100% { left: calc(100% - 80px); }
+}
+@keyframes anim-veil-glow-in {
+  0%   { right: -80px; }
+  100% { right: calc(100% - 80px); }
+}
+/* Emblem: fades in and holds during wipe-out, then fades out during wipe-in */
+@keyframes anim-veil-emblem-out {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.82); }
+  50%  { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+}
+@keyframes anim-veil-emblem-in {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+  60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
 }
 
 /* ── C: Victory/Defeat cinematic animations ─────────────────────────── */
@@ -720,6 +852,63 @@ All colors MUST be HSL.
   30%  { transform: scaleX(1); opacity: 1; }
   75%  { opacity: 1; }
   100% { opacity: 0; }
+}
+/* ── Turn queue active portrait pulse ────────────────────────────── */
+@keyframes anim-tq-active-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(250,210,0,0.35); }
+  50%      { box-shadow: 0 0 16px rgba(250,210,0,0.65); }
+}
+
+/* ── K: Merchant coin particles ─────────────────────────────────────── */
+@keyframes anim-merchant-coin {
+  0%   { opacity: 0; transform: translateY(0) scale(0.8) rotate(0deg); }
+  15%  { opacity: 1; }
+  70%  { opacity: 0.7; transform: translateY(-180px) scale(1.1) rotate(180deg); }
+  100% { opacity: 0; transform: translateY(-260px) scale(0.6) rotate(260deg); }
+}
+
+/* ── L: Boss intro icon throb ────────────────────────────────────────── */
+@keyframes anim-boss-icon-throb {
+  0%   { transform: scale(1.0); filter: drop-shadow(0 0 40px rgba(255,0,0,1)) drop-shadow(0 0 80px rgba(180,0,0,0.7)); }
+  100% { transform: scale(1.12); filter: drop-shadow(0 0 60px rgba(255,0,0,1)) drop-shadow(0 0 120px rgba(200,0,0,0.9)); }
+}
+
+/* ── M: Heavy / massive screen shake variants ────────────────────────── */
+@keyframes screen-shake-heavy {
+  0%, 100% { transform: translate(0, 0); }
+  12%       { transform: translate(-7px, 4px); }
+  28%       { transform: translate(8px, -5px); }
+  45%       { transform: translate(-6px, 6px); }
+  62%       { transform: translate(5px, -4px); }
+  78%       { transform: translate(-4px, 3px); }
+}
+@keyframes screen-shake-massive {
+  0%, 100% { transform: translate(0, 0); }
+  10%       { transform: translate(-14px, 7px); }
+  22%       { transform: translate(13px, -9px); }
+  36%       { transform: translate(-11px, 10px); }
+  50%       { transform: translate(10px, -7px); }
+  65%       { transform: translate(-8px, 6px); }
+  80%       { transform: translate(6px, -4px); }
+}
+
+/* ── J: Campfire ambiance ────────────────────────────────────────────── */
+@keyframes anim-campfire-glow {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1.0; }
+}
+@keyframes anim-campfire-ember {
+  0%   { opacity: 0; transform: translateY(0) scale(1); }
+  15%  { opacity: 1; }
+  80%  { opacity: 0.6; transform: translateY(-120px) translateX(12px) scale(0.5); }
+  100% { opacity: 0; transform: translateY(-180px) translateX(18px) scale(0.2); }
+}
+
+/* ── I: Character selection card entrance ────────────────────────────── */
+@keyframes anim-charcard-enter {
+  0%   { opacity: 0; transform: translateY(30px) scale(0.92); filter: brightness(0.4); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.01); filter: brightness(1.1); }
+  100% { opacity: 1; transform: translateY(0) scale(1.0); filter: brightness(1.0); }
 }
 
 /* ── H: Reward card reveal ──────────────────────────────────────────── */

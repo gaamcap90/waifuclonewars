@@ -14,6 +14,7 @@ import UltimateIndicator from "@/components/UltimateIndicator";
 import RoguelikeMap from "@/components/RoguelikeMap";
 import RewardsScreen from "@/components/RewardsScreen";
 import { CampfireScreen, MerchantScreen, TreasureScreen, UnknownScreen, RunDefeatScreen, RunVictoryScreen } from "@/components/roguelike/RoomScreens";
+import SignatureLegendaryPicker from "@/components/roguelike/SignatureLegendaryPicker";
 import useGameState from "@/hooks/useGameStateNew";
 import { useRunState } from "@/hooks/useRunState";
 import { useAudio } from "@/hooks/useAudio";
@@ -32,11 +33,35 @@ import { TUTORIAL_CHARS } from "@/data/tutorialData";
 import type { TutorialRunNode } from "@/data/tutorialData";
 import { useAchievements } from "@/hooks/useAchievements";
 import { AchievementToast } from "@/components/AchievementToast";
+import { useCloneDialogue } from "@/hooks/useCloneDialogue";
 
-type GameMode = 'loading' | 'menu' | 'archives' | 'settings' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated' | 'runVictory';
+type GameMode = 'loading' | 'menu' | 'archives' | 'achievements' | 'settings' | 'characterSelect' | 'singleplayer' | 'multiplayer' | 'roguelikeMap' | 'rewards' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'runDefeated' | 'runVictory';
 
 // Screens that open as overlays — no fade transition
-const OVERLAY_MODES = new Set<GameMode>(['settings', 'archives']);
+const OVERLAY_MODES = new Set<GameMode>(['settings', 'archives', 'achievements']);
+
+// Per-character cast burst colors — used for ability/card VFX
+const CHARACTER_VFX_COLORS: Record<string, string> = {
+  Napoleon:   'rgba(59,130,246,0.95)',   // imperial blue
+  Genghis:    'rgba(220,38,38,0.95)',    // blood red
+  'Da Vinci': 'rgba(16,185,129,0.95)',   // renaissance emerald
+  Leonidas:   'rgba(245,158,11,0.95)',   // Spartan gold
+  'Sun-sin':  'rgba(6,182,212,0.95)',    // ocean cyan
+  Beethoven:  'rgba(139,92,246,0.95)',   // deep violet
+  Huang:      'rgba(249,115,22,0.95)',   // terracotta orange
+  Nelson:     'rgba(14,165,233,0.95)',   // admiral sky-blue
+  Hannibal:   'rgba(168,85,247,0.95)',   // Carthaginian purple
+  Picasso:    'rgba(236,72,153,0.95)',   // cubist pink
+  Teddy:      'rgba(34,197,94,0.95)',    // rough-rider green
+  Mansa:      'rgba(234,179,8,0.95)',    // golden wealth
+};
+
+const LEGACY_MAIN_STAT: Record<string, 'might' | 'power' | 'defense'> = {
+  napoleon: 'might', genghis: 'might', davinci: 'power',
+  leonidas: 'defense', sunsin: 'power', beethoven: 'power',
+  huang: 'might', nelson: 'might', hannibal: 'might',
+  picasso: 'power', teddy: 'might', mansa: 'power',
+};
 
 /** Capture final HP and passive stack values from all player icons after combat. */
 function captureIconStates(playerIcons: any[]): { finalHps: Record<string, number>; finalPassiveStacks: Record<string, number> } {
@@ -65,11 +90,12 @@ const Index = () => {
     }
     if (veilTimerRef.current) clearTimeout(veilTimerRef.current);
     setVeil('out');
+    // 260ms wipe-out → 70ms hold at full black (emblem readable) → wipe-in
     veilTimerRef.current = setTimeout(() => {
       setGameModeRaw(mode);
       setVeil('in');
       veilTimerRef.current = setTimeout(() => setVeil('idle'), 380);
-    }, 260);
+    }, 330);
   }, [gameMode]);
 
   const handleLoadingComplete = useCallback(() => setGameModeRaw('menu'), []);
@@ -85,9 +111,12 @@ const Index = () => {
   const [hoveredCardExecutorId, setHoveredCardExecutorId] = useState<string | null>(null);
   const [hoveredEnemyAbilityRange, setHoveredEnemyAbilityRange] = useState<{ iconId: string; range: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const { runState, hasSavedRun, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, upgradeSharedCard, removeCardFromDeck, addItemToCharacter, removeItemFromCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility, startTutorialRun } = useRunState();
+  const [merchantPurchasedCardDefs, setMerchantPurchasedCardDefs] = useState<Set<string>>(new Set());
+  const { runState, hasSavedRun, startRun, abandonRun, enterNode, completeCombat, completeNonCombatNode, collectRewards, healAtCampfire, healAllAtCampfire, upgradeSharedCard, removeCardFromDeck, addItemToCharacter, removeItemFromCharacter, spendGold, addGold, addCardToDeck, buyCardFromMerchant, buyHealAllFromMerchant, hurtAllCharacters, allocateStatPoint, upgradeAbility, startTutorialRun, grantSignatureLegendary, clearActBonusNotice } = useRunState();
   const [pendingEventItem, setPendingEventItem] = useState<import('@/types/roguelike').RunItem | null>(null);
   const [pendingEventItemSource, setPendingEventItemSource] = useState<'event' | 'merchant'>('event');
+  const [showSignatureLegendaryPicker, setShowSignatureLegendaryPicker] = useState(false);
+  const [actBonusPopup, setActBonusPopup] = useState<{ totalMana: number } | null>(null);
   // Shown after events that add a curse — display the curse card before going back to map
   const [pendingCurseAdded, setPendingCurseAdded] = useState<{ curseId: string; nodeId: string } | null>(null);
   const { gameState, selectTile, endTurn, basicAttack, useAbility, playCard, currentTurnTimer, selectIcon, undoMovement, respawnCharacter, startRespawnPlacement, startBattle, resetGame, cancelTargeting } = useGameState(
@@ -99,7 +128,8 @@ const Index = () => {
   const { playSound, playMusic, stopMusic } = useAudio();
   const { animations, addAnimation } = useAnimations();
   const { tutorialState, currentStep, totalStepsInStage, stageId, startTutorial, skipTutorial, advanceTutorial, setTutorialStage, clearJustCompleted } = useTutorialState();
-  const { fireEvent, toastQueue, dismissToast, isLoreUnlocked, isUnlocked, stats } = useAchievements();
+  const { fireEvent, toastQueue, dismissToast, isLoreUnlocked, isUnlocked, stats, newUnlockCount, newAchievementIds, newAchievementCount, markAchievementSeen, clearNewCounts, totalUnlockedPoints, unlockedCharacterIds, unlocked, devAllCharsUnlocked, toggleDevCharUnlock, fogOfWarTier, activeRunPerks } = useAchievements();
+  const { activeDialogue, notifyInteraction } = useCloneDialogue(gameState, runState?.battleCount ?? 0);
   // Tracks which characters used their ultimate in the current fight (reset on fight start)
   const fightUltimatesRef = useRef<Set<string>>(new Set());
   // Tracks whether any player icon took damage in the current fight
@@ -111,13 +141,27 @@ const Index = () => {
   const [showEnemyBanner, setShowEnemyBanner] = useState(false);
   const [showPlayerBanner, setShowPlayerBanner] = useState(false);
   const [hideUI, setHideUI] = useState(false);
-  const [shakeActive, setShakeActive] = useState(false);
+  const [shakeAnim, setShakeAnim] = useState<string | null>(null);
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [redVignette, setRedVignette] = useState(false);
   const vignetteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [phaseBanner, setPhaseBanner] = useState<{ enemyName: string; abilityName: string; icon: string } | null>(null);
   const prevPhaseBannerRef = useRef<string | null>(null);
-  const [battleTransition, setBattleTransition] = useState<{ label: string; icon: string } | null>(null);
+  const [battleTransition, setBattleTransition] = useState<{ label: string; icon: string; isBoss?: boolean } | null>(null);
+
+  // ── Notify dialogue system on first player interaction ───────────────────────
+  useEffect(() => {
+    if (hoveredTile !== null || hoveredCardRange !== null) notifyInteraction();
+  }, [hoveredTile, hoveredCardRange]);
+
+  // ── Act completion mana bonus notification ────────────────────────────────────
+  useEffect(() => {
+    if (runState?.pendingActBonusNotice && gameMode === 'roguelikeMap') {
+      const totalMana = 5 + runState.pendingActBonusNotice;
+      setActBonusPopup({ totalMana });
+      clearActBonusNotice();
+    }
+  }, [runState?.pendingActBonusNotice, gameMode]);
 
   // ── Animations: detect HP changes + movement between renders ──────────────────
   // iconId → { hp, q, r } snapshot from previous render
@@ -143,6 +187,9 @@ const Index = () => {
       }
     });
 
+    // Collect damage events to stagger VFX across multi-hit abilities
+    const dmgQueue: Array<{ pos: { q: number; r: number }; dmg: number; isKill: boolean; playerId: number }> = [];
+
     allIcons.forEach(icon => {
       const prev = snap.get(icon.id);
       const currHp = icon.stats.hp;
@@ -151,43 +198,15 @@ const Index = () => {
         const delta = currHp - prev.hp;
 
         if (delta < -0.5) {
-          // Damage received
           const dmg = Math.round(-delta);
           if (icon.playerId === 0) fightDamageTakenRef.current = true;
-          addAnimation({
-            id: nextAnimId('dmg'),
-            type: 'damage',
-            position: icon.position,
-            value: dmg,
-          });
-          // Screen shake on heavy hits
-          if (dmg >= 20) {
-            if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
-            setShakeActive(true);
-            shakeTimerRef.current = setTimeout(() => setShakeActive(false), 200);
-          }
-          // Red vignette when player team takes damage
+          // Red vignette fires immediately so it doesn't feel delayed
           if (icon.playerId === 0) {
             if (vignetteTimerRef.current) clearTimeout(vignetteTimerRef.current);
             setRedVignette(true);
             vignetteTimerRef.current = setTimeout(() => setRedVignette(false), 650);
           }
-          addAnimation({
-            id: nextAnimId('impact'),
-            type: 'impact',
-            position: icon.position,
-            color: icon.playerId === 0
-              ? 'rgba(239,68,68,0.88)'       // blue team takes red impact
-              : 'rgba(251,146,60,0.88)',      // red team takes orange impact
-          });
-          if (currHp <= 0) {
-            addAnimation({
-              id: nextAnimId('death'),
-              type: 'death',
-              position: icon.position,
-            });
-            playSound('unit_death');
-          }
+          dmgQueue.push({ pos: { ...icon.position }, dmg, isKill: currHp <= 0, playerId: icon.playerId });
         } else if (delta > 0.5) {
           if (prev.hp <= 0 && currHp > 0) {
             // Respawn — unit materialises from nothing
@@ -230,6 +249,16 @@ const Index = () => {
           position: { q: prev.q, r: prev.r },
           color: icon.playerId === 0 ? 'rgba(100,180,255,0.7)' : 'rgba(255,100,100,0.7)',
         });
+        // Knockback landing burst — enemy moved during player's turn = knockback ability
+        if (icon.playerId === 1 && gameState.activePlayerId === 0) {
+          addAnimation({
+            id: nextAnimId('knockback'),
+            type: 'knockback',
+            position: icon.position,
+            fromPosition: { q: prev.q, r: prev.r },
+            color: 'rgba(100,220,255,0.92)',
+          });
+        }
         // Only play move sound for player team (avoid noise during AI multi-move)
         if (icon.playerId === 0) {
           playSound('card_play');
@@ -238,6 +267,33 @@ const Index = () => {
       }
 
       snap.set(icon.id, { hp: currHp, q: icon.position.q, r: icon.position.r });
+    });
+
+    // Stagger damage VFX: 120ms between targets for multi-hit abilities, instant for single hits
+    const STAGGER_MS = 120;
+    dmgQueue.forEach(({ pos, dmg, isKill, playerId }, i) => {
+      const delay = dmgQueue.length > 1 ? i * STAGGER_MS : 0;
+      const fire = () => {
+        addAnimation({ id: nextAnimId('dmg'), type: 'damage', position: pos, value: dmg });
+        addAnimation({
+          id: nextAnimId('impact'), type: 'impact', position: pos,
+          color: playerId === 0 ? 'rgba(239,68,68,0.88)' : 'rgba(251,146,60,0.88)',
+        });
+        if (isKill) {
+          addAnimation({ id: nextAnimId('death'), type: 'death', position: pos });
+          playSound('unit_death');
+        }
+        // Screen shake fires with the first hit
+        if (i === 0 && dmg >= 20) {
+          if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+          const anim = dmg >= 60 ? 'screen-shake-massive' : dmg >= 40 ? 'screen-shake-heavy' : 'screen-shake';
+          const dur  = dmg >= 60 ? 320 : dmg >= 40 ? 260 : 200;
+          setShakeAnim(anim);
+          shakeTimerRef.current = setTimeout(() => setShakeAnim(null), dur);
+        }
+      };
+      if (delay === 0) fire();
+      else setTimeout(fire, delay);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.players]);
@@ -261,6 +317,32 @@ const Index = () => {
     prevBaseHealthRef.current = current;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [(gameState as any).baseHealth]);
+
+  // ── 0-damage hits → "BLOCKED" shield VFX ────────────────────────────────────
+  const prevZeroHitsRef = useRef<{q:number,r:number}[]>([]);
+  useEffect(() => {
+    const positions: {q:number,r:number}[] = (gameState as any).pendingZeroHitPositions ?? [];
+    if (positions.length > 0 && positions !== prevZeroHitsRef.current) {
+      positions.forEach(pos => {
+        addAnimation({ id: nextAnimId('shield'), type: 'shield', position: pos, color: 'rgba(120,200,255,0.95)' });
+        addAnimation({ id: nextAnimId('impact'), type: 'impact', position: pos, color: 'rgba(120,200,255,0.70)' });
+      });
+    }
+    prevZeroHitsRef.current = positions;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(gameState as any).pendingZeroHitPositions]);
+
+  // ── In-battle arena event → achievement counter ──────────────────────────────
+  const prevArenaEventIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const ev = (gameState as any).arenaEvent as { id: string } | null | undefined;
+    const age: number = (gameState as any).arenaEventAge ?? 1;
+    if (!ev || age !== 0) return;
+    if (ev.id === prevArenaEventIdRef.current) return;
+    prevArenaEventIdRef.current = ev.id;
+    if (!runState?.isTutorialRun) fireEvent('arena_event_triggered');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(gameState as any).arenaEvent, (gameState as any).arenaEventAge]);
 
   // ── Turn flash + enemy banner when active player changes ─────────────────────
   const prevActivePlayerRef = useRef<number>(gameState.activePlayerId);
@@ -368,12 +450,12 @@ const Index = () => {
           const enemyIcons  = gameState.players[1]?.icons ?? [];
           const alivePlayerIcons = playerIcons.filter((i: any) => i.isAlive);
           const turns = gameState.currentTurn ?? 1;
-          const deadEnemies = enemyIcons.filter((i: any) => !i.isAlive);
+          const killedLog: string[] = (gameState as any).killedEnemyNameLog ?? [];
           fireEvent('fight_ended', {
             won:            true,
             turnsElapsed:   turns,
-            enemiesKilled:  deadEnemies.length,
-            killedEnemyNames: deadEnemies.map((i: any) => i.name),
+            enemiesKilled:  killedLog.length,
+            killedEnemyNames: killedLog,
             allAlive:       alivePlayerIcons.length === playerIcons.length,
             oneCloneAlive:  alivePlayerIcons.length === 1,
             noDamageTaken:  !fightDamageTakenRef.current,
@@ -438,6 +520,7 @@ const Index = () => {
       finalHps: finalHps as any,
       finalPassiveStacks,
       enemiesKilled: (gameState.players[1]?.icons ?? []).filter(i => !i.isAlive).length,
+      killBlowsByName: (gameState as any).playerKillBlows ?? {},
     });
     setActiveNodeId(null);
     setGameMode('rewards');
@@ -500,10 +583,16 @@ const Index = () => {
       const mapSeed = runState.seed ^ (runState.battleCount * 31337);
       const transLabel = node.type === 'boss' ? 'BOSS BATTLE' : node.type === 'elite' ? 'ELITE ENCOUNTER' : 'COMBAT';
       const transIcon = node.type === 'boss' ? '💀' : node.type === 'elite' ? '⚡' : '⚔️';
-      setBattleTransition({ label: transLabel, icon: transIcon });
+      setBattleTransition({ label: transLabel, icon: transIcon, isBoss: node.type === 'boss' });
       const charsToUse = runState.isTutorialRun
         ? runState.characters.filter(c => (node as TutorialRunNode).tutorialCharIds?.includes(c.id))
         : runState.characters;
+      const legacyBonus = (runState.act ?? 1) * 5;
+      const charsWithLegacy = charsToUse.map(c => {
+        const mainStat = LEGACY_MAIN_STAT[c.id];
+        if (!mainStat || !unlocked.has(`legacy_${c.id}`)) return c;
+        return { ...c, statBonuses: { ...c.statBonuses, [mainStat]: c.statBonuses[mainStat] + legacyBonus } };
+      });
       // Sync selectedCharacters so the game hook builds only the correct icons
       if (runState.isTutorialRun) {
         const tutCharsFull = (TUTORIAL_CHARS as any[]).filter(c => (node as TutorialRunNode).tutorialCharIds?.includes(c.id));
@@ -513,7 +602,7 @@ const Index = () => {
         fightUltimatesRef.current = new Set();
         fightDamageTakenRef.current = false;
         fightStartHpRef.current = {};
-        startBattle(charsToUse, runState.deckCardIds, node.encounter ?? null, mapSeed, true, runState.battleCount, runState.upgradedCardDefIds, runState.act as 1 | 2 | 3);
+        startBattle(charsWithLegacy, runState.deckCardIds, node.encounter ?? null, mapSeed, true, runState.battleCount, runState.upgradedCardDefIds, runState.act as 1 | 2 | 3 | 4, runState.permanentManaBonus ?? 0);
         setGameMode('singleplayer');
         setTimeout(() => setBattleTransition(null), 800);
       }, 1100);
@@ -525,6 +614,7 @@ const Index = () => {
       setGameMode('campfire');
     }
     if (node.type === 'merchant') {
+      setMerchantPurchasedCardDefs(new Set()); // reset per merchant visit
       setGameMode('merchant');
     }
     if (node.type === 'treasure') {
@@ -629,6 +719,14 @@ const Index = () => {
     }
   }, [gameState, selectTile, addAnimation, advanceTutorial, tutorialState.active, currentStep]);
 
+  const ACTIVE_GAME_MODES = ['combat', 'roguelikeMap', 'campfire', 'merchant', 'treasure', 'unknown', 'rewards', 'runDefeated', 'runVictory'];
+  const handleLoreClick = () => {
+    if (ACTIVE_GAME_MODES.includes(gameMode)) {
+      if (!window.confirm('Leave the current game screen and view the Archives?\n\nYour run progress is saved.')) return;
+    }
+    setGameMode('archives');
+  };
+
   const handlePlayCard = (card: any, executorId: string) => {
     playSound('card_play');
     // Achievement tracking — fire card_played event
@@ -667,15 +765,14 @@ const Index = () => {
       const isHeal   = card?.effect?.healing !== undefined || card?.effect?.healZone || card?.effect?.healingMult !== undefined;
       const isBuff   = card?.effect?.atkBonus !== undefined || card?.effect?.defBonus !== undefined || card?.effect?.movementBonus !== undefined || card?.effect?.teamDmgPct !== undefined || card?.effect?.teamDefBuff !== undefined;
       const isShield = card?.effect?.defBonus !== undefined && !card?.effect?.damage;
+      const charColor = Object.entries(CHARACTER_VFX_COLORS).find(([k]) => executor.name.includes(k))?.[1];
       addAnimation({
         id: nextAnimId('cast'),
         type: isShield ? 'shield' : isHeal ? 'aura' : 'cast',
         position: executor.position,
         color: isHeal
           ? 'rgba(80,255,140,0.9)'
-          : isBuff
-            ? 'rgba(255,215,0,0.9)'
-            : 'rgba(255,140,20,0.9)',
+          : charColor ?? (isBuff ? 'rgba(255,215,0,0.9)' : 'rgba(255,140,20,0.9)'),
       });
 
       // AOE ring for area-effect cards
@@ -770,30 +867,32 @@ const Index = () => {
         overflow: 'hidden',
       }}
     >
-      {/* Leading-edge energy scanline */}
+      {/* Leading-edge energy scanline — sweeps in sync with clip-path wipe */}
       <div style={{
         position: 'absolute',
         top: 0,
         bottom: 0,
         width: 3,
-        right: isWipeOut ? 0 : undefined,
-        left: isWipeOut ? undefined : 0,
         background: 'linear-gradient(to bottom, rgba(139,92,246,0.3) 0%, rgba(34,211,238,0.95) 30%, rgba(255,255,255,1) 50%, rgba(34,211,238,0.95) 70%, rgba(139,92,246,0.3) 100%)',
         boxShadow: '0 0 20px rgba(34,211,238,0.8), 0 0 50px rgba(139,92,246,0.4)',
+        animation: isWipeOut
+          ? 'anim-veil-scanline-out 0.26s ease-in-out forwards'
+          : 'anim-veil-scanline-in 0.38s ease-in-out forwards',
       }} />
-      {/* Broader glow behind the scanline */}
+      {/* Broader glow trail behind the scanline */}
       <div style={{
         position: 'absolute',
         top: 0,
         bottom: 0,
         width: 80,
-        right: isWipeOut ? 0 : undefined,
-        left: isWipeOut ? undefined : 0,
         background: isWipeOut
-          ? 'linear-gradient(to left, rgba(34,211,238,0.15) 0%, transparent 100%)'
-          : 'linear-gradient(to right, rgba(34,211,238,0.15) 0%, transparent 100%)',
+          ? 'linear-gradient(to left, rgba(34,211,238,0.18) 0%, transparent 100%)'
+          : 'linear-gradient(to right, rgba(34,211,238,0.18) 0%, transparent 100%)',
+        animation: isWipeOut
+          ? 'anim-veil-glow-out 0.26s ease-in-out forwards'
+          : 'anim-veil-glow-in 0.38s ease-in-out forwards',
       }} />
-      {/* Center emblem flash — alien glyph */}
+      {/* Center emblem — fades in on wipe-out, holds, then fades on wipe-in */}
       <div style={{
         position: 'absolute',
         top: '50%',
@@ -802,12 +901,12 @@ const Index = () => {
         fontFamily: 'var(--font-orbitron, monospace)',
         fontSize: '1.4rem',
         letterSpacing: '0.3em',
-        color: 'rgba(139,92,246,0.35)',
-        textShadow: '0 0 20px rgba(139,92,246,0.3)',
+        color: 'rgba(139,92,246,0.6)',
+        textShadow: '0 0 24px rgba(139,92,246,0.5), 0 0 8px rgba(34,211,238,0.3)',
         whiteSpace: 'nowrap',
         animation: isWipeOut
-          ? 'anim-veil-emblem 0.26s ease-in forwards'
-          : 'anim-veil-emblem 0.38s ease-out forwards',
+          ? 'anim-veil-emblem-out 0.26s ease-out forwards'
+          : 'anim-veil-emblem-in 0.38s ease-in forwards',
       }}>
         ⬡ WCW ⬡
       </div>
@@ -820,11 +919,35 @@ const Index = () => {
 
   if (gameMode === 'archives') {
     return <HistoricalArchives
-      onBack={() => setGameMode('menu')}
+      onBack={() => { clearNewCounts(); setGameMode('menu'); }}
       onFireEvent={fireEvent}
       isLoreUnlocked={isLoreUnlocked}
       isUnlocked={isUnlocked}
       achievementStats={stats}
+      newAchievementIds={newAchievementIds}
+      newAchievementCount={newAchievementCount}
+      markAchievementSeen={markAchievementSeen}
+      totalUnlockedPoints={totalUnlockedPoints}
+      devAllCharsUnlocked={devAllCharsUnlocked}
+      onToggleDevChars={toggleDevCharUnlock}
+    />;
+  }
+
+  if (gameMode === 'achievements') {
+    return <HistoricalArchives
+      standaloneMode
+      onBack={() => { clearNewCounts(); setGameMode('menu'); }}
+      onFireEvent={fireEvent}
+      isLoreUnlocked={isLoreUnlocked}
+      isUnlocked={isUnlocked}
+      achievementStats={stats}
+      newAchievementIds={newAchievementIds}
+      newAchievementCount={newAchievementCount}
+      markAchievementSeen={markAchievementSeen}
+      initialTab="achievements"
+      totalUnlockedPoints={totalUnlockedPoints}
+      devAllCharsUnlocked={devAllCharsUnlocked}
+      onToggleDevChars={toggleDevCharUnlock}
     />;
   }
 
@@ -842,13 +965,16 @@ const Index = () => {
   if (gameMode === 'menu') {
     return (<>
       {screenVeil}
-      <AchievementToast queue={toastQueue} onDismiss={dismissToast} />
+      <AchievementToast queue={toastQueue} onDismiss={dismissToast} onLoreClick={handleLoreClick} />
       <MainMenu
         onStartGame={handleStartGame}
         onArchives={() => setGameMode('archives')}
+        onAchievements={() => setGameMode('achievements')}
         onSettings={() => setGameMode('settings')}
         hasSavedRun={hasSavedRun}
         onContinueRun={() => setGameMode(runState?.pendingRewards ? 'rewards' : 'roguelikeMap')}
+        newUnlockCount={newUnlockCount}
+        achievementPoints={totalUnlockedPoints}
       />
       {/* First-launch tutorial prompt */}
       {showTutorialPrompt && (
@@ -910,7 +1036,7 @@ const Index = () => {
   }
 
   if (gameMode === 'characterSelect') {
-    return <>{screenVeil}<CharacterSelection onStartGame={handleCharacterSelectionComplete} onBack={() => setGameMode('menu')} gameMode={pendingMode} /></>;
+    return <>{screenVeil}<CharacterSelection onStartGame={handleCharacterSelectionComplete} onBack={() => setGameMode('menu')} gameMode={pendingMode} unlockedCharacterIds={unlockedCharacterIds} achievementPoints={totalUnlockedPoints} unlockedAchievementIds={unlocked} /></>;
   }
 
   if (gameMode === 'roguelikeMap' && runState) {
@@ -923,6 +1049,9 @@ const Index = () => {
         onSettings={() => { setSettingsReturnMode('roguelikeMap'); setGameMode('settings'); }}
         onAllocateStat={allocateStatPoint}
         onUpgradeAbility={upgradeAbility}
+        onRoswellFound={() => fireEvent('roswell')}
+        fogOfWarTier={fogOfWarTier}
+        hasExtraItemSlot={activeRunPerks.has('inv_slot_7')}
       />
       <TutorialOverlay
         step={currentStep}
@@ -933,10 +1062,56 @@ const Index = () => {
         onNext={() => advanceTutorial('button')}
         onSkip={() => { skipTutorial(); abandonRun(); setGameMode('menu'); }}
       />
+      <AchievementToast queue={toastQueue} onDismiss={dismissToast} onLoreClick={handleLoreClick} />
+      {actBonusPopup && (
+        <div className="fixed inset-0 z-[9000] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="relative flex flex-col items-center gap-6 rounded-2xl px-12 py-10 text-center"
+            style={{
+              background: 'linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #061020 100%)',
+              border: '1px solid rgba(96,165,250,0.6)',
+              boxShadow: '0 0 60px rgba(96,165,250,0.3), 0 20px 80px rgba(0,0,0,0.8)',
+              minWidth: 360,
+            }}>
+            <div style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 0 20px rgba(96,165,250,0.8))' }}>✨</div>
+            <div>
+              <div className="font-orbitron text-[10px] tracking-[0.5em] uppercase mb-2" style={{ color: 'rgba(96,165,250,0.7)' }}>ACT COMPLETE</div>
+              <div className="font-orbitron font-black text-white text-2xl mb-2" style={{ textShadow: '0 0 20px rgba(96,165,250,0.5)' }}>+1 Permanent Mana</div>
+              <div className="font-orbitron text-[13px]" style={{ color: 'rgba(96,165,250,0.65)' }}>
+                Starting Mana: <span className="text-white font-bold">{actBonusPopup.totalMana}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setActBonusPopup(null)}
+              className="font-orbitron font-bold px-10 py-3 rounded-xl text-sm tracking-widest transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, rgba(96,165,250,0.2), rgba(96,165,250,0.08))',
+                border: '2px solid rgba(96,165,250,0.6)',
+                color: '#93c5fd',
+                boxShadow: '0 0 20px rgba(96,165,250,0.2)',
+              }}>
+              CONTINUE →
+            </button>
+          </div>
+        </div>
+      )}
     </>);
   }
 
   if (gameMode === 'rewards' && runState?.pendingRewards) {
+    // Signature Legendary picker — intercepts before rewards screen on Act 1/2 boss kills
+    if (showSignatureLegendaryPicker && runState) {
+      return (
+        <SignatureLegendaryPicker
+          characters={runState.characters}
+          alreadyChosen={runState.signatureLegendaryCharIds ?? []}
+          onSelect={(charId, item, forceSlotIdx) => {
+            grantSignatureLegendary(charId, item, forceSlotIdx);
+            setShowSignatureLegendaryPicker(false);
+          }}
+        />
+      );
+    }
+
     // Tutorial boss complete — show the tutorial complete overlay instead of rewards
     if (runState.isTutorialRun && tutorialState.done) {
       return (<>
@@ -971,16 +1146,22 @@ const Index = () => {
           if (cardId) advanceTutorial('card_picked');
           const completedNode = runState.map.find(n => n.id === runState.pendingRewards?.completedNodeId);
           const isBossNode = completedNode?.type === 'boss';
-          const isFinalBoss = isBossNode && runState.act === 3;
+          const isFinalBoss = isBossNode && runState.act === 4;
           if (isBossNode && !runState.isTutorialRun) {
             if (isFinalBoss) fireEvent('boss_killed');
-            if (runState.act === 1) fireEvent('act_complete', { act: 1 });
+            fireEvent('act_complete', { act: runState.act });
           }
           if (isFinalBoss && !runState.isTutorialRun) {
             const charIds = runState.characters.map(c => c.id);
+            const aliveCharIds = runState.characters
+              .filter(c => !runState.permanentlyDeadIds.includes(c.id) && c.currentHp > 0)
+              .map(c => c.id);
             const deathless = runState.permanentlyDeadIds.length === 0;
             const noLosses = runState.completedNodeIds.length === runState.map.filter(n => n.type === 'enemy' || n.type === 'elite' || n.type === 'boss').length;
-            fireEvent('run_ended', { won: true, characterIds: charIds, deathless, noLosses });
+            fireEvent('run_ended', { won: true, characterIds: charIds, aliveCharacterIds: aliveCharIds, deathless, noLosses });
+          }
+          if (!runState.isTutorialRun) {
+            for (const { item } of equipItems) fireEvent('item_found', { itemId: item.id, tier: item.tier });
           }
           collectRewards(cardId, equipItems);
           setGameMode(isFinalBoss ? 'runVictory' : 'roguelikeMap');
@@ -1005,8 +1186,9 @@ const Index = () => {
       <CampfireScreen
         runState={runState}
         onHealAll={() => { healAllAtCampfire(); }}
-        onRemoveCard={(cardId) => { removeCardFromDeck(cardId); }}
         onUpgradeSharedCard={(defId) => { upgradeSharedCard(defId); }}
+        hasCardRemove={activeRunPerks.has('campfire_remove')}
+        onRemoveCard={(defId) => { removeCardFromDeck(defId); }}
         onLeave={() => {
           advanceTutorial('campfire_done');
           completeNonCombatNode(activeNodeId!);
@@ -1029,6 +1211,12 @@ const Index = () => {
   if (gameMode === 'merchant' && runState && !pendingEventItem) {
     return (<>{screenVeil}<MerchantScreen
         runState={runState}
+        nodeId={activeNodeId ?? undefined}
+        purchasedCardDefs={merchantPurchasedCardDefs}
+        hasMerchant4th={activeRunPerks.has('merchant_4th')}
+        hasMerchant4thItem={activeRunPerks.has('merchant_4th_item')}
+        hasMysteryBoxFree={activeRunPerks.has('mystery_box_free')}
+        onCardPurchased={(defId) => setMerchantPurchasedCardDefs(prev => new Set([...prev, defId]))}
         onBuyCard={(cardId, cost) => { buyCardFromMerchant(cardId, cost); }}
         onBuyHeal={(cost) => { buyHealAllFromMerchant(cost); }}
         onBuyItem={(item, cost) => {
@@ -1044,6 +1232,7 @@ const Index = () => {
           removeItemFromCharacter(characterId, slotIndex);
           addGold(goldGained);
         }}
+        onRemoveCard={(cardId, cost) => { removeCardFromDeck(cardId); spendGold(cost); }}
         onMysteryBox={(cost) => {
           spendGold(cost);
           const roll = Math.random();
@@ -1460,42 +1649,120 @@ const Index = () => {
       <ArenaBackground />
       <Toaster />
       {!hideUI && <MusicPlayer />}
-      <AchievementToast queue={toastQueue} onDismiss={dismissToast} />
+      <AchievementToast queue={toastQueue} onDismiss={dismissToast} onLoreClick={handleLoreClick} />
 
-      {/* Battle transition curtain */}
-      {battleTransition && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none"
-          style={{ animation: 'anim-battle-curtain 1.9s ease-in-out forwards' }}>
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.94)' }} />
-          <div className="relative z-10 text-center" style={{ animation: 'anim-battle-title 1.5s ease-in-out forwards' }}>
-            <div style={{ fontSize: '4rem', marginBottom: 8, filter: 'drop-shadow(0 0 30px rgba(255,60,60,0.9))' }}>
-              {battleTransition.icon}
+      {/* Act completion mana bonus popup */}
+      {actBonusPopup && (
+        <div className="fixed inset-0 z-[9000] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="relative flex flex-col items-center gap-6 rounded-2xl px-12 py-10 text-center"
+            style={{
+              background: 'linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #061020 100%)',
+              border: '1px solid rgba(96,165,250,0.6)',
+              boxShadow: '0 0 60px rgba(96,165,250,0.3), 0 20px 80px rgba(0,0,0,0.8)',
+              minWidth: 360,
+            }}>
+            <div style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 0 20px rgba(96,165,250,0.8))' }}>✨</div>
+            <div>
+              <div className="font-orbitron text-[10px] tracking-[0.5em] uppercase mb-2" style={{ color: 'rgba(96,165,250,0.7)' }}>ACT COMPLETE</div>
+              <div className="font-orbitron font-black text-white text-2xl mb-2" style={{ textShadow: '0 0 20px rgba(96,165,250,0.5)' }}>+1 Permanent Mana</div>
+              <div className="font-orbitron text-[13px]" style={{ color: 'rgba(96,165,250,0.65)' }}>
+                Starting Mana: <span className="text-white font-bold">{actBonusPopup.totalMana}</span>
+              </div>
             </div>
-            <div style={{
-              fontFamily: 'var(--font-orbitron, monospace)',
-              fontSize: '0.75rem',
-              letterSpacing: '0.42em',
-              color: 'rgba(255,140,140,0.80)',
-              textTransform: 'uppercase',
-              marginBottom: 8,
-            }}>ENTERING</div>
-            <div style={{
-              fontFamily: 'var(--font-orbitron, monospace)',
-              fontSize: '2.6rem',
-              fontWeight: 900,
-              letterSpacing: '0.10em',
-              color: '#ffffff',
-              textShadow: '0 0 40px rgba(255,60,60,0.85), 0 0 80px rgba(200,0,0,0.40)',
-              textTransform: 'uppercase',
-            }}>{battleTransition.label}</div>
+            <button
+              onClick={() => setActBonusPopup(null)}
+              className="font-orbitron font-bold px-10 py-3 rounded-xl text-sm tracking-widest transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, rgba(96,165,250,0.2), rgba(96,165,250,0.08))',
+                border: '2px solid rgba(96,165,250,0.6)',
+                color: '#93c5fd',
+                boxShadow: '0 0 20px rgba(96,165,250,0.2)',
+              }}>
+              CONTINUE →
+            </button>
           </div>
         </div>
       )}
 
+      {/* Battle transition curtain */}
+      {battleTransition && (() => {
+        const isBoss = battleTransition.isBoss;
+        return (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none"
+            style={{ animation: 'anim-battle-curtain 1.9s ease-in-out forwards' }}>
+            {/* Background */}
+            <div className="absolute inset-0" style={{
+              background: isBoss
+                ? 'radial-gradient(ellipse at center, rgba(80,0,0,0.98) 0%, rgba(4,0,12,0.99) 60%)'
+                : 'rgba(0,0,0,0.94)',
+            }} />
+            {/* Boss: scanline sweeps */}
+            {isBoss && (<>
+              <div className="absolute left-0 right-0 pointer-events-none" style={{
+                height: 2, top: '36%',
+                background: 'linear-gradient(to right, transparent, rgba(255,30,30,0.9), transparent)',
+                animation: 'anim-turn-banner-line 0.7s ease-out 0.25s forwards',
+                transformOrigin: 'left center', opacity: 0,
+              }} />
+              <div className="absolute left-0 right-0 pointer-events-none" style={{
+                height: 1, top: '64%',
+                background: 'linear-gradient(to right, transparent, rgba(200,50,50,0.5), transparent)',
+                animation: 'anim-turn-banner-line 0.7s ease-out 0.45s forwards',
+                transformOrigin: 'left center', opacity: 0,
+              }} />
+              {/* Corner warning glyphs */}
+              {['top-4 left-4', 'top-4 right-4', 'bottom-4 left-4', 'bottom-4 right-4'].map((pos, i) => (
+                <div key={i} className={`absolute ${pos} font-orbitron pointer-events-none`}
+                  style={{ fontSize: '0.6rem', color: 'rgba(255,40,40,0.55)', letterSpacing: '0.2em',
+                    animation: `anim-veil-emblem-out 0.4s ease-out ${0.3 + i * 0.08}s both` }}>
+                  ⚠ DANGER ⚠
+                </div>
+              ))}
+            </>)}
+            {/* Content */}
+            <div className="relative z-10 text-center" style={{ animation: 'anim-battle-title 1.5s ease-in-out forwards' }}>
+              <div style={{
+                fontSize: isBoss ? '5.5rem' : '4rem', marginBottom: 8,
+                filter: isBoss
+                  ? 'drop-shadow(0 0 40px rgba(255,0,0,1)) drop-shadow(0 0 80px rgba(180,0,0,0.7))'
+                  : 'drop-shadow(0 0 30px rgba(255,60,60,0.9))',
+                animation: isBoss ? 'anim-boss-icon-throb 0.7s ease-in-out 0.4s infinite alternate' : undefined,
+              }}>
+                {battleTransition.icon}
+              </div>
+              {isBoss && (
+                <div style={{
+                  fontFamily: 'var(--font-orbitron, monospace)', fontSize: '0.55rem',
+                  letterSpacing: '0.6em', color: 'rgba(255,80,80,0.7)',
+                  textTransform: 'uppercase', marginBottom: 6,
+                }}>— FINAL GUARDIAN —</div>
+              )}
+              <div style={{
+                fontFamily: 'var(--font-orbitron, monospace)', fontSize: '0.75rem',
+                letterSpacing: '0.42em',
+                color: isBoss ? 'rgba(255,100,100,0.75)' : 'rgba(255,140,140,0.80)',
+                textTransform: 'uppercase', marginBottom: 8,
+              }}>ENTERING</div>
+              <div style={{
+                fontFamily: 'var(--font-orbitron, monospace)',
+                fontSize: isBoss ? '3.0rem' : '2.6rem',
+                fontWeight: 900,
+                letterSpacing: isBoss ? '0.14em' : '0.10em',
+                color: isBoss ? '#ff5555' : '#ffffff',
+                textShadow: isBoss
+                  ? '0 0 60px rgba(255,0,0,0.95), 0 0 120px rgba(200,0,0,0.5)'
+                  : '0 0 40px rgba(255,60,60,0.85), 0 0 80px rgba(200,0,0,0.40)',
+                textTransform: 'uppercase',
+              }}>{battleTransition.label}</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Full-screen game board */}
       <div
         className="absolute inset-0"
-        style={shakeActive ? { animation: 'screen-shake 0.18s ease-out' } : undefined}
+        style={shakeAnim ? { animation: `${shakeAnim} 0.22s ease-out` } : undefined}
       >
         <GameBoard
           gameState={gameState}
@@ -1505,6 +1772,7 @@ const Index = () => {
           hoverPreviewRange={hoveredCardRange}
           hoverPreviewExecutorId={hoveredCardExecutorId}
           externalIntentRange={hoveredEnemyAbilityRange}
+          activeDialogue={runState?.isTutorialRun ? null : activeDialogue}
         />
       </div>
 
@@ -1711,6 +1979,7 @@ const Index = () => {
               runState.characters.map(c => [c.id, c.items.filter(Boolean).map(item => ({ icon: item!.icon, name: item!.name, description: item!.description }))])
             ) : undefined}
             runStartTime={runState?.runStartTime}
+            timerPaused={gameState.phase === 'victory' || gameState.phase === 'defeat'}
           />
         </div>
       )}
@@ -1838,6 +2107,7 @@ const Index = () => {
                   finalHps: finalHps as any,
                   finalPassiveStacks,
                   enemiesKilled: enemyIcons.filter(i => !i.isAlive).length,
+                  killBlowsByName: (gameState as any).playerKillBlows ?? {},
                 });
                 if (!runState.isTutorialRun) {
                   toast('Run saved — continue anytime from the main menu', {
@@ -1872,6 +2142,7 @@ const Index = () => {
                 finalHps: finalHps as any,
                 finalPassiveStacks,
                 enemiesKilled: enemyIcons.filter(i => !i.isAlive).length,
+                killBlowsByName: (gameState as any).playerKillBlows ?? {},
               });
               if (!won && !runState.isTutorialRun) {
                 fireEvent('run_ended', {
@@ -1888,7 +2159,23 @@ const Index = () => {
                 }
               }
               setActiveNodeId(null);
-              setGameMode(won ? 'rewards' : 'runDefeated');
+              if (won) {
+                // Check if this was a boss node for Act 1 or 2 — offer Signature Legendary
+                const completedNode = runState.map.find(n => n.id === activeNodeId);
+                const isBoss = completedNode?.type === 'boss';
+                const isAct1or2 = runState.act <= 2;
+                const hasEligible = runState.characters.some(
+                  c => c.currentHp > 0 && !(runState.signatureLegendaryCharIds ?? []).includes(c.id)
+                );
+                if (isBoss && isAct1or2 && hasEligible) {
+                  setShowSignatureLegendaryPicker(true);
+                  setGameMode('rewards'); // rewards waits behind the picker overlay
+                } else {
+                  setGameMode('rewards');
+                }
+              } else {
+                setGameMode('runDefeated');
+              }
             } else {
               setGameMode('characterSelect');
             }

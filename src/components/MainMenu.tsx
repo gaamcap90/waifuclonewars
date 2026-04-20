@@ -6,9 +6,12 @@ import MusicPlayer from "@/components/MusicPlayer";
 interface MainMenuProps {
   onStartGame: (mode: "singleplayer" | "multiplayer") => void;
   onArchives?: () => void;
+  onAchievements?: () => void;
   onSettings?: () => void;
   onContinueRun?: () => void;
   hasSavedRun?: boolean;
+  newUnlockCount?: number;
+  achievementPoints?: number;
 }
 
 interface NavItem {
@@ -24,7 +27,7 @@ interface NavItem {
 const PRIMARY_ACCENT = "#f59e0b";
 const CONTINUE_ACCENT = "#a855f7";
 
-export default function MainMenu({ onStartGame, onArchives, onSettings, onContinueRun, hasSavedRun }: MainMenuProps) {
+export default function MainMenu({ onStartGame, onArchives, onAchievements, onSettings, onContinueRun, hasSavedRun, newUnlockCount, achievementPoints = 0 }: MainMenuProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const { t } = useT();
 
@@ -46,12 +49,12 @@ export default function MainMenu({ onStartGame, onArchives, onSettings, onContin
       action: () => onStartGame("singleplayer"),
     },
     {
-      id: "mp",
-      label: t.menu.mp,
-      sub: t.menu.mpSub,
-      icon: "🏟️",
-      enabled: true,
-      action: () => onStartGame("multiplayer"),
+      id: "achieve",
+      label: t.menu.achievements ?? "Achievements",
+      sub: t.menu.achievementsSub ?? "Track progress & unlock clones",
+      icon: "🏆",
+      enabled: !!onAchievements,
+      action: onAchievements,
     },
     {
       id: "arch",
@@ -281,6 +284,33 @@ export default function MainMenu({ onStartGame, onArchives, onSettings, onContin
                     <span className="font-orbitron text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded shrink-0"
                       style={{ background: 'rgba(245,158,11,0.18)', color: `${PRIMARY_ACCENT}cc`, border: `1px solid rgba(245,158,11,0.35)` }}>
                       STORY
+                    </span>
+                  )}
+                  {item.id === 'achieve' && achievementPoints > 0 && (
+                    <span
+                      className="font-orbitron font-black text-[9px] shrink-0 px-1.5 py-0.5 rounded"
+                      style={{
+                        background: 'rgba(251,191,36,0.15)',
+                        color: '#fbbf24',
+                        border: '1px solid rgba(251,191,36,0.35)',
+                      }}
+                    >
+                      {achievementPoints} pts
+                    </span>
+                  )}
+                  {item.id === 'achieve' && !!newUnlockCount && newUnlockCount > 0 && (
+                    <span
+                      className="font-orbitron font-black text-[10px] shrink-0 w-5 h-5 flex items-center justify-center rounded-full animate-pulse"
+                      style={{
+                        background: '#22d3ee',
+                        color: '#060316',
+                        boxShadow: '0 0 8px rgba(34,211,238,0.65)',
+                        minWidth: '1.25rem',
+                        padding: newUnlockCount > 9 ? '0 4px' : undefined,
+                        borderRadius: newUnlockCount > 9 ? '9999px' : '50%',
+                      }}
+                    >
+                      {newUnlockCount > 99 ? '99+' : newUnlockCount}
                     </span>
                   )}
                 </button>

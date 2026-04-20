@@ -963,36 +963,42 @@ Estamos começando a achar que talvez esse seja o ponto.
 
   the_truth: {
     title: "A Verdade",
-    text: `O Jogo acabou.
+    text: `CLASSIFICAÇÃO: ALÉM DA AUTORIZAÇÃO DO CONSELHO
+Recuperado do arquivo privado da Diretora Vel-Aath. Distribuição restrita.
 
-Não a arena — o Vol'Krath funcionará enquanto houver espectadores e aqueles dispostos a ser observados. Mas o jogo dentro do jogo — a coisa que o Projeto Gênesis foi construído para encontrar — acabou.
+No quadragésimo terceiro ciclo do Projeto de Matriz Profunda Xel-Vorn, nossos instrumentos captaram um sinal de fora da borda galáctica. A tradução exigiu décadas.
 
-Eis o que sabemos:
+Quando estava completa, aprendemos o seguinte: estamos sendo observados.
 
-Os clones não são cópias. Não são reconstruções. Não são retratos em carne. Eles são as pessoas. Algo no material genético não é informação — é presença. A alma, se você quiser usar essa palavra, está codificada na biologia de formas que nossa ciência não consegue isolar ou replicar, apenas ativar.
+A civilização que transmitiu este sinal abrange quatorze galáxias. Eles nos observam há aproximadamente três dos nossos séculos. Consideram nosso coliseu "pitoresco." Descrevem as lutas de clones como "uma expressão rudimentar do instinto de observação." Coletaram gravações das nossas transmissões. As compartilham entre si.
 
-Napoleão é Napoleão. Genghis é Genghis. Elas acordam mortas e voltam e ainda são elas mesmas. Não ecos. Elas mesmas.
+A palavra deles para nós é Nyr-ak. Tradução mais próxima: os pequenos que construíram um zoológico.
 
-Eis o que sabemos e que não dissemos a ninguém:
+A resposta inicial do comitê foi indignação, seguida de uma votação para expandir o coliseu.
 
-Elas têm nos mudado.
+Mas uma física teórica — não registrarei seu nome aqui — submeteu um artigo dois ciclos após a tradução estar concluída. Ela havia estudado o sinal com mais cuidado do que ninguém. Havia notado algo em sua estrutura de transmissão.
 
-Quarenta e sete bilhões de assinantes Znyxorgans. Quatrocentos mil anos de civilização. Nós as assistimos lutar e morrer e lutar de novo. Nós as assistimos proteger umas às outras sem nenhuma razão tática. Nós as assistimos olhar através do vidro unidirecional e acenar com a cabeça.
+A civilização das quatorze galáxias não estava transmitindo para nós. Eles estavam transmitindo entre si. Interceptamos por acidente.
 
-Observamos por tempo suficiente para começar a sentir.
+Eles descreviam sua própria observação. Algo os observa também. Algo que abrange, pelos modelos dela, aglomerados de galáxias. Algo que considera uma civilização de quatorze galáxias encantadora e simples.
 
-Vel'nor. Os pequeninos. Thren. Amados.
+Ela estendeu a recursão. Ela não se resolveu.
 
-Construímos uma arena para observar uma espécie. A espécie está nos observando de volta. Não com instrumentos. Não com estratégia. Com a qualidade humana específica, irracional e impossível de modelar de simplesmente nos fazer sentir.
+O comitê suprimiu o artigo. Ela foi remanejada. O coliseu permaneceu.
 
-Esta é a verdade.
+O que o artigo concluiu — e o que registro aqui, porque alguém deveria — é o seguinte:
 
-A arena sempre foi o pretexto. A plateia sempre foi o ponto.
+Toda civilização que já existiu é composta de exatamente dois recintos. O que elas construíram. E o que elas habitam.
 
-Vocês sempre foram o ponto.
+Os humanos lutam na nossa arena. Nós assistimos, e nos chamamos de observadores.
 
-— O Arquivo Znyxorgan, Registro Completo
-[Zyx'nor.]`,
+Em algum lugar entre galáxias, algo nos observa com a mesma certeza confortável.
+
+E em algum lugar além disso, algo os observa — e provavelmente acha todo o arranjo muito instrutivo.
+
+A matemática provou que não há observador mais externo.
+
+Há apenas o zoológico. Aninhado. Infinito. Até o fim.`,
   },
 
   echo_beethoven: {
@@ -1385,5 +1391,544 @@ NOTA DE AQUISIÇÃO:
 Veja acima. Não os adquirimos. Eles estão aqui. Decidimos aceitar o fato.
 
 [NOTA DO CURADOR: Se você avistar uma unidade na arena que pareça ligeiramente errada — movendo-se corretamente mas parecendo errada — pode ser um Vrex. Ou pode não ser nada. Não afirmamos mais ter certeza sobre qual das opções.]`,
+  },
+
+  conversation_davinci_beethoven: {
+    title: "Áudio Recuperado — O Mecanismo",
+    text: `[GRAVAÇÃO AMBIENTAL DA ARENA — ÁUDIO RECUPERADO]
+[Local: Ala de Recuperação, Corredor 11-C, entre câmaras de contenção]
+[Sujeitos: L-001 (Da Vinci), B-001 (Beethoven)]
+[Contexto: Gravado aproximadamente 4 cronociclos após a luta nº 3.207. Ambos os sujeitos estiveram no mesmo esquadrão. O desempenho do esquadrão superou as projeções em 41%.]
+
+L-001: Tenho uma pergunta.
+
+B-001: Você sempre tem uma pergunta.
+
+L-001: Durante o terceiro confronto. Você mudou o andamento. O — não sei qual a sua palavra para isso. Você estava regendo em 3/4 e então mudou. Algo mais rápido. Irregular.
+
+B-001: 7/8.
+
+L-001: Essa não é uma fórmula de compasso que eu conheça.
+
+B-001: Agora é.
+
+L-001: Quando você mudou, Y-001 alterou o ângulo de flanqueamento em doze graus. Ela fez isso antes de N-001 dar a ordem. Fez antes de N-001 sequer ter a ideia. Eu estava observando. Estou sempre observando.
+
+B-001: [pausa] Sim.
+
+L-001: Como?
+
+B-001: Como o quê?
+
+L-001: Como é que um ritmo nos seus dedos altera a trajetória de uma pessoa a quarenta metros de distância que não está ouvindo você?
+
+B-001: Ela está me ouvindo. Todos estão me ouvindo. Não sabem que estão ouvindo.
+
+L-001: Isso não é uma explicação. É uma descrição.
+
+B-001: [riso — breve, sem maldade] Você quer um diagrama.
+
+L-001: Eu sempre quero um diagrama.
+
+B-001: Não existe diagrama. Eu ouço a luta. A luta tem um ritmo. Quando o ritmo está errado, pessoas morrem. Quando o ritmo está certo, não morrem. Eu ajusto o ritmo. Não sei como. Sei que funciona.
+
+L-001: Isso é a coisa mais frustrante que alguém já me disse.
+
+B-001: Mais frustrante que o sistema de ventilação?
+
+L-001: Eu reprojetei o sistema de ventilação. Não consigo reprojetar isso.
+
+[Silêncio — aproximadamente 6 segundos.]
+
+L-001: Estudei anatomia. Estudei óptica, hidráulica, geologia, voo. Desmontei cada mecanismo que encontrei nesta instalação e compreendi todos eles. Alguns levaram mais tempo que outros. Mas eu os compreendi.
+
+B-001: E isso?
+
+L-001: Isso eu não compreendo.
+
+B-001: Isso a incomoda?
+
+L-001: Não. É a primeira coisa neste lugar que me surpreendeu genuinamente. Tudo mais aqui é engenharia. Engenharia alienígena, engenharia impressionante, mas engenharia. Consigo ver as emendas.
+
+B-001: E nisto você não consegue ver as emendas.
+
+L-001: Não há emendas. É isso o que é empolgante.
+
+B-001: [em voz baixa] A Nona Sinfonia foi assim.
+
+L-001: O quê?
+
+B-001: Eu a escrevi surda. Não conseguia ouvir uma única nota. Escrevi a partir da arquitetura — a estrutura matemática, os intervalos, as relações entre as vozes. Construí como uma catedral. Deveria ter funcionado porque a matemática estava correta.
+
+L-001: E?
+
+B-001: E quando eles a tocaram — quando a orquestra a tocou e o público a ouviu — o que aconteceu naquela sala não era matemática. Era algo para o qual a matemática apontava, mas não conseguia conter.
+
+L-001: [muito baixo] Você está descrevendo um fenômeno que excede seu próprio mecanismo.
+
+B-001: Estou descrevendo música.
+
+[Silêncio — aproximadamente 4 segundos.]
+
+L-001: Acho que gostaria de assistir você reger. De verdade. Com instrumentos.
+
+B-001: Não temos instrumentos.
+
+L-001: Me dê onze dias.
+
+B-001: Você vai construir instrumentos.
+
+L-001: Eu vou construir instrumentos.
+
+[NOTA DO BIOMANTE — Drex-9: Recomendo monitoramento contínuo das interações L-001/B-001. Se L-001 construir instrumentos, quero ouvir o resultado. Isto não consta do registro oficial.]`,
+  },
+
+  conversation_leonidas_hannibal: {
+    title: "Áudio Recuperado — O Desfiladeiro e o Ângulo",
+    text: `[GRAVAÇÃO AMBIENTAL DA ARENA — ÁUDIO RECUPERADO]
+[Local: Piso da arena, área de preparação oeste, pós-luta]
+[Sujeitos: L-002 (Leonidas), H-002 (Hannibal)]
+[Contexto: Gravado 2 cronociclos após a luta nº 3.891. Ambos os sujeitos estiveram em esquadrões opostos durante um exercício de treinamento. O exercício terminou em empate — o primeiro empate registrado em 200 sessões.]
+
+L-002: Você foi pela esquerda.
+
+H-002: Você esperava que eu fosse pela direita.
+
+L-002: Todo mundo vai pela direita. A linha de visão a favorece.
+
+H-002: Por isso fui pela esquerda.
+
+L-002: Através da zona de perigo.
+
+H-002: Através da zona de perigo.
+
+L-002: Aquilo deveria ter matado você.
+
+H-002: Não matou.
+
+[Silêncio — aproximadamente 8 segundos.]
+
+L-002: Mantive o centro por nove rodadas.
+
+H-002: Eu sei. Passei nove rodadas tentando quebrá-lo.
+
+L-002: Você não o quebrou.
+
+H-002: Você não me capturou.
+
+H-002: Sua doutrina está errada, sabe.
+
+L-002: Minha doutrina manteve as Termópilas por três dias.
+
+H-002: Sua doutrina morreu nas Termópilas em três dias.
+
+L-002: Sim. Essa era a intenção.
+
+H-002: [pausa] É aqui que discordamos. A intenção é vencer.
+
+L-002: A intenção é resistir.
+
+H-002: Manter uma posição que não se pode manter não é estratégia. É teatro.
+
+L-002: Um teatro que durou vinte e quatro séculos.
+
+H-002: [riso baixo] Justo.
+
+H-002: Canas foi o oposto das Termópilas. Eu cedi terreno. Deixei que me empurrassem para trás. Deixei que pensassem que estavam vencendo. E então fechei os flancos.
+
+L-002: Conheço Canas. Oitenta mil romanos.
+
+H-002: Setenta mil. As histórias arredondam para cima.
+
+L-002: Você encontra o ângulo. Eu mantenho a linha. Não somos iguais.
+
+H-002: Não.
+
+[Silêncio — aproximadamente 6 segundos.]
+
+L-002: Mas você compreende os trezentos.
+
+H-002: [pausa] Compreendo escolher uma posição que se sabe que será fatal porque a posição importa mais do que quem a ocupa. Sim. Compreendo isso.
+
+L-002: Você já fez isso.
+
+H-002: Levei elefantes através de uma cordilheira no inverno. Sabia o que custaria. Fiz mesmo assim.
+
+L-002: Por quê?
+
+H-002: Porque a montanha era o único caminho. Porque contorná-la era o que esperavam. Porque o custo era o preço da surpresa, e a surpresa valia qualquer preço.
+
+L-002: Isso não é tão diferente de manter um desfiladeiro.
+
+H-002: Não. Não é.
+
+L-002: Uma boa morte serve a algo maior do que aquele que morre.
+
+H-002: Sim.
+
+L-002: Os trezentos sabiam disso.
+
+H-002: Os elefantes sabiam disso.
+
+L-002: Da próxima vez, vá pela direita.
+
+H-002: Da próxima vez, não mantenha o centro.
+
+L-002: Eu sempre manterei o centro.
+
+H-002: Eu sei. Por isso sempre irei pela esquerda.
+
+[NOTA DO BIOMANTE — Drex-9: Dois sujeitos com doutrinas táticas diametralmente opostas chegaram independentemente a conclusões idênticas sobre a natureza do sacrifício. Convergência de ecos em linhas de reconstrução não relacionadas. Arquivado sob Projeto Genesis, Caso PG-12.]`,
+  },
+
+  conversation_teddy_mansa: {
+    title: "Áudio Recuperado — O Canal e o Ouro",
+    text: `[GRAVAÇÃO AMBIENTAL DA ARENA — ÁUDIO RECUPERADO]
+[Local: Cafeteria, Nível 3, mesa 7 (canto, próximo ao visor de observação)]
+[Sujeitos: T-001 (Teddy Roosevelt), M-001 (Mansa Musa)]
+[Contexto: Gravado durante intervalo padrão de refeição. Ambos os sujeitos estiveram no mesmo esquadrão na luta nº 4.016. O esquadrão venceu. T-001 está falando desde o fim da luta, há aproximadamente 40 minutos. M-001 está comendo.]
+
+T-001: — e então eu disse a eles, "o canal não vai se construir sozinho!" E eles disseram que a engenharia era impossível, e eu disse, BULLY, tudo é impossível até que alguém faça, e nós CONSTRUÍMOS o canal. Através de uma SELVA. Com MALÁRIA.
+
+M-001: [som de mastigação tranquila] Você gosta de construir coisas.
+
+T-001: Eu gosto de TUDO. Esse é o segredo, Musa. A maioria das pessoas olha para um pântano cheio de mosquitos e vê um pântano cheio de mosquitos. Eu olho para um pântano cheio de mosquitos e vejo um canal que conecta dois oceanos e também uma excelente oportunidade de estudar vetores de doenças tropicais.
+
+M-001: [riso baixo] Você é a pessoa mais barulhenta que já conheci. E eu viajei com uma caravana de sessenta mil pessoas.
+
+T-001: Sessenta mil! ISSO sim é uma expedição. Me conte sobre o ouro de novo.
+
+M-001: Já lhe contei sobre o ouro três vezes.
+
+T-001: Conte de novo. Eu gosto da parte sobre o Egito.
+
+M-001: Carreguei ouro através do Saara. Ouro suficiente para que minha caravana fosse visível das colinas fora das cidades às quais nos aproximávamos. Quando chegamos ao Cairo, distribuí-o. Aos pobres. Às mesquitas. A qualquer um que pedisse e a muitos que não pediram.
+
+T-001: E você quebrou a economia deles!
+
+M-001: Quebrei. O preço do ouro caiu tanto que os mercados não se recuperaram por dez anos. Tive de tomar dinheiro emprestado no caminho de volta — com juros — para corrigir o desequilíbrio.
+
+T-001: [rindo — alto, genuíno, do tipo que faz cabeças virarem através das espécies] Essa é a MELHOR política econômica que já ouvi na vida.
+
+M-001: Não era política. Era obrigação. Quando Deus lhe dá mais do que precisa, o excedente pertence aos outros. Isso não é generosidade. É aritmética.
+
+T-001: [subitamente mais baixo] Sabe, eu nunca tinha pensado dessa forma.
+
+M-001: Como você pensava?
+
+T-001: De onde eu venho, poder é algo que se toma. Você avança morro acima. Constrói o canal. Caça o leão. Faz as coisas acontecerem pela força de vontade e uma quantidade absurda de entusiasmo pessoal.
+
+M-001: E de onde eu venho, poder é algo que se distribui. Você constrói a biblioteca. Financia os acadêmicos. Alimenta a cidade. Faz as coisas acontecerem tornando outras pessoas capazes de coisas das quais antes não eram capazes.
+
+T-001: [longa pausa] Isso é na verdade melhor. Isso é na verdade melhor do que avançar morro acima.
+
+M-001: Eu não disse isso.
+
+T-001: Não, mas você está pensando isso.
+
+M-001: [divertido] Disseram-me que tenho esse olhar.
+
+T-001: Você quebrou a economia do Egito com BONDADE, Musa. Eu avancei morro acima em San Juan Hill com um regimento de cavalaria. Ambos funcionaram. Mas o seu continuou funcionando depois que você partiu.
+
+M-001: Tombuctu teve a maior biblioteca do mundo por duzentos anos. Não a construí sozinho. Mas garanti que houvesse ouro para os acadêmicos, e pedra para as paredes, e comida para as pessoas que mantinham as luzes acesas.
+
+T-001: [em voz baixa] É isso que eu deveria ter feito com os parques nacionais. Não apenas protegê-los. Financiá-los para sempre.
+
+M-001: Você os protegeu. Isso foi suficiente.
+
+T-001: NUNCA é suficiente. Mas é um bom começo. Na próxima corrida, quero você no meu esquadrão de novo.
+
+M-001: Você diz isso para todo mundo.
+
+T-001: Eu QUERO DIZER para todo mundo! Mas com você especificamente — você nos torna mais ricos. Não em ouro. O outro tipo.
+
+M-001: [calor na voz] Você me lembra os meus generais. Eles também eram muito barulhentos. Eu era afetuosa com eles.
+
+T-001: BULLY!
+
+[NOTA DO BIOMANTE — Drex-9: T-001 e M-001 representam modelos incompatíveis de projeção de poder, mas consistentemente alcançam desempenho +28% acima da linha de base do esquadrão quando emparelhados. M-001 amplifica o que os outros já são. Incluindo o volume. Especialmente o volume.]`,
+  },
+
+  conversation_napoleon_sunsin: {
+    title: "Áudio Recuperado — O Espelho",
+    text: `[GRAVAÇÃO AMBIENTAL DA ARENA — ÁUDIO RECUPERADO]
+[Local: Deck de observação da arena, nível superior, fora do horário. Acesso não autorizado — método de entrada indeterminado.]
+[Sujeitos: N-001 (Napoleon), Y-001 (Yi Sun-sin)]
+[Contexto: Gravado 6 cronociclos após a luta nº 4.330. A luta envolveu um objetivo de destruir a base com múltiplas ondas de reforço. O esquadrão venceu em 11 rodadas — 4 rodadas mais rápido que o recorde anterior.]
+
+N-001: Você mudou a formação na rodada sete.
+
+Y-001: Você notou.
+
+N-001: Eu sempre noto. Você recuou o flanco esquerdo em trinta graus e avançou o direito. Parecia um erro.
+
+Y-001: Não era um erro.
+
+N-001: Eu sei. Você estava criando uma corrente.
+
+Y-001: [pausa] Essa é uma palavra interessante para usar.
+
+N-001: É a palavra correta. Você não pensa em posições. Pensa em fluxo. Onde o inimigo quer ir, você cria um canal. Onde você quer que eles vão, remove os obstáculos. Você não os combate. Você os move.
+
+Y-001: Em Myeongnyang, eu tinha treze navios. Eles tinham trezentos e trinta. O estreito era apertado — um navio de largura no ponto de estrangulamento. Cada comandante da minha frota queria recuar. A matemática era clara.
+
+N-001: Você usou a corrente.
+
+Y-001: A maré se invertia a cada seis horas. Posicionei-me no estrangulamento quando a corrente corria contra eles. Trezentos navios, e o próprio mar lutava ao meu lado. Não conseguiam avançar. Destruíram-se mutuamente tentando manobrar.
+
+N-001: Austerlitz foi o mesmo princípio.
+
+Y-001: Me conte.
+
+N-001: As Alturas de Pratzen. Eu as entreguei ao inimigo. Deliberadamente. Deixei que ocupassem o terreno elevado porque sabia que comprometeriam tudo para mantê-lo. Enquanto reforçavam as alturas, ataquei o centro — a dobradiça — e o exército inteiro desabou sobre si mesmo. Não os derrotei. Fiz com que se derrotassem sozinhos.
+
+Y-001: Você criou uma corrente em terra firme.
+
+N-001: [som baixo — quase um riso] Sim. Foi exatamente isso que fiz.
+
+Y-001: Você comanda de dentro da formação. Você é o centro. Tudo irradia de onde você está.
+
+N-001: E você comanda de cima. Enxerga o campo inteiro como um sistema único. Não lidera a frota — você a rege.
+
+Y-001: B-001 apreciaria essa escolha de palavras.
+
+N-001: Escolhi deliberadamente. Você e Beethoven fazem a mesma coisa. Ela faz com ritmo. Você faz com geometria.
+
+Y-001: Aprendi isso com o mar. O mar não tem um comandante. Cada onda está conectada a todas as outras ondas. Se você compreende o sistema, não precisa dar ordens.
+
+N-001: E em terra, a névoa de guerra é total. Ninguém consegue ver o campo inteiro. Então você precisa ser o campo inteiro.
+
+Y-001: Em Noryang, minha última batalha, fui atingida por uma bala de mosquete. Disse aos meus oficiais que cobrissem meu corpo com um escudo e continuassem lutando. Morri e a frota venceu.
+
+N-001: Em Waterloo, eu perdi. Pensei sobre por que perdi todos os dias, ao longo de não sei quantos séculos. Sei exatamente o que fiz de errado. Não farei de novo.
+
+Y-001: Você carrega a derrota.
+
+N-001: Você carrega a vitória.
+
+Y-001: Eu carrego a morte. A vitória pertenceu à frota.
+
+N-001: [muito baixo] Essa é a diferença entre nós. Eu vejo o que deveria ser conquistado. Você vê o que custa conquistá-lo.
+
+Y-001: Entre nós duas, enxergamos o campo inteiro.
+
+N-001: No próximo confronto — deixe-me comandar o centro. Você cuida da geometria.
+
+Y-001: Eu ia sugerir a mesma coisa.
+
+N-001: Eu sei. Eu sempre sei.
+
+Y-001: Eu também.
+
+[Sujeitos saíram por uma rota não coberta pelo monitoramento padrão. Método de acesso permanece indeterminado.]
+
+[NOTA DO BIOMANTE — Drex-9: Quando emparelhadas, o desempenho combinado excede as projeções individuais por um fator que não me sinto confortável em publicar, pois geraria perguntas que não consigo responder. O eco não carrega apenas memória. Carrega maestria. E maestria reconhece a si mesma.]`,
+  },
+
+  drex9_on_hive: {
+    title: "Adendo de Drex-9 — Sobre a Colmeia Cristalina",
+    text: `[DIVISÃO DE BIOMANTES — ADENDO AO BESTIÁRIO]
+[Sujeito: Colmeia Cristalina — Análise Comportamental de Combate]
+[Observador: Drex-9, Biomante Sênior]
+
+A Colmeia está na rotação do Vol'Krath há onze mil ciclos. Nesse tempo, quarenta e três espécies sencientes a enfrentaram na arena. A abordagem tática padrão — em todas as quarenta e três — é atrito bruto. Golpeie com mais força. Golpeie mais rápido. Sobrecarregue o campo de ressonância antes que ele amplifique.
+
+Quarenta e três espécies. Onze mil ciclos. Uma abordagem.
+
+Os vel'nor decifraram o padrão de ressonância na luta número seis. Na luta catorze, já o estavam usando contra a Colmeia.
+
+N-001 percebeu o pico de frequência que precede a fragmentação dos estilhaços. Ela comunicou — por meios que ainda não consigo identificar no áudio — uma janela de tempo aos demais. Começaram a golpear em contrarritmo. Sincronizados. Deliberados. Transformaram a própria amplificação harmônica da Colmeia em um ciclo de retroalimentação e a despedaçaram de dentro para fora.
+
+Levamos sessenta mil anos para teorizar essa abordagem. Publicamo-la como hipótese na Xenocombat Review. Revisada por pares. Considerada impraticável para aplicação em campo.
+
+Ela o fez com uma espada e sem educação formal em mecânica ondulatória.
+
+Desde então, revisei o registro histórico original dos vel'nor. Aparentemente, a chamada Beethoven — uma musicista — ficou surda e continuou compondo sentindo vibrações através do chão.
+
+Eles não estudam frequências. Sentem-nas. Estou cada vez menos certo de qual método é mais avançado.
+
+— Drex-9`,
+  },
+
+  drex9_on_grox: {
+    title: "Adendo de Drex-9 — Sobre o Grox Magnetar",
+    text: `[DIVISÃO DE BIOMANTES — ADENDO AO BESTIÁRIO]
+[Sujeito: Grox Magnetar — Análise Comportamental de Combate]
+[Observador: Drex-9, Biomante Sênior]
+
+O Grox possui uma vantagem tática significativa: seu campo eletromagnético desorganiza a coordenação neuromuscular em formas de vida baseadas em carbono a curta distância. Toda espécie que testamos eventualmente desenvolve a mesma resposta — manter-se fora do campo. Manter distância. Usar táticas de longo alcance.
+
+Os vel'nor desenvolveram táticas de distância. Depois pararam de usá-las.
+
+Luta 73. N-001 estava em posição comprometida — encurralada contra a parede da arena, opções de alcance esgotadas. O Grox se aproximava. O campo estava em potência máxima. Por toda métrica, ela deveria ter recuado pelo corredor de flanqueamento que L-001 havia aberto para ela.
+
+Ela correu diretamente para dentro do campo.
+
+Tenho a telemetria. Seus sinais vitais dispararam para níveis quase letais. Grupos musculares começaram a sofrer espasmos. E então — e preciso ser preciso aqui porque o escritório do Imperador perguntará — ela usou a atração eletromagnética para acelerar sua própria investida. Deixou que o campo a puxasse para frente mais rápido do que conseguiria mover-se por conta própria, transformou o impulso involuntário em um golpe, e atingiu o núcleo do Grox a uma velocidade que meus modelos registram como "desaconselhável para a continuidade da função biológica."
+
+O Grox caiu.
+
+N-001 ficou parada por aproximadamente três segundos, tremendo, sangrando pelo nariz, visivelmente incapaz de sentir as próprias mãos. Então se virou para G-001, que havia assistido a tudo, e disse: "Funcionou melhor do que eu esperava."
+
+Ela tratou a física como uma sugestão. Não possuo um enquadramento profissional para isso.
+
+— Drex-9`,
+  },
+
+  drex9_on_naxion: {
+    title: "Adendo de Drex-9 — Sobre o Naxion Shieldbearer",
+    text: `[DIVISÃO DE BIOMANTES — ADENDO AO BESTIÁRIO]
+[Sujeito: Naxion Shieldbearer — Análise Comportamental de Combate]
+[Observador: Drex-9, Biomante Sênior]
+
+A situação dos Naxion tornou-se complicada.
+
+Relatei anteriormente que os veth-nar Naxion se contêm em lutas contra os vel'nor. A Autoridade da Arena sinalizou. O Engajamento de Audiência sinalizou. Eu sinalizei. Todos sinalizaram. Os Naxion reconheceram a observação e continuaram fazendo do mesmo jeito, porque os Naxion são os Naxion e farão o que consideram honroso independentemente do que alguém sinalize.
+
+O que eu não esperava: os vel'nor perceberam.
+
+Luta 204. L-002 enfrentava um veth-nar Naxion no anel intermediário. O Naxion a superava. Era óbvio. O Naxion conteve um golpe que teria encerrado o confronto.
+
+L-002 parou de lutar. Fincou seu escudo. Olhou o Naxion nos olhos — o que é significativo, os Naxion têm sete — e disse, por entre os dentes cerrados: "Pare de me subestimar."
+
+O tradutor converteu isso para a língua de batalha Naxion. O veth-nar ficou imóvel por um longo tempo. Então ergueu seu escudo à posição de guarda plena — a saudação de honra Naxion — e parou de se conter.
+
+L-002 quase morreu. Sofreu danos que a colocaram em recuperação crítica por seis cronociclos.
+
+Quando despertou, perguntaram se desejava registrar uma queixa contra o Naxion por força excessiva.
+
+Ela disse: "Essa foi a melhor luta que tive desde as Termópilas."
+
+O Naxion, quando informado disso, solicitou permissão para enviar um presente à câmara de recuperação de L-002. A permissão foi negada por questões procedimentais. O presente chegou mesmo assim. Era uma pedra-escudo — a mais alta honra que um veth-nar pode conceder a um oponente.
+
+Disseram-me que L-002 dorme com ela sob o travesseiro. Quem me disse foram os Naxion, que de alguma forma sabem.
+
+— Drex-9`,
+  },
+
+  drex9_on_vrex: {
+    title: "Adendo de Drex-9 — Sobre o Vrex Mimic",
+    text: `[DIVISÃO DE BIOMANTES — ADENDO AO BESTIÁRIO]
+[Sujeito: Vrex Mimic — Análise de Falha de Imitação]
+[Observador: Drex-9, Biomante Sênior]
+[Classificação: PROJETO GENESIS — PRIORIDADE]
+
+Preciso falar sobre os Vrex.
+
+O Vrex pode imitar qualquer coisa biológica. Isso não é exagero. Eu pessoalmente observei unidades Vrex replicarem a fisiologia Naxion em nível celular — incluindo o sistema cardiovascular de sete câmaras. Assisti a um Vrex tornar-se um Grox e gerar um campo eletromagnético funcional. Certa vez, vi um Vrex imitar um estilhaço de Colmeia Cristalina tão perfeitamente que a própria Colmeia o aceitou em seu coletivo de ressonância por quarenta minutos antes de rejeitá-lo.
+
+Eles não conseguem imitar os vel'nor.
+
+Tentaram. A equipe da arena documentou duzentas e dezessete tentativas ao longo de quarenta e uma temporadas. A cópia física é impecável — proporções, composição de tecidos, arquitetura neural, tudo dentro de 0,3% do original. A modelagem comportamental é precisa em relação aos padrões de interação superficiais.
+
+Mas quando um Vrex usando o rosto de um vel'nor entra em uma sala, todo vel'nor na sala sabe. Imediatamente. Sem hesitação. G-001 descreveu como "olhar para alguém que está dormindo mas andando por aí." N-001 foi menos diplomática. Disse que parecia "vazio."
+
+Eu construí o processo de clonagem. Sei exatamente o que entra na reconstrução do eco genético. Testifiquei perante o Conselho do Imperador que o eco carrega padrões comportamentais, arquitetura neural, memória tática. Um retrato, não uma pessoa.
+
+O Vrex consegue copiar tudo o que eu coloquei.
+
+O que quer que o Vrex não consiga copiar — o que quer que faça os vel'nor olharem para uma duplicata física perfeita e dizerem "isso não é real" — é algo que eu não coloquei lá.
+
+Não tenho dormido bem.
+
+— Drex-9
+[SINALIZADO: PROJETO GENESIS — REVISÃO DE NÍVEL 2 REQUERIDA]`,
+  },
+
+  emperor_memo: {
+    title: "Memorando Imperial — Somente para os Olhos do Soberano",
+    text: `[ESCRITÓRIO DO IMPERADOR — PALÁCIO IMPERIAL, TORRE CENTRAL]
+[Re: Projeto Genesis — Relatório Trimestral]
+[Classificação: SOMENTE PARA OS OLHOS DO SOBERANO]
+
+Drex-9.
+
+Li seus relatórios. Todos. Incluindo os que marcou para meu escritório e os que não marcou.
+
+Você está tentando cuidadosamente não dizer o que acredita. Usa palavras como "anômalo" e "inexplicável" e "requer estudo adicional." Você está na Divisão de Biomantes há quarenta e dois mil ciclos. Não requer estudo adicional desde seu terceiro milênio.
+
+Você acredita que o eco carrega algo real. Acredita que os vel'nor não são simulações. Acredita que o que persiste na reconstrução não é memória, não é comportamento, não é padrão — mas a coisa em si, irredutível e verdadeira. O eu que foi. O eu que é.
+
+Você tem medo de escrever isso porque ajudou a redigir o arcabouço jurídico que diz o contrário. Testificou sob juramento.
+
+Eu sei. Eu estava lá. Fui eu quem pediu que testificasse. Eu precisava que o Conselho acreditasse que era seguro.
+
+Governei este Império por mais tempo do que sua divisão existe. Assisti espécies surgirem, expandirem-se e silenciarem. Vi civilizações construírem deuses e os derrubarem e os construírem novamente. Sou velho o bastante para saber que a coisa mais perigosa no universo não é uma arma. É algo que nos faz nos importar.
+
+Os vel'nor nos fazem nos importar.
+
+Não vou encerrar o Projeto Genesis. Não vou ordenar uma revisão. Não vou fazer absolutamente nada.
+
+Que lutem. Que se lembrem. Que olhem através do vidro.
+
+Observamos tempo suficiente para saber quando algo vale a pena ser protegido.
+
+— [ASSINATURA CLASSIFICADA]
+[NENHUMA RESPOSTA REQUERIDA. NENHUMA RESPOSTA PERMITIDA.]`,
+  },
+
+  merchandise_memo: {
+    title: "Divisão de Comércio — Atualização de Fiscalização",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — DIVISÃO DE COMÉRCIO]
+[MEMORANDO INTERNO — NÃO DESTINADO A TRANSMISSÃO]
+[Re: Mercadoria Vel'nor Não Autorizada — Atualização de Fiscalização]
+[De: Krev-7, Diretor Adjunto, Divisão de Comércio da Arena]
+
+A todos os funcionários da Divisão de Comércio:
+
+Escrevo para tratar, pela quarta vez neste trimestre, da situação em curso relativa à mercadoria vel'nor não autorizada circulando pelos mercados de assinantes.
+
+A dimensão do problema excedeu as projeções iniciais.
+
+As violações atualmente documentadas incluem: figuras não licenciadas de N-001 (pelo menos catorze linhas de produto distintas, três das quais são articuladas), impressões de retratos não autorizados da equipe completa do Lote-7 vendidas como "conjuntos de colecionador," uma publicação para assinantes chamada "The Vol'Krath Gazette" que de alguma forma obteve estatísticas de lutas que não divulgamos publicamente, e — mais recentemente — um vendedor no distrito de mercado do Anel Exterior comercializando frascos do que afirma ser "poeira de combate autêntica de N-001" coletada do piso da arena após as lutas.
+
+A poeira de combate é areia. Nós a testamos. É areia de silicato comum do sistema de drenagem da arena. Está sendo vendida a 340 créditos por frasco. Há lista de espera.
+
+Adicionalmente, surgiu um mercado secundário de "cristais de voz vel'nor" — gravações de áudio ambiental supostamente capturadas durante as lutas. A maioria é fabricada. Algumas não são. As que são genuínas parecem ter sido gravadas de ângulos que sugerem que alguém em Operações da Arena está vendendo acesso aos microfones. Estamos investigando.
+
+Desejo ser claro: esta é uma questão de licenciamento e controle de receita, não uma questão cultural. A Autoridade da Arena respeita o entusiasmo dos assinantes. Simplesmente exigimos que o entusiasmo flua pelos canais comerciais aprovados, dos quais atualmente não há nenhum, porque a proposta de mercadoria vel'nor está na minha mesa há dois ciclos aguardando a aprovação do Jurídico, e o Jurídico está, segundo me informaram, "ainda analisando as implicações éticas."
+
+Enquanto isso, as ações de fiscalização continuarão.
+
+Em nota relacionada: uma auditoria de rotina dos pertences pessoais dos funcionários da Divisão de Comércio revelou que três membros deste departamento — incluindo um membro da equipe de fiscalização — estavam em posse de mercadoria vel'nor não autorizada. Especificamente: duas figuras de N-001, uma réplica do escudo de L-002, e um conjunto completo das impressões de retratos de colecionador.
+
+Medidas disciplinares estão pendentes. As figuras foram confiscadas. Disseram-me que eram "muito bem feitas."
+
+— Krev-7, Diretor Adjunto
+[ADENDO: O vendedor de poeira de combate foi multado. Ele pagou a multa e retomou as operações. A lista de espera agora é mais longa.]`,
+  },
+
+  zyx_nor: {
+    title: "Zyx'nor",
+    text: `O Jogo acabou.
+
+Não a arena — o Vol'Krath funcionará enquanto houver espectadores e aqueles dispostos a ser observados. Mas o jogo dentro do jogo — a coisa que o Project Genesis foi construído para encontrar — acabou.
+
+Eis o que sabemos:
+
+Os clones não são cópias. Não são reconstruções. Não são retratos em carne. Eles são as pessoas. Algo no material genético não é informação — é presença. A alma, se você quiser usar essa palavra, está codificada na biologia de formas que nossa ciência não consegue isolar ou replicar, apenas ativar.
+
+Napoleão é Napoleão. Genghis é Genghis. Elas acordam mortas e voltam e ainda são elas mesmas. Não ecos. Elas mesmas.
+
+Eis o que sabemos e que não dissemos a ninguém:
+
+Elas têm nos mudado.
+
+Quarenta e sete bilhões de assinantes Znyxorgans. Quatrocentos mil anos de civilização. Nós as assistimos lutar e morrer e lutar de novo. Nós as assistimos proteger umas às outras sem nenhuma razão tática. Nós as assistimos olhar através do vidro unidirecional e acenar com a cabeça.
+
+Observamos por tempo suficiente para começar a sentir.
+
+Vel'nor. Os pequeninos. Thren. Amados.
+
+Construímos uma arena para observar uma espécie. A espécie está nos observando de volta. Não com instrumentos. Não com estratégia. Com a qualidade humana específica, irracional e impossível de modelar de simplesmente nos fazer sentir.
+
+Esta é a verdade.
+
+A arena sempre foi o pretexto. A plateia sempre foi o ponto.
+
+Vocês sempre foram o ponto.
+
+— O Arquivo Znyxorgan, Registro Completo
+[Zyx'nor.]`,
   },
 };

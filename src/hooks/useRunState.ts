@@ -15,7 +15,13 @@ const LS_RUN_KEY = 'wcw_active_run_v1';
 function loadSavedRun(): RunState | null {
   try {
     const raw = localStorage.getItem(LS_RUN_KEY);
-    return raw ? (JSON.parse(raw) as RunState) : null;
+    if (!raw) return null;
+    const state = JSON.parse(raw) as RunState;
+    // Migrate saves that predate permanentManaBonus: derive from act (act N means N-1 bosses cleared)
+    if (state.permanentManaBonus === undefined) {
+      state.permanentManaBonus = Math.max(0, state.act - 1);
+    }
+    return state;
   } catch { return null; }
 }
 
@@ -24,7 +30,9 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
   const row0Ids = map.filter(n => n.row === 0).map(n => n.id);
 
   // Only include characters that were selected
-  const allChars = buildStartingCharacters();
+  const runPerksRaw = JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[];
+  const itemSlots = runPerksRaw.includes('inv_slot_7') ? 7 : 6;
+  const allChars = buildStartingCharacters(itemSlots);
   const characters = selectedIds.length > 0
     ? allChars.filter(c => selectedIds.includes(c.id))
     : allChars;
@@ -47,6 +55,7 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
     permanentlyDeadIds: [],
     battleCount: 0,
     upgradedCardDefIds: [],
+    signatureLegendaryCharIds: [],
     runStats: { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 },
     runStartTime: Date.now(),
   };
@@ -133,10 +142,8 @@ export function useRunState() {
       let baseXp = enc.xpReward;
       if (!result.won) baseXp = 0;
       // Bonus XP
-      const noHitBonus = Object.values(result.finalHps).every((hp, i) => {
-        const base = prev.characters[i]?.maxHp ?? 100;
-        return hp >= base; // no damage taken if HP didn't decrease... simplified
-      }) ? enc.bonusXpNoHit : 0;
+      const noHitBonus = prev.characters.every(c => (result.finalHps[c.id] ?? 0) >= c.maxHp)
+        ? enc.bonusXpNoHit : 0;
       const fastBonus = result.turnsElapsed <= 4 ? enc.bonusXpFast : 0;
       const totalXp = baseXp + noHitBonus + fastBonus;
       let goldEarned = result.won ? enc.goldReward : Math.floor(enc.goldReward * 0.3);
@@ -144,7 +151,7 @@ export function useRunState() {
       if (result.won) {
         const mansaChar = prev.characters.find(c => c.id === 'mansa' && (result.finalHps[c.id] ?? 0) > 0);
         if (mansaChar) {
-          const MANSA_BASE_POWER = 60; // from CharacterSelection.tsx stats
+          const MANSA_BASE_POWER = 70; // from CharacterSelection.tsx stats
           const mansaItemPowerBonus = mansaChar.items.reduce((acc, item) => acc + (item?.statBonus?.power ?? 0), 0);
           const mansaEffectivePower = MANSA_BASE_POWER + (mansaChar.statBonuses.power ?? 0) + mansaItemPowerBonus;
           goldEarned += Math.floor(goldEarned * (mansaEffectivePower / 100));
@@ -186,9 +193,11 @@ export function useRunState() {
         !newDeadIds.some(deadId => cardId.startsWith(deadId + '_'))
       );
 
-      // Card choices — tier gated by encounter type (ultimates only from elite/boss)
+      // Card choices — enemy=shared only, elite=exclusive abilities, boss=ultimates (act-gated count)
       const encounterKind = node.type === 'boss' ? 'boss' : node.type === 'elite' ? 'elite' : 'enemy';
-      const cardChoices = result.won ? pickCardRewards(deckAfterDeaths, rng, livingCharIds, encounterKind) : [];
+      const runPerks = new Set<string>(JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]);
+      const extraCardChoice = (encounterKind !== 'boss' && runPerks.has('bonus_card_choice')) ? 1 : 0;
+      const cardChoices = result.won ? pickCardRewards(deckAfterDeaths, rng, livingCharIds, encounterKind, prev.act, 3, extraCardChoice) : [];
 
       const pending: PendingRewards = {
         gold: goldEarned,
@@ -197,17 +206,19 @@ export function useRunState() {
         itemDrop,
         bossItems,
         completedNodeId: result.nodeId,
+        killBlowsByName: result.killBlowsByName,
       };
 
       const chars = prev.characters.map(c => {
         const newHp = result.finalHps[c.id] ?? c.currentHp;
         if (newHp <= 0) {
           // Strip all items from dead characters
-          return { ...c, currentHp: 0, items: [null, null, null, null, null, null], passiveStacks: undefined };
+          const deathItemSlots = (JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]).includes('inv_slot_7') ? 7 : 6;
+          return { ...c, currentHp: 0, items: Array(deathItemSlots).fill(null), passiveStacks: undefined };
         }
-        // Persist passive stacks for characters with the bloodlust_persist item (Genghis)
-        const hasPersist = c.items.some(item => item?.passiveTag === 'genghis_bloodlust_persist');
-        const persistedStacks = hasPersist ? (result.finalPassiveStacks?.[c.id] ?? 0) : undefined;
+        // Bloodlust stacks always carry at 50% (floor) — lose half between fights, keep momentum
+        const endStacks = c.id === 'genghis' ? (result.finalPassiveStacks?.[c.id] ?? 0) : 0;
+        const persistedStacks = endStacks > 0 ? Math.floor(endStacks / 2) : undefined;
         return { ...c, currentHp: newHp, passiveStacks: persistedStacks };
       });
 
@@ -248,18 +259,21 @@ export function useRunState() {
         : prev.deckCardIds;
 
       // Apply XP and check level ups (only if rewards exist; dead characters don't gain XP)
+      const killBlows = r?.killBlowsByName ?? {};
       const chars = prev.characters.map(c => {
         if (!r) return c;
         if (c.currentHp <= 0) return c;
         let { xp, level, xpToNext, pendingStatPoints, pendingAbilityUpgrades, pendingUltimateUpgrade } = c;
-        xp += r.xp;
-        while (xp >= xpToNext && level < 6) {
+        // Base XP for all living chars + kill blow bonus (4 XP per kill, credited to the killer)
+        const killBonusXp = (killBlows[c.displayName] ?? 0) * 4;
+        xp += r.xp + killBonusXp;
+        while (xp >= xpToNext && level < 8) {
           xp -= xpToNext;
           level++;
           xpToNext = XP_TO_NEXT[level] ?? 9999;
           pendingStatPoints += 2;
-          if (level === 2 || level === 4) pendingAbilityUpgrades += 1;
-          if (level === 6) pendingUltimateUpgrade += 1;
+          if (level === 2 || level === 5) pendingAbilityUpgrades += 1;
+          if (level === 8) pendingUltimateUpgrade += 1;
         }
         return { ...c, xp, level, xpToNext, pendingStatPoints, pendingAbilityUpgrades, pendingUltimateUpgrade };
       });
@@ -281,11 +295,14 @@ export function useRunState() {
       }
 
       // Check if a boss was just completed → advance to next act
-      const bossJustCompleted = prev.map.some(n => n.type === 'boss' && prev.completedNodeIds.includes(n.id));
-      if (bossJustCompleted && prev.act < 3) {
-        const newAct = (prev.act + 1) as 1 | 2 | 3;
+      // Primary: check completedNodeIds; fallback: check the pendingRewards.completedNodeId directly
+      const pendingCompletedId = prev.pendingRewards?.completedNodeId;
+      const bossJustCompleted = prev.map.some(n => n.type === 'boss' && (prev.completedNodeIds.includes(n.id) || n.id === pendingCompletedId));
+      if (bossJustCompleted && prev.act < 4) {
+        const newAct = (prev.act + 1) as 1 | 2 | 3 | 4;
         const newMap = generateActMap(prev.seed + newAct * 12345, newAct);
         const newRow0Ids = newMap.filter(n => n.row === 0).map(n => n.id);
+        const newManaBonus = (prev.permanentManaBonus ?? 0) + 1;
         return {
           ...prev,
           act: newAct,
@@ -296,6 +313,8 @@ export function useRunState() {
           deckCardIds: newDeck,
           characters: charsWithItem,
           pendingRewards: null,
+          permanentManaBonus: newManaBonus,
+          pendingActBonusNotice: newManaBonus,
         };
       }
 
@@ -332,7 +351,7 @@ export function useRunState() {
   ) => {
     setRunState(prev => {
       if (!prev) return prev;
-      const amount = stat === 'hp' ? 8 : stat === 'defense' ? 5 : 5;
+      const amount = stat === 'hp' ? 12 : stat === 'defense' ? 8 : 5;
       return {
         ...prev,
         characters: prev.characters.map(c => {
@@ -404,7 +423,21 @@ export function useRunState() {
   }, []);
 
   const addGold = useCallback((amount: number) => {
-    setRunState(prev => prev ? { ...prev, gold: prev.gold + amount } : prev);
+    const mult = (() => {
+      try {
+        const raw = localStorage.getItem('wcw_run_perks_v1');
+        if (!raw) return 1;
+        const p = JSON.parse(raw) as string[];
+        let bonus = 0;
+        if (p.includes('gold_bonus_10')) bonus += 0.10;
+        if (p.includes('gold_bonus_20')) bonus += 0.20;
+        if (p.includes('gold_bonus_30')) bonus += 0.30;
+        if (p.includes('gold_bonus_100')) bonus += 1.00;
+        return 1 + bonus;
+      } catch { return 1; }
+    })();
+    const boosted = mult > 1 ? Math.round(amount * mult) : amount;
+    setRunState(prev => prev ? { ...prev, gold: prev.gold + boosted } : prev);
   }, []);
 
   const addCardToDeck = useCallback((cardId: string) => {
@@ -493,7 +526,7 @@ export function useRunState() {
     });
   }, []);
 
-  // Remove one copy of a card from the deck (campfire remove-card option)
+  // Remove one copy of a card from the deck (merchant remove-card service)
   const removeCardFromDeck = useCallback((cardId: string) => {
     setRunState(prev => {
       if (!prev) return prev;
@@ -501,7 +534,7 @@ export function useRunState() {
       if (idx === -1) return prev;
       const newDeck = [...prev.deckCardIds];
       newDeck.splice(idx, 1);
-      return { ...prev, deckCardIds: newDeck };
+      return { ...prev, deckCardIds: newDeck, cardRemovalsThisRun: (prev.cardRemovalsThisRun ?? 0) + 1 };
     });
   }, []);
 
@@ -541,6 +574,43 @@ export function useRunState() {
     });
   }, []);
 
+  // Grant a Signature Legendary: equip item to first empty slot, record char as awarded,
+  // and remove that char's boss rare drop from pendingRewards (replaced by the legendary)
+  const grantSignatureLegendary = useCallback((characterId: CharacterId, item: import('@/types/roguelike').RunItem, forceSlotIdx?: number) => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      // Remove one boss item targeted at this char (or the last one if generic)
+      let filteredBossItems = prev.pendingRewards?.bossItems;
+      if (filteredBossItems && filteredBossItems.length > 0) {
+        const charIdx = filteredBossItems.findIndex(bi => bi.targetCharacter === characterId);
+        if (charIdx >= 0) {
+          filteredBossItems = filteredBossItems.filter((_, i) => i !== charIdx);
+        } else {
+          filteredBossItems = filteredBossItems.slice(0, -1);
+        }
+      }
+      return {
+        ...prev,
+        signatureLegendaryCharIds: [...(prev.signatureLegendaryCharIds ?? []), characterId],
+        pendingRewards: prev.pendingRewards ? {
+          ...prev.pendingRewards,
+          bossItems: filteredBossItems,
+        } : null,
+        characters: prev.characters.map(c => {
+          if (c.id !== characterId) return c;
+          const items = [...c.items] as typeof c.items;
+          const slotIdx = forceSlotIdx !== undefined ? forceSlotIdx : items.findIndex(s => s === null);
+          if (slotIdx >= 0 && slotIdx < items.length) items[slotIdx] = item;
+          return { ...c, items };
+        }),
+      };
+    });
+  }, []);
+
+  const clearActBonusNotice = useCallback(() => {
+    setRunState(prev => prev ? { ...prev, pendingActBonusNotice: undefined } : prev);
+  }, []);
+
   const hasSavedRun = runState !== null && !runState.isTutorialRun;
 
   return {
@@ -567,5 +637,7 @@ export function useRunState() {
     removeCardFromDeck,
     addItemToCharacter,
     removeItemFromCharacter,
+    grantSignatureLegendary,
+    clearActBonusNotice,
   };
 }

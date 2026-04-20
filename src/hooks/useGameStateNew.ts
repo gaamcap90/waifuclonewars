@@ -464,7 +464,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Napoleon-chan",
       role: "dps_ranged" as const,
-      stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 65, power: 60, defense: 15, movement: 2 },
+      stats: { hp: 100, maxHp: 100, moveRange: 2, speed: 6, might: 60, power: 65, defense: 15, movement: 2 },
       abilities: [
         { id: "1", name: "Artillery Barrage", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 4, description: "Long-range bombardment. Deals 48 damage.", damage: 0 },
         { id: "2", name: "Grande Armée", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
@@ -475,7 +475,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Genghis-chan",
       role: "dps_melee" as const,
-      stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 50, power: 50, defense: 25, movement: 2 },
+      stats: { hp: 120, maxHp: 120, moveRange: 2, speed: 8, might: 55, power: 50, defense: 25, movement: 2 },
       abilities: [
         { id: "1", name: "Mongol Charge", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "48 damage at range 3 + Bleed (16 HP/turn, 2 turns).", damage: 0, powerMult: 1.2, bleedMult: 0.4 },
         { id: "2", name: "Horde Tactics", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "20 dmg per enemy × enemy count to ALL in range 2.", damage: 0, scalingAoE: true, perEnemyMult: 0.5 },
@@ -507,7 +507,7 @@ const createInitialIcons = (): Icon[] => {
     {
       name: "Huang-chan",
       role: "controller" as const,
-      stats: { hp: 90, maxHp: 90, moveRange: 2, speed: 5, might: 30, power: 55, defense: 25, movement: 2 },
+      stats: { hp: 90, maxHp: 90, moveRange: 2, speed: 5, might: 35, power: 55, defense: 25, movement: 2 },
       abilities: [
         { id: "1", name: "Terracotta Legion", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Summon a random Terracotta Warrior (Archer: range 2 — or Melee: range 1) on a target hex. Lasts 2 turns.", damage: 0, summonTerracotta: true },
         { id: "2", name: "First Emperor's Command", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Summon a Terracotta Cavalry (scales with your stats) adjacent to you. Lasts 2 turns. Gain free Cavalry Charge card in hand.", damage: 0, summonCavalry: true },
@@ -604,12 +604,13 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
     const itemBonus = runChar?.items?.reduce((acc, item) => {
       if (!item?.statBonus) return acc;
       return {
-        hp:      acc.hp      + (item.statBonus.hp      ?? 0),
-        might:   acc.might   + (item.statBonus.might   ?? 0),
-        power:   acc.power   + (item.statBonus.power   ?? 0),
-        defense: acc.defense + (item.statBonus.defense ?? 0),
+        hp:          acc.hp          + (item.statBonus.hp          ?? 0),
+        might:       acc.might       + (item.statBonus.might       ?? 0),
+        power:       acc.power       + (item.statBonus.power       ?? 0),
+        defense:     acc.defense     + (item.statBonus.defense     ?? 0),
+        attackRange: acc.attackRange + (item.statBonus.attackRange ?? 0),
       };
-    }, { hp: 0, might: 0, power: 0, defense: 0 }) ?? { hp: 0, might: 0, power: 0, defense: 0 };
+    }, { hp: 0, might: 0, power: 0, defense: 0, attackRange: 0 }) ?? { hp: 0, might: 0, power: 0, defense: 0, attackRange: 0 };
     // Collect all passive tags from equipped items
     const itemPassiveTags = runChar?.items
       ?.filter(Boolean)
@@ -617,7 +618,9 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       .filter((t): t is string => !!t) ?? [];
     // move_plus_1: add +1 to base movement range
     const movePlusOne = itemPassiveTags.filter(t => t === 'move_plus_1').length;
-    const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 35 : template.role === "controller" ? 25 : 15;
+    // swift_wraps_burst: +2 movement on the first turn only (not added to moveRange)
+    const swiftWrapsBurst = itemPassiveTags.includes('swift_wraps_burst') ? 2 : 0;
+    const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 35 : template.role === "controller" ? 25 : template.role === "hybrid" ? 20 : 15;
     const maxHpWithItems = (runChar ? runChar.maxHp : template.stats.hp) + itemBonus.hp;
     // If character was at full HP before the item, scale up currentHp too (item heals to new max)
     const baseHp = runChar
@@ -634,18 +637,19 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
         maxHp:     maxHp,
         moveRange: (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne,
         speed:     template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : template.role === "tank" ? 3 : 4,
-        attackRange: template.name.includes("Mansa") ? 3
+        attackRange: (template.name.includes("Mansa") ? 3
                    : (template.name.includes("Picasso") || template.role === "dps_ranged") ? 2
-                   : 1,
+                   : (template.name.includes("Sun-sin") && itemPassiveTags.includes('sig_sunsin_turtle_helm')) ? 2
+                   : 1) + itemBonus.attackRange,
         might:     template.stats.might + (statBonus.might ?? 0) + itemBonus.might,
         power:     (template.stats.power ?? 50) + (statBonus.power ?? 0) + itemBonus.power,
         defense:   baseDefense + (statBonus.defense ?? 0) + itemBonus.defense,
-        movement:  (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne,
+        movement:  (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne + swiftWrapsBurst,
         mana: 3,
         maxMana: 3,
       },
       abilities: getAbilitiesForCharacter(template.name),
-      passive:   getPassiveForCharacter(template.name),
+      passive:   getPassiveForCharacter(template.name, runChar?.level ?? 1),
       position:  (pid === 0 ? p1Spawns : p2Spawns)[idx],
       playerId:  pid,
       isAlive:   true,
@@ -656,12 +660,13 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       ultimateUsed:     false,
       hasRespawned:     false,
       justRespawned:    false,
+      level:            runChar?.level ?? 1,
       itemPassiveTags:  itemPassiveTags.length > 0 ? itemPassiveTags : undefined,
       voidArmorUsed:    false,
       firstHitNegated:  false,
       firstAbilityUsed: false,
-      // Restore persisted passive stacks (e.g. Genghis Bloodlust with Eternal Hunger)
-      passiveStacks: itemPassiveTags.includes('genghis_bloodlust_persist') ? (runChar?.passiveStacks ?? 0) : 0,
+      // Restore persisted passive stacks (Genghis Bloodlust always carries at 50% between fights)
+      passiveStacks: template.name?.includes('Genghis') ? (runChar?.passiveStacks ?? 0) : 0,
     };
   };
 
@@ -695,9 +700,9 @@ function getAbilitiesForCharacter(name: string) {
     { id: "ultimate", name: "THIS IS SPARTA!", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×2.5 damage + Root adjacent enemies 2t.", damage: 0, powerMult: 2.5 },
   ];
   if (name.includes("Beethoven")) return [
-    { id: "1", name: "Schallwelle",  manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Sonic wave — Power×0.5 dmg on a line, pushes each enemy 2 tiles back.", damage: 0, powerMult: 0.5 },
+    { id: "1", name: "Schallwelle",  manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Sonic wave — Power×0.8 dmg on a line, pushes each enemy 2 tiles back.", damage: 0, powerMult: 0.8 },
     { id: "2", name: "Freudenspur", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "Place resonance zone (7 tiles). Allies on zone gain +2 Movement at turn start. Lasts 2 turns.", damage: 0 },
-    { id: "ultimate", name: "Götterfunken", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Stun all enemies within range 3 for 1 turn.", damage: 0 },
+    { id: "ultimate", name: "Götterfunken", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Power×1.0 dmg to all enemies in range 3. Stuns them for 1 turn.", damage: 0, powerMult: 1.0 },
   ];
   if (name.includes("Sun-sin")) return [
     { id: "1", name: "Hwajeon / Ramming Speed", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Land: Power×1.2 at range 3, Poison. Water: Might×2.0 range 1.", damage: 0, powerMult: 1.2 },
@@ -715,7 +720,7 @@ function getAbilitiesForCharacter(name: string) {
     { id: "ultimate", name: "Trafalgar Square", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 4, description: "ULTIMATE: ~130 dmg to one target. If target dies, ~50 dmg to all adjacent enemies.", damage: 0, powerMult: 2.0 },
   ];
   if (name.includes("Hannibal")) return [
-    { id: "1", name: "Alpine March", manaCost: 1, cooldown: 0, currentCooldown: 0, range: 6, description: "Charge up to 6 hexes in a straight line across any terrain.", damage: 0, chargeMove: true, chargeDist: 6 },
+    { id: "1", name: "Alpine March", manaCost: 1, cooldown: 0, currentCooldown: 0, range: 6, description: "Use before moving. Charge up to 6 hexes — enemies in path take ~Might×0.5 dmg and are pushed sideways. Consumes all movement.", damage: 0, chargeMove: true, chargeDist: 6 },
     { id: "2", name: "Double Envelopment", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "~55 dmg to target + ~28 dmg to all adjacent enemies.", damage: 0, chargeAndPull: true, chargeAndPullHitMult: 1.1, chargeAndPullArrivalMult: 0.55 },
     { id: "ultimate", name: "War Elephant", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "ULTIMATE: Summon War Elephant — HP 120, Might 70, Def 20, Move 2. Basic attacks only. Lasts 2 turns.", damage: 0, summonWarElephant: true },
   ];
@@ -726,7 +731,7 @@ function getAbilitiesForCharacter(name: string) {
   ];
   if (name.includes("Teddy")) return [
     { id: "1", name: "Speak Softly", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 2, description: "All enemies in range 2 Taunted — must target Teddy. Teddy gains +30 DEF until her next turn.", damage: 0, globalTauntRange: 2 },
-    { id: "2", name: "Big Stick", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "~100 Might dmg at range 1. Doubled (~200) if target is Stunned or Taunted.", damage: 0, mightMult: 1.65, executeVsDebuffed: true },
+    { id: "2", name: "Big Stick", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "~78 Might dmg at range 1. +50% bonus (~117) if target is Stunned or Taunted.", damage: 0, mightMult: 1.3, executeVsDebuffed: true },
     { id: "ultimate", name: "Rough Riders' Rally", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Allies gain +25 Might, +2 Move for 2 turns. Teddy gains +45 Might and teleports range 5.", damage: 0, selfMightBonus: 45, selfTeleportAnywhere: 5 },
   ];
   if (name.includes("Mansa")) return [
@@ -742,19 +747,40 @@ function getAbilitiesForCharacter(name: string) {
   ];
 }
 
-function getPassiveForCharacter(name: string) {
-  if (name.includes("Napoleon")) return "Mitraille: At the start of Napoleon's turn, all enemies within range 2 take 5 pure damage (ignores Defense)";
-  if (name.includes("Genghis")) return "Bloodlust: Each kill grants +12 Might and restores 1 Mana (up to 3×)";
-  if (name.includes("Da Vinci")) return "Tinkerer: Draw +1 card at turn start if no exclusive ability was used last turn";
-  if (name.includes("Leonidas")) return "Phalanx: Each turn adjacent to an ally, gain +8 Defense (stacks up to 3 turns)";
-  if (name.includes("Sun-sin")) return "Turtle Ship: Can enter lake tiles. On lake: +40% Might, +30% DEF, −40% Power, Move 1, Range 3";
-  if (name.includes("Beethoven")) return "Taubheit: Cannot be pushed or displaced while playing an ability card";
+function getPassiveForCharacter(name: string, level: number = 1) {
+  if (name.includes("Napoleon")) {
+    const dmg = 5 + 2 * (level - 1);
+    return `Mitraille: At the start of Napoleon's turn, all enemies within range 2 take ${dmg} pure damage (ignores Defense). Scales with level: 5 + 2 per level (current: ${dmg} at lvl ${level}).`;
+  }
+  if (name.includes("Genghis")) {
+    const cap = 2 + Math.floor(level / 2);
+    return `Bloodlust: Each kill grants +12 Might and restores 1 Mana. Stack cap scales with level: 2 + ⌊level/2⌋ (current cap: ${cap} at lvl ${level}).`;
+  }
+  if (name.includes("Da Vinci")) return "Tinkerer: Draw +1 extra card at the start of each turn. Draws +1 additional card if the Combat Drone is alive.";
+  if (name.includes("Leonidas")) {
+    const defPerStack = 6 + level;
+    return `Phalanx: Each turn adjacent to an ally, gain ${defPerStack} Defense per stack (up to 3 stacks, max +${defPerStack * 3} DEF). Scales with level: 6 + level (current: ${defPerStack} per stack at lvl ${level}).`;
+  }
+  if (name.includes("Sun-sin")) return "Turtle Ship: Can enter lake tiles. On water: +35% Might, +30% DEF, −40% Power, Range 3. On lake only: Move 1.";
+  if (name.includes("Beethoven")) return "Crescendo: Each Beethoven ability card played grants +2 Power (stacks up to 15×, max +30 Power). Stack resets between fights.";
   if (name.includes("Huang"))    return "Imperial Command: Cannot play Basic Attack cards. Guaranteed at least 1 Basic Attack card is drawn each turn (for Terracotta units to use). Terracotta units may only use Basic Attack cards.";
   if (name.includes("Nelson"))   return "One Eye, One Hand: Nelson cannot be Silenced. The first hit she takes each fight is negated entirely.";
-  if (name.includes("Hannibal")) return "Cannae: When Hannibal attacks a flanked enemy (an ally is adjacent to the target), deal 40% bonus damage. Works on basic attacks and card attacks.";
-  if (name.includes("Picasso"))  return "Fractured Perspective: Every 3rd card Picasso plays this battle costs 0 mana (3rd, 6th, 9th... free). Counter persists across turns.";
-  if (name.includes("Teddy"))    return "Bully!: Each kill grants Teddy +10 Might (stacks up to 3×, max +30). Cannot be stacked by Terracotta or drone kills.";
-  if (name.includes("Mansa"))    return "Treasury: After each battle, earn bonus gold equal to Mansa's Power% (60 Power = +60% more gold). Mansa's ability cards cost 1 less Mana.";
+  if (name.includes("Hannibal")) {
+    const pct = (30 + 2 * level).toFixed(0);
+    return `Cannae: When Hannibal attacks a flanked enemy (ally adjacent to target), deal +${pct}% bonus damage. Scales with level: 30% + 2% per level (current: +${pct}% at lvl ${level}). Works on basic attacks and card attacks.`;
+  }
+  if (name.includes("Picasso")) {
+    const interval = level >= 7 ? 2 : 3;
+    return `Fractured Perspective: Every ${interval}${level >= 7 ? 'nd' : 'rd'} card Picasso plays this battle costs 0 mana${level >= 7 ? ' (lvl 7+ bonus active)' : ` (triggers every 2nd card at lvl 7+)`}. Counter persists across turns.`;
+  }
+  if (name.includes("Teddy")) {
+    const mightPerKill = 8 + level;
+    return `Bully!: Each kill grants Teddy +${mightPerKill} Might (stacks up to 3×, max +${mightPerKill * 3} Might). Scales with level: 8 + level (current: +${mightPerKill} per kill at lvl ${level}). Cannot trigger from Terracotta or drone kills.`;
+  }
+  if (name.includes("Mansa")) {
+    const costReduction = level >= 6 ? 2 : 1;
+    return `Treasury: After each battle, earn bonus gold equal to Mansa's Power% (60 Power = +60% more gold). Ability cards cost ${costReduction} less Mana${level >= 6 ? ' (lvl 6+ bonus active)' : ` (cost 2 less at lvl 6+)`}.`;
+  }
   return "";
 }
 
@@ -781,6 +807,11 @@ function computeAIIntents(state: ExtState): AIIntent[] {
       : ai.name.includes("Napoleon") || ai.name.includes("Da Vinci") || ai.name.includes("Beethoven") ? 2 : 1;
     let mainIntentSet = false;
 
+    // Sorted copies used for smarter target selection:
+    // abilities aim at lowest-HP enemy (creates urgency / counterplay), basic attacks at nearest.
+    const enemiesByHp   = [...enemies].sort((a, b) => a.stats.hp - b.stats.hp);
+    const enemiesByDist = [...enemies].sort((a, b) => hexDistance(ai.position, a.position) - hexDistance(ai.position, b.position));
+
     // --- 1. Try a damaging ability ---
     for (const ab of (ai.abilities as any[])) {
       if (ab.id === "ultimate" && ai.ultimateUsed) continue;
@@ -788,14 +819,15 @@ function computeAIIntents(state: ExtState): AIIntent[] {
       const isDmg  = (typeof ab.damage === "number" && ab.damage > 0) || isPowerMult;
       const isHeal = typeof ab.healing === "number" && ab.healing > 0;
 
-      if (isDmg && enemies.some(e => hexDistance(ai.position, e.position) <= ab.range)) {
-        const nearestEnemy = enemies.find(e => hexDistance(ai.position, e.position) <= ab.range)!;
+      if (isDmg && enemiesByHp.some(e => hexDistance(ai.position, e.position) <= ab.range)) {
+        // Target the lowest-HP enemy in range — most threatening, but player can move them away
+        const target = enemiesByHp.find(e => hexDistance(ai.position, e.position) <= ab.range)!;
         const atkStats = calcEffectiveStats(state, ai);
         const estDmg = isPowerMult
           ? Math.floor(atkStats.power * ab.powerMult)
           : ab.damage;
         intents.push({ iconId: ai.id, type: 'ability', abilityName: ab.name,
-          label: String(Math.round(estDmg)), damage: estDmg, range: ab.range });
+          label: String(Math.round(estDmg)), damage: estDmg, range: ab.range, targetId: target.id });
         mainIntentSet = true;
         break;
       } else if (isHeal) {
@@ -813,15 +845,17 @@ function computeAIIntents(state: ExtState): AIIntent[] {
 
     // --- 2. Basic attack if no ability ---
     if (!mainIntentSet) {
-      const inRange = enemies.find(e =>
+      // Target the nearest enemy with LoS; tiebreak by lowest HP
+      const inRange = enemiesByDist.find(e =>
         hexDistance(ai.position, e.position) <= basicRange &&
         !hasLineMountain(state.board, ai.position, e.position)
       );
       if (inRange) {
         const atkStats = calcEffectiveStats(state, ai);
-        const dmg = Math.floor(atkStats.might);
+        const targetDef = calcEffectiveStats(state, inRange).defense;
+        const dmg = Math.max(0, Math.floor(atkStats.might - targetDef));
         intents.push({ iconId: ai.id, type: 'attack', abilityName: 'Basic Attack',
-          label: String(dmg), damage: dmg, range: basicRange });
+          label: String(dmg), damage: dmg, range: basicRange, targetId: inRange.id });
         mainIntentSet = true;
       }
     }
@@ -850,6 +884,44 @@ function computeAIIntents(state: ExtState): AIIntent[] {
           range: ab.range ?? ab.effect?.range ?? 2,
           turnsUntilReady: cd,
         });
+      }
+    }
+
+    // --- 5. New-format enemyAbilities (EnemyAbilityDef with nested effect) ---
+    if (!mainIntentSet) {
+      const enemyAbs = (ai as any).enemyAbilities as import('@/types/roguelike').EnemyAbilityDef[] | undefined ?? [];
+      for (const ab of enemyAbs) {
+        const cd = cooldowns[ab.id] ?? 0;
+        if (cd > 0) continue; // on cooldown — handled in cooldown badges below
+        const e = ab.effect;
+        const range = e.range ?? 2;
+        const isDmg = e.type === 'aoe_damage' || e.type === 'damage_all_enemies' || e.type === 'dash_attack';
+        const isHeal = e.type === 'heal_self';
+        if (isDmg && enemiesByHp.some(en => hexDistance(ai.position, en.position) <= range)) {
+          const atkStats = calcEffectiveStats(state, ai);
+          const atkStat = e.useMight ? atkStats.might : atkStats.power;
+          const rawDmg = e.damage ?? atkStat * (e.multiplier ?? 1.0);
+          const abilityTarget = enemiesByHp.find(en => hexDistance(ai.position, en.position) <= range)!;
+          const nearestDef = calcEffectiveStats(state, abilityTarget).defense;
+          const estDmg = Math.max(0, Math.round(rawDmg - nearestDef));
+          intents.push({ iconId: ai.id, type: 'ability', abilityName: ab.name,
+            label: String(estDmg), damage: estDmg, range, targetId: abilityTarget.id });
+          mainIntentSet = true;
+          break;
+        } else if (isHeal) {
+          intents.push({ iconId: ai.id, type: 'heal', abilityName: ab.name,
+            label: `+${e.amount ?? '?'}`, healing: e.amount, range });
+          mainIntentSet = true;
+          break;
+        }
+      }
+    }
+    // Cooldown badges for new-format abilities
+    for (const ab of ((ai as any).enemyAbilities as import('@/types/roguelike').EnemyAbilityDef[] | undefined ?? [])) {
+      const cd = cooldowns[ab.id] ?? 0;
+      if (cd > 0) {
+        intents.push({ iconId: ai.id, type: 'upcoming_ability', abilityName: ab.name,
+          label: String(cd), range: ab.effect?.range ?? 2, turnsUntilReady: cd });
       }
     }
   }
@@ -921,11 +993,19 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
       const inRange = playerIcons().filter(e => hexDistance(currentAi.position, e.position) <= (effect.range ?? 2));
       if (!inRange.length) continue;
       // singleTarget: only hit the nearest enemy (Champion's Strike)
-      const targets = (effect as any).singleTarget
+      const targets = effect.singleTarget
         ? [inRange.sort((a, b) => hexDistance(currentAi.position, a.position) - hexDistance(currentAi.position, b.position))[0]]
         : inRange;
-      const dmg = effect.damage ?? Math.round(calcEffectiveStats(s, currentAi).might * (effect.multiplier ?? 1.0));
+      // Power by default for multiplier abilities; useMight flag for Might-based (e.g. Champion's Strike)
+      const aiStatsCur = calcEffectiveStats(s, currentAi);
+      const rawBase = effect.damage != null
+        ? effect.damage
+        : Math.round((effect.useMight ? aiStatsCur.might : aiStatsCur.power) * (effect.multiplier ?? 1.0));
+      const logDmg: number[] = [];
       for (const t of targets) {
+        const tDef = calcEffectiveStats(s, t).defense;
+        const dmg = Math.round(Math.max(1, rawBase - tDef));
+        logDmg.push(dmg);
         const newHp = Math.round(Math.max(0, t.stats.hp - dmg));
         s = {
           ...s,
@@ -940,7 +1020,8 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
           })),
         };
       }
-      pushLog(s, `${ai.name} used ${ab.name} for ${dmg} dmg to ${targets.length} target(s)!`, 1);
+      const avgDmg = logDmg.length ? Math.round(logDmg.reduce((a, b) => a + b, 0) / logDmg.length) : 0;
+      pushLog(s, `${ai.name} used ${ab.name} for ~${avgDmg} dmg to ${targets.length} target(s)!`, 1);
       abilitiesUsed++;
     } else if (effect.type === 'debuff_enemies') {
       const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
@@ -966,10 +1047,12 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
       pushLog(s, `${ai.name} used ${ab.name} on ${targets.length} target(s)!`, 1);
       abilitiesUsed++;
     } else if (effect.type === 'damage_all_enemies') {
-      const dmg = effect.damage ?? 0;
+      // trueDamage: environmental/cosmic ability bypasses DEF (Arena Collapse, Emperor's Verdict)
+      const baseDmg = effect.damage ?? 0;
       const targets = playerIcons();
       if (!targets.length) continue;
       for (const t of targets) {
+        const dmg = effect.trueDamage ? baseDmg : Math.round(Math.max(1, baseDmg - calcEffectiveStats(s, t).defense));
         const newHp = Math.round(Math.max(0, t.stats.hp - dmg));
         s = {
           ...s,
@@ -984,7 +1067,8 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
           })),
         };
       }
-      pushLog(s, `${ai.name} used ${ab.name} — ${dmg} damage to ALL enemies!`, 1);
+      const label = effect.trueDamage ? `${baseDmg} TRUE dmg` : `~${baseDmg} dmg (DEF applies)`;
+      pushLog(s, `${ai.name} used ${ab.name} — ${label} to ALL!`, 1);
       abilitiesUsed++;
     } else if (effect.type === 'dash_attack') {
       const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
@@ -1051,6 +1135,103 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
         pushLog(s, `${ai.name} used ${ab.name} on ${target.name} for ${dmg} dmg!`, 1);
         abilitiesUsed++;
       } else continue;
+    } else if (effect.type === 'melee_debuff') {
+      // Melee hit on nearest target in range, then apply a debuff
+      const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
+      const meleeRange = effect.range ?? 1;
+      const inRange = playerIcons().filter(e => hexDistance(currentAi.position, e.position) <= meleeRange);
+      if (!inRange.length) continue;
+      const target = inRange.sort((a, b) => hexDistance(currentAi.position, a.position) - hexDistance(currentAi.position, b.position))[0];
+      const aiStatsMD = calcEffectiveStats(s, currentAi);
+      const rawDmgMD = aiStatsMD.might * (effect.multiplier ?? 1.0);
+      const dmgMD = Math.round(Math.max(1, rawDmgMD - calcEffectiveStats(s, target).defense));
+      const newHpMD = Math.round(Math.max(0, target.stats.hp - dmgMD));
+      s = {
+        ...s,
+        players: s.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => {
+            if (ic.id !== target.id) return ic;
+            const withHp = { ...ic, stats: { ...ic.stats, hp: newHpMD }, isAlive: newHpMD > 0, respawnTurns: newHpMD > 0 ? ic.respawnTurns : 4 };
+            if (!effect.debuffType) return withHp;
+            return { ...withHp, debuffs: [...(ic.debuffs ?? []), { type: effect.debuffType as any, magnitude: effect.magnitude ?? 0, turnsRemaining: effect.duration ?? 1 }] };
+          }),
+        })),
+      };
+      const debuffLabel = effect.debuffType ? ` + ${effect.debuffType}` : '';
+      pushLog(s, `${ai.name} used ${ab.name} on ${target.name} for ${dmgMD} dmg${debuffLabel}!`, 1);
+      abilitiesUsed++;
+    } else if (effect.type === 'pull_attack') {
+      // Pull the closest target in range toward the attacker, then strike
+      const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
+      const attackRange = effect.range ?? 3;
+      const inRange = playerIcons().filter(e => hexDistance(currentAi.position, e.position) <= attackRange);
+      if (!inRange.length) continue;
+      const target = inRange.sort((a, b) => hexDistance(currentAi.position, a.position) - hexDistance(currentAi.position, b.position))[0];
+      // Pull: move target up to pullRange hexes closer to attacker
+      const pullSteps = effect.pullRange ?? 2;
+      const hexDirs = [{ q: 1, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 1 }, { q: 0, r: -1 }, { q: 1, r: -1 }, { q: -1, r: 1 }];
+      const occupiedPA = new Set(s.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.id !== target.id).map(ic => `${ic.position.q},${ic.position.r}`));
+      let pulled = target.position;
+      for (let step = 0; step < pullSteps; step++) {
+        const curDist = hexDistance(pulled, currentAi.position);
+        if (curDist <= 1) break;
+        const nextStep = hexDirs
+          .map(d => ({ q: pulled.q + d.q, r: pulled.r + d.r }))
+          .filter(p => !occupiedPA.has(`${p.q},${p.r}`))
+          .filter(p => { const tile = s.board.find(t => t.coordinates.q === p.q && t.coordinates.r === p.r); return tile && tile.terrain.effects.movementModifier !== -999; })
+          .sort((a, b) => hexDistance(a, currentAi.position) - hexDistance(b, currentAi.position))[0];
+        if (!nextStep || hexDistance(nextStep, currentAi.position) >= curDist) break;
+        pulled = nextStep;
+      }
+      if (pulled.q !== target.position.q || pulled.r !== target.position.r) {
+        s = { ...s, players: s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : { ...ic, position: pulled }) })) };
+      }
+      // Strike after pull
+      const updatedTarget = s.players[0].icons.find(i => i.id === target.id) ?? target;
+      const aiStatsPA = calcEffectiveStats(s, currentAi);
+      const rawDmgPA = aiStatsPA.power * (effect.multiplier ?? 0.8);
+      const dmgPA = Math.round(Math.max(1, rawDmgPA - calcEffectiveStats(s, updatedTarget).defense));
+      const newHpPA = Math.round(Math.max(0, updatedTarget.stats.hp - dmgPA));
+      s = {
+        ...s,
+        players: s.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+            ...ic,
+            stats: { ...ic.stats, hp: newHpPA },
+            isAlive: newHpPA > 0,
+            respawnTurns: newHpPA > 0 ? ic.respawnTurns : 4,
+          }),
+        })),
+      };
+      pushLog(s, `${ai.name} pulled ${target.name} closer and struck for ${dmgPA} dmg!`, 1);
+      abilitiesUsed++;
+    } else if (effect.type === 'copy_attack') {
+      // Copy nearest player's Might, then strike that player with it
+      const currentAi = s.players[1].icons.find(i => i.id === aiId)!;
+      const sorted = playerIcons().sort((a, b) => hexDistance(currentAi.position, a.position) - hexDistance(currentAi.position, b.position));
+      const target = sorted[0];
+      if (!target) continue;
+      // Imitate: deal 0.5× copied Might + 0.5× copied Power, minus target's defense
+      const targetStats = calcEffectiveStats(s, target);
+      const rawDmgCA = Math.round(targetStats.might * 0.5 + targetStats.power * 0.5);
+      const dmgCA = Math.round(Math.max(1, rawDmgCA - targetStats.defense));
+      const newHpCA = Math.round(Math.max(0, target.stats.hp - dmgCA));
+      s = {
+        ...s,
+        players: s.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== target.id ? ic : {
+            ...ic,
+            stats: { ...ic.stats, hp: newHpCA },
+            isAlive: newHpCA > 0,
+            respawnTurns: newHpCA > 0 ? ic.respawnTurns : 4,
+          }),
+        })),
+      };
+      pushLog(s, `${ai.name} mimics ${target.name} and strikes for ${dmgCA} dmg!`, 1);
+      abilitiesUsed++;
     }
 
     // Set cooldown after use
@@ -1134,7 +1315,7 @@ function executeAITurn(state: ExtState): ExtState {
           }
         }
       }
-    } else if (mainIntent?.type === 'attack' || (isSilenced && mainIntent?.type !== 'attack')) {
+    } else if (mainIntent?.type === 'attack' || (isSilenced && mainIntent?.type === 'ability')) {
       // Silenced enemies fall back to basic attack even if intent was ability
       ai = s.players[1].icons.find(i => i.id === aiOrig.id)!;
       if (!ai.cardUsedThisTurn) {
@@ -1149,18 +1330,21 @@ function executeAITurn(state: ExtState): ExtState {
             pushLog(s, `${ai.name} attacked player base for ${dmg.toFixed(0)} dmg`, 1);
           }
         } else {
-          // Basic attack on enemy — prefer taunter if unit is taunted
+          // Basic attack — if taunted, MUST attack the taunter; skip entirely if taunter is out of range
           const preMoveAiTaunt = ai.debuffs?.find(d => d.type === 'taunted');
           const preMoveAiTaunter = preMoveAiTaunt?.sourceIconId
             ? s.players[0].icons.find(ic => ic.id === preMoveAiTaunt.sourceIconId && ic.isAlive && hexDistance(ai!.position, ic.position) <= basicRange && !hasLineMountain(s.board, ai!.position, ic.position))
             : null;
-          const target = preMoveAiTaunter ?? enemies().find(e =>
-            hexDistance(ai!.position, e.position) <= basicRange &&
-            !hasLineMountain(s.board, ai!.position, e.position)
-          );
+          // If taunted but taunter not reachable, do not attack anyone
+          const target = preMoveAiTaunt
+            ? preMoveAiTaunter   // taunted: only the taunter, or null (skip attack)
+            : enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange && !hasLineMountain(s.board, ai!.position, e.position));
           if (target) {
             const dmg = resolveBasicAttackDamage(s, ai, target);
             const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
+            if (newHp === Math.round(target.stats.hp)) {
+              s.pendingZeroHitPositions = [...(s.pendingZeroHitPositions ?? []), target.position];
+            }
             s.players = s.players.map(p => ({
               ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
                 ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
@@ -1251,10 +1435,16 @@ function executeAITurn(state: ExtState): ExtState {
         const postMoveTaunter = postMoveTaunt?.sourceIconId
           ? s.players[0].icons.find(ic => ic.id === postMoveTaunt.sourceIconId && ic.isAlive && hexDistance(ai!.position, ic.position) <= basicRange)
           : null;
-        const target = postMoveTaunter ?? enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
+        // If taunted, only attack the taunter — don't fall back to any other target
+        const target = postMoveTaunt
+          ? postMoveTaunter
+          : enemies().find(e => hexDistance(ai!.position, e.position) <= basicRange);
         if (target) {
           const dmg = resolveBasicAttackDamage(s, ai, target);
           const newHp = Math.round(Math.max(0, target.stats.hp - dmg));
+          if (newHp === Math.round(target.stats.hp)) {
+            s.pendingZeroHitPositions = [...(s.pendingZeroHitPositions ?? []), target.position];
+          }
           s.players = s.players.map(p => ({
             ...p, icons: p.icons.map(ic => ic.id !== target.id ? ic : {
               ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
@@ -1330,31 +1520,54 @@ function executeAITurn(state: ExtState): ExtState {
 }
 
 /** Apply all kill-triggered passives and item effects after a kill. */
-function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolean, victimIsNowDead: boolean): ExtState {
+function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolean, victimIsNowDead: boolean, victimId?: string): ExtState {
   if (!victimWasAlive || !victimIsNowDead) return s;
   const killer = s.players.flatMap(p => p.icons).find(i => i.id === killerId);
   if (!killer) return s;
+  const victim = victimId ? s.players.flatMap(p => p.icons).find(i => i.id === victimId) : undefined;
 
-  // Genghis Bloodlust: +12 Might stack, +1 mana (up to 3 stacks)
+  // Track kill blows for post-combat XP (player 0 kills of enemies only)
+  if (killer.playerId === 0) {
+    const kbMap: Record<string, number> = (s as any).playerKillBlows ?? {};
+    (s as any).playerKillBlows = { ...kbMap, [killer.name]: (kbMap[killer.name] ?? 0) + 1 };
+    // Log every enemy kill by name for achievement tracking (counts respawned kills too)
+    if (victim && victim.playerId === 1) {
+      (s as any).killedEnemyNameLog = [...((s as any).killedEnemyNameLog ?? []), victim.name];
+    }
+  }
+
+  // Genghis Bloodlust: +12 Might stack, +1 mana (cap 3, or uncapped with Eternal Steppe)
   if (killer.name.includes("Genghis")) {
     const stacks = killer.passiveStacks ?? 0;
-    if (stacks < 3) {
+    const hasEternalSteppe = killer.itemPassiveTags?.includes('sig_genghis_uncapped_bloodlust');
+    const levelCap = 2 + Math.floor((killer.level ?? 1) / 2);
+    const maxStacks = hasEternalSteppe ? 999 : levelCap;
+    if (stacks < maxStacks) {
       const newStacks = stacks + 1;
       s.players = s.players.map(p => ({
         ...p,
-        icons: p.icons.map(ic => ic.id !== killerId ? ic : { ...ic, passiveStacks: newStacks }),
+        icons: p.icons.map(ic => ic.id !== killerId ? ic : {
+          ...ic,
+          passiveStacks: newStacks,
+          // Eternal Steppe: each stack also grants +1 movement
+          stats: hasEternalSteppe ? { ...ic.stats, moveRange: ic.stats.moveRange + 1, movement: ic.stats.movement + 1 } : ic.stats,
+        }),
       }));
       const newMana = [...s.globalMana] as [number, number];
       newMana[killer.playerId] = Math.min(5, newMana[killer.playerId] + 1);
       s.globalMana = newMana;
-      pushLog(s, `${killer.name} Bloodlust! ${newStacks}/3 stacks (+12 Might, +1 Mana)`, killer.playerId);
+      const label = hasEternalSteppe ? `${newStacks} stacks (+12 Might, +1 Move, +1 Mana)` : `${newStacks}/${maxStacks} stacks (+12 Might, +1 Mana)`;
+      pushLog(s, `${killer.name} Bloodlust! ${label}`, killer.playerId);
     }
   }
 
-  // Teddy Bully!: each kill grants +10 Might (up to 3 stacks; excludes Terracotta/drone kills)
+  // Teddy Bully!: each kill grants +10 Might (cap 3). Bull Moose Heart: also +10 Defense per stack
   if (killer.name.includes("Teddy")) {
     const stacks = killer.passiveStacks ?? 0;
-    const isMinorUnit = killer.name.includes("Terracotta") || killer.name.includes("Drone") || killer.name.includes("drone");
+    const victimName = victim?.name ?? '';
+    const isMinorUnit = victimName.includes("Terracotta") || victimName.includes("Drone") || victimName.includes("drone") || victimName.includes("War Elephant");
+    const hasBullMoose = killer.itemPassiveTags?.includes('sig_teddy_bull_moose');
+    const bullyBonus = 8 + (killer.level ?? 1);
     if (stacks < 3 && !isMinorUnit) {
       const newStacks = stacks + 1;
       s.players = s.players.map(p => ({
@@ -1362,10 +1575,15 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
         icons: p.icons.map(ic => ic.id !== killerId ? ic : {
           ...ic,
           passiveStacks: newStacks,
-          stats: { ...ic.stats, might: ic.stats.might + 10 },
+          stats: {
+            ...ic.stats,
+            might: ic.stats.might + bullyBonus,
+            defense: hasBullMoose ? ic.stats.defense + 10 : ic.stats.defense,
+          },
         }),
       }));
-      pushLog(s, `${killer.name} Bully! ${newStacks}/3 stacks (+10 Might)`, killer.playerId);
+      const label = hasBullMoose ? `${newStacks}/3 stacks (+${bullyBonus} Might, +10 DEF)` : `${newStacks}/3 stacks (+${bullyBonus} Might)`;
+      pushLog(s, `${killer.name} Bully! ${label}`, killer.playerId);
     }
   }
 
@@ -1373,7 +1591,7 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
   const draw2Count = killer.itemPassiveTags?.filter(t => t === 'draw_2_on_kill').length ?? 0;
   const draw1Count = killer.itemPassiveTags?.filter(t => t === 'draw_on_kill').length ?? 0;
   if (draw2Count > 0 || draw1Count > 0) {
-    const drawCount = draw2Count * 1 + draw1Count * 1;
+    const drawCount = draw2Count * 2 + draw1Count * 1;
     const pid = killer.playerId as 0 | 1;
     const hand = (s as any).hands?.[pid];
     const deck = (s as any).decks?.[pid];
@@ -1402,16 +1620,13 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
     }));
   }
 
-  // Znyxorga's Eye (next_2_cards_free_on_kill): next N cards cost 0 mana (stacks)
-  const eye2Count = killer.itemPassiveTags?.filter(t => t === 'next_2_cards_free_on_kill').length ?? 0;
   const eye1Count = killer.itemPassiveTags?.filter(t => t === 'next_card_free_on_kill').length ?? 0;
-  if (eye2Count > 0 || eye1Count > 0) {
-    const freeCount = eye2Count * 2 + eye1Count * 1;
+  if (eye1Count > 0) {
     s.players = s.players.map(p => ({
       ...p,
-      icons: p.icons.map(ic => ic.id !== killerId ? ic : { ...ic, freeCardsLeft: (ic.freeCardsLeft ?? 0) + freeCount }),
+      icons: p.icons.map(ic => ic.id !== killerId ? ic : { ...ic, freeCardsLeft: (ic.freeCardsLeft ?? 0) + eye1Count }),
     }));
-    pushLog(s, `${killer.name} Znyxorga's Eye: next ${freeCount} card(s) are FREE!`, killer.playerId);
+    pushLog(s, `${killer.name} Znyxorga's Eye: next ${eye1Count} card(s) are FREE!`, killer.playerId);
   }
 
   // War Trophy (on_kill_might_power_plus3): permanently +2 Might and +2 Power per trophy
@@ -1451,6 +1666,11 @@ function applyDmgToIcon(ic: Icon, dmg: number, s: ExtState, logFn?: (msg: string
   // Void Armor: once per fight, survive a lethal hit at 1 HP
   if (rawHp <= 0 && !ic.voidArmorUsed && ic.itemPassiveTags?.includes('once_survive_lethal')) {
     if (logFn) logFn(`${ic.name} Void Armor: survived lethal blow at 1 HP!`);
+    return { ...ic, stats: { ...ic.stats, hp: 1 }, isAlive: true, voidArmorUsed: true, respawnTurns: ic.respawnTurns };
+  }
+  // Bull Moose Heart (Teddy): same survive-lethal pattern
+  if (rawHp <= 0 && !ic.voidArmorUsed && ic.itemPassiveTags?.includes('sig_teddy_bull_moose')) {
+    if (logFn) logFn(`${ic.name} Bull Moose Heart: refused to fall! (1 HP)`);
     return { ...ic, stats: { ...ic.stats, hp: 1 }, isAlive: true, voidArmorUsed: true, respawnTurns: ic.respawnTurns };
   }
   return {
@@ -1656,7 +1876,52 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'defeat' as any, winner: 1 } : prev);
     } else if (!p1Alive && ext.encounterObjective !== 'destroy_base') {
       // destroy_base: killing all enemies does NOT end the fight — you must destroy the base
-      setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
+
+      // Multi-phase boss: if phases remain, spawn the next wave instead of triggering victory
+      const remainingPhases = (ext as any).bossPhases as import('@/types/roguelike').EnemyTemplate[][] | undefined;
+      if (remainingPhases && remainingPhases.length > 0) {
+        setGameState(prev => {
+          if (prev.phase !== 'combat') return prev;
+          const phases = (prev as any).bossPhases as import('@/types/roguelike').EnemyTemplate[][];
+          if (!phases || phases.length === 0) {
+            return { ...prev, phase: 'victory' as any, winner: 0 };
+          }
+          const nextPhaseEnemies = phases[0];
+          const phasesLeft = phases.slice(1);
+          const scaleFactor: number = (prev as any).bossPhaseScaleFactor ?? 1.0;
+          const phaseNum: number = ((prev as any).currentBossPhase ?? 1) + 1;
+          const total: number = (prev as any).totalBossPhases ?? 4;
+
+          const newEnemyIcons = buildEnemyIconsFromEncounter(
+            { enemies: nextPhaseEnemies } as import('@/types/roguelike').EncounterDef,
+            scaleFactor,
+          );
+          const allIcons = [...prev.players[0].icons, ...newEnemyIcons];
+          const newSpeedQueue = initSpeedQueue(allIcons);
+
+          const enemyNames = nextPhaseEnemies.map((e: import('@/types/roguelike').EnemyTemplate) => e.name).join(' & ');
+          const phaseMsg = `⚡ PHASE ${phaseNum}/${total} — ${enemyNames} enter the arena!`;
+
+          return {
+            ...prev,
+            players: [
+              prev.players[0],
+              { ...prev.players[1], icons: newEnemyIcons },
+            ],
+            speedQueue: newSpeedQueue,
+            queueIndex: 0,
+            activePlayerId: 0 as const,
+            // Refill player mana for the new phase
+            globalMana: [prev.globalMaxMana[0], prev.globalMana[1]],
+            bossPhases: phasesLeft,
+            currentBossPhase: phaseNum,
+            aiIntents: [],
+            combatLog: [...((prev as any).combatLog ?? []), { message: phaseMsg, turn: prev.currentTurn }],
+          } as any;
+        });
+      } else {
+        setGameState(prev => prev.phase === 'combat' ? { ...prev, phase: 'victory' as any, winner: 0 } : prev);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1711,6 +1976,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           toast.error(getT().messages.outOfRange);
           return prev;
         }
+        // Mountains block line-of-sight for ranged attacks (adjacent attacks can always hit)
+        if (hexDistance(executor.position, coordinates) > 1 && hasLineMountain(state.board, executor.position, coordinates)) {
+          toast.error("Mountains block line of sight!");
+          return prev;
+        }
 
         const targetIcon = state.players.flatMap(p => p.icons).find(
           ic => ic.isAlive && ic.position.q === coordinates.q && ic.position.r === coordinates.r
@@ -1728,7 +1998,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           if (occupied) { toast.error(getT().messages.tileOccupied); return prev; }
 
           const dronePower = executor.stats.power;
-          const droneHp   = Math.round(dronePower * 1.8);
+          const codexHpBonus = executor.itemPassiveTags?.includes('sig_davinci_codex') ? 30 : 0;
+          const droneHp   = Math.round(dronePower * 1.8) + codexHpBonus;
           const droneMight = Math.round(dronePower * 1.2);
           const droneDef   = Math.round(dronePower * 0.6);
           const drone: Icon = {
@@ -1912,18 +2183,21 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           const isArcher = Math.random() < 0.5;
           const exStats = calcEffectiveStats(updated, executor);
           const terraKilnBonus = executor.itemPassiveTags?.includes('huang_terra_buff');
+          const hasJadeSeal = executor.itemPassiveTags?.includes('sig_huang_jade_seal');
+          const jadeSealMult = hasJadeSeal ? 1.2 : 1.0; // +20% stats with Jade Seal
+          const jadeSealTurns = hasJadeSeal ? 2 : 0;     // +2 turns duration
           const terracottaUnit: Icon = {
             id: `terracotta_${makeId()}`,
             name: isArcher ? "Terracotta Archer" : "Terracotta Warrior",
             role: isArcher ? "dps_ranged" : "dps_melee",
             stats: {
-              hp: 40 + (card.effect.summonHpBonus ?? 0) + (terraKilnBonus ? 20 : 0),
-              maxHp: 40 + (card.effect.summonHpBonus ?? 0) + (terraKilnBonus ? 20 : 0),
+              hp: Math.round((40 + (card.effect.summonHpBonus ?? 0) + (terraKilnBonus ? 20 : 0)) * jadeSealMult),
+              maxHp: Math.round((40 + (card.effect.summonHpBonus ?? 0) + (terraKilnBonus ? 20 : 0)) * jadeSealMult),
               moveRange: 2, speed: 4,
-              might: (isArcher ? Math.round(exStats.might * 1.5) : exStats.might) + (terraKilnBonus ? 10 : 0),
+              might: Math.round(((isArcher ? Math.round(exStats.might * 1.5) : exStats.might) + (terraKilnBonus ? 10 : 0)) * jadeSealMult),
               power: 0,
-              defense: exStats.defense,
-              movement: 0, mana: 0, maxMana: 0,  // 0 on spawn turn; reset to moveRange on next turn
+              defense: Math.round(exStats.defense * jadeSealMult),
+              movement: 0, mana: 0, maxMana: 0,
               attackRange: isArcher ? 2 : 1,
             },
             abilities: [], passive: "Terracotta",
@@ -1931,7 +2205,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             isAlive: true, respawnTurns: 0,
             cardUsedThisTurn: false, movedThisTurn: true,
             hasUltimate: false, ultimateUsed: true,
-            droneExpiresTurn: state.currentTurn + 2,
+            droneExpiresTurn: state.currentTurn + 2 + jadeSealTurns,
           };
           updated.players = updated.players.map(p =>
             p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, terracottaUnit] }
@@ -1972,17 +2246,20 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error(getT().messages.cantTeleport); return prev; }
           const cavStats = calcEffectiveStats(updated, executor);
           const cavKilnBonus = executor.itemPassiveTags?.includes('huang_terra_buff');
+          const cavJadeSeal = executor.itemPassiveTags?.includes('sig_huang_jade_seal');
+          const cavJM = cavJadeSeal ? 1.2 : 1.0;
+          const cavJT = cavJadeSeal ? 2 : 0;
           const cavalryUnit: Icon = {
             id: `terracotta_cav_${makeId()}`,
             name: "Terracotta Cavalry",
             role: "dps_melee",
             stats: {
-              hp: 60 + (cavKilnBonus ? 20 : 0), maxHp: 60 + (cavKilnBonus ? 20 : 0),
+              hp: Math.round((60 + (cavKilnBonus ? 20 : 0)) * cavJM), maxHp: Math.round((60 + (cavKilnBonus ? 20 : 0)) * cavJM),
               moveRange: 3, speed: 7,
-              might: Math.round(cavStats.might * 1.5) + (card.effect.cavalryMightBonus ?? 0) + (cavKilnBonus ? 10 : 0),
+              might: Math.round((Math.round(cavStats.might * 1.5) + (card.effect.cavalryMightBonus ?? 0) + (cavKilnBonus ? 10 : 0)) * cavJM),
               power: cavStats.power,
-              defense: Math.round(cavStats.defense * 1.5),
-              movement: 0, mana: 0, maxMana: 0,  // 0 on spawn turn; reset to moveRange on next turn
+              defense: Math.round(Math.round(cavStats.defense * 1.5) * cavJM),
+              movement: 0, mana: 0, maxMana: 0,
               attackRange: 1,
             },
             abilities: [], passive: "Terracotta",
@@ -1990,7 +2267,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             isAlive: true, respawnTurns: 0,
             cardUsedThisTurn: false, movedThisTurn: true,
             hasUltimate: false, ultimateUsed: true,
-            droneExpiresTurn: state.currentTurn + 2,
+            droneExpiresTurn: state.currentTurn + 2 + cavJT,
           };
           updated.players = updated.players.map(p =>
             p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, cavalryUnit] }
@@ -2156,11 +2433,31 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             updated.players = updated.players.map(p => ({
               ...p,
               icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-                ...ic, passiveStacks: Math.min(7, (ic.passiveStacks ?? 0) + 1),
+                ...ic, passiveStacks: Math.min(15, (ic.passiveStacks ?? 0) + 1),
               }),
             }));
-            const stacks = Math.min(7, (executor.passiveStacks ?? 0) + 1);
-            pushLog(updated, `${executor.name} Crescendo: ${stacks}/7 (+${stacks * 3} Power)`, executor.playerId);
+            const stacks = Math.min(15, (executor.passiveStacks ?? 0) + 1);
+            pushLog(updated, `${executor.name} Crescendo: ${stacks}/15 (+${stacks * 2} Power)`, executor.playerId);
+            // Resonant Crystal: Power×0.25 to all adjacent enemies after any Beethoven ability
+            if (executor.itemPassiveTags?.includes('beethoven_resonance_aoe')) {
+              const freshExec = updated.players.flatMap(p => p.icons).find(ic => ic.id === executorId) ?? executor;
+              const atkStats = calcEffectiveStats(updated, freshExec);
+              const adjacent = updated.players
+                .flatMap(p => p.icons)
+                .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= 1);
+              for (const adj of adjacent) {
+                const defStats = calcEffectiveStats(updated, adj);
+                const dmg = Math.max(0, Math.round(atkStats.power * 0.25 - defStats.defense));
+                if (dmg > 0) {
+                  const newHp = Math.max(0, adj.stats.hp - dmg);
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== adj.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 }),
+                  }));
+                }
+              }
+              if (adjacent.length > 0) pushLog(updated, `${executor.name} Resonant Crystal — resonance wave hits ${adjacent.length} adjacent enem${adjacent.length !== 1 ? 'ies' : 'y'}!`, executor.playerId);
+            }
           }
           updated.players = updated.players.map(p => ({
             ...p,
@@ -2316,7 +2613,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             .sort((a, b) => hexDistance(a.position, executor.position) - hexDistance(b.position, executor.position));
           if (enemies.length === 0) { toast.error(getT().messages.noEnemiesOnLine); return prev; }
           const atkStats = calcEffectiveStats(updated, executor);
-          // Each successive target takes 65% of the previous hit
+          // Each successive target takes 65% of the previous hit (no decay with Victory's Pennant)
+          const hasVictoryPennant = executor.itemPassiveTags?.includes('sig_nelson_no_decay');
           let mult = card.effect.powerMult ?? 1.0;
           for (const enemy of enemies) {
             const defStats = calcEffectiveStats(updated, enemy);
@@ -2328,9 +2626,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
               }),
             }));
-            updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0);
+            updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0, enemy.id);
             pushLog(updated, `${executor.name} Crossing the T hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
-            mult *= 0.65; // each subsequent target takes 65% of previous
+            if (!hasVictoryPennant) mult *= 0.65; // decay unless Victory's Pennant
           }
           if (card.manaCost > 0) {
             const pid = executor.playerId as 0 | 1;
@@ -2348,7 +2646,14 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
         // ── Hannibal: Alpine March — directed charge move, ignores terrain cost ─
         if (state.targetingMode?.abilityId === "charge_move") {
+          // Must be used before spending any movement
+          if (executor.movedThisTurn) {
+            toast.error("Alpine March must be used before moving!");
+            return prev;
+          }
           const HEX_DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+          const rotCW  = (dq: number, dr: number) => ({ q: -dr,     r: dq + dr });
+          const rotCCW = (dq: number, dr: number) => ({ q: dq + dr, r: -dq    });
           const rawDq = coordinates.q - executor.position.q;
           const rawDr = coordinates.r - executor.position.r;
           const chargeDir = HEX_DIRS.reduce((best, d) => {
@@ -2357,25 +2662,58 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           });
           const maxSteps = card.effect.chargeDist ?? 6;
           let currentPos = { ...executor.position };
+          const marchStats = calcEffectiveStats(updated, executor);
           for (let step = 0; step < maxSteps; step++) {
             const nextPos = { q: currentPos.q + chargeDir.q, r: currentPos.r + chargeDir.r };
             const nextTile = updated.board.find(t => t.coordinates.q === nextPos.q && t.coordinates.r === nextPos.r);
-            if (!nextTile) break; // off-map
-            // Stop if occupied (but can pass through all terrain types)
-            const occupied = updated.players.flatMap(p => p.icons).some(
-              ic => ic.isAlive && ic.position.q === nextPos.q && ic.position.r === nextPos.r
+            if (!nextTile || nextTile.terrain.effects.movementModifier === -999) break; // off-map or impassable mountain/lake
+            // Stop at friendly
+            const friendlyHere = updated.players.flatMap(p => p.icons).some(
+              ic => ic.isAlive && ic.playerId === executor.playerId && ic.position.q === nextPos.q && ic.position.r === nextPos.r
             );
-            if (occupied) break;
+            if (friendlyHere) break;
+            // Enemy in path — trample: deal damage + push sideways, then continue
+            const enemyHere = updated.players.flatMap(p => p.icons).find(
+              ic => ic.isAlive && ic.playerId !== executor.playerId && ic.position.q === nextPos.q && ic.position.r === nextPos.r
+            );
+            if (enemyHere) {
+              const defStats = calcEffectiveStats(updated, enemyHere);
+              const trampleMult = card.effect.chargeTrampleMult ?? 0.5;
+              const trampleDmg = Math.max(0, Math.floor(marchStats.might * trampleMult) - defStats.defense);
+              // Push sideways — try CW then CCW
+              const cwDir = rotCW(chargeDir.q, chargeDir.r);
+              const ccwDir = rotCCW(chargeDir.q, chargeDir.r);
+              const cwDest  = { q: nextPos.q + cwDir.q,  r: nextPos.r + cwDir.r  };
+              const ccwDest = { q: nextPos.q + ccwDir.q, r: nextPos.r + ccwDir.r };
+              const occupiedKeys = new Set(updated.players.flatMap(p => p.icons)
+                .filter(ic => ic.isAlive && ic.id !== enemyHere.id)
+                .map(ic => `${ic.position.q}:${ic.position.r}`));
+              const cwTileFree  = updated.board.some(t => t.coordinates.q === cwDest.q  && t.coordinates.r === cwDest.r  && t.terrain.effects.movementModifier !== -999) && !occupiedKeys.has(`${cwDest.q}:${cwDest.r}`);
+              const ccwTileFree = updated.board.some(t => t.coordinates.q === ccwDest.q && t.coordinates.r === ccwDest.r && t.terrain.effects.movementModifier !== -999) && !occupiedKeys.has(`${ccwDest.q}:${ccwDest.r}`);
+              const pushDest = cwTileFree ? cwDest : ccwTileFree ? ccwDest : null;
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => {
+                  if (ic.id !== enemyHere.id) return ic;
+                  const newHp = Math.max(0, ic.stats.hp - trampleDmg);
+                  if (newHp <= 0) return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
+                  return { ...ic, stats: { ...ic.stats, hp: newHp }, position: pushDest ?? ic.position };
+                }),
+              }));
+              pushLog(updated, `⚔ ${executor.name} trampled ${enemyHere.name} — ${trampleDmg} dmg${pushDest ? ', pushed aside' : ''}!`, executor.playerId);
+            }
             currentPos = nextPos;
           }
+          // Move Hannibal to final position and consume all remaining movement
           updated.players = updated.players.map(p => ({
             ...p,
             icons: p.icons.map(ic => ic.id !== executorId ? ic : {
               ...ic, position: currentPos, movedThisTurn: true, cardUsedThisTurn: true,
               cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1,
+              stats: { ...ic.stats, movement: 0 },
             }),
           }));
-          pushLog(updated, `${executor.name} Alpine March charged!`, executor.playerId);
+          pushLog(updated, `${executor.name} Alpine March — crossed the terrain!`, executor.playerId);
           if (card.manaCost > 0) {
             const pid = executor.playerId as 0 | 1;
             const nm = [...updated.globalMana] as [number, number];
@@ -2434,7 +2772,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   return { ...ic, position: drowned ? ic.position : dest, stats: { ...ic.stats, hp: Math.round(newHp) }, isAlive: newHp > 0 && !drowned, respawnTurns: (newHp <= 0 || drowned) ? 4 : ic.respawnTurns };
                 }),
               }));
-              updated = applyKillPassives(updated, executorId, enemyAtNext.isAlive, newHp <= 0);
+              updated = applyKillPassives(updated, executorId, enemyAtNext.isAlive, newHp <= 0, enemyAtNext.id);
               pushLog(updated, `${executor.name} Kiss Me Hardy hit ${enemyAtNext.name} for ${dmg.toFixed(0)} dmg, pushed sideways`, executor.playerId);
             }
             currentPos = nextPos;
@@ -2478,6 +2816,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           }
           const elephantHpBonus = executor.itemPassiveTags?.includes('hannibal_elephant_buff') ? 40 : 0;
           const elephantMightBonus = executor.itemPassiveTags?.includes('hannibal_elephant_buff') ? 20 : 0;
+          const hasCarthageOath = executor.itemPassiveTags?.includes('sig_hannibal_carthage');
           const elephant: Icon = {
             id: `elephant_${makeId()}`,
             name: "War Elephant",
@@ -2493,7 +2832,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             movedThisTurn: true,
             hasUltimate: false,
             ultimateUsed: true,
-            droneExpiresTurn: (updated as any).currentTurn + 2,
+            droneExpiresTurn: (updated as any).currentTurn + (hasCarthageOath ? 3 : 2),
           };
           updated.players = updated.players.map(p =>
             p.id !== executor.playerId ? p : { ...p, icons: [...p.icons, elephant] }
@@ -2519,7 +2858,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             ...p,
             icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
           }));
-          pushLog(updated, `${executor.name} summons a War Elephant (HP 120, Might 70, Def 20)! Lasts 2 turns.`, executor.playerId);
+          const elephantDur = hasCarthageOath ? 3 : 2;
+          pushLog(updated, `${executor.name} summons a War Elephant (HP 120, Might 70, Def 20)! Lasts ${elephantDur} turns.`, executor.playerId);
           updated = consumeCardFromHand(updated, card, executor.playerId);
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
@@ -2535,7 +2875,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           // Check for Cannae flanking bonus
           const allies = updated.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.playerId === executor.playerId && ic.id !== executorId);
           const isFlanked = allies.some(a => hexDistance(a.position, target.position) === 1);
-          const hitMult = (card.effect.chargeAndPullHitMult ?? 1.1) * (isFlanked ? 1.4 : 1.0);
+          const cannaeLvlMult = isFlanked ? (1.3 + 0.02 * (executor.level ?? 1)) : 1.0;
+          const hitMult = (card.effect.chargeAndPullHitMult ?? 1.1) * cannaeLvlMult;
           const primaryDmg = Math.max(0.1, atkStats.power * hitMult - defStats.defense);
           const primaryHp = Math.round(Math.max(0, target.stats.hp - primaryDmg));
           updated.players = updated.players.map(p => ({
@@ -2544,7 +2885,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               ...ic, stats: { ...ic.stats, hp: primaryHp }, isAlive: primaryHp > 0, respawnTurns: primaryHp > 0 ? ic.respawnTurns : 4,
             }),
           }));
-          updated = applyKillPassives(updated, executorId, target.isAlive, primaryHp <= 0);
+          updated = applyKillPassives(updated, executorId, target.isAlive, primaryHp <= 0, target.id);
           if (isFlanked) pushLog(updated, `${executor.name} Cannae — flanked! +40% dmg`, executor.playerId);
           pushLog(updated, `${executor.name} Double Envelopment: ${primaryDmg.toFixed(0)} dmg to ${target.name}`, executor.playerId);
           // AoE to adjacent enemies
@@ -2563,7 +2904,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ...ic, stats: { ...ic.stats, hp: adjHp }, isAlive: adjHp > 0, respawnTurns: adjHp > 0 ? ic.respawnTurns : 4,
               }),
             }));
-            updated = applyKillPassives(updated, executorId, adj.isAlive, adjHp <= 0);
+            updated = applyKillPassives(updated, executorId, adj.isAlive, adjHp <= 0, adj.id);
             pushLog(updated, `${executor.name} Double Envelopment AoE: ${adjDmg.toFixed(0)} to ${adj.name}`, executor.playerId);
           }
           if (card.manaCost > 0) {
@@ -2609,7 +2950,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
               }),
             }));
-            updated = applyKillPassives(updated, executorId, swapTarget.isAlive, newHp <= 0);
+            updated = applyKillPassives(updated, executorId, swapTarget.isAlive, newHp <= 0, swapTarget.id);
             pushLog(updated, `${executor.name} Cubist Mirror: swapped with ${swapTarget.name}, dealt ${dmg.toFixed(0)} dmg!`, executor.playerId);
           } else {
             pushLog(updated, `${executor.name} Cubist Mirror: swapped with ${swapTarget.name}!`, executor.playerId);
@@ -2641,11 +2982,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             turnsRemaining: card.effect.zoneDuration ?? 2,
           };
           updated = { ...updated, activeZones: [...(updated.activeZones ?? []), zone] } as ExtState;
-          // Mansa Treasury: ability cards cost 1 less mana (2 less with Mali Coffers)
+          // Mansa Treasury: ability cards cost 1 less mana; 2 less at level 6+ (or with Mali Coffers)
           const saltRoadDiscount = executor.name.includes("Mansa") && card.definitionId?.startsWith("mansa_")
-            ? (executor.itemPassiveTags?.includes('mansa_discount_2') ? 2 : 1)
+            ? (executor.itemPassiveTags?.includes('mansa_discount_2') || (executor.level ?? 1) >= 6 ? 2 : 1)
             : 0;
-          const effectiveSaltRoadCost = Math.max(0, card.manaCost - saltRoadDiscount);
+          const effectiveSaltRoadCost = Math.max(1, card.manaCost - saltRoadDiscount);
           if (effectiveSaltRoadCost > 0) {
             const pid = executor.playerId as 0 | 1;
             const nm = [...updated.globalMana] as [number, number];
@@ -2690,7 +3031,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
               }),
             }));
-            updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0);
+            updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, targetIcon.id);
             pushLog(updated, `${executor.name} ${card.name}: ${dmg.toFixed(0)} dmg to ${targetIcon.name}`, executor.playerId);
           }
 
@@ -2749,8 +3090,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   pushLog(updated, `${pushed.name} was knocked back by Spartan Shield!`, executor.playerId);
                 }
               }
-              // Stun for 1 visible turn (turnsRemaining:2 because debuffs tick at every turn-end)
-              const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
+              // Spartan Shield item: stun target for 1 turn
+              const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
@@ -2779,6 +3120,13 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         const computeCardDamage = (tgt: typeof targetIcon) => {
           const executorTile = state.board.find(t => t.coordinates.q === executor.position.q && t.coordinates.r === executor.position.r);
           const terrainMult = 1 + (executorTile ? (card.terrainBonus?.[executorTile.terrain.type] ?? 0) : 0);
+          // Berserker's Mark: +15% damage when executor is below 50% HP
+          const berserkerMult = executor.itemPassiveTags?.includes('berserker_mark') && executor.stats.hp < executor.stats.maxHp * 0.5 ? 1.15 : 1;
+          // Retribution: damage = (maxHp - currentHp) * retributionMult (ignores defense)
+          if (card.effect.retributionMult !== undefined) {
+            const missingHp = executor.stats.maxHp - executor.stats.hp;
+            return Math.max(0.1, missingHp * card.effect.retributionMult * terrainMult * berserkerMult);
+          }
           if (card.effect.damageType === 'atk') {
             if (card.effect.mightMult !== undefined) {
               const atkStats = calcEffectiveStats(updated, executor);
@@ -2786,26 +3134,26 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               let baseDmg = Math.max(0.1, atkStats.might * card.effect.mightMult * terrainMult - (defStats.defense ?? 0));
               // Carry a Bigger Stick: +20 flat Might damage bonus
               if (card.definitionId === 'teddy_big_stick' && executor.itemPassiveTags?.includes('teddy_big_stick_range2')) baseDmg += 20;
-              // Big Stick executeVsDebuffed: double damage if target is Stunned or Taunted
+              // Big Stick executeVsDebuffed: +50% bonus damage if target is Stunned or Taunted
               if (card.effect.executeVsDebuffed && tgt) {
                 const isDebuffed = (tgt.debuffs ?? []).some(d => d.type === 'stun' || d.type === 'taunted');
-                if (isDebuffed) baseDmg *= 2;
+                if (isDebuffed) baseDmg *= 1.5;
               }
-              return baseDmg;
+              return baseDmg * berserkerMult;
             }
             const baseAtk = resolveBasicAttackDamage(updated, executor, tgt ?? null);
-            return baseAtk;
+            return baseAtk * berserkerMult;
           }
           if (card.effect.powerMult !== undefined) {
             const atkStats = calcEffectiveStats(updated, executor);
             const defStats = tgt ? calcEffectiveStats(updated, tgt) : { defense: 0 };
             const raw = atkStats.power * card.effect.powerMult * terrainMult - defStats.defense;
-            return Math.max(0.1, raw);
+            return Math.max(0.1, raw) * berserkerMult;
           }
-          return Math.max(0.1, (card.effect.damage ?? 1) * terrainMult);
+          return Math.max(0.1, (card.effect.damage ?? 1) * terrainMult) * berserkerMult;
         };
 
-        if (card.effect.damage !== undefined || card.effect.powerMult !== undefined || card.effect.mightMult !== undefined) {
+        if (card.effect.damage !== undefined || card.effect.powerMult !== undefined || card.effect.mightMult !== undefined || card.effect.retributionMult !== undefined) {
           const isOwnBase =
             (executor.playerId === 0 && coordinates.q === -5 && coordinates.r === 4) ||
             (executor.playerId === 1 && coordinates.q === 5 && coordinates.r === -4);
@@ -2829,7 +3177,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
                 }),
               }));
-              updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0);
+              updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0, enemy.id);
               if (card.effect.debuffType && newHp > 0) {
                 // Blue Canvas: Guernica armor break lasts 3 player turns instead of 2
                 const debuffDuration = (card.effect.debuffDuration ?? 2) + (executor.itemPassiveTags?.includes('picasso_guernica_extend') ? 2 : 0);
@@ -2876,7 +3224,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               const dmg = Math.max(1, Math.round(atkStats.might * (card.effect.mightMult ?? 0.3) - defStats.defense));
               const newHp = Math.max(0, enemy.stats.hp - dmg);
               updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== enemy.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 }) }));
-              updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0);
+              updated = applyKillPassives(updated, executorId, enemy.isAlive, newHp <= 0, enemy.id);
               if (card.effect.debuffType && newHp > 0) {
                 const debuff: Debuff = { type: card.effect.debuffType, magnitude: card.effect.debuffMagnitude ?? 1, turnsRemaining: card.effect.debuffDuration ?? 1 };
                 updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== enemy.id ? ic : { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== debuff.type), debuff] }) }));
@@ -2925,7 +3273,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg.toFixed(0)} dmg${executeLabel}`, executor.playerId);
               // Khan's Seal: stun each hit enemy for 1 turn
               if (newEnemyHp > 0 && executor.itemPassiveTags?.includes('genghis_fury_stun')) {
-                const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
+                const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
                 updated.players = updated.players.map(p => ({
                   ...p,
                   icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
@@ -2935,6 +3283,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 pushLog(updated, `${enemy.name} STUNNED by Khan's Seal!`, executor.playerId);
               }
               // Schallwelle pushback: push each hit enemy along the wave direction
+              // Hitting an impassable tile or going off-board stuns for 1 turn (like ice collision)
               if (card.effect.pushback && newEnemyHp > 0) {
                 const DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
                 const dq = enemy.position.q - executor.position.q;
@@ -2942,6 +3291,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 const dir = DIRS.reduce((best, d) =>
                   (dq * d.q + dr * d.r) > (dq * best.q + dr * best.r) ? d : best
                 );
+                let slammedWall = false;
                 for (let step = 0; step < card.effect.pushback; step++) {
                   const pushed = updated.players.flatMap(p => p.icons).find(ic => ic.id === enemy.id);
                   if (!pushed || !pushed.isAlive) break;
@@ -2950,12 +3300,26 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   const isOccupied = updated.players.flatMap(p => p.icons).some(
                     ic => ic.id !== pushed.id && ic.isAlive && ic.position.q === dest.q && ic.position.r === dest.r
                   );
-                  if (!destTile || isOccupied) break;
+                  const isWall = !destTile || destTile.terrain.effects.movementModifier === -999;
+                  if (isWall) { slammedWall = true; break; }
+                  if (isOccupied) break;
                   updated.players = updated.players.map(p => ({
                     ...p, icons: p.icons.map(ic => ic.id !== pushed.id ? ic : { ...ic, position: dest }),
                   }));
                 }
-                pushLog(updated, `${enemy.name} pushed back by Schallwelle!`, executor.playerId);
+                if (slammedWall) {
+                  const wallStun: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+                      ...ic,
+                      debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), wallStun],
+                    }),
+                  }));
+                  pushLog(updated, `${enemy.name} slammed into an obstacle — STUNNED by Schallwelle!`, executor.playerId);
+                } else {
+                  pushLog(updated, `${enemy.name} pushed back by Schallwelle!`, executor.playerId);
+                }
               }
             }
             // Beethoven Crescendo passive
@@ -2963,11 +3327,31 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-                  ...ic, passiveStacks: Math.min(7, (ic.passiveStacks ?? 0) + 1),
+                  ...ic, passiveStacks: Math.min(15, (ic.passiveStacks ?? 0) + 1),
                 }),
               }));
-              const stacks = Math.min(7, (executor.passiveStacks ?? 0) + 1);
-              pushLog(updated, `${executor.name} Crescendo: ${stacks}/7 (+${stacks * 3} Power)`, executor.playerId);
+              const stacks = Math.min(15, (executor.passiveStacks ?? 0) + 1);
+              pushLog(updated, `${executor.name} Crescendo: ${stacks}/15 (+${stacks * 2} Power)`, executor.playerId);
+              // Resonant Crystal: Power×0.25 to all adjacent enemies after any Beethoven ability
+              if (executor.itemPassiveTags?.includes('beethoven_resonance_aoe')) {
+                const freshExec = updated.players.flatMap(p => p.icons).find(ic => ic.id === executorId) ?? executor;
+                const atkStats = calcEffectiveStats(updated, freshExec);
+                const adjacent = updated.players
+                  .flatMap(p => p.icons)
+                  .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= 1);
+                for (const adj of adjacent) {
+                  const defStats = calcEffectiveStats(updated, adj);
+                  const dmg = Math.max(0, Math.round(atkStats.power * 0.25 - defStats.defense));
+                  if (dmg > 0) {
+                    const newHp = Math.max(0, adj.stats.hp - dmg);
+                    updated.players = updated.players.map(p => ({
+                      ...p,
+                      icons: p.icons.map(ic => ic.id !== adj.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 }),
+                    }));
+                  }
+                }
+                if (adjacent.length > 0) pushLog(updated, `${executor.name} Resonant Crystal — resonance wave hits ${adjacent.length} adjacent enem${adjacent.length !== 1 ? 'ies' : 'y'}!`, executor.playerId);
+              }
             }
             updated.players = updated.players.map(p => ({
               ...p,
@@ -2996,11 +3380,12 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             let currentHp = targetIcon.stats.hp;
             for (let hit = 0; hit < multiHit; hit++) {
               let hitDmg = computeCardDamage(targetIcon);
-              // Hannibal Cannae: +40% if target is flanked (ally adjacent to target); +70% with Carthaginian Ring
+              // Hannibal Cannae: (30% + 2%×level) if target is flanked (ally adjacent to target); +70% with Carthaginian Ring
               if (executor.name.includes("Hannibal")) {
                 const allies = updated.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.playerId === executor.playerId && ic.id !== executorId);
                 if (allies.some(a => hexDistance(a.position, targetIcon.position) === 1)) {
-                  const cannaeMult = executor.itemPassiveTags?.includes('hannibal_cannae_70pct') ? 1.7 : 1.4;
+                  const has70 = executor.itemPassiveTags?.includes('hannibal_cannae_70pct') || executor.itemPassiveTags?.includes('sig_hannibal_carthage');
+                  const cannaeMult = has70 ? 1.7 : (1.3 + 0.02 * (executor.level ?? 1));
                   hitDmg = Math.round(hitDmg * cannaeMult);
                 }
               }
@@ -3023,7 +3408,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               }),
             }));
             if (survivedVoid) pushLog(updated, `${targetIcon.name} Void Armor: survived lethal blow at 1 HP!`, targetIcon.playerId);
-            updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0);
+            updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, targetIcon.id);
             const hitLabel = multiHit > 1 ? `${multiHit}×${(totalDmg/multiHit).toFixed(0)}` : totalDmg.toFixed(0);
             pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${hitLabel} dmg`, executor.playerId);
 
@@ -3043,7 +3428,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                     ...ic, stats: { ...ic.stats, hp: splashHp }, isAlive: splashHp > 0, respawnTurns: splashHp > 0 ? ic.respawnTurns : 4,
                   }),
                 }));
-                updated = applyKillPassives(updated, executorId, splashEnemy.isAlive, splashHp <= 0);
+                updated = applyKillPassives(updated, executorId, splashEnemy.isAlive, splashHp <= 0, splashEnemy.id);
                 pushLog(updated, `${executor.name} Trafalgar Square chain — ${splashEnemy.name} for ${splashDmg.toFixed(0)}!`, executor.playerId);
               }
             }
@@ -3112,7 +3497,22 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               }));
               pushLog(updated, `${targetIcon.name} is Bleeding — ${bleedDmg} HP/turn for ${card.effect.debuffDuration ?? 2} turns`, executor.playerId);
             }
-            // Grand Strategy (napoleon_barrage_splash): hit one additional adjacent enemy for 50% damage
+            // Retribution Bleed: if retributionBleed, apply bleed for 30% of damage dealt (2 turns)
+            if (card.effect.retributionBleed && newHp > 0) {
+              const retBleedDmg = Math.round(totalDmg * 0.3);
+              if (retBleedDmg > 0) {
+                const retBleedDebuff: Debuff = { type: 'bleed', magnitude: retBleedDmg, turnsRemaining: 2 };
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'bleed'), retBleedDebuff],
+                  }),
+                }));
+                pushLog(updated, `${targetIcon.name} is Bleeding from Retribution — ${retBleedDmg} HP/turn for 2 turns`, executor.playerId);
+              }
+            }
+            // Grand Strategy / Marshal's Baton: hit one adjacent enemy (50% dmg, or 100% with signature)
+            // Grand Strategy (rare): hit 1 adjacent enemy at 50%
             if (executor.itemPassiveTags?.includes('napoleon_barrage_splash') && card.definitionId?.includes('artillery_barrage')) {
               const splashTarget = updated.players.flatMap(p => p.icons)
                 .find(ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 1);
@@ -3120,9 +3520,22 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 const splashDmg = Math.round(finalDmg * 0.5);
                 const splashHp = Math.max(0, splashTarget.stats.hp - splashDmg);
                 updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== splashTarget.id ? ic : { ...ic, stats: { ...ic.stats, hp: splashHp }, isAlive: splashHp > 0, respawnTurns: splashHp > 0 ? ic.respawnTurns : 4 }) }));
-                updated = applyKillPassives(updated, executorId, splashTarget.isAlive, splashHp <= 0);
+                updated = applyKillPassives(updated, executorId, splashTarget.isAlive, splashHp <= 0, splashTarget.id);
                 pushLog(updated, `Grand Strategy: Artillery splash hit ${splashTarget.name} for ${splashDmg} dmg`, executor.playerId);
               }
+            }
+            // Marshal's Baton (sig): hit ALL enemies within 2 hexes at 30%
+            if (executor.itemPassiveTags?.includes('sig_napoleon_barrage_splash') && card.definitionId?.includes('artillery_barrage')) {
+              const sigSplashTargets = updated.players.flatMap(p => p.icons)
+                .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 2);
+              const sigDmg = Math.round(finalDmg * 0.3);
+              for (const st of sigSplashTargets) {
+                const stHp = Math.max(0, st.stats.hp - sigDmg);
+                updated.players = updated.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id !== st.id ? ic : { ...ic, stats: { ...ic.stats, hp: stHp }, isAlive: stHp > 0, respawnTurns: stHp > 0 ? ic.respawnTurns : 4 }) }));
+                updated = applyKillPassives(updated, executorId, st.isAlive, stHp <= 0, st.id);
+              }
+              if (sigSplashTargets.length > 0)
+                pushLog(updated, `Marshal's Baton: Artillery hit ${sigSplashTargets.length} additional enem${sigSplashTargets.length !== 1 ? 'ies' : 'y'} for ${sigDmg} dmg each`, executor.playerId);
             }
 
             // aoeRooted: apply Rooted to the primary target AND all adjacent enemies (THIS IS SPARTA!)
@@ -3252,10 +3665,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         return state;
       }
 
-      // Use selectedIcon as the active mover/caster; fall back to first alive on active player's team
+      // Use selectedIcon as the active mover/caster; fall back to first alive non-controlled on active player's team
       const me = state.players[state.activePlayerId]?.icons.find(
-        i => (i.id === state.selectedIcon || !state.selectedIcon) && i.isAlive
-      ) ?? state.players[state.activePlayerId]?.icons.find(i => i.isAlive);
+        i => (i.id === state.selectedIcon || !state.selectedIcon) && i.isAlive && !(i as any).terracottaControlled
+      ) ?? state.players[state.activePlayerId]?.icons.find(i => i.isAlive && !(i as any).terracottaControlled);
       if (!me) return prev;
 
       if (state.gameMode === "singleplayer" && me.playerId === 1) return prev;
@@ -3395,11 +3808,16 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               const allies = updated.players.flatMap(p => p.icons).filter(ic => ic.isAlive && ic.playerId === caster.playerId && ic.id !== caster.id);
               const isFlanked = allies.some(a => hexDistance(a.position, targetIcon.position) === 1);
               if (isFlanked) {
-                const cannaeMult = caster.itemPassiveTags?.includes('hannibal_cannae_70pct') ? 1.7 : 1.4;
+                const has70 = caster.itemPassiveTags?.includes('hannibal_cannae_70pct') || caster.itemPassiveTags?.includes('sig_hannibal_carthage');
+                const cannaeMult = has70 ? 1.7 : 1.4;
                 dmg = Math.round(dmg * cannaeMult);
-                const cannaeLabel = caster.itemPassiveTags?.includes('hannibal_cannae_70pct') ? '+70%' : '+40%';
+                const cannaeLabel = has70 ? '+70%' : '+40%';
                 pushLog(updated, `${caster.name} Cannae — flanked! ${cannaeLabel} dmg`, caster.playerId);
               }
+            }
+            // Berserker's Mark: +15% damage when below 50% HP
+            if (caster.itemPassiveTags?.includes('berserker_mark') && caster.stats.hp < caster.stats.maxHp * 0.5) {
+              dmg = Math.round(dmg * 1.15);
             }
             pushLog(updated, `${caster.name} basic-attacked ${targetIcon.name} for ${dmg.toFixed(0)} dmg`, caster.playerId);
 
@@ -3413,7 +3831,18 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             }));
             const updatedTarget = updated.players.flatMap(p => p.icons).find(i => i.id === targetIcon.id);
             const newBasicHp = updatedTarget?.stats.hp ?? 0;
-            updated = applyKillPassives(updated, caster.id, wasAlive, newBasicHp <= 0);
+            updated = applyKillPassives(updated, caster.id, wasAlive, newBasicHp <= 0, targetIcon.id);
+            // Thermopylae Stone: at 3 phalanx stacks, basic attacks taunt the target
+            if (caster.name.includes("Leonidas") && (caster.passiveStacks ?? 0) >= 3 && caster.itemPassiveTags?.includes('sig_leonidas_thermopylae') && newBasicHp > 0) {
+              const tauntDebuff: Debuff = { type: 'taunted' as any, magnitude: 0, turnsRemaining: 1, sourceIconId: caster.id };
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                  ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'taunted'), tauntDebuff],
+                }),
+              }));
+              pushLog(updated, `🪨 ${caster.name} Thermopylae Stone: ${targetIcon.name} is Taunted!`, caster.playerId);
+            }
           } else {
             if (isOwnBase) {
               toast.error(getT().messages.cantAttackOwnBase2);
@@ -3428,7 +3857,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               const enemyId = caster.playerId === 0 ? 1 : 0;
               updatedBaseHealth[enemyId] = Math.max(0, state.baseHealth[enemyId] - envDamage);
               pushLog(updated, `${caster.name} hit the enemy base for ${envDamage.toFixed(0)} dmg`, caster.playerId);
-              toast.success(`💥 Base hit! −${envDamage.toFixed(0)} HP → ${Math.max(0, state.baseHealth[enemyId] - envDamage).toFixed(0)} remaining`);
+              toast.success(`💥 Base hit! −${envDamage.toFixed(0)} HP → ${Math.max(0, state.baseHealth[enemyId] - envDamage).toFixed(0)} remaining`, { position: 'top-right' });
             } else {
               const campIndex = coordinates.q === 0 && coordinates.r === -4 ? 0 : coordinates.q === 0 && coordinates.r === 4 ? 1 : -1;
               if (campIndex !== -1 && caster.playerId !== 0) { return prev; }
@@ -3776,7 +4205,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const clicked = state.players.flatMap((p) => p.icons).find(
         (i) => i.isAlive && i.position.q === coordinates.q && i.position.r === coordinates.r
       );
-      if (clicked && clicked.playerId === state.activePlayerId) {
+      // Controlled enemies auto-act via AI — player cannot manually select/control them
+      if (clicked && clicked.playerId === state.activePlayerId && !(clicked as any).terracottaControlled) {
         return { ...state, selectedIcon: clicked.id };
       }
 
@@ -3883,8 +4313,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             }));
             pushLog(state, `${me.name} slides on ice!`, me.playerId);
           } else {
-            // Collision: take 5 damage and get stunned
-            const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
+            // Collision: take 5 damage and get stunned for 1 turn
+            const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
             state.players = state.players.map(p => ({
               ...p,
               icons: p.icons.map(ic => {
@@ -3909,10 +4339,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
   const useAbility = useCallback((abilityId: string) => {
     setGameState((prev) => {
-      // Use selectedIcon if set, else first alive on active player's team
+      // Use selectedIcon if set, else first alive non-controlled on active player's team
       const me = prev.players[prev.activePlayerId]?.icons.find(
-        i => (prev.selectedIcon ? i.id === prev.selectedIcon : true) && i.isAlive
-      ) ?? prev.players[prev.activePlayerId]?.icons.find(i => i.isAlive);
+        i => (prev.selectedIcon ? i.id === prev.selectedIcon : true) && i.isAlive && !(i as any).terracottaControlled
+      ) ?? prev.players[prev.activePlayerId]?.icons.find(i => i.isAlive && !(i as any).terracottaControlled);
       if (!me || me.cardUsedThisTurn) return prev;
       if (prev.gameMode === "singleplayer" && me.playerId === 1) return prev;
 
@@ -3930,15 +4360,28 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         return prev;
       }
 
-      return { ...prev, targetingMode: { abilityId, iconId: me.id, range: ability.range } };
+      // If a card is mid-targeting, cancel it: restore card to hand and refund mana
+      let cancelledState = prev;
+      if (prev.targetingMode?.cardRefund) {
+        const { card, manaRefund } = prev.targetingMode.cardRefund;
+        const pid = me.playerId;
+        cancelledState = {
+          ...prev,
+          hand: [...prev.hand, card],
+          globalMana: prev.globalMana.map((m, i) => i === pid ? m + manaRefund : m) as [number, number],
+          targetingMode: undefined,
+        };
+      }
+
+      return { ...cancelledState, targetingMode: { abilityId, iconId: me.id, range: ability.range } };
     });
   }, []);
 
   const basicAttack = useCallback(() => {
     setGameState((prev) => {
       const me = prev.players[prev.activePlayerId]?.icons.find(
-        i => (prev.selectedIcon ? i.id === prev.selectedIcon : true) && i.isAlive
-      ) ?? prev.players[prev.activePlayerId]?.icons.find(i => i.isAlive);
+        i => (prev.selectedIcon ? i.id === prev.selectedIcon : true) && i.isAlive && !(i as any).terracottaControlled
+      ) ?? prev.players[prev.activePlayerId]?.icons.find(i => i.isAlive && !(i as any).terracottaControlled);
       if (!me || me.cardUsedThisTurn) return prev;
       if (prev.gameMode === "singleplayer" && me.playerId === 1) return prev;
 
@@ -3950,7 +4393,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const onWater = ['lake', 'river'].includes(prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type ?? '');
       const isBlinded = me.debuffs?.some(d => d.type === 'blinded') ?? false;
       const range = isBlinded ? 1
-        : me.name.includes("Sun-sin") && onWater ? 3
+        : me.name.includes("Sun-sin") && onWater ? 2 + (me.stats.attackRange ?? 1)
         : (me.stats.attackRange ?? 1);
       return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
     });
@@ -4015,9 +4458,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const isStunned = ic.isAlive && ic.debuffs?.some(d => d.type === 'stun');
             if (isStunned) pushLog(prev as any, `${ic.name} is STUNNED — cannot act this turn!`, nextPlayer);
             const demoSkip = false;
-            // Sun-sin Turtle Ship: on water tile (lake or river), movement capped at 1
-            const sunsinOnRiver = ic.name.includes("Sun-sin") && ic.isAlive &&
-              ['lake', 'river'].includes(prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r)?.terrain.type ?? '');
+            // Sun-sin Turtle Ship: on lake tiles, movement capped at 1; river is full movement
+            const sunsinTileType = prev.board.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r)?.terrain.type ?? '';
+            const sunsinOnLake = ic.name.includes("Sun-sin") && ic.isAlive && sunsinTileType === 'lake';
+            const sunsinOnRiver = ic.name.includes("Sun-sin") && ic.isAlive && ['lake', 'river'].includes(sunsinTileType);
             const frozen = demoSkip || isStunned;
             // Freudenspur zone bonus at turn start — capped at +2 total, applies once to all chars in zone
             const zoneBonus = !frozen
@@ -4038,6 +4482,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const hardyCoatActive = ic.name.includes("Nelson") && ic.itemPassiveTags?.includes('nelson_hardy_coat') && (ic.passiveStacks ?? 0) > 0;
             const newPassiveStacks = hardyCoatActive ? (ic.passiveStacks! - 1) : ic.passiveStacks;
             if (hardyCoatActive) pushLog(prev as any, `🧥 ${ic.name} Hardy's Coat: +25 DEF (${ic.passiveStacks! - 1} turn${ic.passiveStacks! - 1 !== 1 ? 's' : ''} remaining)`, nextPlayer);
+            // Admiral's Turtle Helm: Sun-sin on water heals 10 HP/turn
+            const turtleHelmRegen = sunsinOnRiver && ic.itemPassiveTags?.includes('sig_sunsin_turtle_helm') ? 10 : 0;
+            if (turtleHelmRegen > 0) pushLog(prev as any, `🐢 ${ic.name} Turtle Helm: +${turtleHelmRegen} HP regen (water form)`, nextPlayer);
             return {
               ...ic,
               cardBuffAtk: 0,
@@ -4046,7 +4493,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               cardsUsedThisTurn: frozen ? 3 : 0,
               movedThisTurn: frozen ? true : false,
               passiveStacks: newPassiveStacks,
-              stats: { ...ic.stats, movement: sunsinOnRiver ? Math.min(1 + zoneBonus, finalMove + zoneBonus) : finalMove + zoneBonus },
+              stats: {
+                ...ic.stats,
+                hp: Math.min(ic.stats.maxHp, ic.stats.hp + turtleHelmRegen),
+                movement: sunsinOnLake ? Math.min(1 + zoneBonus, finalMove + zoneBonus) : finalMove + zoneBonus,
+              },
             };
           }
           return ic;
@@ -4194,11 +4645,11 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
       // ── Arena Events (single-player runs only, starting turn 3, ~35% chance per round) ──
       const extPrevArena = prev as ExtState;
-      // Carry previous event forward for 2 endTurn cycles so the banner persists through the AI turn
+      // Carry previous event forward for 4 endTurn cycles (≈2 full rounds) so the banner stays readable
       const prevArenaEvent = (extPrevArena as any).arenaEvent ?? null;
       const prevArenaEventAge: number = (extPrevArena as any).arenaEventAge ?? 0;
       let arenaEvent: import('@/types/game').ArenaEventDef | null =
-        (prevArenaEvent && prevArenaEventAge < 2) ? prevArenaEvent : null;
+        (prevArenaEvent && prevArenaEventAge < 4) ? prevArenaEvent : null;
       let arenaEventAge: number = arenaEvent ? prevArenaEventAge + 1 : 0;
       let gravityCrushSaved: Record<string, number> | undefined = (extPrevArena as any).gravityCrushSaved;
       let gravitySurgeSaved: Record<string, number> | undefined = (extPrevArena as any).gravitySurgeSaved;
@@ -4242,6 +4693,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }));
         adrenalineSaved = undefined;
       }
+      // Track which timed event just expired this endTurn cycle — prevent immediate re-roll of the same event
+      const justExpiredEventId = (prevArenaEvent && prevArenaEventAge >= 2) ? prevArenaEvent.id : null;
+
       if (extPrevArena.isRoguelikeRun && nextPlayer === 0 && newCurrentTurn >= 2) {
         // Tick down flood/fire countdowns and activate when they reach 0
         if (pendingFloodCountdown !== undefined && pendingFloodCountdown > 0) {
@@ -4308,7 +4762,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             if (e.id === 'forest_fire' && (forestFireIsActive || pendingFireCountdown !== undefined)) return false;
             if (e.id === 'forest_fire' && boardAfter.filter(t => t.terrain.type === 'forest').length === 0) return false;
             if (e.id === 'gravity_surge' && gravitySurgeSaved && Object.keys(gravitySurgeSaved).length > 0) return false;
+            if (e.id === 'gravity_crush' && gravityCrushSaved && Object.keys(gravityCrushSaved).length > 0) return false;
             if (e.id === 'adrenaline_cloud' && adrenalineSaved && Object.keys(adrenalineSaved).length > 0) return false;
+            // Don't re-roll an event that just expired this same round boundary
+            if (justExpiredEventId && e.id === justExpiredEventId) return false;
             // Laser Grid warning tiles must be visible during player's turn — only roll when AI ends turn
             if (e.id === 'laser_grid' && prev.activePlayerId !== 1) return false;
             // Scramble teleports onto flooded tiles = instant death — never while Alien Tide is active
@@ -4568,7 +5025,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           };
         });
         if (bombarded.length > 0) {
-          toast.error(`🔴 Enemy Base fires! ${bombarded.join(', ')}`);
+          toast.error(`🔴 Enemy Base fires! ${bombarded.join(', ')}`, { position: 'top-right' });
         }
       }
 
@@ -4594,7 +5051,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           };
         });
         if (turretHits.length > 0) {
-          toast.error(`🏰 Base Turrets fire! ${turretHits.join(', ')}`);
+          toast.error(`🏰 Base Turrets fire! ${turretHits.join(', ')}`, { position: 'top-right' });
         }
       }
 
@@ -4757,15 +5214,17 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           const currentStacks = ic.passiveStacks ?? 0;
           const newStacks = isAdjacentToAlly ? Math.min(3, currentStacks + 1) : 0;
           if (newStacks !== currentStacks) {
-            pushLog(prev as any, `${ic.name} Phalanx: ${newStacks} stack(s) (+${newStacks * 10} DEF)`, nextPlayer);
+            pushLog(prev as any, `${ic.name} Phalanx: ${newStacks} stack(s) (+${newStacks * (6 + (ic.level ?? 1))} DEF)`, nextPlayer);
           }
           return { ...ic, passiveStacks: newStacks };
         }),
       }));
 
-      // Napoleon Mitraille passive: at the start of Napoleon's turn, deal 5 pure damage to all enemies within range 2
+      // Napoleon Mitraille passive: at the start of Napoleon's turn, deal pure damage to all enemies within range 2
+      // Scales with level: 5 + 2 × (level − 1), so lvl 1 = 5, lvl 5 = 13, lvl 10 = 23
       const napoleonIcon = playersAfter.find(p => p.id === nextPlayer)?.icons.find(ic => ic.name.includes("Napoleon") && ic.isAlive);
       if (napoleonIcon) {
+        const mitrailleDmg = 5 + 2 * ((napoleonIcon.level ?? 1) - 1);
         const mitrailleHits: string[] = [];
         playersAfter = playersAfter.map(p => {
           if (p.id === napoleonIcon.playerId) return p;
@@ -4774,15 +5233,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             icons: p.icons.map(ic => {
               if (!ic.isAlive) return ic;
               if (hexDistance(ic.position, napoleonIcon.position) > 2) return ic;
-              const newHp = Math.max(0, ic.stats.hp - 5);
+              const newHp = Math.max(0, ic.stats.hp - mitrailleDmg);
               mitrailleHits.push(ic.name);
-              pushLog(prev as any, `🔫 ${napoleonIcon.name} Mitraille — ${ic.name} takes 5 damage!`, napoleonIcon.playerId);
+              pushLog(prev as any, `🔫 ${napoleonIcon.name} Mitraille — ${ic.name} takes ${mitrailleDmg} damage!`, napoleonIcon.playerId);
               return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 };
             }),
           };
         });
         if (mitrailleHits.length > 0) {
-          toast.error(`🔫 Mitraille! ${mitrailleHits.join(', ')} take 5 damage!`);
+          pushLog(prev as any, `🔫 Mitraille — ${mitrailleHits.join(', ')} take ${mitrailleDmg} damage!`, napoleonIcon.playerId);
         }
       }
 
@@ -4829,7 +5288,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               icons: p.icons.map(ic => {
                 if (!ic.isAlive || ic.playerId !== endPid) return ic;
                 if (Math.random() < 0.25) {
-                  const stunDebuff: Debuff = { type: 'stun', magnitude: 1, turnsRemaining: 2 };
+                  const stunDebuff: Debuff = { type: 'stun', magnitude: 1, turnsRemaining: 1 };
                   pushLog(prev as any, `☠ Dread: ${ic.name} is STUNNED next turn!`, endPid);
                   return { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), stunDebuff] };
                 }
@@ -4841,35 +5300,46 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               ...p,
               icons: p.icons.map(ic => {
                 if (ic.playerId !== endPid || !ic.isAlive) return ic;
-                const newHp = Math.max(0, ic.stats.hp - 10);
+                const newHp = Math.max(0, ic.stats.hp - 8);
                 return { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 };
               }),
             }));
-            pushLog(prev as any, `☠ Chains of Znyxorga: all characters take 10 damage!`, endPid);
+            pushLog(prev as any, `☠ Chains of Znyxorga: all characters take 8 damage!`, endPid);
           }
           // curse_burden: no end-of-turn penalty — pure deck pollution
           // curse_void_echo: handled below at NEXT player's turn-start (after hand draw)
         }
 
-        // Discard ending player's remaining hand
+        // Discard ending player's remaining hand (strip injected cavalry charge — not a deck card)
+        const handToDiscard = endHand.cards.filter(c => c.definitionId !== 'huang_cavalry_charge');
         hands[endPid] = { ...endHand, cards: [] };
-        decks[endPid] = { ...endDeck, discardPile: [...endDeck.discardPile, ...endHand.cards] };
+        decks[endPid] = { ...endDeck, discardPile: [...endDeck.discardPile, ...handToDiscard] };
 
-        // Da Vinci Tinkerer passive: draw +1 card if Da Vinci is alive and didn't use an exclusive ability
+        // Da Vinci Tinkerer passive: always draw +1; +1 extra if Combat Drone is alive
         const daVinciNextPlayer = playersAfter[nextPlayer]?.icons.find(
-          ic => ic.isAlive && ic.name.includes("Da Vinci") && !ic.abilityUsedThisTurn
+          ic => ic.isAlive && ic.name.includes("Da Vinci")
+        );
+        const droneAlive = (playersAfter[nextPlayer]?.icons ?? []).some(
+          ic => ic.isAlive && ic.name === "Combat Drone"
         );
         // Warlord's Grimoire (grimoire_early_surge): +2 draw and +2 mana on turns 2 and 3 only
         const hasGrimoire = playersAfter[nextPlayer]?.icons.some(
           ic => ic.isAlive && (ic.itemPassiveTags?.includes('grimoire_early_surge') || ic.itemPassiveTags?.includes('draw_plus_3'))
         );
-        const grimoireActive = hasGrimoire && newCurrentTurn >= 2 && newCurrentTurn <= 3;
+        const grimoireActive = hasGrimoire && newCurrentTurn >= 2 && newCurrentTurn <= 4;
         const grimoireBonus = grimoireActive ? 2 : 0;
         if (grimoireActive) {
           mana[nextPlayer] = Math.min(maxMana[nextPlayer] + 2, mana[nextPlayer] + 2);
           maxMana[nextPlayer] = Math.max(maxMana[nextPlayer], mana[nextPlayer]);
         }
-        const extraDraw = (daVinciNextPlayer ? 1 : 0) + grimoireBonus;
+        // Codex Atlanticus: +1 extra base draw (1→2 base; 2→3 with drone)
+        const codexBonus = daVinciNextPlayer?.itemPassiveTags?.includes('sig_davinci_codex') ? 1 : 0;
+        const daVinciDraw = daVinciNextPlayer ? (1 + codexBonus + (droneAlive ? 1 : 0)) : 0;
+        // Echo Stone: +1 draw per alive holder on the next player's team
+        const echoStoneCount = (playersAfter[nextPlayer]?.icons ?? []).filter(
+          ic => ic.isAlive && ic.itemPassiveTags?.includes('echo_stone_draw')
+        ).length;
+        const extraDraw = daVinciDraw + grimoireBonus + echoStoneCount;
 
         // Reset abilityUsedThisTurn for the next player AFTER Da Vinci check
         playersAfter = playersAfter.map((p, pid) =>
@@ -4882,7 +5352,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         // Draw fresh hand for next player (discard old, then draw)
         const startHand = hands[nextPlayer];
         const startDeck = decks[nextPlayer];
-        const deckWithOld = { ...startDeck, discardPile: [...startDeck.discardPile, ...startHand.cards] };
+        const oldHandToDiscard = startHand.cards.filter(c => c.definitionId !== 'huang_cavalry_charge');
+        const deckWithOld = { ...startDeck, discardPile: [...startDeck.discardPile, ...oldHandToDiscard] };
         const drawCount = startHand.maxSize + extraDraw;
         const { drawn, newDraw, newDiscard } = drawCards(deckWithOld.drawPile, deckWithOld.discardPile, drawCount);
         let finalDrawn = drawn;
@@ -5010,6 +5481,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         pendingFireStartTile,
         activeZones: updatedActiveZones,
         baseIntents,
+        overchargePlayerId: undefined,  // clear overcharge flag on turn end
         ...(hands && { hands }),
         ...(decks && { decks }),
         tutorialPlayerTurnIdx: newTutTurnIdx,
@@ -5059,6 +5531,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       toast.error('Decoys cannot play cards!');
       return prev;
     }
+    if ((executor as any).terracottaControlled) return prev; // controlled enemies act via AI
     if (executor.playerId !== state.activePlayerId) return prev;
     if (state.gameMode === "singleplayer" && executor.playerId === 1) return prev;
     if (executor.justRespawned) {
@@ -5073,7 +5546,10 @@ const playCard = useCallback((card: Card, executorId: string) => {
       toast.error(`${executor.name} is SILENCED and cannot use abilities!`);
       return prev;
     }
-    if ((executor.cardsUsedThisTurn ?? 0) >= 3) {
+    const cardLimit = executor.itemPassiveTags?.includes('cards_per_turn_unlimited')
+      ? Infinity
+      : 3 + (executor.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
+    if ((executor.cardsUsedThisTurn ?? 0) >= cardLimit) {
       toast.error(getT().messages.cardLimitReached);
       return prev;
     }
@@ -5081,7 +5557,9 @@ const playCard = useCallback((card: Card, executorId: string) => {
       toast.error(getT().messages.wrongCharacter.replace('{name}', card.exclusiveTo ?? ''));
       return prev;
     }
-    if ((state.globalMana[executor.playerId] ?? 0) < card.manaCost) {
+    // Overcharge bypass: if overcharge flag is set for this player, skip mana check (the card itself shouldn't be overcharge)
+    const overchargeBypass = (state as any).overchargePlayerId === executor.playerId && !card.effect.overcharge;
+    if (!overchargeBypass && (state.globalMana[executor.playerId] ?? 0) < card.manaCost) {
       toast.error(getT().messages.notEnoughMana);
       return prev;
     }
@@ -5101,6 +5579,13 @@ const playCard = useCallback((card: Card, executorId: string) => {
         toast.error("Terracotta units can only use Basic Attack cards!");
         return prev;
       }
+    }
+
+    // Rooted units cannot use movement / teleport abilities
+    const isMovementCard = !!(card.effect.teleport || card.effect.jump || card.effect.selfTeleportAnywhere);
+    if (isMovementCard && executor.debuffs?.some(d => d.type === 'rooted')) {
+      toast.error(`${executor.name} is ROOTED and cannot use movement abilities!`);
+      return prev;
     }
 
     // Vitruvian Guardian → drone placement targeting
@@ -5195,8 +5680,8 @@ const playCard = useCallback((card: Card, executorId: string) => {
           icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
             ...ic,
             stats: { ...ic.stats, hp: Math.round(Math.max(0, ic.stats.hp - dmg)) },
-            isAlive: ic.stats.hp - dmg > 0,
-            respawnTurns: ic.stats.hp - dmg > 0 ? ic.respawnTurns : 4,
+            isAlive: Math.round(Math.max(0, ic.stats.hp - dmg)) > 0,
+            respawnTurns: Math.round(Math.max(0, ic.stats.hp - dmg)) > 0 ? ic.respawnTurns : 4,
           }),
         }));
         pushLog(updated, `${executor.name} Broadside hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
@@ -5209,7 +5694,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       }
       updated.players = updated.players.map(p => ({
         ...p,
-        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true }),
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }),
       }));
       updated = consumeCardFromHand(updated, card, executor.playerId);
       return { ...updated };
@@ -5347,7 +5832,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
         ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= tauntRange
       );
       if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
-      const tauntDebuff: Debuff = { type: 'taunted', magnitude: 0, turnsRemaining: 4, sourceIconId: executorId };
+      const tauntDebuff: Debuff = { type: 'taunted', magnitude: 0, turnsRemaining: 2, sourceIconId: executorId };
       for (const enemy of enemies) {
         updated.players = updated.players.map(p => ({
           ...p,
@@ -5436,11 +5921,11 @@ const playCard = useCallback((card: Card, executorId: string) => {
       }));
       const buffDesc = powerBonusHajj > 0 ? ` +${powerBonusHajj} Power` : mightBonusHajj > 0 ? ` +${mightBonusHajj} Might` : '';
       pushLog(updated, `${executor.name} ${card.name} — allies healed ${Math.round(healPct * 100)}% HP${buffDesc}.`, executor.playerId);
-      // Mansa Treasury: ability cards cost 1 less mana (2 less with Mali Coffers)
+      // Mansa Treasury: ability cards cost 1 less mana; 2 less at level 6+ (or with Mali Coffers)
       const mansaDiscount = executor.name.includes("Mansa") && card.definitionId?.startsWith("mansa_")
-        ? (executor.itemPassiveTags?.includes('mansa_discount_2') ? 2 : 1)
+        ? (executor.itemPassiveTags?.includes('mansa_discount_2') || (executor.level ?? 1) >= 6 ? 2 : 1)
         : 0;
-      const effectiveCostHajj = Math.max(0, card.manaCost - mansaDiscount);
+      const effectiveCostHajj = Math.max(1, card.manaCost - mansaDiscount);
       if (effectiveCostHajj > 0) {
         const pid = executor.playerId as 0 | 1;
         const nm = [...updated.globalMana] as [number, number];
@@ -5459,9 +5944,9 @@ const playCard = useCallback((card: Card, executorId: string) => {
     if (card.effect.mansaBounty) {
       let updated = { ...state } as ExtState;
       const isUpgrade = card.effect.mansaBountyExtra === true;
-      // turnsRemaining:2 = 1 visible frozen turn (debuffs tick at every endTurn)
-      const allyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 2 };
-      const enemyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: isUpgrade ? 3 : 2 };
+      // Golden Stasis: freeze all units for 1 turn (upgraded: enemies frozen 2 turns)
+      const allyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
+      const enemyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: isUpgrade ? 2 : 1 };
       updated.players = updated.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
@@ -5478,7 +5963,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       const mansaDiscountBounty = executor.name.includes("Mansa") && card.definitionId?.startsWith("mansa_")
         ? (executor.itemPassiveTags?.includes('mansa_discount_2') ? 2 : 1)
         : 0;
-      const effectiveCostBounty = Math.max(0, card.manaCost - mansaDiscountBounty);
+      const effectiveCostBounty = Math.max(1, card.manaCost - mansaDiscountBounty);
       if (effectiveCostBounty > 0) {
         const pid = executor.playerId as 0 | 1;
         const nm = [...updated.globalMana] as [number, number];
@@ -5493,9 +5978,10 @@ const playCard = useCallback((card: Card, executorId: string) => {
       return { ...updated };
     }
 
-    // Damage / healing / single-target powerMult → enter targeting mode
+    // Damage / healing / single-target powerMult / retribution → enter targeting mode
     const needsTarget =
       card.effect.damage !== undefined ||
+      card.effect.retributionMult !== undefined ||
       ((card.effect.healing !== undefined || card.effect.healingMult !== undefined) && !card.effect.selfCast) ||
       (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget && !card.effect.randomTargets && !card.effect.coneTarget) ||
       (card.effect.debuffType !== undefined && !card.effect.allEnemiesInRange);
@@ -5650,7 +6136,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
           }),
         }));
         pushLog(updated, `${executor.name} ${card.name} hit ${enemy.name} for ${dmg} dmg (×${enemies.length})`, executor.playerId);
-        updated = applyKillPassives(updated, executorId, enemy.isAlive, enemy.stats.hp - dmg <= 0);
+        updated = applyKillPassives(updated, executorId, enemy.isAlive, enemy.stats.hp - dmg <= 0, enemy.id);
       }
       // falls through to mana deduction + consumeCard below
     } else if (card.effect.coneTarget) {
@@ -5677,7 +6163,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       );
       if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
       const stunDuration = (card.effect.debuffDuration ?? 2)
-        + (executor.itemPassiveTags?.includes('beethoven_gotterfunken_stun2') ? 2 : 0);
+        + (executor.itemPassiveTags?.includes('sig_beethoven_heiligenstadt') ? 1 : 0);
       const aoeDebuff: Debuff = {
         type: card.effect.debuffType,
         magnitude: card.effect.debuffMagnitude ?? 0,
@@ -5712,11 +6198,31 @@ const playCard = useCallback((card: Card, executorId: string) => {
         updated.players = updated.players.map(p => ({
           ...p,
           icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-            ...ic, passiveStacks: Math.min(7, (ic.passiveStacks ?? 0) + 1),
+            ...ic, passiveStacks: Math.min(15, (ic.passiveStacks ?? 0) + 1),
           }),
         }));
-        const stacks = Math.min(7, (executor.passiveStacks ?? 0) + 1);
-        pushLog(updated, `${executor.name} Crescendo: ${stacks}/7 (+${stacks * 3} Power)`, executor.playerId);
+        const stacks = Math.min(15, (executor.passiveStacks ?? 0) + 1);
+        pushLog(updated, `${executor.name} Crescendo: ${stacks}/15 (+${stacks * 2} Power)`, executor.playerId);
+        // Resonant Crystal: Power×0.25 to all adjacent enemies after any Beethoven ability
+        if (executor.itemPassiveTags?.includes('beethoven_resonance_aoe')) {
+          const freshExec = updated.players.flatMap(p => p.icons).find(ic => ic.id === executorId) ?? executor;
+          const atkStats = calcEffectiveStats(updated, freshExec);
+          const adjacent = updated.players
+            .flatMap(p => p.icons)
+            .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= 1);
+          for (const adj of adjacent) {
+            const defStats = calcEffectiveStats(updated, adj);
+            const dmg = Math.max(0, Math.round(atkStats.power * 0.25 - defStats.defense));
+            if (dmg > 0) {
+              const newHp = Math.max(0, adj.stats.hp - dmg);
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== adj.id ? ic : { ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4 }),
+              }));
+            }
+          }
+          if (adjacent.length > 0) pushLog(updated, `${executor.name} Resonant Crystal — resonance wave hits ${adjacent.length} adjacent enem${adjacent.length !== 1 ? 'ies' : 'y'}!`, executor.playerId);
+        }
       }
       // falls through to mana deduction + consumeCard below
     } else if (card.effect.randomTargets && card.effect.powerMult) {
@@ -5748,7 +6254,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
             respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
           }),
         }));
-        updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0);
+        updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, target.id);
         pushLog(updated, `${executor.name} ${card.name} hit ${target.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
       }
       // falls through to mana deduction + consumeCard below
@@ -5804,17 +6310,27 @@ const playCard = useCallback((card: Card, executorId: string) => {
       pushLog(updated, `${executor.name} Blood Price — sacrificed ${hpCost} HP, team gains +${card.effect.teamDmgFlat} Might & +${card.effect.teamPowerFlat} Power!`, executor.playerId);
       // falls through to mana deduction + consumeCard below
     }
+    else if (card.effect.overcharge) {
+      // Overcharge: set a flag so the next card played this turn by this player costs 0 mana
+      (updated as any).overchargePlayerId = executor.playerId;
+      pushLog(updated, `${executor.name} Overcharge — next card this turn is FREE!`, executor.playerId);
+      // falls through to mana deduction + consumeCard below
+    }
 
     // Deduct mana from global pool — check for free-card passives first
     const isExclusiveAbility = card.exclusiveTo !== null && card.type !== "buff" && card.type !== "movement";
     const execRefreshed = updated.players.flatMap(p => p.icons).find(i => i.id === executorId);
     const cardIsFreeDueToNextFree = execRefreshed?.nextCardFree === true || (execRefreshed?.freeCardsLeft ?? 0) > 0;
     const cardIsFreeDueToFirstAbility = isExclusiveAbility && execRefreshed?.itemPassiveTags?.includes('first_ability_free') && !execRefreshed?.firstAbilityUsed;
-    // Picasso Fractured Perspective: every 3rd card played THIS BATTLE is free (every 2nd with Cubist Lens)
+    // Picasso Fractured Perspective: every 3rd card played THIS BATTLE is free (every 2nd with Rose Period Canvas / Cubist Lens)
     const cardsPlayedSoFar = execRefreshed?.cardsPlayedThisBattle ?? 0;
-    const perspectiveMod = execRefreshed?.itemPassiveTags?.includes('picasso_perspective_2nd') ? 2 : 3;
+    const hasPerspective2nd = execRefreshed?.itemPassiveTags?.includes('picasso_perspective_2nd') || execRefreshed?.itemPassiveTags?.includes('sig_picasso_rose_period');
+    const perspectiveMod = (hasPerspective2nd || (execRefreshed?.level ?? 1) >= 7) ? 2 : 3;
     const cardIsFreeDueToPicasso = executor.name.includes("Picasso") && cardsPlayedSoFar > 0 && cardsPlayedSoFar % perspectiveMod === perspectiveMod - 1;
-    const effectiveCost = (cardIsFreeDueToNextFree || cardIsFreeDueToFirstAbility || cardIsFreeDueToPicasso) ? 0 : card.manaCost;
+    // Overcharge: if the flag is set for this player, this card is free — then clear the flag
+    const cardIsFreeDueToOvercharge = (updated as any).overchargePlayerId === executor.playerId && !card.effect.overcharge;
+    if (cardIsFreeDueToOvercharge) (updated as any).overchargePlayerId = undefined;
+    const effectiveCost = (cardIsFreeDueToNextFree || cardIsFreeDueToFirstAbility || cardIsFreeDueToPicasso || cardIsFreeDueToOvercharge) ? 0 : card.manaCost;
     if (effectiveCost > 0) {
       const pid = executor.playerId as 0 | 1;
       const newMana = [...updated.globalMana] as [number, number];
@@ -5824,6 +6340,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
     if (cardIsFreeDueToNextFree) pushLog(updated, `${executor.name} Znyxorga's Eye: card played FREE!`, executor.playerId);
     if (cardIsFreeDueToFirstAbility) pushLog(updated, `${executor.name} Gladiator's Brand: first ability FREE!`, executor.playerId);
     if (cardIsFreeDueToPicasso) pushLog(updated, `${executor.name} Fractured Perspective: card #${cardsPlayedSoFar + 1} FREE!`, executor.playerId);
+    if (cardIsFreeDueToOvercharge) pushLog(updated, `${executor.name} Overcharge: card played FREE!`, executor.playerId);
 
     // Mark executor as having used a card this turn; track count for 3-card limit (all card types count)
     updated.players = updated.players.map(p => ({
@@ -5914,7 +6431,8 @@ const startBattle = useCallback((
   isRoguelikeRun?: boolean,
   battleCount?: number,
   upgradedCardDefIds?: string[],
-  act?: 1 | 2 | 3,
+  act?: 1 | 2 | 3 | 4,
+  permanentManaBonus?: number,
 ) => {
   const sel = selectedCharactersRef.current;
   if (!sel || sel.length === 0) return;
@@ -5925,9 +6443,13 @@ const startBattle = useCallback((
       : sel;
     const p0Icons = buildIconsFromSelection(aliveSelected, runChars).filter(i => i.playerId === 0);
     // Player 1 icons — from encounter (roguelike) or mirror player (standard)
-    // Progressive difficulty: +3% per roguelike battle, capped at +60%
+    // Progressive difficulty: +3% per roguelike battle, capped at +60%.
+    // Act 4 breaks through the cap — enemies scale past 1.60× as the act progresses.
+    // +3% per fight past battleCount 18, capped at 1.90×.
     const scaleFactor = (isRoguelikeRun && battleCount != null)
-      ? Math.min(1.60, 1 + battleCount * 0.03)
+      ? act === 4
+        ? Math.min(1.75, 1.50 + Math.max(0, battleCount - 20) * 0.025)
+        : Math.min(1.50, 1 + battleCount * 0.025)
       : 1.0;
     const p1Icons = encounter
       ? buildEnemyIconsFromEncounter(encounter, scaleFactor)
@@ -5983,6 +6505,18 @@ const startBattle = useCallback((
       hand0 = { cards: scriptedCards, maxSize: hand0.maxSize };
       deck0 = { drawPile: [], discardPile: [] };
     }
+    // Da Vinci Tinkerer: apply +1 (or +2 with Codex) extra draw to the initial hand (turn 1)
+    // Drone can't be alive yet, so no +1 drone bonus here.
+    if (!handScript?.[0]) {
+      const daVinciStart = p0IconsFinal.find(ic => ic.name.includes("Da Vinci"));
+      if (daVinciStart) {
+        const codexBonus = daVinciStart.itemPassiveTags?.includes('sig_davinci_codex') ? 1 : 0;
+        const tinkererDraw = 1 + codexBonus;
+        const extraCards = deck0.drawPile.slice(0, tinkererDraw);
+        hand0 = { ...hand0, cards: [...hand0.cards, ...extraCards] };
+        deck0 = { ...deck0, drawPile: deck0.drawPile.slice(tinkererDraw) };
+      }
+    }
     // Use random map for roguelike battles; act determines biome theme (1=forest, 2=desert, 3=snow/ice)
     const rawBoard = mapSeed != null ? generateRandomBattleBoard(mapSeed, act ?? 1) : createInitialBoard();
     const rogueObjective = (encounter?.objective ?? 'defeat_all') as FightObjective;
@@ -5998,7 +6532,12 @@ const startBattle = useCallback((
           return tile;
         })
       : rawBoard;
-    const actBaseHp = isRoguelikeRun ? (act === 3 ? 400 : act === 2 ? 250 : 150) : 150;
+    const actBaseHp = isRoguelikeRun ? (act === 4 ? 450 : act === 3 ? 300 : act === 2 ? 200 : 150) : 150;
+    // Chrono Shard: +1 starting mana per holder at the start of the first turn of combat
+    const chronoShardCount = p0IconsFinal.filter(ic => ic.itemPassiveTags?.includes('chrono_shard_t1')).length;
+    const manaBonus = permanentManaBonus ?? 0;
+    const startMana: [number, number] = [5 + chronoShardCount + manaBonus, 5];
+    const startMaxMana: [number, number] = [5 + chronoShardCount + manaBonus, 5];
     return {
       currentTurn: 1,
       activePlayerId: 0 as const,
@@ -6009,8 +6548,8 @@ const startBattle = useCallback((
         { id: 1, name: gameMode === "singleplayer" ? "Znyxorgan AI" : "Player 2", icons: p1IconsFinal, color: "red",  isAI: gameMode === "singleplayer" },
       ],
       board,
-      globalMana:   [5, 5],
-      globalMaxMana:[5, 5],
+      globalMana:   startMana,
+      globalMaxMana: startMaxMana,
       turnTimer:    20,
       speedQueue,
       queueIndex:   0,
@@ -6035,6 +6574,13 @@ const startBattle = useCallback((
       isRoguelikeRun: isRoguelikeRun ?? false,
       tutorialHandScript: encounter?.tutorialHandScript,
       tutorialPlayerTurnIdx: 0,
+      playerKillBlows: {},
+      killedEnemyNameLog: [],
+      // Phased boss — populated only when the encounter has multiple phases
+      bossPhases: encounter?.phases ?? [],
+      currentBossPhase: 1,
+      bossPhaseScaleFactor: encounter?.phases?.length ? 1.8 : scaleFactor,
+      totalBossPhases: encounter?.phases ? encounter.phases.length + 1 : 1,
     } as ExtState;
   });
 }, [gameMode]);

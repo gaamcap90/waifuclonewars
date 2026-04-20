@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import HexTile from "./HexTile";
 import AIIntentBadge from "./AIIntentBadge";
 import AnimationLayer from "./AnimationLayer";
+import CloneDialogueBubble from "./CloneDialogueBubble";
+import type { ActiveDialogue } from "./CloneDialogueBubble";
 import { GameState, Coordinates, AIIntent } from "@/types/game";
 import { useRangeCalculation } from "./RangeIndicator";
 import { resolveBasicAttackDamage, resolveAbilityDamage } from "@/combat/resolver";
@@ -12,6 +14,14 @@ import { useT } from "@/i18n";
 import { getCharacterPortrait, getCharacterSprite } from "@/utils/portraits";
 import { AnimEvent } from "@/hooks/useAnimations";
 import { tileKey, reachableWithCosts } from "@/utils/movement";
+
+const _HEX_SZ = 50;
+function hexCenterPx(q: number, r: number, ox: number, oy: number) {
+  return {
+    x: _HEX_SZ * (1.5 * q) + ox + _HEX_SZ,
+    y: _HEX_SZ * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r) + oy + Math.sqrt(3) * _HEX_SZ / 2,
+  };
+}
 
 /** Snap any offset to the nearest axial hex-line and return the line hexes up to `range`. */
 function snapToLineHexes(from: Coordinates, to: Coordinates, range: number): Coordinates[] {
@@ -36,10 +46,11 @@ interface GameBoardProps {
   hoverPreviewRange?: number | null;
   hoverPreviewExecutorId?: string | null;
   externalIntentRange?: { iconId: string; range: number } | null;
+  activeDialogue?: ActiveDialogue | null;
 }
 
 
-const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], hoverPreviewRange, hoverPreviewExecutorId, externalIntentRange }) => {
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], hoverPreviewRange, hoverPreviewExecutorId, externalIntentRange, activeDialogue }) => {
   const { t } = useT();
 
   // ── Sprite animation tracking ─────────────────────────────────────────
@@ -121,7 +132,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const [hoveredIntentRange, setHoveredIntentRange] = useState<{ iconId: string; range: number } | null>(null);
   const [showCoordOverlay, setShowCoordOverlay] = useState(false);
   const [inspectedEnemyId, setInspectedEnemyId] = useState<string | null>(null);
-  const [debuffTip, setDebuffTip] = useState<{ type: string; turnsRemaining: number; x: number; y: number } | null>(null);
+  const [debuffTip, setDebuffTip] = useState<{ type: string; turnsRemaining: number; x: number; y: number; sourceName?: string } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
   // Dev overlay — Ctrl+D toggles (q,r) coordinate labels on every hex
@@ -298,6 +309,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         const label = isFlanked ? `💥 ${Math.round(dmg)} ⚔CANNAE` : `💥 ${Math.round(dmg)}`;
         return { q: hoveredCoords.q, r: hoveredCoords.r, text: label };
       }
+      if (card.effect.retributionMult !== undefined) {
+        const missingHp = executor.stats.maxHp - executor.stats.hp;
+        const dmg = Math.round(missingHp * card.effect.retributionMult);
+        return { q: hoveredCoords.q, r: hoveredCoords.r, text: `⚔ ${dmg}` };
+      }
       if (card.effect.damage) {
         return { q: hoveredCoords.q, r: hoveredCoords.r, text: `💥 ${card.effect.damage}` };
       }
@@ -375,6 +391,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         const isFlanked = allies.some(a => hexDistance(a.position, hoveredIcon.position) === 1);
         const hitMult = (card.effect.chargeAndPullHitMult ?? 1.1) * (isFlanked ? 1.4 : 1.0);
         const dmg = Math.max(0.1, atkStats.power * hitMult - (defStats.defense ?? 0));
+        return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
+      }
+      if (card.effect.retributionMult !== undefined) {
+        const missingHp = executor.stats.maxHp - executor.stats.hp;
+        const dmg = Math.round(missingHp * card.effect.retributionMult);
         return { iconId: hoveredIcon.id, previewHP: Math.max(0, hoveredIcon.stats.hp - dmg), isDamage: true };
       }
       if (card.effect.damage !== undefined) {
@@ -542,6 +563,28 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
   const movementRangeSet = useMemo(() => new Set(movementRange.map(c => tileKey(c.q, c.r))), [movementRange]);
   const attackRangeSet   = useMemo(() => new Set(attackRange.map(c => tileKey(c.q, c.r))),   [attackRange]);
   const abilityRangeSet  = useMemo(() => new Set(abilityRange.map(c => tileKey(c.q, c.r))),  [abilityRange]);
+
+  // Enemy intent arcs — computed only during player's turn, used for SVG overlay
+  const intentArcs = useMemo(() => {
+    if (gameState.activePlayerId !== 0) return [];
+    const aiIntents: AIIntent[] = (gameState as any).aiIntents ?? [];
+    const allIcons = gameState.players.flatMap(p => p.icons);
+    return aiIntents
+      .filter(intent => (intent.type === 'attack' || intent.type === 'ability') && intent.targetId)
+      .map(intent => {
+        const enemy  = allIcons.find(i => i.id === intent.iconId);
+        const target = allIcons.find(i => i.id === intent.targetId);
+        if (!enemy || !target) return null;
+        return {
+          from: hexCenterPx(enemy.position.q,  enemy.position.r,  offsetX, offsetY),
+          to:   hexCenterPx(target.position.q, target.position.r, offsetX, offsetY),
+          isAbility: intent.type === 'ability',
+          targetPos: target.position,
+        };
+      })
+      .filter(Boolean) as Array<{ from: {x:number,y:number}; to: {x:number,y:number}; isAbility: boolean; targetPos: {q:number,r:number} }>;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.activePlayerId, (gameState as any).aiIntents, gameState.players, offsetX, offsetY]);
 
   // Zone membership Sets — O(1) per-tile lookup, computed once per zone change
   const { moveZoneSet, manaZoneSet } = useMemo(() => {
@@ -1123,7 +1166,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
                     onClick={e => e.stopPropagation()}
                     onMouseEnter={e => {
                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                      setDebuffTip({ type: d.type, turnsRemaining: d.turnsRemaining, x: rect.left + rect.width / 2, y: rect.top - 6 });
+                      const sourceName = d.type === 'taunted' && d.sourceIconId
+                        ? gameState.players.flatMap(p => p.icons).find(ic => ic.id === d.sourceIconId)?.name
+                        : undefined;
+                      setDebuffTip({ type: d.type, turnsRemaining: d.turnsRemaining, x: rect.left + rect.width / 2, y: rect.top - 6, sourceName });
                     }}
                     onMouseLeave={() => setDebuffTip(null)}
                     style={{
@@ -1228,6 +1274,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 z-40">
               <AIIntentBadge
                 intents={tileIntents}
+                playerIcons={gameState.players[0].icons}
                 onHoverRange={(range) => setHoveredIntentRange(range ? { iconId: icon!.id, range } : null)}
               />
             </div>
@@ -1285,8 +1332,25 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPanOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    if (!isDragging) return;
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    const container = boardRef.current;
+    if (container) {
+      const vw = container.clientWidth;
+      const vh = container.clientHeight;
+      const boardScaledW = (boardBounds.maxX - boardBounds.minX) * FIXED_ZOOM;
+      const boardScaledH = (boardBounds.maxY - boardBounds.minY) * FIXED_ZOOM;
+      const limitX = Math.max(0, (boardScaledW - vw) / 2);
+      // Add card-hand panel height so the bottom row of hexes can be panned above it
+      const CARD_HAND_RESERVE = 170;
+      const limitY = Math.max(0, (boardScaledH - vh) / 2) + CARD_HAND_RESERVE;
+      setPanOffset({
+        x: Math.max(-limitX, Math.min(limitX, newX)),
+        y: Math.max(-limitY, Math.min(limitY, newY)),
+      });
+    } else {
+      setPanOffset({ x: newX, y: newY });
     }
   };
   const handleMouseUp = () => setIsDragging(false);
@@ -1409,20 +1473,26 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
         ].join(', '),
       }} />
 
-      {/* A: Crowd lights — torches, glowsticks, holo-screens scattered in stands */}
+      {/* A: Crowd lights — torches, glowsticks, holo-screens, now animated */}
       {([
-        [ 7, 38, 0], [ 7, 50, 1], [ 7, 62, 2],   // left stands
-        [93, 38, 1], [93, 50, 2], [93, 62, 0],   // right stands
-        [35,  6, 2], [50,  4, 0], [65,  6, 1],   // top stands
-        [35, 94, 0], [50, 96, 1], [65, 94, 2],   // bottom stands
-        [20, 18, 1], [80, 18, 0], [20, 82, 2], [80, 82, 1], // corners
-        [14, 34, 0], [86, 34, 2], [14, 66, 1], [86, 66, 0], // side fill
+        [ 7, 38, 0], [ 7, 50, 1], [ 7, 62, 2],
+        [93, 38, 1], [93, 50, 2], [93, 62, 0],
+        [35,  6, 2], [50,  4, 0], [65,  6, 1],
+        [35, 94, 0], [50, 96, 1], [65, 94, 2],
+        [20, 18, 1], [80, 18, 0], [20, 82, 2], [80, 82, 1],
+        [14, 34, 0], [86, 34, 2], [14, 66, 1], [86, 66, 0],
+        // Extra density — more lights to fill the stands
+        [12, 45, 2], [88, 55, 0], [42,  3, 1], [58,  5, 2],
+        [42, 97, 1], [58, 95, 0], [25, 12, 0], [75, 12, 2],
+        [25, 88, 1], [75, 88, 0], [10, 55, 1], [90, 45, 2],
       ] as [number, number, number][]).map(([l, t, type], i) => {
         const p = [
           { bg: 'rgba(255,200,80,0.95)',  sh: '0 0 7px rgba(255,178,55,0.92), 0 0 22px rgba(255,148,35,0.52)' },
           { bg: 'rgba(80,182,255,0.92)',  sh: '0 0 7px rgba(60,162,255,0.92), 0 0 22px rgba(38,118,255,0.52)' },
           { bg: 'rgba(255,85,168,0.92)',  sh: '0 0 7px rgba(255,62,145,0.92), 0 0 22px rgba(220,38,120,0.52)' },
         ][type];
+        const dur = 1.8 + (i % 5) * 0.6;  // 1.8–4.2s stagger
+        const delay = -(i * 0.37);
         return (
           <div key={i} className="absolute pointer-events-none z-[6]" style={{
             left: `${l}%`, top: `${t}%`,
@@ -1430,9 +1500,52 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             borderRadius: '50%',
             background: p.bg,
             boxShadow: p.sh,
+            animation: `anim-crowd-flicker ${dur}s ease-in-out ${delay}s infinite`,
           }} />
         );
       })}
+
+      {/* Crowd wave sweeps — bright bands that travel through the stands */}
+      <div className="absolute inset-0 pointer-events-none z-[5]" style={{
+        background: 'conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 340deg, rgba(80,200,255,0.08) 350deg, rgba(80,200,255,0.12) 355deg, transparent 360deg)',
+        animation: 'anim-crowd-wave 6s linear infinite',
+      }} />
+      <div className="absolute inset-0 pointer-events-none z-[5]" style={{
+        background: 'conic-gradient(from 180deg at 50% 50%, transparent 0deg, transparent 340deg, rgba(217,70,239,0.07) 350deg, rgba(217,70,239,0.10) 355deg, transparent 360deg)',
+        animation: 'anim-crowd-wave 8s linear infinite reverse',
+      }} />
+
+      {/* Holographic floating banners — alien text strips above the stands */}
+      {[
+        { l: '8%', t: '20%', w: 80, rot: -8, color: 'rgba(34,211,238,0.18)', delay: 0 },
+        { l: '82%', t: '22%', w: 70, rot: 6, color: 'rgba(217,70,239,0.16)', delay: -3 },
+        { l: '12%', t: '75%', w: 65, rot: 4, color: 'rgba(139,92,246,0.16)', delay: -6 },
+        { l: '78%', t: '78%', w: 75, rot: -5, color: 'rgba(250,200,60,0.14)', delay: -2 },
+      ].map((b, i) => (
+        <div key={`banner-${i}`} className="absolute pointer-events-none z-[6]" style={{
+          left: b.l, top: b.t,
+          width: b.w, height: 4,
+          background: `linear-gradient(90deg, transparent, ${b.color}, transparent)`,
+          transform: `rotate(${b.rot}deg)`,
+          borderRadius: 2,
+          boxShadow: `0 0 12px ${b.color}`,
+          animation: `anim-holo-banner 3.5s ease-in-out ${b.delay}s infinite`,
+        }} />
+      ))}
+
+      {/* Spotlight beams — sweeping from arena edges */}
+      <div className="absolute pointer-events-none z-[4]" style={{
+        left: '5%', top: '10%', width: 120, height: '80%',
+        background: 'linear-gradient(to right, rgba(80,200,255,0.06), transparent)',
+        transform: 'skewX(-5deg)',
+        animation: 'anim-spotlight-sweep 10s ease-in-out infinite',
+      }} />
+      <div className="absolute pointer-events-none z-[4]" style={{
+        right: '5%', top: '10%', width: 120, height: '80%',
+        background: 'linear-gradient(to left, rgba(217,70,239,0.05), transparent)',
+        transform: 'skewX(5deg)',
+        animation: 'anim-spotlight-sweep 12s ease-in-out infinite reverse',
+      }} />
 
       {/* ── Full arena image — single piece, parallaxes with board drag ── */}
       <div className="absolute pointer-events-none z-[5]" style={{
@@ -1491,6 +1604,70 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
             offsetX={offsetX}
             offsetY={offsetY}
           />
+          {/* Bezier targeting arc — executor hex → hovered hex */}
+          {(() => {
+            const ctm = cardTargetingMode;
+            const tm = gameState.targetingMode;
+            if (!hoveredCoords || (!ctm && !tm)) return null;
+            const executorId = ctm?.executorId ?? tm?.iconId;
+            if (!executorId) return null;
+            const executor = gameState.players.flatMap(p => p.icons).find(i => i.id === executorId);
+            if (!executor) return null;
+            if (executor.position.q === hoveredCoords.q && executor.position.r === hoveredCoords.r) return null;
+            const from = hexCenterPx(executor.position.q, executor.position.r, offsetX, offsetY);
+            const to   = hexCenterPx(hoveredCoords.q, hoveredCoords.r, offsetX, offsetY);
+            const cp   = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 55 };
+            const d    = `M ${from.x} ${from.y} Q ${cp.x} ${cp.y} ${to.x} ${to.y}`;
+            return (
+              <svg style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0, overflow: 'visible', pointerEvents: 'none', zIndex: 50 }}>
+                <defs>
+                  <filter id="tgt-glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <path d={d} fill="none" stroke="rgba(96,210,255,0.8)" strokeWidth="2.2"
+                  strokeDasharray="9 5" filter="url(#tgt-glow)"
+                  style={{ animation: 'targeting-march 0.65s linear infinite' }} />
+                <circle cx={to.x} cy={to.y} r={7} fill="rgba(96,210,255,0.25)"
+                  stroke="rgba(96,210,255,0.9)" strokeWidth="1.5" filter="url(#tgt-glow)" />
+              </svg>
+            );
+          })()}
+          {/* Enemy intent arcs — dashed lines from each enemy toward their planned target */}
+          {intentArcs.length > 0 && (
+            <svg style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0, overflow: 'visible', pointerEvents: 'none', zIndex: 48 }}>
+              <defs>
+                <filter id="intent-glow" x="-60%" y="-60%" width="220%" height="220%">
+                  <feGaussianBlur stdDeviation="2.5" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              {intentArcs.map((arc, i) => {
+                const cp = { x: (arc.from.x + arc.to.x) / 2, y: Math.min(arc.from.y, arc.to.y) - 42 };
+                const d  = `M ${arc.from.x} ${arc.from.y} Q ${cp.x} ${cp.y} ${arc.to.x} ${arc.to.y}`;
+                const stroke    = arc.isAbility ? 'rgba(249,115,22,0.82)' : 'rgba(239,68,68,0.75)';
+                const dashArray = arc.isAbility ? '10 4' : '6 4';
+                return (
+                  <g key={i} filter="url(#intent-glow)">
+                    <path d={d} fill="none" stroke={stroke} strokeWidth="1.8"
+                      strokeDasharray={dashArray}
+                      style={{ animation: 'intent-march 0.5s linear infinite' }} />
+                    <circle cx={arc.to.x} cy={arc.to.y} r={10} fill={arc.isAbility ? 'rgba(249,115,22,0.18)' : 'rgba(239,68,68,0.18)'}
+                      stroke={stroke} strokeWidth="1.5"
+                      style={{ animation: 'intent-pulse 1.2s ease-in-out infinite' }} />
+                  </g>
+                );
+              })}
+            </svg>
+          )}
+          {activeDialogue && (
+            <CloneDialogueBubble
+              dialogue={activeDialogue}
+              offsetX={offsetX}
+              offsetY={offsetY}
+            />
+          )}
         </div>
       </div>
 
@@ -1516,6 +1693,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHov
           <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 10, fontWeight: 700, color: '#e2e8f0', marginBottom: 1 }}>
             {((t.game as any).debuffNames?.[debuffTip.type] ?? debuffTip.type).toUpperCase()}
           </div>
+          {debuffTip.sourceName && (
+            <div style={{ fontSize: 9, color: '#fbbf24', marginBottom: 1 }}>
+              Taunted by: {debuffTip.sourceName}
+            </div>
+          )}
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}>
             {debuffTip.turnsRemaining} turn{debuffTip.turnsRemaining !== 1 ? 's' : ''} remaining
           </div>

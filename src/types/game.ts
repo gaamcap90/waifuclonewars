@@ -57,6 +57,7 @@ export interface Icon {
   enemyAbilityCooldowns?: Record<string, number>; // cooldown tracker for enemy boss abilities
   enemyAbilities?: import('@/types/roguelike').EnemyAbilityDef[]; // boss/elite ability definitions
   regens?: { amount: number; turnsRemaining: number }[]; // active regen buffs (Naval Repairs)
+  level?: number;               // character level (from RunState; used by level-scaling passives)
   itemPassiveTags?: string[];  // passive tags from all equipped items (populated at fight start)
   voidArmorUsed?: boolean;     // once_survive_lethal: used already this fight
   nextCardFree?: boolean;      // legacy free-card flag
@@ -178,10 +179,16 @@ export interface EffectValues {
   singleAllyBuff?: boolean;        // Buff a single target ally (future use)
   allyMightBonus?: number;         // Might bonus for singleAllyBuff
   allyPowerBonus?: number;         // Power bonus for singleAllyBuff
-  chargeMove?: boolean;            // Alpine March: directed charge in straight line (no damage, stops at unit/map edge)
+  chargeMove?: boolean;            // Alpine March: directed charge in straight line — must use before moving, consumes all movement
   chargeDist?: number;             // max hexes for charge move
+  chargeTrampleMult?: number;      // Alpine March+: damage mult for enemies trampled in path (default 0.5)
   mansaBounty?: boolean;           // Mansa's Bounty: Golden Stasis — freeze ALL units (both teams) for 1 turn
   mansaBountyExtra?: boolean;      // Bounty+: enemies stay frozen 2 turns while allies free after 1
+
+  // ── Overcharge / Retribution ──────────────────────────────────────────────
+  overcharge?: boolean;              // Overcharge: next card played this turn costs 0 mana
+  retributionMult?: number;          // Retribution: damage = (maxHp - hp) * retributionMult
+  retributionBleed?: boolean;        // Retribution+: also apply Bleed for 30% of damage dealt (2 turns)
 }
 
 export interface Zone {
@@ -276,6 +283,15 @@ export interface GameState {
   pendingFireCountdown?: number;    // Turns until Forest Fire activates (2 = 2 turns notice)
   pendingFireStartTile?: string;    // "q,r" key of tile that will catch fire (shown as warning on board)
   activeZones?: Zone[];             // Beethoven Freudenspur movement buff zones
+  playerKillBlows?: Record<string, number>; // display name → kill count (player 0 vs enemies only)
+  killedEnemyNameLog?: string[];            // every enemy name killed this fight (including respawned kills)
+  pendingZeroHitPositions?: {q:number, r:number}[]; // positions where an attack landed but dealt 0 HP damage (for "BLOCKED" VFX)
+
+  // ── Phased boss ──────────────────────────────────────────────────────────────
+  bossPhases?: import('@/types/roguelike').EnemyTemplate[][];  // remaining phases (shrinks as each phase is cleared)
+  currentBossPhase?: number;     // 1-indexed current phase number (1 = first wave)
+  bossPhaseScaleFactor?: number; // scale factor applied when spawning phase enemies
+  totalBossPhases?: number;      // total phase count for this encounter (for UI display)
 }
 
 export interface ArenaEventDef {
@@ -306,4 +322,5 @@ export interface AIIntent {
   damage?: number;
   healing?: number;
   turnsUntilReady?: number; // for upcoming_ability: countdown turns until ability fires
+  targetId?: string;    // which player icon is being targeted (for arc display)
 }

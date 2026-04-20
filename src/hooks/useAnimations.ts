@@ -13,7 +13,8 @@ export type AnimType =
   | 'aoe'
   | 'slash'
   | 'heal_ring'
-  | 'despawn';
+  | 'despawn'
+  | 'knockback';
 
 export interface AnimEvent {
   id: string;
@@ -40,6 +41,7 @@ const DEFAULT_DURATIONS: Record<AnimType, number> = {
   slash:       380,
   heal_ring:   750,
   despawn:     700,
+  knockback:   600,
 };
 
 let _counter = 0;

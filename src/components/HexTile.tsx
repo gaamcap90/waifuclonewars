@@ -46,7 +46,10 @@ const TERRAIN_MAP = USE_3D_TILES ? TERRAIN_MAP_3D : TERRAIN_MAP_FLAT;
 
 // Per-character sprite scale overrides (default 1.7)
 const SPRITE_SCALE_OVERRIDES: Record<string, number> = {
-  Genghis: 1.95,
+  Genghis:  1.95,
+  Huang:    1.6,
+  Teddy:    1.85,
+  Leonidas: 1.85,
 };
 
 interface HexTileProps {
@@ -401,6 +404,39 @@ function HexTile({
         }} />
       )}
 
+      {/* ── Mana crystal ambient pulse — pulsing ring on the strategic center tile ── */}
+      {tile.terrain.type === 'mana_crystal' && (
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 6 }}>
+          {/* Expanding ring */}
+          <div style={{
+            position: 'absolute',
+            top: '50%', left: '50%',
+            width: '70%', height: '70%',
+            borderRadius: '50%',
+            border: '2px solid rgba(139,92,246,0.8)',
+            boxShadow: '0 0 10px rgba(139,92,246,0.5), inset 0 0 8px rgba(139,92,246,0.2)',
+            animation: 'anim-mana-ring-pulse 2.2s ease-in-out infinite',
+          }} />
+          {/* Second ring, phase-offset */}
+          <div style={{
+            position: 'absolute',
+            top: '50%', left: '50%',
+            width: '45%', height: '45%',
+            borderRadius: '50%',
+            border: '1px solid rgba(34,211,238,0.5)',
+            animation: 'anim-mana-ring-pulse 2.2s ease-in-out 1.1s infinite',
+          }} />
+          {/* Core glow */}
+          <div style={{
+            position: 'absolute',
+            inset: '25%',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(34,211,238,0.1) 60%, transparent 100%)',
+            animation: 'anim-mana-core-glow 2.2s ease-in-out infinite',
+          }} />
+        </div>
+      )}
+
       {/* ── Character portrait — counter-rotated to face camera ── */}
       {icon && (
         <div
@@ -410,6 +446,11 @@ function HexTile({
         <div className="absolute inset-0" style={{ clipPath: `url(#${clipId})` }}>
           {iconPortrait ? (
             <>
+              {/* Idle float wrapper — bobs the entire sprite up/down; disabled while dead */}
+              <div className="absolute inset-0" style={iconIsSprite && activeSpriteAnim !== 'death' ? (() => {
+                const floatDelay = iconName ? `${(iconName.charCodeAt(0) % 8) * 0.35}s` : '0s';
+                return { animation: `anim-sprite-idle-float 2.8s ease-in-out ${floatDelay} infinite` };
+              })() : undefined}>
               {/* Scale wrapper */}
               <div className="absolute inset-0" style={iconIsSprite ? {
                 transform: `scale(${iconName ? (Object.entries(SPRITE_SCALE_OVERRIDES).find(([k]) => iconName.includes(k))?.[1] ?? 1.7) : 1.7})`,
@@ -446,6 +487,7 @@ function HexTile({
                   />
                 </div>
               </div>
+              </div>{/* /float wrapper */}
               {/* Dark vignette — lighter for sprites so minifig stays bright */}
               <div className="absolute inset-0" style={{
                 background: iconIsSprite

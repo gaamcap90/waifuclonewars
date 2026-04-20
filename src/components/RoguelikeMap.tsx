@@ -39,6 +39,9 @@ interface Props {
   onSettings?: () => void;
   onAllocateStat?: (characterId: CharacterId, stat: 'hp' | 'might' | 'power' | 'defense') => void;
   onUpgradeAbility?: (characterId: CharacterId, defId: string, isUltimate: boolean) => void;
+  onRoswellFound?: () => void;
+  fogOfWarTier?: 0 | 1 | 2 | 3 | 4;
+  hasExtraItemSlot?: boolean;
 }
 
 // ── Horizontal pure-SVG coordinate system ────────────────────────────────────
@@ -287,7 +290,7 @@ function LeftPanelCharCard({
       </div>
 
       {/* XP bar */}
-      {char.level < 6 ? (
+      {char.level < 8 ? (
         <div className="mb-2">
           <div className="flex justify-between mb-0.5">
             <span className="text-[9px] text-purple-600 font-orbitron font-bold">XP</span>
@@ -317,21 +320,29 @@ function LeftPanelCharCard({
       <div className="border-t border-slate-600/50 pt-2 mt-1">
         <p className="font-orbitron text-[8px] tracking-[0.35em] text-slate-500 mb-1.5 font-bold">INVENTORY</p>
         <div className="flex gap-1.5">
-          {char.items.map((item, i) => (
-            <div
-              key={i}
-              className="flex-1 h-9 rounded-lg border flex items-center justify-center text-sm"
-              style={{
-                background: item ? 'rgba(10,6,30,0.9)' : 'rgba(8,5,20,0.6)',
-                borderColor: item ? TIER_COLOR[item.tier] + '80' : 'rgba(80,55,130,0.40)',
-                boxShadow: item && itemTooltip?.item === item ? `0 0 12px ${TIER_COLOR[item.tier]}70` : item ? `0 0 6px ${TIER_COLOR[item.tier]}35` : 'inset 0 0 8px rgba(80,55,130,0.12)',
-              }}
-              onMouseEnter={item ? (e) => setItemTooltip({ item, rect: e.currentTarget.getBoundingClientRect() }) : undefined}
-              onMouseLeave={() => setItemTooltip(null)}
-            >
-              {item ? item.icon : <span className="text-slate-700 text-[10px]">—</span>}
-            </div>
-          ))}
+          {char.items.map((item, i) => {
+            const isSig = item?.isSignature;
+            const tc = item ? TIER_COLOR[item.tier] : '';
+            return (
+              <div
+                key={i}
+                className="flex-1 h-9 rounded-lg border flex items-center justify-center text-sm relative"
+                style={{
+                  background: isSig ? 'rgba(40,25,5,0.95)' : item ? 'rgba(10,6,30,0.9)' : 'rgba(8,5,20,0.6)',
+                  borderColor: isSig ? '#f59e0b' : item ? tc + '80' : 'rgba(80,55,130,0.40)',
+                  boxShadow: isSig ? `0 0 14px rgba(245,158,11,0.55), inset 0 0 8px rgba(245,158,11,0.15)`
+                    : item && itemTooltip?.item === item ? `0 0 12px ${tc}70`
+                    : item ? `0 0 6px ${tc}35`
+                    : 'inset 0 0 8px rgba(80,55,130,0.12)',
+                }}
+                onMouseEnter={item ? (e) => setItemTooltip({ item, rect: e.currentTarget.getBoundingClientRect() }) : undefined}
+                onMouseLeave={() => setItemTooltip(null)}
+              >
+                {item ? item.icon : <span className="text-slate-700 text-[10px]">—</span>}
+                {isSig && <span className="absolute -top-1 -right-1 text-[8px]" style={{ filter: 'drop-shadow(0 0 3px rgba(245,158,11,0.8))' }}>⭐</span>}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -341,9 +352,9 @@ function LeftPanelCharCard({
           className="pointer-events-none z-[9999]"
           style={{
             position: 'fixed',
-            left: itemTooltip.rect.left + itemTooltip.rect.width / 2,
-            top: itemTooltip.rect.top - 8,
-            transform: 'translate(-50%, -100%)',
+            left: Math.min(Math.max(itemTooltip.rect.left + itemTooltip.rect.width / 2, 125), (typeof window !== 'undefined' ? window.innerWidth : 1200) - 125),
+            top: itemTooltip.rect.top < 220 ? itemTooltip.rect.bottom + 8 : itemTooltip.rect.top - 8,
+            transform: itemTooltip.rect.top < 220 ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
             minWidth: 180,
             maxWidth: 240,
           }}
@@ -360,7 +371,7 @@ function LeftPanelCharCard({
               <span className="font-orbitron font-bold text-[12px] text-white">{itemTooltip.item.name}</span>
               <span className="ml-auto text-[9px] font-bold font-orbitron px-1.5 py-0.5 rounded"
                 style={{ color: TIER_COLOR[itemTooltip.item.tier], background: TIER_COLOR[itemTooltip.item.tier] + '18', border: `1px solid ${TIER_COLOR[itemTooltip.item.tier]}40` }}>
-                {itemTooltip.item.tier.toUpperCase()}
+                {itemTooltip.item.isSignature ? '⭐ SIGNATURE' : itemTooltip.item.tier.toUpperCase()}
               </span>
             </div>
             <p className="text-[11px] text-slate-300 leading-relaxed">{itemTooltip.item.description}</p>
@@ -492,10 +503,11 @@ function DeckOverlay({ deckIds, upgradedCardDefIds, onClose }: { deckIds: string
   );
 }
 
-function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
+function CharacterDetailOverlay({ char, onClose, onAllocateStat, hasExtraItemSlot = false }: {
   char: CharacterRunState;
   onClose: () => void;
   onAllocateStat?: (stat: 'hp' | 'might' | 'power' | 'defense') => void;
+  hasExtraItemSlot?: boolean;
 }) {
   const { t } = useT();
   const [hoveredItem, setHoveredItem] = useState<RunItem | null>(null);
@@ -566,7 +578,7 @@ function CharacterDetailOverlay({ char, onClose, onAllocateStat }: {
         </div>
         {/* Items */}
         <div>
-          <p className="font-orbitron text-[10px] text-slate-500 tracking-[0.3em] mb-3">{t.roguelike.itemSlots}</p>
+          <p className="font-orbitron text-[10px] text-slate-500 tracking-[0.3em] mb-3">{t.roguelike.itemSlots.replace('{n}', hasExtraItemSlot ? '7' : '6')}</p>
           <div className="flex gap-2 flex-wrap">
             {char.items.map((item, i) => (
               <div key={i}
@@ -771,7 +783,7 @@ function NodeTooltipPortal({
   );
 }
 
-export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onSettings, onAllocateStat, onUpgradeAbility }: Props) {
+export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onSettings, onAllocateStat, onUpgradeAbility, onRoswellFound, fogOfWarTier = 4, hasExtraItemSlot = false }: Props) {
   const { t } = useT();
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredInfo, setHoveredInfo] = useState<{ node: RunNode; sx: number; sy: number; isUnlocked: boolean } | null>(null);
@@ -818,8 +830,32 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
     if (ultChar) setAbilityUpgradeChar({ char: ultChar, isUltimate: true });
   }, [runState.characters, detailChar]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Roswell Easter Egg: 5% chance per map visit (seeded per battle), small 50s saucer in a corner ──
+  const roswellSeed = runState.seed + runState.completedNodeIds.length * 1337;
+  const showSaucer = !runState.isTutorialRun && (roswellSeed % 20 === 7); // ~5% per map visit
+  const saucerCornerIdx = roswellSeed % 4; // 0=TL 1=TR 2=BL 3=BR
+  const SAUCER_CORNERS = [
+    { cx: 58,           cy: 44           }, // top-left
+    { cx: SVG_W - 72,  cy: 44           }, // top-right
+    { cx: 58,           cy: SVG_H - 50  }, // bottom-left
+    { cx: SVG_W - 72,  cy: SVG_H - 50  }, // bottom-right
+  ];
+  const saucerPos = SAUCER_CORNERS[saucerCornerIdx];
+
   // Build a lookup for fast node position access
   const nodeById = new Map<string, RunNode>((map as RunNode[]).map(n => [n.id, n]));
+
+  // ── Fog of war ──────────────────────────────────────────────────────────────
+  // Rows ahead visible per tier: 1 / 2 / 4 / 6 / all
+  const FOG_ROWS_AHEAD = [1, 2, 4, 6, MAP_ROWS + 1] as const;
+  const fogRowsAhead = FOG_ROWS_AHEAD[fogOfWarTier];
+  // Default to 0 so new runs always show row 0 + row 1 (current + next)
+  const currentCompletedRow = (completedNodeIds as string[]).reduce(
+    (max, id) => Math.max(max, nodeById.get(id)?.row ?? -1), 0
+  );
+  const maxVisibleRow = currentCompletedRow + fogRowsAhead;
+  const isNodeFogged = (node: RunNode): boolean =>
+    fogOfWarTier < 4 && node.type !== 'boss' && node.row > maxVisibleRow;
 
   // Build connection paths with three visual states:
   //   'done'   — source was completed (solid cyan)
@@ -829,6 +865,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
     node.connections.map(cid => {
       const target = nodeById.get(cid);
       if (!target) return null;
+      if (isNodeFogged(node) || isNodeFogged(target)) return null;
       const srcDone     = completedNodeIds.includes(node.id);
       const srcUnlocked = unlockedNodeIds.includes(node.id);
       const state: 'done' | 'active' | 'locked' =
@@ -1117,6 +1154,9 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
                 const cx = floorX(node.row);
                 const cy = trackY(node.col);
                 const r = isBoss ? BOSS_R : NODE_R;
+                const inFog = isNodeFogged(node);
+
+                if (inFog) return <g key={node.id} />;
 
                 // Three opacity tiers — locked nodes are clearly visible now
                 const opacity = isDone ? 0.50 : isUnlocked ? 1.0 : 0.58;
@@ -1169,21 +1209,34 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
                       </>
                     )}
 
-                    {/* Glow halo — unlocked only */}
+                    {/* Glow halo — unlocked only, now breathing */}
                     {isUnlocked && !isDone && (
                       <polygon
                         points={hexPoints(cx, cy, r + (isHov ? 14 : 6))}
                         fill={meta.glow}
                         filter="url(#map-node-glow)"
                         opacity={isHov ? 0.80 : 0.35}
+                        style={{ animation: isHov ? 'none' : 'anim-map-node-breathe 2.5s ease-in-out infinite' }}
                       />
                     )}
 
-                    {/* Boss: subtle dim glow even when locked so it's always findable */}
+                    {/* Completed node shimmer — subtle energy ripple */}
+                    {isDone && (
+                      <polygon
+                        points={hexPoints(cx, cy, r + 3)}
+                        fill="none"
+                        stroke="rgba(34,211,238,0.30)"
+                        strokeWidth="1"
+                        style={{ animation: 'anim-map-done-shimmer 3s ease-in-out infinite' }}
+                      />
+                    )}
+
+                    {/* Boss: dim glow when locked — now with menacing throb */}
                     {isBoss && !isUnlocked && !isDone && (
                       <circle cx={cx} cy={cy} r={r + 10}
                         fill="rgba(244,63,94,0.18)"
                         filter="url(#map-node-glow)"
+                        style={{ animation: 'anim-map-boss-locked-throb 3s ease-in-out infinite' }}
                       />
                     )}
 
@@ -1285,6 +1338,30 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
                   </g>
                 );
               })}
+
+              {/* ── LAYER 5: Roswell Easter Egg — 5% chance per run ── */}
+              {showSaucer && (
+                <g
+                  transform={`translate(${saucerPos.cx}, ${saucerPos.cy})`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onRoswellFound?.()}
+                >
+                  {/* Green underlight glow */}
+                  <ellipse cx={0} cy={8} rx={40} ry={10} fill="rgba(0,255,100,0.12)" />
+                  {/* Saucer body */}
+                  <ellipse cx={0} cy={5} rx={36} ry={13} fill="#b8c8b8" stroke="#7a9a7a" strokeWidth="1.2" />
+                  {/* Equatorial rim ring */}
+                  <ellipse cx={0} cy={5} rx={36} ry={6} fill="none" stroke="rgba(100,200,120,0.55)" strokeWidth="2" />
+                  {/* Porthole lights */}
+                  <circle cx={-20} cy={5} r={2.8} fill="#00ee77" opacity="0.85" />
+                  <circle cx={0}   cy={3} r={2.8} fill="#00ee77" opacity="0.85" />
+                  <circle cx={20}  cy={5} r={2.8} fill="#00ee77" opacity="0.85" />
+                  {/* Dome */}
+                  <ellipse cx={0} cy={-5} rx={15} ry={11} fill="rgba(190,230,255,0.45)" stroke="rgba(160,210,255,0.75)" strokeWidth="1" />
+                  {/* Dome highlight */}
+                  <ellipse cx={-4} cy={-8} rx={5} ry={3} fill="rgba(255,255,255,0.28)" />
+                </g>
+              )}
             </svg>
 
             {/* Portal tooltip for hovered node */}
@@ -1308,6 +1385,7 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
         <CharacterDetailOverlay
           char={detailChar}
           onClose={() => setDetailChar(null)}
+          hasExtraItemSlot={hasExtraItemSlot}
           onAllocateStat={onAllocateStat ? (stat) => {
             onAllocateStat(detailChar.id as CharacterId, stat);
             const remaining = detailChar.pendingStatPoints - 1;

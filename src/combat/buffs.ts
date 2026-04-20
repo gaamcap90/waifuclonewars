@@ -36,14 +36,18 @@ export function calcEffectiveStats(state: GameState, icon: Icon) {
     might += (icon.passiveStacks ?? 0) * 12;
   }
 
-  // Beethoven Crescendo passive: +3 Power per exclusive ability played (stacks up to 8)
+  // Beethoven Crescendo passive: +2 Power per stack, max 15 (or +3 with Heiligenstadt Score)
   if (icon.name.includes("Beethoven") && (icon.passiveStacks ?? 0) > 0) {
-    power += (icon.passiveStacks ?? 0) * 3;
+    const perStack = icon.itemPassiveTags?.includes('sig_beethoven_heiligenstadt') ? 3 : 2;
+    power += (icon.passiveStacks ?? 0) * perStack;
   }
 
-  // Leonidas Phalanx passive: +10 Defense per adjacency stack (stacks up to 3)
+  // Leonidas Phalanx passive: (6 + level) Defense per adjacency stack (+ Thermopylae Stone: +5 Might per stack)
   if (icon.name.includes("Leonidas") && (icon.passiveStacks ?? 0) > 0) {
-    defense += (icon.passiveStacks ?? 0) * 10;
+    defense += (icon.passiveStacks ?? 0) * (6 + (icon.level ?? 1));
+    if (icon.itemPassiveTags?.includes('sig_leonidas_thermopylae')) {
+      might += (icon.passiveStacks ?? 0) * 5;
+    }
   }
 
   // 🏰 Base tile buff (+20% Might/Power/Defense on own base)

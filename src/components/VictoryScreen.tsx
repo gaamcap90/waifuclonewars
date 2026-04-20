@@ -147,6 +147,20 @@ const VictoryScreen = ({
         }}
       />
 
+      {/* Full-screen flash — fires the instant phase 2 hits */}
+      {phase >= 2 && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 55,
+            background: isVictory
+              ? 'radial-gradient(ellipse at center, rgba(255,255,255,0.55) 0%, rgba(34,211,238,0.25) 40%, transparent 70%)'
+              : 'radial-gradient(ellipse at center, rgba(239,68,68,0.45) 0%, transparent 60%)',
+            animation: 'anim-victory-flash 0.6s ease-out forwards',
+          }}
+        />
+      )}
+
       {/* Particle burst — both victory (bright) and defeat (red shards) */}
       {phase >= 2 && particles.map((p, i) => (
         <div

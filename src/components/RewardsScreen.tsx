@@ -69,7 +69,7 @@ function CharacterXPCard({ char, gainXp }: { char: CharacterRunState; gainXp: nu
           className={`w-10 h-10 rounded-full object-cover border border-slate-600/50 ${isDead ? 'grayscale' : ''}`} />
         <div className="flex-1 min-w-0">
           <p className="font-orbitron text-[11px] text-white">{char.displayName}</p>
-          <p className="text-[10px] text-purple-400">Level {char.level}</p>
+          <p className="text-[10px] text-purple-400">{t.rewards.levelLabel.replace('{n}', String(char.level))}</p>
         </div>
         {isDead && <span className="text-red-400 text-xs font-bold font-orbitron shrink-0">{t.rewards.fallen}</span>}
         {leveledUp && <span className="text-yellow-400 text-xs font-bold font-orbitron animate-pulse shrink-0">{t.rewards.levelUp}</span>}
@@ -119,7 +119,7 @@ function ItemAssignWidget({
           <p className="font-orbitron font-bold text-white text-base">{(t.items as Record<string, { name: string; description: string }>)[item.id]?.name ?? item.name}</p>
           {item.targetCharacter && (
             <p className="text-[10px] font-orbitron mt-0.5" style={{ color: TIER_COLOR[item.tier] }}>
-              {item.targetCharacter.toUpperCase()} ONLY
+              {t.rewards.characterOnly.replace('{name}', item.targetCharacter.toUpperCase())}
             </p>
           )}
           <p className="text-slate-300 text-[12px] mt-1 leading-relaxed">{(t.items as Record<string, { name: string; description: string }>)[item.id]?.description ?? item.description}</p>
@@ -132,6 +132,28 @@ function ItemAssignWidget({
           {t.rewards.alreadyCarries.replace('{names}', ineligibleOwner.map(c => c.displayName).join(', '))}
         </p>
       )}
+      {/* Warn when replacing an occupied slot — show stats of item being lost */}
+      {assignedTo !== null && assignedSlot !== null && (() => {
+        const targetChar = characters.find(c => c.id === assignedTo);
+        const slotItem = targetChar?.items[assignedSlot];
+        if (!slotItem) return null;
+        const b = slotItem.statBonus;
+        const statParts: string[] = [];
+        if (b?.hp)        statParts.push(`HP +${b.hp}`);
+        if (b?.might)     statParts.push(`Might +${b.might}`);
+        if (b?.power)     statParts.push(`Power +${b.power}`);
+        if (b?.defense)   statParts.push(`Def +${b.defense}`);
+        if (b?.moveRange) statParts.push(`Move +${b.moveRange}`);
+        return (
+          <div className="mb-3 p-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <p className="font-orbitron text-[10px] text-red-400 mb-1">⚠ Will replace: <span className="font-bold">{slotItem.name}</span></p>
+            {statParts.length > 0 && (
+              <p className="font-orbitron text-[9px]" style={{ color: 'rgba(239,68,68,0.6)' }}>Losing: {statParts.join(' · ')}</p>
+            )}
+            <p className="font-orbitron text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{slotItem.description}</p>
+          </div>
+        );
+      })()}
 
       {/* Character slot picker */}
       <p className="font-orbitron text-[10px] text-slate-500 mb-3">{t.rewards.equipTo}</p>
@@ -149,15 +171,13 @@ function ItemAssignWidget({
                 const isOccupied = !!slot;
                 return (
                   <button key={i}
-                    onClick={isOccupied ? undefined : () => onChange(c.id, i)}
-                    disabled={isOccupied}
-                    title={isOccupied ? `${slot!.name} (occupied)` : `Slot ${i + 1} — empty`}
-                    className="w-9 h-9 rounded-lg border text-sm flex items-center justify-center transition-all disabled:cursor-not-allowed"
+                    onClick={() => onChange(c.id, i)}
+                    title={isOccupied ? `Replace: ${slot!.name}` : t.rewards.slotEmpty.replace('{n}', String(i + 1))}
+                    className="w-9 h-9 rounded-lg border text-sm flex items-center justify-center transition-all relative"
                     style={{
                       background: isSelected ? 'rgba(34,211,238,0.22)' : isOccupied ? 'rgba(10,8,25,0.6)' : 'rgba(20,15,40,0.8)',
-                      borderColor: isSelected ? '#22d3ee' : isOccupied ? 'rgba(60,50,80,0.5)' : 'rgba(100,80,150,0.4)',
+                      borderColor: isSelected ? '#22d3ee' : isOccupied ? 'rgba(239,68,68,0.45)' : 'rgba(100,80,150,0.4)',
                       boxShadow: isSelected ? '0 0 12px rgba(34,211,238,0.5)' : 'none',
-                      opacity: isOccupied ? 0.55 : 1,
                     }}>
                     {slot ? slot.icon : '·'}
                   </button>
@@ -204,6 +224,7 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
   const displayXP = useRewardCountUp(xp);
 
   const [chosenCard, setChosenCard] = useState<string | null>(null);
+  const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
 
   // itemDrop assignment
   const [dropCharId, setDropCharId] = useState<CharacterId | null>(null);
@@ -281,17 +302,42 @@ export default function RewardsScreen({ runState, onCollect }: Props) {
             <div data-tut="reward_cards" className="grid grid-cols-3 gap-4">
               {cardChoices.map((card, idx) => {
                 const selected = chosenCard === card.definitionId;
+                const flipped = flippedCards.has(card.definitionId);
                 const exColor = card.exclusiveTo ? EXCLUSIVE_COLOR[card.exclusiveTo] ?? '#94a3b8' : null;
                 const tCard = (t.cards as Record<string, { name: string; description: string }>)[card.definitionId];
+                const isUltimate = card.rarity === 'ultimate';
+
+                if (!flipped) {
+                  return (
+                    <button key={card.definitionId}
+                      onClick={() => setFlippedCards(prev => { const next = new Set(prev); next.add(card.definitionId); return next; })}
+                      className="rounded-xl border p-4 flex flex-col items-center justify-center cursor-pointer"
+                      style={{
+                        background: 'rgba(4,2,18,0.92)',
+                        borderColor: 'rgba(80,50,140,0.45)',
+                        boxShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                        minHeight: 160,
+                        animation: `anim-reward-card-reveal 0.4s ease-out ${idx * 0.12}s both`,
+                      }}>
+                      <div style={{ fontSize: 28, opacity: 0.55, color: '#c4b5fd' }}>?</div>
+                      <div style={{
+                        marginTop: 8, fontSize: 9,
+                        fontFamily: 'var(--font-orbitron, monospace)',
+                        color: 'rgba(167,139,250,0.65)',
+                        letterSpacing: '0.12em',
+                      }}>REVEAL</div>
+                    </button>
+                  );
+                }
+
                 return (
                   <button key={card.definitionId}
                     onClick={() => setChosenCard(selected ? null : card.definitionId)}
-                    className="rounded-xl border p-4 text-left transition-all duration-150 flex flex-col"
+                    className={`rounded-xl border p-4 text-left transition-all duration-150 flex flex-col card-flip-reveal${isUltimate ? ' card-ult-flash' : ''}`}
                     style={{
                       background: selected ? 'rgba(34,211,238,0.09)' : 'rgba(2,4,14,0.80)',
                       borderColor: selected ? 'rgba(34,211,238,0.75)' : 'rgba(100,120,150,0.30)',
-                      boxShadow: selected ? '0 0 18px rgba(34,211,238,0.18)' : 'none',
-                      animation: `anim-reward-card-reveal 0.5s ease-out ${idx * 0.12}s both`,
+                      boxShadow: selected ? '0 0 18px rgba(34,211,238,0.18)' : undefined,
                     }}>
                     <div className="flex items-start justify-between mb-2">
                       <span className="text-2xl">{card.icon}</span>

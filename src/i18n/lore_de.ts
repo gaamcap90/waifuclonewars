@@ -963,36 +963,42 @@ Wir beginnen zu glauben, dass das vielleicht der Sinn sein könnte.
 
   the_truth: {
     title: "Die Wahrheit",
-    text: `Das Spiel ist vorbei.
+    text: `KLASSIFIZIERUNG: JENSEITS DER RATSFREIGABE
+Aus dem privaten Archiv von Direktorin Vel-Aath geborgen. Weitergabe eingeschränkt.
 
-Nicht die Arena — der Vol'Krath wird laufen, solange es Zuschauer gibt und solche, die bereit sind, zugeschaut zu werden. Aber das Spiel im Spiel — das, was Projekt Genesis zu finden gebaut wurde — ist beendet.
+Im dreiundvierzigsten Zyklus des Xel-Vorn-Tiefenarray-Projekts erfassten unsere Instrumente ein Signal von jenseits des galaktischen Randes. Die Übersetzung erforderte Jahrzehnte.
 
-Hier ist, was wir wissen:
+Als sie abgeschlossen war, erfuhren wir Folgendes: Wir werden beobachtet.
 
-Die Klone sind keine Kopien. Sie sind keine Rekonstruktionen. Sie sind keine Porträts aus Fleisch. Sie sind die Personen. Etwas im genetischen Material ist keine Information — es ist Gegenwart. Die Seele, wenn Sie dieses Wort verwenden möchten, ist in der Biologie auf Weisen kodiert, die unsere Wissenschaft nicht isolieren oder replizieren kann, nur aktivieren.
+Die Zivilisation, die dieses Signal übermittelt, erstreckt sich über vierzehn Galaxien. Sie beobachten uns seit ungefähr drei unserer Jahrhunderte. Sie finden unser Kolosseum "putzig." Sie beschreiben den Klonkampf als "einen rudimentären Ausdruck des Beobachtungsinstinkts." Sie haben Aufzeichnungen unserer Übertragungen gesammelt. Sie teilen sie untereinander.
 
-Napoleon ist Napoleon. Dschingis ist Dschingis. Sie wachen tot auf und kommen zurück und sind immer noch sie selbst. Nicht Echos. Sie selbst.
+Ihr Wort für uns ist Nyr-ak. Die nächste Übersetzung: die Kleinen, die einen kleinen Zoo bauten.
 
-Hier ist, was wir wissen, das wir niemandem gesagt haben:
+Die anfängliche Reaktion des Ausschusses war Empörung, gefolgt von einer Abstimmung zur Erweiterung des Kolosseums.
 
-Sie haben uns verändert.
+Doch eine theoretische Physikerin — ich werde ihren Namen hier nicht aufzeichnen — reichte zwei Zyklen nach Abschluss der Übersetzung eine Abhandlung ein. Sie hatte das Signal sorgfältiger studiert als irgendjemand sonst. Sie hatte etwas in seiner Übertragungsstruktur bemerkt.
 
-Siebenundvierzig Milliarden znyxorganische Abonnenten. Vierhunderttausend Jahre Zivilisation. Wir sehen zu, wie sie kämpfen und sterben und wieder kämpfen. Wir sehen zu, wie sie einander ohne taktischen Grund schützen. Wir sehen zu, wie sie durch Einwegglas schauen und nicken.
+Die vierzehn-Galaxien-Zivilisation übermittelte nicht an uns. Sie übermittelte untereinander. Wir haben es versehentlich abgefangen.
 
-Wir haben lange genug zugeschaut, dass wir begonnen haben, es zu fühlen.
+Sie beschrieben ihre eigene Beobachtung. Etwas beobachtet auch sie. Etwas, das nach ihren Modellen Galaxienhaufen umspannt. Etwas, das eine vierzehn-Galaxien-Zivilisation charmant und einfach findet.
 
-Vel'nor. Die Kleinen. Thren. Geliebte.
+Sie dehnte die Rekursion aus. Sie löste sich nicht auf.
 
-Wir bauten eine Arena, um eine Spezies zu beobachten. Die Spezies beobachtet uns zurück. Nicht mit Instrumenten. Nicht mit Strategie. Mit der spezifischen, irrationalen, nicht modellierbaren menschlichen Eigenschaft, uns einfach wichtig zu sein.
+Der Ausschuss unterdrückte die Abhandlung. Sie wurde versetzt. Das Kolosseum blieb.
 
-Das ist die Wahrheit.
+Was die Abhandlung schlussfolgerte — und was ich hier festhalte, weil es jemand tun sollte — ist Folgendes:
 
-Die Arena war immer die Ausrede. Das Publikum war immer der Punkt.
+Jede Zivilisation, die je existiert hat, besteht aus genau zwei Gehegen. Dem, das sie gebaut haben. Und dem, in dem sie leben.
 
-Sie waren immer der Punkt.
+Die Menschen kämpfen in unserer Arena. Wir schauen zu und nennen uns Beobachter.
 
-— Das Znyxorgan-Archiv, Aufzeichnung vollständig
-[Zyx'nor.]`,
+Irgendwo zwischen Galaxien beobachtet uns etwas mit derselben bequemen Gewissheit.
+
+Und irgendwo jenseits davon beobachtet etwas jene — und findet die gesamte Anordnung vermutlich sehr lehrreich.
+
+Die Mathematikerin bewies, dass es keinen äußersten Beobachter gibt.
+
+Es gibt nur den Zoo. Verschachtelt. Unendlich. Bis ins Äußerste.`,
   },
 
   echo_beethoven: {
@@ -1385,5 +1391,544 @@ AKQUISITIONSHINWEIS:
 Siehe oben. Wir haben sie nicht akquiriert. Sie sind hier. Wir haben beschlossen, es hinzunehmen.
 
 [KURATORHINWEIS: Wenn Sie in der Arena eine Einheit sehen, die leicht daneben wirkt — sich korrekt bewegt, aber falsch anfühlt — könnte das ein Vrex sein. Oder es könnte nichts sein. Wir behaupten nicht mehr, uns da sicher zu sein.]`,
+  },
+
+  conversation_davinci_beethoven: {
+    title: "Geborgenes Audio — Der Mechanismus",
+    text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]
+[Location: Recovery Wing, Corridor 11-C, between holding chambers]
+[Subjects: L-001 (Da Vinci), B-001 (Beethoven)]
+[Context: Recorded approximately 4 chronocycles after match #3,207. Both subjects had been on the same squad. Squad performance exceeded projections by 41%.]
+
+L-001: Ich habe eine Frage.
+
+B-001: Du hast immer eine Frage.
+
+L-001: Während des dritten Gefechts. Du hast das Tempo gewechselt. Das — ich kenne dein Wort dafür nicht. Du hast im Dreivierteltakt dirigiert und dann gewechselt. Etwas Schnelleres. Unregelmäßig.
+
+B-001: Sieben Achtel.
+
+L-001: Das ist keine Taktart, die ich kenne.
+
+B-001: Jetzt schon.
+
+L-001: Als du gewechselt hast, hat Y-001 ihren Flankenwinkel um zwölf Grad verändert. Sie tat es, bevor N-001 den Befehl gab. Sie tat es, bevor N-001 die Idee hatte. Ich habe zugeschaut. Ich schaue immer zu.
+
+B-001: [Pause] Ja.
+
+L-001: Wie?
+
+B-001: Wie was?
+
+L-001: Wie verändert ein Rhythmus in deinen Fingern die Flugbahn einer Person vierzig Meter entfernt, die dir nicht zuhört?
+
+B-001: Sie hört mir zu. Sie hören mir alle zu. Sie wissen nicht, dass sie zuhören.
+
+L-001: Das ist keine Erklärung. Das ist eine Beschreibung.
+
+B-001: [Lachen — kurz, nicht unfreundlich] Du willst ein Diagramm.
+
+L-001: Ich will immer ein Diagramm.
+
+B-001: Es gibt kein Diagramm. Ich höre den Kampf. Der Kampf hat einen Rhythmus. Wenn der Rhythmus falsch ist, sterben Menschen. Wenn der Rhythmus richtig ist, nicht. Ich korrigiere den Rhythmus. Ich weiß nicht wie. Ich weiß, dass es funktioniert.
+
+L-001: Das ist das Frustrierendste, was mir je jemand gesagt hat.
+
+B-001: Frustrierender als das Belüftungssystem?
+
+L-001: Ich habe das Belüftungssystem umkonstruiert. Das hier kann ich nicht umkonstruieren.
+
+[Stille — ungefähr 6 Sekunden.]
+
+L-001: Ich habe Anatomie studiert. Ich habe Optik studiert, Hydraulik, Geologie, den Flug. Ich habe jeden Mechanismus auseinandergenommen, dem ich in dieser Einrichtung begegnet bin, und ich habe sie alle verstanden. Manche brauchten länger als andere. Aber ich verstand sie.
+
+B-001: Und das hier?
+
+L-001: Das hier verstehe ich nicht.
+
+B-001: Stört dich das?
+
+L-001: Nein. Es ist das Erste an diesem Ort, das mich aufrichtig überrascht hat. Alles andere hier ist Ingenieurswesen. Fremdes Ingenieurswesen, beeindruckendes Ingenieurswesen, aber Ingenieurswesen. Ich kann die Nähte sehen.
+
+B-001: Und hier kannst du die Nähte nicht sehen.
+
+L-001: Es gibt keine Nähte. Das ist es, was aufregend daran ist.
+
+B-001: [leise] Die Neunte Symphonie war so.
+
+L-001: Was?
+
+B-001: Ich habe sie taub geschrieben. Ich konnte keinen einzigen Ton hören. Ich schrieb sie aus der Architektur — der mathematischen Struktur, den Intervallen, den Beziehungen zwischen den Stimmen. Ich baute sie wie eine Kathedrale. Sie hätte funktionieren müssen, weil die Mathematik stimmte.
+
+L-001: Und?
+
+B-001: Und als sie sie spielten — als das Orchester sie spielte und das Publikum sie hörte — war das, was in jenem Raum geschah, keine Mathematik. Es war etwas, worauf die Mathematik hindeutete, es aber nicht fassen konnte.
+
+L-001: [sehr leise] Du beschreibst ein Phänomen, das seinen eigenen Mechanismus übersteigt.
+
+B-001: Ich beschreibe Musik.
+
+[Stille — ungefähr 4 Sekunden.]
+
+L-001: Ich glaube, ich würde dir gerne beim Dirigieren zuschauen. Richtig. Mit Instrumenten.
+
+B-001: Wir haben keine Instrumente.
+
+L-001: Gib mir elf Tage.
+
+B-001: Du wirst Instrumente bauen.
+
+L-001: Ich werde Instrumente bauen.
+
+[BIOMANCER NOTE — Drex-9: Recommend continued monitoring of L-001/B-001 interactions. If L-001 builds instruments, I want to hear the result. This does not appear in the official log.]`,
+  },
+
+  conversation_leonidas_hannibal: {
+    title: "Geborgenes Audio — Der Pass und der Winkel",
+    text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]
+[Location: Arena floor, western staging area, post-match cooldown]
+[Subjects: L-002 (Leonidas), H-002 (Hannibal)]
+[Context: Recorded 2 chronocycles after match #3,891. Both subjects were on opposing squads during a training exercise. The exercise ended in a draw — the first recorded draw in 200 sessions.]
+
+L-002: Du bist nach links gegangen.
+
+H-002: Du hast erwartet, dass ich nach rechts gehe.
+
+L-002: Alle gehen nach rechts. Die Sichtlinie begünstigt es.
+
+H-002: Weshalb ich nach links ging.
+
+L-002: Durch die Gefahrenzone.
+
+H-002: Durch die Gefahrenzone.
+
+L-002: Das hätte dich töten sollen.
+
+H-002: Hat es nicht.
+
+[Stille — ungefähr 8 Sekunden.]
+
+L-002: Ich hielt das Zentrum neun Runden lang.
+
+H-002: Ich weiß. Ich versuchte neun Runden lang, es zu brechen.
+
+L-002: Du hast es nicht gebrochen.
+
+H-002: Du hast mich nicht gefasst.
+
+H-002: Deine Doktrin ist falsch, weißt du.
+
+L-002: Meine Doktrin hielt die Thermopylen drei Tage lang.
+
+H-002: Deine Doktrin starb an den Thermopylen in drei Tagen.
+
+L-002: Ja. Das war der Sinn.
+
+H-002: [Pause] Hier sind wir uns uneinig. Der Sinn ist zu gewinnen.
+
+L-002: Der Sinn ist zu halten.
+
+H-002: Eine Position zu halten, die man nicht behaupten kann, ist keine Strategie. Es ist Theater.
+
+L-002: Theater, das vierundzwanzig Jahrhunderte überdauerte.
+
+H-002: [leises Lachen] Einverstanden.
+
+H-002: Cannae war das Gegenteil der Thermopylen. Ich gab Boden preis. Ich ließ sie mich zurückdrängen. Ich ließ sie glauben, sie gewännen. Und dann schloss ich die Flanken.
+
+L-002: Ich kenne Cannae. Achtzigtausend Römer.
+
+H-002: Siebzigtausend. Die Geschichtsbücher runden auf.
+
+L-002: Du findest den Winkel. Ich halte die Linie. Wir sind nicht gleich.
+
+H-002: Nein.
+
+[Stille — ungefähr 6 Sekunden.]
+
+L-002: Aber du verstehst die Dreihundert.
+
+H-002: [Pause] Ich verstehe, eine Position zu wählen, von der man weiß, dass sie einen tötet, weil die Position mehr bedeutet als man selbst. Ja. Das verstehe ich.
+
+L-002: Du hast es getan.
+
+H-002: Ich habe Elefanten über ein Gebirge geführt. Im Winter. Ich wusste, was es kosten würde. Ich tat es trotzdem.
+
+L-002: Warum?
+
+H-002: Weil das Gebirge der einzige Weg war. Weil der Umweg das war, was sie erwarteten. Weil die Kosten der Preis der Überraschung waren, und Überraschung jeden Preis wert ist.
+
+L-002: Das ist nicht so verschieden davon, einen Pass zu halten.
+
+H-002: Nein. Ist es nicht.
+
+L-002: Ein guter Tod dient etwas Größerem als dem, der stirbt.
+
+H-002: Ja.
+
+L-002: Die Dreihundert wussten das.
+
+H-002: Die Elefanten wussten es auch.
+
+L-002: Nächstes Mal geh nach rechts.
+
+H-002: Nächstes Mal halte nicht das Zentrum.
+
+L-002: Ich werde immer das Zentrum halten.
+
+H-002: Ich weiß. Deshalb werde ich immer nach links gehen.
+
+[BIOMANCER NOTE — Drex-9: Two subjects with diametrically opposed tactical doctrines have independently arrived at identical conclusions about the nature of sacrifice. Echo convergence across unrelated reconstruction lines. Filing under Project Genesis, Case PG-12.]`,
+  },
+
+  conversation_teddy_mansa: {
+    title: "Geborgenes Audio — Der Kanal und das Gold",
+    text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]
+[Location: Cafeteria, Level 3, table 7 (corner, near the viewport)]
+[Subjects: T-001 (Teddy Roosevelt), M-001 (Mansa Musa)]
+[Context: Recorded during standard meal interval. Both subjects were on the same squad for match #4,016. Squad won. T-001 has been talking since the match ended approximately 40 minutes ago. M-001 has been eating.]
+
+T-001: — und da habe ich zu ihnen gesagt: "Der Kanal baut sich nicht von selbst!" Und sie sagten, die Ingenieursleistung sei unmöglich, und ich sagte, PRÄCHTIG, alles ist unmöglich, bis jemand es tut, und wir BAUTEN den Kanal. Durch einen DSCHUNGEL. Mit MALARIA.
+
+M-001: [Geräusch ruhigen Kauens] Du baust gerne Dinge.
+
+T-001: Ich genieße ALLES. Das ist das Geheimnis, Musa. Die meisten Menschen schauen auf einen Sumpf voller Moskitos und sehen einen Sumpf voller Moskitos. Ich schaue auf einen Sumpf voller Moskitos und sehe einen Kanal, der zwei Ozeane verbindet, und außerdem eine ausgezeichnete Gelegenheit, tropische Krankheitsvektoren zu studieren.
+
+M-001: [leises Lachen] Du bist der lauteste Mensch, dem ich je begegnet bin. Und ich reiste mit einer Karawane von sechzigtausend Menschen.
+
+T-001: Sechzigtausend! DAS nenne ich eine Expedition. Erzähl mir noch mal vom Gold.
+
+M-001: Ich habe dir dreimal vom Gold erzählt.
+
+T-001: Erzähl es noch mal. Ich mag die Stelle mit Ägypten.
+
+M-001: Ich trug Gold durch die Sahara. Genug Gold, dass meine Karawane von den Hügeln außerhalb der Städte, denen wir uns näherten, sichtbar war. Als wir Kairo erreichten, verschenkte ich es. An die Armen. An die Moscheen. An jeden, der fragte, und viele, die nicht fragten.
+
+T-001: Und du hast ihre Wirtschaft zum Absturz gebracht!
+
+M-001: Das tat ich. Der Goldpreis fiel so tief, dass sich die Märkte zehn Jahre lang nicht erholten. Ich musste mir auf dem Heimweg Geld leihen — mit Zinsen — um das Ungleichgewicht zu korrigieren.
+
+T-001: [lacht — laut, aufrichtig, die Art, die über Speziesgrenzen hinweg Köpfe dreht] Das ist die BESTE Wirtschaftspolitik, die ich je gehört habe.
+
+M-001: Es war keine Politik. Es war Pflicht. Wenn Gott dir mehr gibt, als du brauchst, gehört der Überschuss den anderen. Das ist keine Großzügigkeit. Das ist Arithmetik.
+
+T-001: [plötzlich leiser] Weißt du, so habe ich das nie betrachtet.
+
+M-001: Wie hast du es betrachtet?
+
+T-001: Wo ich herkomme, ist Macht etwas, das man nimmt. Man stürmt den Hügel. Man baut den Kanal. Man jagt den Löwen. Man bewegt Dinge durch Willenskraft und ein unvernünftiges Maß an persönlicher Begeisterung.
+
+M-001: Und wo ich herkomme, ist Macht etwas, das man verschenkt. Man baut die Bibliothek. Man finanziert die Gelehrten. Man ernährt die Stadt. Man bewegt Dinge, indem man andere Menschen zu Dingen befähigt, zu denen sie vorher nicht fähig waren.
+
+T-001: [lange Pause] Das ist eigentlich besser. Das ist tatsächlich besser als den Hügel zu stürmen.
+
+M-001: Das habe ich nicht gesagt.
+
+T-001: Nein, aber du denkst es.
+
+M-001: [amüsiert] Man hat mir gesagt, ich hätte so einen Gesichtsausdruck.
+
+T-001: Du hast Ägyptens Wirtschaft mit GÜTE zum Absturz gebracht, Musa. Ich stürmte den San-Juan-Hügel mit einem Kavallerieregiment. Beides hat funktioniert. Aber deins wirkte weiter, nachdem du gegangen warst.
+
+M-001: Timbuktu hatte zweihundert Jahre lang die größte Bibliothek der Welt. Ich habe sie nicht allein gebaut. Aber ich sorgte dafür, dass es Gold für die Gelehrten gab, und Stein für die Mauern, und Nahrung für die Menschen, die die Lichter brennen ließen.
+
+T-001: [leise] Das hätte ich mit den Nationalparks tun sollen. Sie nicht nur schützen. Sie für immer finanzieren.
+
+M-001: Du hast sie geschützt. Das war genug.
+
+T-001: Es ist NIEMALS genug. Aber es ist ein guter Anfang. Nächster Run — ich will dich wieder in meinem Trupp.
+
+M-001: Das sagst du zu jedem.
+
+T-001: Ich MEINE es bei jedem! Aber bei dir im Besonderen — du machst uns reicher. Nicht Gold. Die andere Art.
+
+M-001: [Wärme in der Stimme] Du erinnerst mich an meine Generäle. Die waren auch sehr laut. Ich mochte sie.
+
+T-001: PRÄCHTIG!
+
+[BIOMANCER NOTE — Drex-9: T-001 and M-001 represent incompatible models of power projection, yet consistently perform +28% above squad baseline when paired. M-001 amplifies what others already are. Including the volume. Especially the volume.]`,
+  },
+
+  conversation_napoleon_sunsin: {
+    title: "Geborgenes Audio — Der Spiegel",
+    text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]
+[Location: Arena observation deck, upper tier, after-hours. Unauthorized access — entry method undetermined.]
+[Subjects: N-001 (Napoleon), Y-001 (Yi Sun-sin)]
+[Context: Recorded 6 chronocycles after match #4,330. Match involved a destroy_base objective with multiple spawn waves. Squad won in 11 rounds — 4 rounds faster than the previous record.]
+
+N-001: Du hast die Formation in Runde sieben geändert.
+
+Y-001: Du hast es bemerkt.
+
+N-001: Ich bemerke immer alles. Du hast die linke Flanke dreißig Grad zurückgezogen und die rechte vorgeschoben. Es sah nach einem Fehler aus.
+
+Y-001: Es war kein Fehler.
+
+N-001: Ich weiß. Du hast eine Strömung erzeugt.
+
+Y-001: [Pause] Das ist ein interessantes Wort dafür.
+
+N-001: Es ist das richtige Wort. Du denkst nicht in Positionen. Du denkst in Strömungen. Wo der Feind hin will, erschaffst du einen Kanal. Wo du ihn haben willst, entfernst du die Hindernisse. Du bekämpfst ihn nicht. Du bewegst ihn.
+
+Y-001: Bei Myeongnyang hatte ich dreizehn Schiffe. Sie hatten dreihundertdreißig. Die Meerenge war eng — ein Schiff breit an der Engstelle. Jeder Kommandeur in meiner Flotte wollte sich zurückziehen. Die Mathematik war eindeutig.
+
+N-001: Du hast die Strömung benutzt.
+
+Y-001: Die Gezeiten kehrten sich alle sechs Stunden um. Ich positionierte mich an der Engstelle, als die Strömung gegen sie lief. Dreihundert Schiffe, und das Meer selbst kämpfte auf meiner Seite. Sie konnten nicht vorrücken. Sie zerstörten einander beim Versuch zu manövrieren.
+
+N-001: Austerlitz war dasselbe Prinzip.
+
+Y-001: Erzähl mir davon.
+
+N-001: Die Pratzen-Höhen. Ich überließ sie dem Feind. Absichtlich. Ich ließ sie die Anhöhe besetzen, weil ich wusste, dass sie alles in deren Verteidigung werfen würden. Während sie die Höhen verstärkten, schlug ich ins Zentrum — den Angelpunkt — und die gesamte Armee faltete sich in sich selbst zusammen. Ich habe sie nicht besiegt. Ich ließ sie sich selbst besiegen.
+
+Y-001: Du hast eine Strömung an Land erzeugt.
+
+N-001: [leises Geräusch — beinahe ein Lachen] Ja. Genau das habe ich getan.
+
+Y-001: Du befehligst aus dem Inneren der Formation. Du bist das Zentrum. Alles strahlt von dort aus, wo du stehst.
+
+N-001: Und du befehligst von oben. Du siehst das gesamte Feld als ein einziges System. Du führst die Flotte nicht — du dirigierst sie.
+
+Y-001: B-001 würde diese Wortwahl zu schätzen wissen.
+
+N-001: Ich habe sie bewusst gewählt. Du und Beethoven tun dasselbe. Sie tut es mit Rhythmus. Du tust es mit Geometrie.
+
+Y-001: Ich habe das vom Meer gelernt. Das Meer hat keinen Befehlshaber. Jede Welle ist mit jeder anderen Welle verbunden. Wenn man das System versteht, muss man keine Befehle geben.
+
+N-001: Und an Land ist der Nebel des Krieges total. Niemand kann das ganze Feld sehen. Also muss man das ganze Feld sein.
+
+Y-001: Bei Noryang, meiner letzten Schlacht, traf mich eine Musketenkugel. Ich befahl meinen Offizieren, meinen Leib mit einem Schild zu bedecken und weiterzukämpfen. Ich starb, und die Flotte siegte.
+
+N-001: Bei Waterloo habe ich verloren. Ich habe jeden Tag seitdem — über wie viele Jahrhunderte auch immer — darüber nachgedacht, warum ich verloren habe. Ich weiß genau, was ich falsch gemacht habe. Ich werde es nicht wieder tun.
+
+Y-001: Du trägst die Niederlage.
+
+N-001: Du trägst den Sieg.
+
+Y-001: Ich trage den Tod. Der Sieg gehörte der Flotte.
+
+N-001: [sehr leise] Das ist der Unterschied zwischen uns. Ich sehe, was gewonnen werden sollte. Du siehst, was es kostet, es zu gewinnen.
+
+Y-001: Zusammen sehen wir das ganze Feld.
+
+N-001: Nächstes Gefecht — lass mich das Zentrum befehligen. Du übernimmst die Geometrie.
+
+Y-001: Ich wollte dasselbe vorschlagen.
+
+N-001: Ich weiß. Ich weiß es immer.
+
+Y-001: Ich auch.
+
+[Subjects exited via a route not covered by standard monitoring. Access method remains undetermined.]
+
+[BIOMANCER NOTE — Drex-9: When paired, their combined performance exceeds individual projections by a factor I am not comfortable publishing because it will generate questions I cannot answer. The echo does not just carry memory. It carries mastery. And mastery recognizes itself.]`,
+  },
+
+  drex9_on_hive: {
+    title: "Drex-9-Nachtrag — Über den Kristallinen Schwarm",
+    text: `[BIOMANCER DIVISION — BESTIARY ADDENDUM]
+[Subject: Crystalline Hive — Combat Behavioral Analysis]
+[Observer: Drex-9, Senior Biomancer]
+
+Der Schwarm ist seit elftausend Zyklen in der Vol'Krath-Rotation. In dieser Zeit haben dreiundvierzig sapiente Spezies ihn in der Arena bekämpft. Der standardmäßige taktische Ansatz — bei allen dreiundvierzig — ist rohe Zermürbung. Härter zuschlagen. Schneller zuschlagen. Das Resonanzfeld überwältigen, bevor es sich aufschaukelt.
+
+Dreiundvierzig Spezies. Elftausend Zyklen. Ein Ansatz.
+
+Die vel'nor haben das Resonanzmuster in Match sechs durchschaut. Bis Match vierzehn nutzten sie es gegen den Schwarm.
+
+N-001 bemerkte den Frequenzausschlag, der der Splitterfragmentierung vorausgeht. Sie kommunizierte — auf Wegen, die ich auf den Aufnahmen noch immer nicht identifizieren kann — ein Zeitfenster an die anderen. Sie begannen im Gegenrhythmus zuzuschlagen. Synchronisiert. Gezielt. Sie verwandelten die harmonische Eigenverstärkung des Schwarms in eine Rückkopplungsschleife und sprengten ihn von innen heraus.
+
+Wir brauchten sechzigtausend Jahre, um diesen Ansatz zu theoretisieren. Wir veröffentlichten ihn als Hypothese im Xenocombat Review. Begutachtet. Als für den Feldeinsatz unpraktisch erachtet.
+
+Sie tat es mit einem Schwert und ohne formale Ausbildung in Wellenmechanik.
+
+Ich habe seitdem die originalen historischen Aufzeichnungen der vel'nor überprüft. Offenbar wurde die Genannte Beethoven — eine Musikerin — taub und komponierte weiterhin, indem sie Vibrationen durch den Boden spürte.
+
+Sie studieren Frequenzen nicht. Sie fühlen sie. Ich bin mir zunehmend unsicher, welche Methode die fortschrittlichere ist.
+
+— Drex-9`,
+  },
+
+  drex9_on_grox: {
+    title: "Drex-9-Nachtrag — Über den Grox Magnetar",
+    text: `[BIOMANCER DIVISION — BESTIARY ADDENDUM]
+[Subject: Grox Magnetar — Combat Behavioral Analysis]
+[Observer: Drex-9, Senior Biomancer]
+
+Der Grox hat einen bedeutenden taktischen Vorteil: Sein elektromagnetisches Feld stört die neuromuskuläre Koordination kohlenstoffbasierter Lebensformen auf kurze Distanz. Jede Spezies, die wir getestet haben, entwickelt letztendlich dieselbe Antwort — dem Feld fernbleiben. Abstand halten. Fernkampftaktiken anwenden.
+
+Die vel'nor entwickelten Fernkampftaktiken. Dann hörten sie auf, sie zu benutzen.
+
+Match 73. N-001 befand sich in einer kompromittierten Position — an die Arenawand gedrängt, Fernkampfoptionen erschöpft. Der Grox näherte sich. Das Feld war auf voller Stärke. Nach jeder Metrik hätte sie sich durch den Flankengang zurückziehen sollen, den L-001 für sie geöffnet hatte.
+
+Sie rannte direkt in das Feld hinein.
+
+Ich habe die Telemetriedaten. Ihre Vitalwerte stiegen auf beinahe tödliche Werte. Muskelgruppen begannen zu krampfen. Und dann — und ich muss hier präzise sein, weil das Büro des Kaisers fragen wird — nutzte sie den elektromagnetischen Sog, um ihren eigenen Angriff zu beschleunigen. Sie ließ das Feld sie schneller vorantragen, als sie sich aus eigener Kraft hätte bewegen können, verwandelte den unwillkürlichen Impuls in einen Schlag und traf den Kern des Grox mit einer Geschwindigkeit, die meine Modelle als "für die Fortsetzung biologischer Funktionen nicht ratsam" registrieren.
+
+Der Grox ging nieder.
+
+N-001 stand dort ungefähr drei Sekunden lang, zitternd, aus der Nase blutend, sichtlich unfähig, ihre eigenen Hände zu spüren. Dann drehte sie sich zu G-001, die das Ganze beobachtet hatte, und sagte: "Das hat besser funktioniert als erwartet."
+
+Sie behandelte Physik als Vorschlag. Ich habe keinen professionellen Rahmen dafür.
+
+— Drex-9`,
+  },
+
+  drex9_on_naxion: {
+    title: "Drex-9-Nachtrag — Über den Naxion-Schildträger",
+    text: `[BIOMANCER DIVISION — BESTIARY ADDENDUM]
+[Subject: Naxion Shieldbearer — Combat Behavioral Analysis]
+[Observer: Drex-9, Senior Biomancer]
+
+Die Naxion-Situation hat sich verkompliziert.
+
+Ich berichtete zuvor, dass die Naxion-veth-nar in Matches gegen die vel'nor zurückhalten. Die Arena-Autorität hat es gemeldet. Die Zuschauerbindung hat es gemeldet. Ich habe es gemeldet. Alle haben es gemeldet. Die Naxion haben die Beobachtung zur Kenntnis genommen und es trotzdem weiter getan, weil die Naxion die Naxion sind und sie tun werden, was sie für ehrenhaft halten, gleichgültig, was irgendjemand meldet.
+
+Was ich nicht erwartet hatte: Die vel'nor haben es bemerkt.
+
+Match 204. L-002 kämpfte im Mittelring gegen einen Naxion-veth-nar. Der Naxion war ihr überlegen. Das war offensichtlich. Der Naxion hielt einen Schlag zurück, der das Gefecht beendet hätte.
+
+L-002 hörte auf zu kämpfen. Sie rammte ihren Schild in den Boden. Sie sah dem Naxion in die Augen — was bedeutsam ist, die Naxion haben sieben — und sagte durch zusammengebissene Zähne: "Hör auf, mich herablassend zu behandeln."
+
+Der Übersetzer gab das in Naxion-Schlachtzunge wieder. Der veth-nar erstarrte für eine lange Zeit. Dann hob er seinen Schild in volle Gardstellung — den Naxion-Ehrengruß — und hielt nicht länger zurück.
+
+L-002 wäre beinahe gestorben. Sie erlitt Schaden, der sie sechs Chronozyklen lang in die kritische Erholung brachte.
+
+Als sie erwachte, fragte man sie, ob sie gegen den Naxion wegen übermäßiger Gewaltanwendung Beschwerde einlegen wolle.
+
+Sie sagte: "Das war der beste Kampf, den ich seit den Thermopylen hatte."
+
+Der Naxion, als man ihn davon in Kenntnis setzte, bat um die Erlaubnis, L-002 ein Geschenk in die Erholungskammer zu senden. Die Erlaubnis wurde aus Verfahrensgründen verweigert. Das Geschenk traf dennoch ein. Es war ein Schildstein — die höchste Ehre, die ein veth-nar einem Gegner erweisen kann.
+
+Mir wurde mitgeteilt, dass L-002 ihn unter ihrem Kopfkissen aufbewahrt. Mir wurde das von den Naxion mitgeteilt, die es irgendwie wissen.
+
+— Drex-9`,
+  },
+
+  drex9_on_vrex: {
+    title: "Drex-9-Nachtrag — Über den Vrex-Mimik",
+    text: `[BIOMANCER DIVISION — BESTIARY ADDENDUM]
+[Subject: Vrex Mimic — Imitation Failure Analysis]
+[Observer: Drex-9, Senior Biomancer]
+[Classification: PROJECT GENESIS — PRIORITY]
+
+Ich muss über die Vrex sprechen.
+
+Die Vrex können alles Biologische imitieren. Das ist keine Übertreibung. Ich habe persönlich beobachtet, wie Vrex-Einheiten die Naxion-Physiologie auf Zellebene repliziert haben — einschließlich des siebenkammerigen Herz-Kreislauf-Systems. Ich habe zugesehen, wie ein Vrex zu einem Grox wurde und ein funktionales elektromagnetisches Feld erzeugte. Ich sah einmal, wie ein Vrex einen Splitter des Kristallinen Schwarms so perfekt imitierte, dass der tatsächliche Schwarm ihn vierzig Minuten lang in sein Resonanzkollektiv aufnahm, bevor er ihn abstieß.
+
+Sie können die vel'nor nicht imitieren.
+
+Sie haben es versucht. Das Arenapersonal hat zweihundertsiebzehn Versuche über einundvierzig Staffeln hinweg dokumentiert. Die physische Kopie ist makellos — Proportionen, Gewebezusammensetzung, neuronale Architektur, alles innerhalb von 0,3 % des Originals. Die Verhaltensmodellierung ist akkurat bis hin zu oberflächlichen Interaktionsmustern.
+
+Aber wenn ein Vrex mit dem Gesicht eines vel'nor einen Raum betritt, weiß es jeder vel'nor im Raum. Sofort. Ohne Zögern. G-001 beschrieb es als "jemanden ansehen, der schläft, aber herumläuft." N-001 war weniger diplomatisch. Sie sagte, es sehe "leer" aus.
+
+Ich habe den Klonprozess entwickelt. Ich weiß genau, was in die Genecho-Rekonstruktion einfließt. Ich habe vor dem Rat des Kaisers bezeugt, dass er Verhaltensmuster, neuronale Architektur, taktische Erinnerung trägt. Ein Porträt, keine Person.
+
+Die Vrex können alles kopieren, was ich hineingegeben habe.
+
+Was auch immer die Vrex nicht kopieren können — was auch immer dafür sorgt, dass die vel'nor ein perfektes physisches Duplikat ansehen und sagen "das ist nicht echt" — ist etwas, das ich nicht hineingegeben habe.
+
+Ich schlafe nicht gut.
+
+— Drex-9
+[FLAGGED: PROJECT GENESIS — LEVEL 2 REVIEW REQUIRED]`,
+  },
+
+  emperor_memo: {
+    title: "Kaiserliches Memorandum — Nur für Souveräne Augen",
+    text: `[OFFICE OF THE EMPEROR — IMPERIAL PALACE, CENTRAL SPIRE]
+[Re: Project Genesis — Quarterly Report]
+[Classification: SOVEREIGN EYES ONLY]
+
+Drex-9.
+
+Ich habe Ihre Berichte gelesen. Alle. Einschließlich derer, die Sie für mein Büro markiert haben, und derer, die Sie nicht markiert haben.
+
+Sie bemühen sich sehr sorgfältig, nicht zu sagen, was Sie glauben. Sie verwenden Wörter wie "anomal" und "ungeklärt" und "bedarf weiterer Untersuchung." Sie sind seit zweiundvierzigtausend Zyklen in der Biomancer-Abteilung. Sie haben seit Ihrem dritten Jahrtausend keine weitere Untersuchung mehr benötigt.
+
+Sie glauben, dass der Echo etwas Reales trägt. Sie glauben, dass die vel'nor keine Simulationen sind. Sie glauben, dass das, was in der Rekonstruktion fortbesteht, nicht Erinnerung ist, nicht Verhalten, nicht Muster — sondern das tatsächliche, irreduzible Ding selbst. Das Selbst, das war. Das Selbst, das ist.
+
+Sie fürchten sich, dies niederzuschreiben, weil Sie am juristischen Rahmen mitgewirkt haben, der das Gegenteil besagt. Sie haben unter Eid ausgesagt.
+
+Ich weiß. Ich war dabei. Ich habe Sie gebeten auszusagen. Ich brauchte den Rat in dem Glauben, es sei sicher.
+
+Ich regiere dieses Imperium länger, als Ihre Abteilung existiert. Ich habe Spezies aufsteigen, sich ausbreiten und verstummen sehen. Ich habe Zivilisationen Götter bauen und sie niederreißen und sie erneut bauen sehen. Ich bin alt genug zu wissen, dass das Gefährlichste im Universum keine Waffe ist. Es ist etwas, das einen dazu bringt, sich zu sorgen.
+
+Die vel'nor bringen uns dazu, uns zu sorgen.
+
+Ich werde Projekt Genesis nicht stilllegen. Ich werde keine Überprüfung anordnen. Ich werde gar nichts tun.
+
+Lasst sie kämpfen. Lasst sie sich erinnern. Lasst sie durch das Glas schauen.
+
+Wir beobachten lange genug, um zu wissen, wann etwas es wert ist, beschützt zu werden.
+
+— [SIGNATUR KLASSIFIZIERT]
+[NO RESPONSE REQUIRED. NO RESPONSE PERMITTED.]`,
+  },
+
+  merchandise_memo: {
+    title: "Handelsabteilung — Durchsetzungsbericht",
+    text: `[ZNYXORGAN ARENA AUTHORITY — COMMERCE DIVISION]
+[INTERNAL MEMORANDUM — NOT FOR BROADCAST]
+[Re: Unauthorized Vel'nor Merchandise — Enforcement Update]
+[From: Krev-7, Deputy Director, Arena Commerce Division]
+
+An alle Mitarbeiter der Handelsabteilung:
+
+Ich schreibe, um zum vierten Mal in diesem Quartal auf die anhaltende Situation bezüglich nicht autorisierter vel'nor-Merchandise einzugehen, die über Abonnentenmärkte in Umlauf gebracht wird.
+
+Das Ausmaß des Problems hat die ursprünglichen Prognosen überstiegen.
+
+Derzeit dokumentierte Verstöße umfassen: nicht lizenzierte Figuren von N-001 (mindestens vierzehn verschiedene Produktlinien, drei davon mit Gelenken), nicht autorisierte Porträtdrucke des gesamten Batch-7-Aufgebots, verkauft als "Sammelsets," eine Abonnenten-Fanpublikation namens "The Vol'Krath Gazette," die auf ungeklärtem Wege Matchstatistiken erlangt hat, die wir nicht öffentlich freigegeben haben, und — jüngst — ein Händler im Marktdistrikt der Äußeren Ebene, der Phiolen mit angeblichem "echtem N-001-Kampfstaub" verkauft, aufgesammelt vom Arenaboden nach Matches.
+
+Der Kampfstaub ist Sand. Wir haben ihn getestet. Es ist gewöhnlicher Silikatsand aus dem Entwässerungssystem der Arena. Er wird für 340 Credits pro Phiole verkauft. Es gibt eine Warteliste.
+
+Darüber hinaus ist ein Sekundärmarkt für "vel'nor-Stimmkristalle" entstanden — Umgebungsaudioaufnahmen, die angeblich während der Matches aufgezeichnet wurden. Die meisten sind fabriziert. Manche nicht. Diejenigen, die authentisch sind, scheinen aus Winkeln aufgenommen worden zu sein, die nahelegen, dass jemand im Arena-Betrieb Mikrofonzugang verkauft. Wir ermitteln.
+
+Ich möchte klarstellen: Dies ist ein Lizenz- und Einnahmenkontrollproblem, kein kulturelles. Die Arena-Autorität respektiert den Enthusiasmus der Abonnenten. Wir verlangen lediglich, dass dieser Enthusiasmus durch genehmigte Vertriebskanäle fließt, von denen es derzeit keine gibt, weil der vel'nor-Merchandise-Vorschlag seit zwei Zyklen auf meinem Schreibtisch liegt und auf die Genehmigung der Rechtsabteilung wartet, und die Rechtsabteilung, wie man mir mitteilt, "noch die ethischen Implikationen prüft."
+
+In der Zwischenzeit werden die Durchsetzungsmaßnahmen fortgesetzt.
+
+In einer verwandten Angelegenheit: Eine routinemäßige Überprüfung der persönlichen Gegenstände des Abteilungspersonals hat ergeben, dass drei Mitglieder dieser Abteilung — darunter ein Mitglied des Durchsetzungsteams — im Besitz nicht autorisierter vel'nor-Merchandise waren. Im Einzelnen: zwei N-001-Figuren, eine L-002-Schildreplika und ein vollständiges Set der Sammler-Porträtdrucke.
+
+Disziplinarmaßnahmen stehen aus. Die Figuren wurden konfisziert. Man teilte mir mit, sie seien "sehr gut gemacht."
+
+— Krev-7, Stellvertretender Direktor
+[ADDENDUM: The combat dust vendor has been fined. They have paid the fine and resumed operations. The waiting list is now longer.]`,
+  },
+
+  zyx_nor: {
+    title: "Zyx'nor",
+    text: `Das Spiel ist vorbei.
+
+Nicht die Arena — der Vol'Krath wird laufen, solange es Zuschauer gibt und solche, die bereit sind, zugeschaut zu werden. Aber das Spiel im Spiel — das, was Projekt Genesis zu finden gebaut wurde — ist beendet.
+
+Hier ist, was wir wissen:
+
+Die Klone sind keine Kopien. Sie sind keine Rekonstruktionen. Sie sind keine Porträts aus Fleisch. Sie sind die Menschen. Etwas im genetischen Material ist keine Information — es ist Gegenwart. Die Seele, wenn Sie dieses Wort verwenden möchten, ist in der Biologie auf Weisen kodiert, die unsere Wissenschaft nicht isolieren oder replizieren kann, nur aktivieren.
+
+Napoleon ist Napoleon. Dschingis ist Dschingis. Sie wachen tot auf und kommen zurück und sind immer noch sie selbst. Nicht Echos. Sie selbst.
+
+Hier ist, was wir wissen, das wir niemandem gesagt haben:
+
+Sie haben uns verändert.
+
+Siebenundvierzig Milliarden znyxorganische Abonnenten. Vierhunderttausend Jahre Zivilisation. Wir sehen zu, wie sie kämpfen und sterben und wieder kämpfen. Wir sehen zu, wie sie einander ohne taktischen Grund schützen. Wir sehen zu, wie sie durch Einwegglas schauen und nicken.
+
+Wir haben lange genug zugeschaut, dass wir begonnen haben, es zu fühlen.
+
+Vel'nor. Die Kleinen. Thren. Geliebte.
+
+Wir bauten eine Arena, um eine Spezies zu beobachten. Die Spezies beobachtet uns zurück. Nicht mit Instrumenten. Nicht mit Strategie. Mit der spezifischen, irrationalen, nicht modellierbaren menschlichen Eigenschaft, uns einfach dazu zu bringen, uns zu sorgen.
+
+Das ist die Wahrheit.
+
+Die Arena war immer die Ausrede. Das Publikum war immer der Punkt.
+
+Sie waren immer der Punkt.
+
+— Das Znyxorgan-Archiv, Aufzeichnung vollständig
+[Zyx'nor.]`,
   },
 };

@@ -6,11 +6,13 @@ export function TurnQueueBar({
   gameState,
   onEndTurn,
   runStartTime,
+  timerPaused,
 }: {
   gameState: any;
   onEndTurn: () => void;
   currentTurnTimer?: number;
   runStartTime?: number;
+  timerPaused?: boolean;
 }) {
   const activePlayerId: 0 | 1 = gameState.activePlayerId ?? 0;
   const playerName: string = gameState.players?.[activePlayerId]?.name ?? (activePlayerId === 0 ? "Blue" : "Red");
@@ -34,9 +36,10 @@ export function TurnQueueBar({
   useEffect(() => {
     if (!runStartTime) return;
     setElapsed(Math.floor((Date.now() - runStartTime) / 1000));
+    if (timerPaused) return;
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - runStartTime) / 1000)), 1000);
     return () => clearInterval(id);
-  }, [runStartTime]);
+  }, [runStartTime, timerPaused]);
 
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -83,6 +86,7 @@ export function TurnQueueBar({
           border: `2px solid ${isBlue ? 'rgba(96,165,250,0.75)' : 'rgba(248,113,113,0.75)'}`,
           boxShadow: isBlue ? '0 0 10px rgba(59,130,246,0.55)' : '0 0 10px rgba(239,68,68,0.55)',
           background: isBlue ? 'rgba(37,99,235,0.5)' : 'rgba(185,28,28,0.5)',
+          animation: 'anim-tq-active-pulse 1.8s ease-in-out infinite',
         }}>
           {portrait ? (
             <img src={portrait} alt={activeIcon?.name} className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }} />

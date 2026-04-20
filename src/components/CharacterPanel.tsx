@@ -45,14 +45,57 @@ const CharacterPanel = ({ character, visible, gameState }: CharacterPanelProps) 
   const buffedMight = baseMight + extraMight;
   const buffedPower = basePower + extraPower;
 
+  const PORTRAIT_MAP: Record<string, string> = {
+    Napoleon:   '/art/napoleon_portrait.png',
+    Genghis:    '/art/genghis_portrait.png',
+    'Da Vinci': '/art/davinci_portrait.png',
+    Leonidas:   '/art/leonidas_portrait.png',
+    'Sun-sin':  '/art/sunsin_portrait.png',
+    Beethoven:  '/art/beethoven_portrait.png',
+    Huang:      '/art/huang_portrait.png',
+    Nelson:     '/art/nelson_portrait.png',
+    Hannibal:   '/art/hannibal_portrait.png',
+    Picasso:    '/art/picasso_portrait.png',
+    Teddy:      '/art/teddy_portrait.png',
+    Mansa:      '/art/mansa_portrait.png',
+  };
+  const portraitSrc = Object.entries(PORTRAIT_MAP).find(([k]) => character.name.includes(k))?.[1] ?? null;
+
+  const hpPct = character.stats.maxHp > 0 ? character.stats.hp / character.stats.maxHp : 1;
+  const hpBorderColor = hpPct > 0.6
+    ? (character.playerId === 0 ? '#3b82f6' : '#ef4444')
+    : hpPct > 0.3
+    ? '#f59e0b'
+    : '#ef4444';
+  const hpGlow = hpPct > 0.6
+    ? (character.playerId === 0 ? 'rgba(59,130,246,0.45)' : 'rgba(239,68,68,0.45)')
+    : hpPct > 0.3
+    ? 'rgba(245,158,11,0.55)'
+    : 'rgba(239,68,68,0.7)';
+  const isUrgent = hpPct <= 0.3 && character.stats.hp > 0;
+
   return (
     <div className="fixed bottom-4 left-4 w-80 z-40">
       <Card className="bg-card/95 backdrop-blur border-arena-glow/30">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-3 font-orbitron">
-            <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-lg font-bold
-              ${character.playerId === 0 ? 'border-player1 text-player1' : 'border-player2 text-player2'}`}>
-              {character.name.charAt(0)}
+            <div
+              className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0"
+              style={{
+                border: `2px solid ${hpBorderColor}`,
+                boxShadow: `0 0 10px ${hpGlow}`,
+                animation: isUrgent ? 'anim-hp-urgent-pulse 1.0s ease-in-out infinite' : undefined,
+              }}>
+              {portraitSrc ? (
+                <img src={portraitSrc} alt={character.name}
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: 'center 15%', filter: isUrgent ? 'saturate(1.3)' : undefined }} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-lg font-bold"
+                  style={{ background: 'rgba(80,60,120,0.8)', color: hpBorderColor }}>
+                  {character.name.charAt(0)}
+                </div>
+              )}
             </div>
             <div>
               <div className="text-lg">{character.name}</div>
@@ -99,16 +142,36 @@ const CharacterPanel = ({ character, visible, gameState }: CharacterPanelProps) 
                 <span className="text-muted-foreground">Defense:</span>
                 <span className="text-green-400">{character.stats.defense}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Speed:</span>
-                <span className="text-yellow-400">{character.stats.speed}</span>
-              </div>
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="text-sm font-medium text-alien-purple">Passive:</div>
             <div className="text-xs text-muted-foreground">{character.passive}</div>
+            {(character.passiveStacks ?? 0) > 0 && (() => {
+              const stacks = character.passiveStacks ?? 0;
+              let label = "";
+              let maxStacks = 0;
+              if (character.name.includes("Beethoven")) { label = "Crescendo"; maxStacks = 15; }
+              else if (character.name.includes("Genghis")) { label = "Bloodlust"; maxStacks = 2 + Math.floor((character.level ?? 1) / 2); }
+              else if (character.name.includes("Leonidas")) { label = "Phalanx"; maxStacks = 3; }
+              else if (character.name.includes("Teddy")) { label = "Bully!"; maxStacks = 3; }
+              if (!label) return null;
+              return (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-alien-purple font-medium">{label}:</span>
+                  <div className="flex gap-1">
+                    {Array.from({ length: maxStacks }).map((_, i) => (
+                      <div key={i} className="w-3 h-3 rounded-sm" style={{
+                        background: i < stacks ? 'rgba(167,139,250,0.85)' : 'rgba(167,139,250,0.15)',
+                        border: '1px solid rgba(167,139,250,0.4)',
+                      }} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{stacks}/{maxStacks}</span>
+                </div>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>
