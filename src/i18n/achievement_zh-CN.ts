@@ -55,6 +55,18 @@ export const achievementZhCN: Record<string, { name: string; description: string
   power_cut:        { name: '断电',             description: '击败50个格洛克斯磁力巨兽。' },
   shellbreaker:     { name: '破盾者',           description: '击败50个纳克西恩盾卫。' },
   mirror_mirror:    { name: '镜中镜',           description: '击败100个弗雷克斯拟态者。' },
+  swarmed:               { name: '蜂群攻击',         description: '击败250个Zyx蜂群者。' },
+  contract_expired_salvager: { name: '合同到期',     description: '击败250个Qrix打捞者。' },
+  frost_resistant:       { name: '抗冻',             description: '击败250个冰晶漂流者。' },
+  dead_freight:          { name: '死亡货物',         description: '击败100个Qrix装载者。' },
+  void_proof:            { name: '虚空证明',         description: '击败100个Qrix虚空破裂者。' },
+  signal_lost:           { name: '信号丢失',         description: '击败100个Zyx残余。' },
+  swarm_authority:       { name: '蜂群主宰',         description: '击败500个Zyx蜂群者。' },
+  remnant_erased:        { name: '残余消除',         description: '击败200个Zyx残余。' },
+  full_cargo_cleared:    { name: '货物清空',         description: '击败200个Qrix装载者。' },
+  salvage_complete:      { name: '打捞完成',         description: '击败500个Qrix打捞者。' },
+  void_closed:           { name: '虚空封闭',         description: '击败200个Qrix虚空破裂者。' },
+  permafrost:            { name: '永久冻土',         description: '击败500个冰晶漂流者。' },
 
   // Observer
   archivist:         { name: '档案管理员',             description: '阅读5条传说条目。' },

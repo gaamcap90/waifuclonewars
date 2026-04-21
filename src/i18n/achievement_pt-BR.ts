@@ -55,6 +55,18 @@ export const achievementPtBR: Record<string, { name: string; description: string
   power_cut:        { name: 'Corte de Energia',     description: 'Derrote 50 Grox Magnetares.' },
   shellbreaker:     { name: 'Quebra-Escudos',       description: 'Derrote 50 Naxion Escudeiros.' },
   mirror_mirror:    { name: 'Espelho, Espelho',     description: 'Derrote 100 Vrex Mímicos.' },
+  swarmed:               { name: 'Enxameado',            description: 'Derrote 250 Zyx Enxameadores.' },
+  contract_expired_salvager: { name: 'Contrato Expirado', description: 'Derrote 250 Qrix Recuperadoras.' },
+  frost_resistant:       { name: 'Resistente ao Gelo',   description: 'Derrote 250 Cryo Errantes.' },
+  dead_freight:          { name: 'Carga Morta',           description: 'Derrote 100 Qrix Carregadores.' },
+  void_proof:            { name: 'Prova do Vazio',        description: 'Derrote 100 Qrix Perfuradores do Vazio.' },
+  signal_lost:           { name: 'Sinal Perdido',         description: 'Derrote 100 Zyx Remanescentes.' },
+  swarm_authority:       { name: 'Autoridade do Enxame',  description: 'Derrote 500 Zyx Enxameadores.' },
+  remnant_erased:        { name: 'Remanescente Apagado',  description: 'Derrote 200 Zyx Remanescentes.' },
+  full_cargo_cleared:    { name: 'Carga Removida',        description: 'Derrote 200 Qrix Carregadores.' },
+  salvage_complete:      { name: 'Recuperação Concluída', description: 'Derrote 500 Qrix Recuperadoras.' },
+  void_closed:           { name: 'Vazio Selado',          description: 'Derrote 200 Qrix Perfuradores do Vazio.' },
+  permafrost:            { name: 'Permafrost',             description: 'Derrote 500 Cryo Errantes.' },
 
   // Observer
   archivist:         { name: 'Arquivista',                 description: 'Leia 5 entradas de lore.' },

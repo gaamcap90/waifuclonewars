@@ -1393,6 +1393,505 @@ Veja acima. Não os adquirimos. Eles estão aqui. Decidimos aceitar o fato.
 [NOTA DO CURADOR: Se você avistar uma unidade na arena que pareça ligeiramente errada — movendo-se corretamente mas parecendo errada — pode ser um Vrex. Ou pode não ser nada. Não afirmamos mais ter certeza sobre qual das opções.]`,
   },
 
+  bestiary_krath_champion: {
+    title: "Bestiário: Campeão Krath",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Espécie Sapiente — Elite Guerreira — Designação KRATH-I]
+[Nome Comum na Arena: Campeão Krath]
+[Status: Estoque Ativo da Arena, Ato I Elite]
+
+ORIGEM:
+Os Krath são bípedes, nativos de Krath-Prime, um mundo vulcânico de alta gravidade. A casta dos campeões é composta por veteranos condecorados da arena que retornaram por vontade própria. Os crânios que carregam são reais. A cultura Krath equipara desempenho na arena com status social.
+
+PERFIL DE COMBATE:
+A Fúria de Batalha (induzida bioquimicamente) cria uma breve janela de elevada capacidade ofensiva e defensiva. O Golpe do Campeão é o encerramento em curto alcance. Utilizam a própria arena como recurso — colunas, terreno, barreira da plateia — tudo é um ativo tático.
+
+NOTAS COMPORTAMENTAIS:
+Luta de forma suja. Fintas, exploração de pontos cegos, uso do ambiente, preferência por encerrar lutas mais rápido do que as regras exigem. Vários receberam advertências formais. Vários sorriram durante a advertência.
+
+[NOTA DA EQUIPE: Não tente elogiar um Campeão Krath por sua coleção de crânios. Isso foi tentado. Não terminou bem para nenhum dos envolvidos.]`,
+  },
+
+  bestiary_iron_wall: {
+    title: "Bestiário: Muralha de Ferro",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Constructo de Guerra Autônomo — Designação IW-0001]
+[Nome Comum na Arena: Muralha de Ferro]
+[Status: Guardião do Portão do Ato I — Fixture Permanente]
+
+ORIGEM:
+Não é biológico. Construído — origem obscura, fornecedor classificado — serve como guardião do portão do Ato I desde a temporada quarenta e três. Essa estatística está mudando. A Autoridade da Arena não divulga isso publicamente.
+
+PERFIL DE COMBATE:
+A ameaça escala com a duração. Engajamentos prolongados ativam a configuração de torreta — plataforma de armas estacionária. O array de EMP foi adicionado depois que as audiências de teste descreveram a fase inicial como "decepcionantemente fácil." A função de autorreparo não constava nas especificações originais — começou a ocorrer espontaneamente por volta da temporada setenta. O fornecedor não respondeu.
+
+NOTAS COMPORTAMENTAIS:
+Não experimenta frustração. Quando está perdendo, torna-se mais perigoso — o protocolo de resposta à ameaça aloca mais capacidade ofensiva. Quando morre, não cai. Trava.
+
+[NOTA DE MANUTENÇÃO: A reconstrução pós-luta leva aproximadamente quarenta cronociclos. Por favor, agende as conclusões do Ato I dos vel'nor de acordo.]`,
+  },
+
+  bestiary_krath_berserker: {
+    title: "Bestiário: Berserker Krath",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Espécie Sapiente — Casta Berserker — Designação KRATH-IV]
+[Nome Comum na Arena: Berserker Krath]
+[Status: Estoque Ativo da Arena, Ato II / Ato III Elite]
+
+ORIGEM:
+Mesmo mundo natal do Campeão Krath — Krath-Prime. A casta berserker prioriza velocidade e comprometimento ofensivo absoluto. Quatro braços evoluídos para manuseio simultâneo de armas. A arquitetura neural desprioriza o instinto defensivo. Não esquiva. Vencer rápido custa menos do que sobreviver por muito tempo.
+
+PERFIL DE COMBATE:
+Fúria Sangrenta troca o instinto defensivo restante por capacidade ofensiva bruta. O Salto Selvagem converte movimento diretamente em dano — a própria aproximação é um ataque. Não existe distância segura de um Berserker Krath.
+
+NOTA DE AQUISIÇÃO:
+Não adquirido pelo programa padrão. Adquirido ao perder um Campeão Krath e ter outro Krath aparecendo exigindo entrada. O processo é informal. A Autoridade da Arena formalizou a burocracia para isso.
+
+NOTAS COMPORTAMENTAIS:
+Identifica o caminho mais curto e o percorre. Abordagem recomendada: não dar a ele uma segunda ação. Considerado óbvio e universalmente difícil de executar.
+
+[NOTA MÉDICA: Ferimentos causados pelo Berserker Krath são classificados separadamente. Categoria: ALTA VELOCIDADE. Adicionada na temporada sessenta e quatro.]`,
+  },
+
+  bestiary_phasewarden: {
+    title: "Bestiário: Guardião de Fase",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Entidade Interdimensional — Designação PHASE-ΔΩ]
+[Nome Comum na Arena: Guardião de Fase]
+[Status: Estoque Ativo da Arena, Ato II / Ato III Elite]
+
+ORIGEM:
+Não se origina de nenhum mundo natal catalogado. Existe parcialmente no espaço normal e parcialmente em um substrato dimensional adjacente — designação interna atual: "o outro lugar." A estrutura cristalina não é seu corpo real — provavelmente uma âncora de ressonância.
+
+PERFIL DE COMBATE:
+Sequência legível: sair de fase, reposicionar, retornar à fase adjacente a um alvo exposto, aplicar Dreno Dimensional (perturba a armadura em área ampla), atacar a abertura. A sequência é conhecida. Contrariá-la não é confortável de executar sob pressão.
+
+NOTAS COMPORTAMENTAIS:
+O efeito de quebra de armadura parece permanente. Jogadores relatam consistentemente que parece permanente.
+
+NOTA DE AQUISIÇÃO:
+Publicamos um aviso de interesse conceitual em uma faixa de frequência dimensional. Vários chegaram dentro de uma órbita padrão. Não determinamos se vieram por causa do aviso ou já planejavam vir.
+
+[ADENDO CLASSIFICADO: A Autoridade da Arena tentou estudar o substrato dimensional. Todos os equipamentos de pesquisa foram devolvidos — pareciam ter sido limpos. Não enviamos mais equipamentos.]`,
+  },
+
+  bestiary_twin_terror: {
+    title: "Bestiário: Terror Gêmeo",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Par Ligado — Designação TT-ALPHA / TT-BETA]
+[Nome Comum na Arena: Terror Gêmeo]
+[Status: Guardiões do Portão do Ato II — Fixture Permanente]
+
+ORIGEM:
+Adquiridos juntos, ligados juntos, nunca separados em mais de quarenta temporadas de arena. O mundo natal deles não existe mais. Isso não está relacionado à sua aquisição. O timing é coincidência. A Autoridade da Arena confirmou isso várias vezes.
+
+PERFIL DE COMBATE:
+Terror Alfa = vetor ofensivo — alta velocidade, fecha distância, força engajamento em curto alcance. Terror Beta = ameaça sustentada — capacidade de autocura que mantém a luta em andamento. Equipes que focam no Alfa primeiro vencem 23% mais rápido. Equipes que dividem o foco vencem a taxas que a Autoridade da Arena não publica.
+
+NOTAS COMPORTAMENTAIS:
+Após quarenta temporadas, a coordenação não requer comunicação. Os 33% do comportamento deles que desafiam o modelo envolvem escolhas que parecem irracionais isoladamente e devastadoras em contexto.
+
+[NOTA PARA A AUDIÊNCIA: A resposta da plateia quando ambos os Terrors entram simultaneamente é o maior nível de áudio sustentado já registrado no Vol'Krath. Proteção auditiva recomendada nas seções 11 a 24.]`,
+  },
+
+  bestiary_znyxorgas_champion: {
+    title: "Bestiário: Campeão de Znyxorga",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Designado Imperial — Designação ZC-PRIME]
+[Nome Comum na Arena: Campeão de Znyxorga]
+[Status: Guardião do Portão do Ato III — Fixture Permanente]
+
+ORIGEM:
+Não é uma espécie. É um título. Mantido por mais tempo do que a Autoridade da Arena escolhe registrar oficialmente. Quatro braços. Seis olhos. Move-se em um ritmo deliberado que a equipe inicialmente interpretou como lentidão e reclassificou como paciência.
+
+PERFIL DE COMBATE:
+Colapso da Arena inflige dano verdadeiro simultâneo a todos os oponentes — sem defesa contra isso. Mudança de Fase: invencível e com upgrade ofensivo ao mesmo tempo. Vontade do Campeão = escalada secundária para situações que a Mudança de Fase não resolveu. Categoria referida nos relatórios como "desaconselhável."
+
+O FATOR VEL'NOR:
+Dezessete instâncias documentadas de equipes vel'nor derrotando o Campeão de Znyxorga. As projeções internas da Autoridade da Arena esperavam zero. O Imperador não expressou opinião.
+
+[NOTA DO CURADOR: Se você está lendo isso, você é um dos dezessete. A porta à frente leva à resposta do Imperador. A Autoridade da Arena recomenda continuar. A Autoridade da Arena já esteve errada antes.]`,
+  },
+
+  bestiary_naxion_warmaster: {
+    title: "Bestiário: Mestre de Guerra Naxion",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Espécie Sapiente — Casta de Comando — Designação NAXION-I]
+[Nome Comum na Arena: Mestre de Guerra Naxion]
+[Status: Estoque Ativo da Arena, Ato III]
+
+ORIGEM:
+Não é uma espécie diferente do Portador de Escudo Naxion — é uma patente diferente. Ápice do veth-nar. Onde o Portador de Escudo mantém posição, o Mestre de Guerra a toma. A doutrina de comando Naxion não usa a palavra "recuar" — mesmo "reposicionamento tático" é considerado um estado de falha.
+
+PERFIL DE COMBATE:
+Decreto de Guerra — transmissão bioquímica que eleva a capacidade ofensiva imediatamente. Carga de Vanguarda: avanço de campo total cobrindo a arena em segundos, golpe ponderado na chegada. Doutrina: complexidade é o que você recorre quando não é rápido o suficiente.
+
+NOTAS COMPORTAMENTAIS:
+O que você aprendeu sobre o combate Naxion não é mais preciso. O Mestre de Guerra luta para vencer, não para manter. Nunca aprendeu a manter.
+
+[NOTA DA EQUIPE: Três Mestres de Guerra Naxion se candidataram a contratos permanentes na arena. Os três citaram a qualidade da competição. A Autoridade da Arena está analisando.]`,
+  },
+
+  bestiary_grox_titan: {
+    title: "Bestiário: Grox Titã",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Megafauna Alienígena — Forma de Vida Eletromagnética — Espécime Ancião — Designação VELYX-Ω-PRIME]
+[Nome Comum na Arena: Grox Titã]
+[Status: Estoque Ativo da Arena, Ato III]
+
+ORIGEM:
+Mesma origem do Grox Magnetar — disco de acreção de VELYX-Ω. Diferente idade. O Titã é o que um Magnetar se torna se sobreviver tempo suficiente. Idade significa acumulação — densidade eletromagnética, massa, intensidade de campo. Três em estoque. Dois cresceram a partir de Magnetares. Um chegou já sendo um Titã. Não sabemos de onde.
+
+PERFIL DE COMBATE:
+Um Grox Magnetar padrão produz ~10¹² Tesla. O Titã produz campos que nossos instrumentos não conseguem medir — eles falham primeiro. Tempestade Grávica é uma função corporal natural, não uma decisão. Fortaleza Magnética torna o assalto direto uma perda significativa de recursos. Ataque antes que ela seja ativada. Então continue atacando.
+
+NOTAS COMPORTAMENTAIS:
+Move-se menos do que o Magnetar — não é agressividade reduzida, mas porque não precisa. Não é agressivo. Simplesmente existe. Coisas na proximidade dessa densidade eletromagnética tendem a parar de funcionar.
+
+[NOTA CLASSIFICADA: O último instrumento que enviamos próximo a um Titã voltou com seus componentes internos reorganizados em uma grade geométrica perfeita. Sem dano térmico. Sem dano por impacto. Apenas reorganizados. Não enviamos mais instrumentos.]`,
+  },
+
+  bestiary_velthrak_shadowblade: {
+    title: "Bestiário: Lâmina das Sombras Vel'thrak",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Espécie Sapiente — Casta Desconhecida — Designação VELTHRAK-??]
+[Nome Comum na Arena: Lâmina das Sombras Vel'thrak]
+[Status: Estoque Ativo da Arena, Ato III]
+
+ORIGEM:
+Catalogados como membros do Império. Além disso, o arquivo está em grande parte redigido. São rápidos. Extremamente rápidos. Mais rápidos do que qualquer outra coisa no Vol'Krath em seu tamanho.
+
+PERFIL DE COMBATE:
+Avalia o campo de ameaças, identifica o alvo mais vulnerável, marca-o com Quebra de Armadura (Marca da Morte), elimina o elo mais fraco, move-se para o próximo. Isso chegou como um protocolo pré-instalado.
+
+NOTAS COMPORTAMENTAIS:
+O único combatente a derrotar uma equipe vel'nor completa tomando zero dano — várias vezes. Não celebra. Não reage à vitória. Simplesmente reavalia se alguma ameaça permanece e, quando nenhuma existe, para de se mover.
+
+[NOTA DE AQUISIÇÃO: Os Vel'thrak enviaram sua própria candidatura. Incluindo um portfólio de combate. Aprovamos imediatamente. Toda outra arena que recebeu o portfólio também aprovou imediatamente. Não temos certeza do que isso diz sobre nenhum de nós.]`,
+  },
+
+  bestiary_glorp_shambler: {
+    title: "Bestiário: Glorp Cambaleante",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Fauna Alienígena — Organismo Fúngico — Designação GLORP-7]
+[Nome Comum na Arena: Glorp Cambaleante]
+[Status: Estoque Ativo da Arena, Ato I]
+
+ORIGEM:
+Proveniente das selvas de esporos de Vel'Grak IV. Em seu mundo natal, os Glorps se movem em uma única direção, liberando esporos, comendo o que morre. Novas audiências subestimam universalmente algo que parece um cogumelo andando. Estatisticamente confiável.
+
+PERFIL DE COMBATE:
+Não é rápido nem forte. Liberação de Esporos aplica Veneno sustentado em tudo nas proximidades. A plateia tem uma categoria para mortes por Glorp: "Pisoteio." A Autoridade da Arena não criou essa categoria.
+
+NOTAS COMPORTAMENTAIS:
+Não reagem a dor de forma reconhecível. Continuam em direção à fonte de calor mais próxima independentemente do dano. Se o Glorp tem medo de você ou simplesmente está escorrendo em cima de você permanece em aberto. Biologicamente, essas podem não ser coisas diferentes.
+
+[NOTA DE AQUISIÇÃO: O contato ofereceu uma "taxa de desconto em volume" devido a haver "muitos deles." Perguntamos quantos. O contato não respondeu. Lamentamos as implicações de armazenamento desde então.]`,
+  },
+
+  bestiary_zyx_skitter: {
+    title: "Bestiário: Zyx Rastejador",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Fauna Alienígena — Fragmento de Colmeia — Designação ZYX-DELTA]
+[Nome Comum na Arena: Zyx Rastejador]
+[Status: Estoque Ativo da Arena, Ato I]
+
+ORIGEM:
+Os Zyx não são indivíduos. Cada Rastejador é um fragmento de um organismo de colmeia distribuída nativo dos campos de detritos orbitais acima de Nox-3 — um único sistema vivo espalhado por um campo de detritos do tamanho de um pequeno sistema solar. O Império não mantém nenhum acordo com os Zyx. A Autoridade da Arena simplesmente coleta fragmentos que derivam para as rotas de navegação comercial. A Colmeia não produz nenhuma resposta observável à perda de fragmentos individuais.
+
+PERFIL DE COMBATE:
+Individualmente frágil. Compensa com velocidade excepcional e sempre chega em pares. Mordida de Enxame desencadeia uma explosão localizada, então o Rastejador se reorienta e se aproxima novamente. As plateias avaliam engajamentos Zyx como "alta atividade."
+
+NOTAS COMPORTAMENTAIS:
+Um fragmento de colmeia separado de seu coletivo opera em lógica reduzida: aproximar, atacar, aproximar. O que torna um único Rastejador gerenciável é exatamente o que torna a Colmeia em si uma categoria de problema completamente diferente.
+
+[NOTA DE AQUISIÇÃO: Uma vez tentamos colocar 200 fragmentos Zyx em uma única partida. Eles imediatamente começaram a se coordenar. Cancelamos o evento. Não tentamos novamente.]`,
+  },
+
+  bestiary_naxion_scout: {
+    title: "Bestiário: Explorador Naxion",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Espécie Sapiente — Confederação Naxion — Operativo de Campo]
+[Nome Comum na Arena: Explorador Naxion]
+[Status: Estoque Ativo da Arena, Ato I]
+
+ORIGEM:
+A Confederação Naxion é um dos membros aliados mais antigos do Império — distinção mantida por mais de doze mil anos. Fornecer voluntários para a arena é uma instituição Naxion. Cada Explorador se candidatou pela Guilda dos Guerreiros, passou por uma avaliação física e foi aprovado pelo seu governo antes de a Autoridade da Arena sequer ver seu nome.
+
+PERFIL DE COMBATE:
+Opera à distância. Tiro de Plasma entrega projetis de energia de alta precisão a distância considerável. Um Explorador engajado em combate corpo a corpo cometeu um erro tático.
+
+NOTAS COMPORTAMENTAIS:
+Não entram em pânico — reavalia. Vários foram observados ajustando trajetória para garantir visibilidade para a plateia. O Império conta isso como uma funcionalidade.
+
+[NOTA DE AQUISIÇÃO: A Confederação Naxion envia faturas formais pelo deployment de Exploradores, detalhadas por duração de engajamento. Esta é a única espécie que faturou com sucesso pela própria captura. Não contamos isso a ninguém.]`,
+  },
+
+  bestiary_vron_crawler: {
+    title: "Bestiário: Rastejador Vron",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Fauna Alienígena — Artrópode Blindado — Designação VRON-09]
+[Nome Comum na Arena: Rastejador Vron]
+[Status: Estoque Ativo da Arena, Ato I]
+
+ORIGEM:
+Nativo das planícies de marés de Huxar-2. Um ambiente alternando entre pressão esmagadora e turbulência violenta a cada 14 horas padrão criou um exoesqueleto reforçado em nível molecular. A Autoridade da Arena foi alertada quando uma equipe de aquisição perdeu três unidades de contenção de aço reforçado transportando um único Rastejador. O Vron não estava se esforçando.
+
+PERFIL DE COMBATE:
+O combatente padrão mais defensivo do Ato I. Endurecimento da Carapaça o coloca em território quase impenetrável em intervalos. Ofensiva lenta e moderada. O Vron não está aqui para matar rapidamente. Está aqui para ainda estar vivo quando tudo ao seu redor não estiver.
+
+NOTAS COMPORTAMENTAIS:
+Exibe resolução de problemas de baixo nível. Quando Endurecimento da Carapaça está ativo, move-se em direção ao alvo de maior valor em vez do mais próximo.
+
+[NOTA DE AQUISIÇÃO: A alimentação é cara — suplementos minerais importados de Huxar-2. Calculamos o valor de relações públicas de um oponente que não pode morrer por assalto frontal e decidimos que a despesa era justificada.]`,
+  },
+
+  bestiary_spore_node: {
+    title: "Bestiário: Nó de Esporos",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Fauna Alienígena — Organismo Fúngico Colonial — Designação SPORE-CLUSTER-3]
+[Nome Comum na Arena: Nó de Esporos]
+[Status: Estoque Ativo da Arena, Atos I-III / Tier Elite]
+
+ORIGEM:
+Colônias Glorp maduras que passaram por "calcificação cooperativa." Três ou mais Glorps fundem seus sistemas de raízes, após o que coordenam a liberação de esporos em uma arma química dirigida. Os Glorps individuais no aglomerado não parecem estar cientes de que isso está acontecendo com eles.
+
+PERFIL DE COMBATE:
+Nuvem Tóxica aplica Veneno em área ampla. Teia de Esporos enraíza tudo nas imediações, imobilizando equipes antes que possam fechar a distância. Frágil e incapaz de se reposicionar de forma significativa. Nunca colocado sozinho.
+
+NOTAS COMPORTAMENTAIS:
+Nenhum perfil comportamental observável. Não rastreia alvos. Não prioriza. É, essencialmente, um perigo ao qual foi atribuída uma ordem de turno.
+
+[NOTA DE SEGURANÇA DA ARENA: Limpeza atmosférica pós-luta necessária. Funcionários que entram antes da limpeza relatam euforia leve, inflamação nas articulações e um desejo inexplicável por fluido bioluminescente morno. Os efeitos são temporários. Os funcionários são lembrados de que "temporário" tem um prazo definido.]`,
+  },
+
+  bestiary_vexlar: {
+    title: "Bestiário: Vexlar",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Fauna Alienígena — Predador Ápice — Designação VEXLAR-PRIME]
+[Nome Comum na Arena: Vexlar]
+[Status: Estoque Ativo da Arena, Atos I-II]
+
+ORIGEM:
+Nativo das savanas montanhosas de Greth-7. Iridescente, seis membros, caça por rastreamento olfativo e "mira pré-emptiva" — identifica qual presa vai se separar do grupo antes que a presa tenha decidido se mover.
+
+PERFIL DE COMBATE:
+Bem blindado, golpeia forte, cobre terreno mais rápido do que qualquer coisa do seu tamanho deveria. Salto do Predador cobre vasta distância, entrega um golpe completo na chegada e repele unidades adjacentes ao pousar. Seleciona o alvo com menor armadura. Se alcança seu alvo sem obstáculos, o resto da luta é jogado nos seus termos.
+
+NOTAS COMPORTAMENTAIS:
+Não requer condicionamento para lutar. Os Vexlars não são agressivos com a equipe — simplesmente não categorizam a equipe como presa. Essa distinção não parece um elogio.
+
+[NOTA DE AQUISIÇÃO: Eles tranquilizaram um. Acordou durante o transporte, avaliou o recipiente de contenção e aparentemente decidiu que era adequado. Não tentou escapar desde então. A equipe de aquisição acha isso mais alarmante do que uma tentativa de fuga teria sido.]`,
+  },
+
+  bestiary_mog_toxin: {
+    title: "Bestiário: Mog Toxina",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Fauna Alienígena — Organismo Corrosivo — Designação MOG-III]
+[Nome Comum na Arena: Mog Toxina]
+[Status: Estoque Ativo da Arena, Ato II]
+
+ORIGEM:
+Encontrado em zonas de resíduos industriais de mundos coloniais de médio porte, onde o despejo de resíduos químicos criou um nicho ecológico que algo eventualmente evoluiu para preencher. O Mog Toxina se alimenta de compostos corrosivos, os armazena, libera quando ameaçado. A evolução não pretendia isso como arma.
+
+PERFIL DE COMBATE:
+Ameaça de médio alcance. Mantém distância e aplica Spray Ácido — retira armadura de tudo nas proximidades. Então visa inimigos vulneráveis com Golpe Hemorrágico, aplicando sangramento persistente. Depende de ser uma prioridade secundária.
+
+NOTAS COMPORTAMENTAIS:
+Preferência aparente por alvos que já mostram defesa reduzida. Se isso constitui avaliação de ameaça ou uma resposta quimiorreceptora é incerto.
+
+[NOTA DE CONTENÇÃO: Unidades de retenção requerem revestimento total resistente a ácido e vedação de pressão de duas atmosferas. Três unidades de retenção se dissolveram desde o início do deployment no Ato II. Ajustamos o orçamento de materiais de acordo.]`,
+  },
+
+  bestiary_qrix_hunter: {
+    title: "Bestiário: Caçador Qrix",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: Espécie Sapiente — Adaptado ao Vácuo — Operativo Contratado]
+[Nome Comum na Arena: Caçador Qrix]
+[Status: Estoque Ativo da Arena, Ato II]
+
+ORIGEM:
+Os Qrix são adaptados ao vácuo — nascidos e otimizados para o espaço aberto. Sem mundo natal. Operam a partir de redes de frotas móveis navegando pelo espaço imperial e pré-imperial. O que fazem principalmente é mover coisas. O deployment na arena é uma das ofertas de contrato entre muitas. Um Caçador que sobreviveu a três temporadas de arena obtém taxas consideravelmente melhores para tudo o mais depois.
+
+PERFIL DE COMBATE:
+Definido por alcance e precisão. Tiro de Fixação a longa distância acerta duramente um único alvo. Sempre identifica o alvo de maior valor primeiro. Defesas mínimas. Opera sob a suposição de que não será atingido. Na prática, essa suposição se mantém mais frequentemente do que deveria.
+
+NOTAS COMPORTAMENTAIS:
+Engaja com a arena como um ambiente profissional. Três Caçadores Qrix protocolaram reclamações formais sobre desvantagens percebidas no layout da arena. Duas eram tecnicamente válidas. Uma resultou em um ajuste de tile.
+
+[NOTA DE AQUISIÇÃO: O Sindicato Qrix fornece relatórios de desempenho pós-engajamento sobre seus operativos. Não solicitamos esses relatórios. Começaram a chegar após o terceiro deployment. Implementamos duas das sugestões deles. Não informamos o Sindicato.]`,
+  },
+
+  bestiary_void_wraith: {
+    title: "Bestiário: Espectro do Vácuo",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: DESCONHECIDA — Forma de Vida Anômala — Designação WRAITH-CLASS]
+[Nome Comum na Arena: Espectro do Vácuo]
+[Status: Estoque Ativo da Arena, Ato II]
+
+ORIGEM:
+Não aparece em nenhum banco de dados de espécies catalogadas — mais de 400.000 entradas, nenhuma correspondência. O primeiro Espectro do Vácuo apareceu dentro de um cofre de contenção selado na Estação Vel-Keth-9. Nenhum registro de como entrou. Classificação permanece: DESCONHECIDA.
+
+PERFIL DE COMBATE:
+Definido por mobilidade. Passo das Sombras contorna o terreno e entrega o Espectro adjacente ao alvo escolhido em uma única ação. Golpeia forte na chegada, defesas quase inexistentes. No Ato II, antes que as equipes desenvolvam forte controle de área, executa de forma confiável.
+
+NOTAS COMPORTAMENTAIS:
+Atraído por assinaturas de calor biológico. Aproxima-se de seres vivos como um predador se aproxima de presa, sem nenhum comportamento de alimentação observado depois. A equipe da arena recebe instruções de não permanecer na arena após um deployment de Espectro. As instruções não explicam por quê.
+
+[NOTA CLASSIFICADA: Três tentativas de contenção falharam. Cada vez o Espectro foi encontrado em um local diferente — dentro de uma parede sólida, um armário de funcionários, o sistema de arquivamento administrativo (nenhum dano físico detectado). Estratégia atual: fornecer uma entrada na arena nos dias de partida e confiar que ele retorna. Sempre retornou. Não sabemos por quê.]`,
+  },
+
+  bestiary_velzar: {
+    title: "Bestiário: Vel'Zar — Vontade do Imperador",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: CONSTRUCTO IMPERIAL — Entidade de Guerra de Sete Formas — DESIGNAÇÃO REDIGIDA]
+[Nome Comum na Arena: Vel'Zar — Vontade do Imperador]
+[Status: Ato IV — ENCONTRO FINAL]
+
+ORIGEM:
+A Autoridade da Arena não possui documentação de origem. Instalado no hangar de retenção de máxima segurança do Vol'Krath aproximadamente 90 cronociclos antes do período operacional atual. Ordem de instalação do Gabinete do Imperador. Nenhum briefing acompanhou a ordem.
+
+Vel'Zar travou 300 engajamentos sancionados ao longo de três séculos. Vel'Zar nunca perdeu.
+
+PERFIL DE COMBATE:
+Sete membros. Rápido. Durável além de qualquer outra coisa em campo. Veredicto do Imperador inflige dano verdadeiro à equipe inteira simultaneamente. Fenda do Vácuo retira defesas de todos. Mandato Imperial atordoa em curto alcance. Ascensão Ápice ativa abaixo de 60% de HP: invencível e permanentemente mais forte simultaneamente. Autoridade Total ativa abaixo de 25%: aprimoramento permanente final em todas as capacidades de combate. Não existe forma degradada. Torna-se mais perigoso à medida que sofre dano.
+
+NOTAS COMPORTAMENTAIS:
+Vel'Zar não luta — "lutar" implica capacidade comparável. Executa. Possui uma sequência preferida, adapta quando desviada, não parece experimentar a partida como ameaçadora. Move-se como se já soubesse o que você fará.
+
+[NOTA IMPERIAL: O Imperador forneceu uma instrução: "Não precisará de nada de vocês. Não interfira com ele." A Autoridade da Arena honrou isso por três séculos.
+
+Estamos cientes de que uma equipe de clones chegou ao Ato IV. Estamos cientes do histórico deles. Esta é a primeira vez em 300 partidas que escrevemos esta nota sem saber como a partida terminará.]`,
+  },
+
+  bestiary_zyx_swarmer: {
+    title: "Bestiário: Zyx Enxameador",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: FAUNA — Designação: ZYX-ENXAMEADOR]
+[Nome comum na arena: Zyx Enxameador]
+[Status: Estoque ativo da arena, Ato I / Ato IV]
+
+ORIGEM:
+Os Zyx não são membros do Império. São fauna — altamente desenvolvidos, sociais, capazes de comportamentos coletivos notáveis — mas não possuem tecnologia de viagem espacial e não estabeleceram contato com a administração imperial. Em seu habitat natural, Zyx Enxameadores formam grupos de caça de vinte a quarenta indivíduos, coordenando-se por cascatas de sinalização bioquímica e operando de forma tão coesa que primeiros observadores erroneamente postularam uma estrutura de liderança centralizada.
+
+Não há estrutura de liderança. Cada enxameador é igual. O enxame é a decisão.
+
+NOTAS COMPORTAMENTAIS:
+No contexto da arena, os enxameadores permanecem em grupos de três — a menor unidade de caça coesa. Priorizam alvos isolados e tentam desviar de ataques — não por autopreservação, mas porque um alvo sobrecarregado é mais eficiente para o enxame. Mordem rapidamente, recuam, mordem novamente. Os ferimentos se acumulam.
+
+Sozinhos, são inofensivos. Em conjunto, são o que o espectador comum da arena descreveria como "desagradável". Drex-9 escolheria "estatisticamente perigoso de forma significativa".
+
+NOTA DE AQUISIÇÃO:
+Coletados de biosféras do Ato I durante levantamentos ambientais de rotina. A reposição de população se dá por reprodução em cativeiro. Reproduzem-se voluntariamente em cativeiro, o que é ou um sinal de adaptabilidade ou de desinteresse total pelo ambiente. Drex-9 inclina-se para o segundo.`,
+  },
+
+  bestiary_zyx_remnant: {
+    title: "Bestiário: Zyx Remanescente",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: FAUNA — Designação: ZYX-REMANESCENTE]
+[Nome comum na arena: Zyx Remanescente]
+[Status: Estoque ativo da arena, Ato III / Ato IV — Classificação Elite]
+
+ORIGEM:
+Nem todo Zyx Enxameador sobrevive à primeira década. A maioria morre jovem — predadores, escassez de recursos, a inevitabilidade estatística de ser o elo mais fraco do enxame. Os que sobrevivem se transformam.
+
+O que catalogamos como Zyx Remanescente não é um táxon distinto. É um Zyx Enxameador que viveu o suficiente para ser significativamente diferente. O canal bioquímico do enxame enfraquece. A capacidade de tomada de decisão individual emerge mais. O indivíduo começa a priorizar táticas em vez de seguir impulsos do enxame.
+
+O resultado é algo mais lento, mais solitário e consideravelmente mais difícil de matar.
+
+NOTAS COMPORTAMENTAIS:
+Zyx Remanescentes operam sozinhos. Mantêm distância, observam padrões e então se aproximam usando uma habilidade de impulso que puxa alvos em sua direção. Combatentes relatam sentir que estão sendo "puxados para o campo" — o alvo fica brevemente desorientado.
+
+O resultado é uma criatura que parece ter aprendido paciência. Se isso é intencional ou apenas modificação comportamental favorecida pela sobrevivência, Drex-9 não pode afirmar com certeza.
+
+NOTA DE AQUISIÇÃO:
+Aquisição do Ato III, biosféras profundas esparsas. Exigem instalações de contenção separadas devido à natureza solitária.`,
+  },
+
+  bestiary_qrix_hauler: {
+    title: "Bestiário: Qrix Carregador",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: ESPÉCIE ALIADA — Designação: QRIX-CARREGADOR]
+[Nome comum na arena: Qrix Carregador]
+[Status: Estoque ativo da arena, Ato I / Ato II / Ato IV — Classificação Elite]
+
+ORIGEM:
+Os Qrix são uma espécie de serviço adaptada ao vazio, conhecida por transporte, logística e serviços de courier no espaço imperial. Seus membros assumem uma ampla gama de funções, e os serviços de arena são uma delas — entre muitas. Os Carregadores Qrix são a espinha dorsal trabalhadora dessas operações: construídos massivamente, lentos, difíceis de parar.
+
+Em seu papel civil, os Carregadores transportam cargas ultrapassadas em ambientes onde veículos motorizados são considerados arriscados demais. Na arena, transportam a si mesmos diretamente para as linhas de combate do oponente.
+
+NOTAS COMPORTAMENTAIS:
+Os Carregadores não são ágeis. Também não precisam ser. Sua abordagem é deliberada, sua massa é considerável, e quando imobilizam um combatente por uma rotina de carregamento — uma técnica que, no contexto de carregamento, significa "este objeto agora não vai para onde quer ir" — o alvo tem um problema.
+
+A aplicação de combate dessa manobra produz enraizamento. O alvo não pode se mover. O Carregador pode continuar se movendo.
+
+NOTA DE AQUISIÇÃO:
+Negociado contratualmente, como é padrão para serviços Qrix. Carregadores individuais se inscrevem para serviços de arena por razões variadas. Drex-9 parou de perguntar; as respostas eram todas administrativamente aceitáveis.`,
+  },
+
+  bestiary_qrix_salvager: {
+    title: "Bestiário: Qrix Recuperadora",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: ESPÉCIE ALIADA — Designação: QRIX-RECUPERADORA]
+[Nome comum na arena: Qrix Recuperadora]
+[Status: Estoque ativo da arena, Ato II / Ato IV]
+
+ORIGEM:
+As Recuperadoras representam a classe Qrix mais diversa nos registros de logística imperial. Sua função primária é a recuperação de recursos: extrair itens de valor de ambientes perigosos ou inacessíveis. São treinadas para manusear materiais danificados, e suas ferramentas frequentemente deixam marcas perceptíveis no que tocam.
+
+Isso é útil no contexto civil. No contexto da arena, é mais grave.
+
+NOTAS COMPORTAMENTAIS:
+As Recuperadoras preferem operar à média distância. Suas ferramentas corrosivas — no uso civil, destinadas a quebrar encaixes e revestimentos para reciclagem — podem reduzir os valores de proteção de armadura quando aplicadas a portadores biológicos. O alvo mantém o mesmo HP. Simplesmente recebe mais dele.
+
+Embora não seja uma tática oficialmente atribuída, as Recuperadoras frequentemente coordenam com outras unidades Qrix quando disponíveis.
+
+NOTA DE AQUISIÇÃO:
+Serviços contratuais padrão. As Recuperadoras são as unidades Qrix mais comuns no estoque do Vol'Krath e as mais facilmente substituíveis. Elas notam isso. Não é discutido.`,
+  },
+
+  bestiary_qrix_voidbreacher: {
+    title: "Bestiário: Qrix Perfurador do Vazio",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: ESPÉCIE ALIADA — Designação: QRIX-PERFURADOR-DO-VAZIO]
+[Nome comum na arena: Qrix Perfurador do Vazio]
+[Status: Estoque ativo da arena, Ato III / Ato IV — Classificação Elite]
+
+ORIGEM:
+Nem toda especialização Qrix emerge de treinamento intencional. Os Perfuradores do Vazio são Qrix que se adaptaram através de múltiplas missões em ambientes de perigo do vazio — estações de carga danificadas, corredores de trânsito instáveis, seções de casco despressurizadas. Aprenderam, por repetição, a se mover em áreas que outros classificariam como intransitáveis.
+
+O resultado é uma unidade que se move com velocidade perturbadora e pode abalar a presença de um combatente em seu ambiente antes que ele tenha tempo de reagir.
+
+NOTAS COMPORTAMENTAIS:
+Os Perfuradores do Vazio avançam rapidamente para o alcance de ataque, usando um trânsito de sprint de fase curto — ou seja: eles estão brevemente em outro lugar e depois de volta aqui, exceto que desta vez estão perto o suficiente para acertar. Imediatamente após o trânsito, segue uma habilidade conhecida como Disrupção do Vazio: um silêncio que interrompe o uso de habilidades por dois turnos.
+
+A resposta ótima a um Perfurador do Vazio é identificá-lo cedo. A resposta subótima é ser surpreendido quando ele já está ao seu lado.
+
+NOTA DE AQUISIÇÃO:
+Como todos os Qrix: contratual. Os Perfuradores do Vazio exigem taxas adicionais. A arena paga. Vale a pena.`,
+  },
+
+  bestiary_cryo_drifter: {
+    title: "Bestiário: Cryo Errante",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — CATÁLOGO DE FORMAS DE VIDA]
+[Classificação: FAUNA — Designação: CRYO-ERRANTE]
+[Nome comum na arena: Cryo Errante]
+[Status: Estoque ativo da arena, Ato III / Ato IV]
+
+ORIGEM:
+Cryo Errantes são originários de biosféras de frio profundo — planetas com temperaturas que excluem atividade biológica estável na maioria dos organismos conhecidos. Os Errantes não são uma exceção a essa regra; são uma consequência dela. Sua fisiologia não funciona apesar do frio, mas por causa dele. Os processos bioquímicos que causariam falha tecidual em outras formas de vida ativamente impulsionam os Errantes.
+
+Na arena, isso significa: eles não congelam. Eles resfriam o ambiente.
+
+NOTAS COMPORTAMENTAIS:
+Cryo Errantes se movem lentamente e preferem contato à média distância. Seu ataque primário gera supressão térmica localizada no impacto — o alvo experimenta o que a equipe médica da arena descreve como "inibição de mobilidade". O que os combatentes chamam de "enraizamento". O alvo não pode se mover por um turno.
+
+Sua habilidade secundária — Cryo Pulso — estende essa zona térmica para unidades adjacentes. Combatentes operando em formações fechadas devem considerar isso.
+
+NOTA DE AQUISIÇÃO:
+Coletados de expedições a biosféras profundas do Ato III. Protocolo de contenção especial necessário. A equipe de contenção usa equipamento térmico. Os Errantes não percebem a equipe. Isso é bom.`,
+  },
+
   conversation_davinci_beethoven: {
     title: "Áudio Recuperado — O Mecanismo",
     text: `[GRAVAÇÃO AMBIENTAL DA ARENA — ÁUDIO RECUPERADO]

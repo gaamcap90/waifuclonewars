@@ -708,23 +708,25 @@ const ENEMIES: EnemyEntry[] = [
   { id: 'vron_crawler',      name: 'Vron Crawler',         icon: '🦀', act: 1, rank: 'Minion', ai: 'defensive',  portrait: '/art/enemies/vron_crawler_portrait.png',    stats: { hp: 85,  might: 28, power: 20, defense: 16, moveRange: 2, attackRange: 1 }, description: "A living fortress on six legs. Its layered shell makes frontal assaults nearly pointless — wait for it to expose its soft underbelly, or don't attack at all.",
     abilities: [
       { icon: '🐚', name: 'Shell Harden', desc: 'Retracts into armored shell — gains +18 Defense for 2 turns. (Every 5 turns)' },
+      { icon: '🦀', name: 'Crushing Charge', desc: 'Drives forward 1 hex and crushes the target for 1.3× Might damage (DEF applies). (Every 3 turns)' },
     ],
   },
   { id: 'krath_champion',    name: 'Krath Champion',       icon: '⚔️', act: 1, rank: 'Elite',  ai: 'berserker',  portrait: '/art/enemies/krath_champion_portrait.png',  stats: { hp: 105, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 }, description: "A seasoned Krath arena veteran decorated with the skulls of past opponents. Fights dirty, hard, and with a grin that says it's already killed better than you.",
     abilities: [
       { icon: '🔥', name: 'Battle Rage', desc: 'Gains +25 Might and +10 Defense for 2 turns. (Every 3 turns)' },
       { icon: '⚔️', name: "Champion's Strike", desc: 'Deals 1× Might damage to the nearest enemy in range 2. (Every 2 turns)' },
+      { icon: '📣', name: 'Battle Roar', desc: 'Lets out a commanding roar — Taunts all enemies within range 2 for 1 turn, forcing them to target this unit. (Every 3 turns)' },
     ],
   },
-  { id: 'spore_cluster',     name: 'Spore Node',           icon: '🔴', act: 1, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/spore_node_portrait.png',     stats: { hp: 40,  might: 20, power: 30, defense: 5,  moveRange: 1, attackRange: 2 }, description: 'Three semi-sentient spore heads on a shared fungal body. Sluggish and barely mobile, but the toxic clouds they pump out will rot your armor off in minutes.',
+  { id: 'spore_cluster',     name: 'Spore Node',           icon: '🔴', act: 1, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/spore_node_portrait.png',     stats: { hp: 40,  might: 20, power: 30, defense: 5,  moveRange: 1, attackRange: 2 }, description: 'Three semi-sentient spore heads on a shared fungal body. Sluggish and barely mobile, but the mycotoxin threads it weaves through the ground will root you in place before you realize what happened.',
     abilities: [
       { icon: '☣️', name: 'Toxic Cloud', desc: 'Applies Poison to all enemies within range 2. (Every 3 turns)' },
-      { icon: '💥', name: 'Spore Burst', desc: 'Deals 45 damage to all enemies within range 2. (Every 2 turns)' },
+      { icon: '🕸️', name: 'Spore Web', desc: 'Ejects sticky spore threads — Roots all enemies within range 2 for 1 turn. (Every 4 turns)' },
     ],
   },
-  { id: 'vexlar',            name: 'Vexlar',               icon: '🐆', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vexlar_portrait.png',          stats: { hp: 80,  might: 25, power: 30, defense: 22, moveRange: 3, attackRange: 1 }, description: 'Alien apex predators brought in for your opening round. Six-legged and iridescent, they hunt the weakest link with surgical instinct and terrifying speed.',
+  { id: 'vexlar',            name: 'Vexlar',               icon: '🐆', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vexlar_portrait.png',          stats: { hp: 80,  might: 25, power: 30, defense: 22, moveRange: 3, attackRange: 1 }, description: 'Alien apex predators brought in for your opening round. Six-legged and iridescent, they hunt the weakest link with surgical instinct — leaping in, striking, and scattering anything nearby.',
     abilities: [
-      { icon: '🐆', name: 'Predator Leap', desc: 'Leaps up to range 4 toward the enemy with the lowest Defense and immediately attacks. (Every 3 turns)' },
+      { icon: '🐆', name: 'Predator Leap', desc: 'Leaps up to range 4 toward the enemy with the lowest Defense, strikes immediately, and knocks back adjacent units on landing. (Every 3 turns)' },
     ],
   },
   { id: 'iron_wall',         name: 'Iron Wall',            icon: '🤖', act: 1, rank: 'Boss',   ai: 'defensive',  portrait: '/art/enemies/iron_wall_portrait.png',       stats: { hp: 200, might: 60, power: 50, defense: 20, moveRange: 2, attackRange: 1 }, description: 'The Act I gatekeeper — a hulking war mech that heals when wounded, blankets the field with EMP blasts, and becomes an impenetrable turret when cornered.',
@@ -734,9 +736,10 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '🤖', name: 'Turret Mode', desc: 'Gains +30 Defense for 2 turns. (Every 4 turns)' },
     ],
   },
-  { id: 'mog_toxin',         name: 'Mog Toxin',            icon: '☣️', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/mog_toxin_portrait.png',     stats: { hp: 75,  might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 }, description: 'A long-range biological hazard unit. Deals poison-type damage from across the field.',
+  { id: 'mog_toxin',         name: 'Mog Toxin',            icon: '☣️', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/mog_toxin_portrait.png',     stats: { hp: 75,  might: 30, power: 45, defense: 10, moveRange: 2, attackRange: 3 }, description: 'A long-range biological hazard unit. Corrodes your armor from a distance and then bleeds you dry with targeted toxin injections.',
     abilities: [
       { icon: '🧪', name: 'Acid Spray', desc: 'Launches a corrosive burst — applies Armor Break (−20% DEF) to all enemies within range 1 for 2 turns. (Every 3 turns)' },
+      { icon: '🩸', name: 'Hemorrhage Strike', desc: 'Injects a targeted toxin — applies Bleed (3 dmg/turn) to a single enemy within range 1 for 3 turns. (Every 3 turns)' },
     ],
   },
   { id: 'qrix_hunter',       name: 'Qrix Hunter',          icon: '🏹', act: 2, rank: 'Minion', ai: 'ranged',     portrait: '/art/enemies/qrix_hunter_portrait.png',     stats: { hp: 70,  might: 25, power: 50, defense: 8,  moveRange: 3, attackRange: 3 }, description: 'A precision marksman deployed by arena sponsors. Has the longest attack range of any common enemy.',
@@ -755,10 +758,10 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '🦘', name: 'Savage Leap', desc: 'Teleports adjacent to the closest enemy and deals 1.2× Might (~72) damage (DEF applies). (Every 2 turns)' },
     ],
   },
-  { id: 'phasewarden',       name: 'Phasewarden',          icon: '🔮', act: 2, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/phasewarden_portrait.png',     stats: { hp: 110, might: 55, power: 65, defense: 20, moveRange: 4, attackRange: 2 }, description: "A guardian from between dimensions. Its crystalline armor flickers between planes of existence — it blinks away, strips your defenses, then closes in when you're most exposed.",
+  { id: 'phasewarden',       name: 'Phasewarden',          icon: '🔮', act: 2, rank: 'Elite',  ai: 'ranged',     portrait: '/art/enemies/phasewarden_portrait.png',     stats: { hp: 110, might: 55, power: 65, defense: 20, moveRange: 4, attackRange: 2 }, description: "A guardian from between dimensions. Its crystalline armor flickers between planes of existence — it blinks in, strikes while your abilities are suppressed, then vanishes before you can respond.",
     abilities: [
       { icon: '🔮', name: 'Dimensional Drain', desc: 'Applies Armor Break to all enemies within range 2 for 2 turns. (Every 3 turns)' },
-      { icon: '✨', name: 'Phase Blink', desc: 'Teleports adjacent to the closest enemy and deals ~66 damage (DEF applies). (Every 2 turns)' },
+      { icon: '✨', name: 'Phase Blink', desc: 'Blinks adjacent to the nearest enemy and strikes for ~50 damage (DEF applies), Silencing the target for 1 turn. (Every 3 turns)' },
     ],
   },
   { id: 'twin_terror_a',     name: 'Terror Alpha',         icon: '🗡️', act: 2, rank: 'Boss',   ai: 'berserker',  portrait: '/art/enemies/terror_alpha_portrait.png',   stats: { hp: 160, might: 60, power: 55, defense: 20, moveRange: 4, attackRange: 1 }, description: 'The aggressive half of the Twin Terror. Built for raw speed and kinetic impact — charges at full sprint and hits like a missile. Kill it first or it will never stop coming.',
@@ -803,10 +806,10 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '⚡', name: 'EMP Surge', desc: 'Releases an electromagnetic pulse — Silences all enemies within range 1 for 1 turn (Power reduced to 0). (Every 3 turns)' },
     ],
   },
-  { id: 'vrex_mimic', name: 'Vrex Mimic', icon: '🎭', act: 2, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vrex_mimic_portrait.png', stats: { hp: 90, might: 40, power: 40, defense: 15, moveRange: 4, attackRange: 1 }, description: "Nobody knows what a Vrex Mimic actually looks like — it never stops wearing someone else's face. Adapts its form mid-fight, copying the threat in front of it with unnerving precision.",
+  { id: 'vrex_mimic', name: 'Vrex Mimic', icon: '🎭', act: 2, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/vrex_mimic_portrait.png', stats: { hp: 90, might: 40, power: 40, defense: 15, moveRange: 4, attackRange: 1 }, description: "Nobody knows what a Vrex Mimic actually looks like — it never stops wearing someone else's face. Adapts its form mid-fight, and when the mask slips, it wipes your ability to respond.",
     abilities: [
       { icon: '🎭', name: 'Imitate', desc: 'Mimics the closest enemy — copies their Might value, then strikes for 1.2× that Might. (Every 2 turns)' },
-      { icon: '🌀', name: 'Disorienting Shift', desc: 'Shifts form erratically — Roots the target for 1 turn. Range 2. (Every 3 turns)' },
+      { icon: '🌀', name: 'Disorienting Shift', desc: "Shifts form mid-fight — Silences a single target within range 2 for 1 turn, suppressing their Power. (Every 2 turns)" },
     ],
   },
   { id: 'naxion_warmaster',     name: 'Naxion Warmaster',      icon: '🪖', act: 3, rank: 'Elite', ai: 'berserker', portrait: '/art/enemies/naxion_warmaster_portrait.png',     stats: { hp: 155, might: 68, power: 48, defense: 26, moveRange: 3, attackRange: 1 }, description: "The apex of Naxion military caste — an offensive commander who leads every charge personally. Where the Shieldbearer holds the line, the Warmaster breaks it.",
@@ -815,10 +818,11 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '🪖', name: 'Vanguard Charge', desc: 'Charges up to 3 hexes toward the nearest enemy and strikes for 1.3× Might (DEF applies). (Every 2 turns)' },
     ],
   },
-  { id: 'grox_titan',          name: 'Grox Titan',            icon: '🌩️', act: 3, rank: 'Elite', ai: 'ranged',    portrait: '/art/enemies/grox_titan_portrait.png',          stats: { hp: 175, might: 60, power: 88, defense: 32, moveRange: 2, attackRange: 3 }, description: "Beyond the Magnetar class — the Grox Titan commands electromagnetic force at a scale that reshapes the battlefield. Everything within range is either pulled, broken, or burning.",
+  { id: 'grox_titan',          name: 'Grox Titan',            icon: '🌩️', act: 3, rank: 'Elite', ai: 'ranged',    portrait: '/art/enemies/grox_titan_portrait.png',          stats: { hp: 175, might: 60, power: 88, defense: 32, moveRange: 2, attackRange: 3 }, description: "Beyond the Magnetar class — the Grox Titan commands electromagnetic force at a scale that reshapes the battlefield. Everything within range is either pulled in, broken, or burning.",
     abilities: [
       { icon: '🌩️', name: 'Graviton Storm',    desc: 'Releases a graviton pulse — deals ~57 damage to all enemies within range 3 (DEF applies). (Every 3 turns)' },
       { icon: '🛡️', name: 'Magnetic Fortress', desc: 'Converts its electromagnetic field into a defensive shell — gains +40 Defense for 2 turns. (Every 4 turns)' },
+      { icon: '🧲', name: 'Magnetic Pull',      desc: 'Generates a massive graviton spike — yanks a target 2 hexes closer then deals ~35 damage. Range 3. (Every 2 turns)' },
     ],
   },
   { id: 'velthrak_shadowblade', name: "Vel'thrak Shadowblade", icon: '🗡️', act: 3, rank: 'Elite', ai: 'berserker', portrait: '/art/enemies/velthrak_shadowblade_portrait.png', stats: { hp: 108, might: 78, power: 60, defense: 12, moveRange: 5, attackRange: 1 }, description: "An assassin from the Vel'thrak species — the Empire's most feared shadow warriors. It doesn't fight you; it decides the order you die in and then executes the plan.",
@@ -830,7 +834,43 @@ const ENEMIES: EnemyEntry[] = [
   { id: 'crystalline_hive', name: 'Crystalline Hive', icon: '💎', act: 3, rank: 'Minion', ai: 'ranged', portrait: '/art/enemies/crystalline_hive_portrait.png', stats: { hp: 85, might: 35, power: 60, defense: 20, moveRange: 2, attackRange: 3 }, description: "A collective organism grown from shattered crystal — the Hive doesn't think so much as resonate. Its shards fragment in every direction and the longer it stays alive, the more the air itself cuts you.",
     abilities: [
       { icon: '💎', name: 'Crystal Burst', desc: 'Erupts in razor shards — deals ~48 damage to all enemies within range 2. (Every 2 turns)' },
-      { icon: '🔶', name: 'Resonance Field', desc: 'Harmonic vibrations weaken armor — applies Armor Break (−15% DEF) to all enemies within range 2 for 2 turns. (Every 3 turns)' },
+      { icon: '🩸', name: 'Crystalline Shards', desc: 'Fires microscopic crystal fragments — applies Bleed (3 dmg/turn) to all enemies within range 2 for 2 turns. (Every 3 turns)' },
+    ],
+  },
+  { id: 'zyx_swarmer', name: 'Zyx Swarmer', icon: '🦟', act: 1, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/zyx_swarmer_portrait.png', stats: { hp: 25, might: 18, power: 12, defense: 3, moveRange: 4, attackRange: 1 }, description: 'A failed hive separation — three fragments sharing one degraded drive. Each is weaker than a Skitter alone, but all three arrive at once and they never stop.',
+    abilities: [
+      { icon: '🦟', name: 'Swarm Bite', desc: 'Leaps and deals 30 damage to all enemies within range 1. (Every 4 turns)' },
+      { icon: '🩸', name: 'Wound Swarm', desc: 'Applies Bleed to a single target in range 1. (Every 3 turns)' },
+    ],
+  },
+  { id: 'zyx_remnant', name: 'Zyx Remnant', icon: '💀', act: 3, rank: 'Elite', ai: 'defensive', portrait: '/art/enemies/zyx_remnant_portrait.png', stats: { hp: 110, might: 40, power: 45, defense: 18, moveRange: 2, attackRange: 2 }, description: 'A hive fragment old enough that Arena Authority has stopped trying to classify what it is. Slow. Tanky. Pulls everything toward it and refuses to let go.',
+    abilities: [
+      { icon: '🌀', name: 'Recall Pulse', desc: 'Pulls all enemies within range 2 toward it by 2 hexes. (Every 3 turns)' },
+      { icon: '❄️', name: 'Resonance Strike', desc: 'Melee attack that Roots the target for 1 turn. (Every 2 turns)' },
+    ],
+  },
+  { id: 'qrix_hauler', name: 'Qrix Hauler', icon: '⚓', act: 2, rank: 'Elite', ai: 'defensive', portrait: '/art/enemies/qrix_hauler_portrait.png', stats: { hp: 125, might: 45, power: 28, defense: 22, moveRange: 2, attackRange: 1 }, description: 'A void freight specialist in the arena between cargo runs. Slow, absurdly durable, and capable of locking a character in place for an uncomfortably long time.',
+    abilities: [
+      { icon: '⚓', name: 'Dead Weight', desc: 'Grabs target — deals 1× Might and Roots for 2 turns. (Every 3 turns)' },
+      { icon: '💥', name: 'Haul Through', desc: 'Charges 2 hexes and deals 1.2× Might on impact. (Every 2 turns)' },
+    ],
+  },
+  { id: 'qrix_salvager', name: 'Qrix Salvager', icon: '🔧', act: 2, rank: 'Minion', ai: 'ranged', portrait: '/art/enemies/qrix_salvager_portrait.png', stats: { hp: 80, might: 35, power: 40, defense: 12, moveRange: 3, attackRange: 2 }, description: 'Spent years stripping disabled ships for parts. Now strips your buffs instead. The toolkit is the same; the target has changed.',
+    abilities: [
+      { icon: '🔧', name: 'Reroute', desc: 'Applies Silence (1 turn) and Armor Break to target in range 2. (Every 3 turns)' },
+      { icon: '🩸', name: 'Corrosive Strike', desc: 'Melee attack that applies Bleed for 2 turns. (Every 2 turns)' },
+    ],
+  },
+  { id: 'qrix_voidbreacher', name: 'Qrix Voidbreacher', icon: '⚡', act: 3, rank: 'Elite', ai: 'berserker', portrait: '/art/enemies/qrix_voidbreacher_portrait.png', stats: { hp: 105, might: 72, power: 55, defense: 14, moveRange: 5, attackRange: 1 }, description: "A Qrix whose void-adaptation has compounded past the baseline. Fastest thing in Act III. By the time you see it, it's already next to your weakest character.",
+    abilities: [
+      { icon: '⚡', name: 'Phase Step', desc: 'Teleports adjacent to the chosen target and Silences them for 2 turns. (Every 3 turns)' },
+      { icon: '🗡️', name: 'Void Slash', desc: 'Deals 1× Might damage at melee range. (Every 2 turns)' },
+    ],
+  },
+  { id: 'cryo_drifter', name: 'Cryo Drifter', icon: '🧊', act: 3, rank: 'Minion', ai: 'aggressive', portrait: '/art/enemies/cryo_drifter_portrait.png', stats: { hp: 95, might: 38, power: 42, defense: 15, moveRange: 2, attackRange: 2 }, description: 'A deep-cold organism from the unmaintained transit corridors of the outer drift. Moves slowly and hits moderately — but everything it touches is Rooted in ice.',
+    abilities: [
+      { icon: '🧊', name: 'Frost Strike', desc: 'Melee attack that Roots the target for 1 turn. (Every 2 turns)' },
+      { icon: '❄️', name: 'Cryo Pulse', desc: 'Releases a cold burst — Roots all enemies within range 2 for 1 turn. (Every 4 turns)' },
     ],
   },
   { id: 'enemy_base', name: 'Znyxorga Fortress', icon: '🏰', act: 0, rank: 'Boss', ai: 'static', portrait: '/art/enemies/enemy_base_portrait.png', stats: { hp: 150, might: 0, power: 0, defense: 0, moveRange: 0, attackRange: 3 }, description: 'A hardened enemy stronghold that can appear in any Act. Cannot move — instead it fires every single turn and bombards with heavy artillery every 3 turns. HP scales by act: 150 (Act I) / 200 (Act II) / 300 (Act III) / 450 (Act IV). Destroy it before its relentless fire wears you down.',
@@ -2724,6 +2764,141 @@ One wrote a single word in the post-match debrief form. The form has been sealed
 We are aware that a clone squad has reached Act IV. We are aware of their record. This is the first time in 300 matches that we have written this note and not known how the match would conclude.]`,
   },
 
+  {
+    id: "bestiary_zyx_swarmer", title: "Bestiary: Zyx Swarmer", icon: '🦟', unlocked: false,
+    unlockHint: "Defeat 250 Zyx Swarmers to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Hive Fragment Cluster — Designation ZYX-EPSILON]
+[Common Arena Name: Zyx Swarmer]
+[Status: Active Arena Stock, Act I (Late Encounters)]
+
+ORIGIN:
+A Zyx Swarmer is not a different species from the Zyx Skitter. It is a failed separation — three hive fragments that tried to divide from one another and did not complete the process. They share a degraded drive loop, a single simplified instinct distributed across three bodies that are no longer fully coordinating but cannot fully stop. Individually, each fragment is smaller and weaker than a standard Skitter. Together, they are a sustained problem.
+
+Arena Authority was not aware this variant existed until a shipment arrived with the count wrong. The manifest listed twelve fragments. The actual count was thirty-six. The difference in mass was not detectable at standard weighing intervals.
+
+COMBAT PROFILE:
+Three simultaneous bodies with identical threat behavior creates a math problem rather than a tactical one. Each Swarmer moves at full Skitter speed. Swarm Bite remains intact — each fragment can trigger a localized burst individually. The added threat is attrition: Swarm Wounds, the variant's secondary behavior, applies a persistent bleed to any target it reaches. Against a squad facing all three bodies simultaneously, the damage stacks before anyone can address it.
+
+BEHAVIORAL NOTES:
+Swarmer engagements produce the highest crowd enthusiasm rating of any Act I encounter. Arena Authority initially attributed this to spectacle. A closer review of the footage suggests the audience is simply responding to the bodies.
+
+[ACQUISITION NOTE: The manifest discrepancy was reported to the supply division. The supply division responded that the fragments were correctly counted as twelve. They had counted each cluster, not each body. This distinction has since been added to the acquisition intake form.]`,
+  },
+  {
+    id: "bestiary_zyx_remnant", title: "Bestiary: Zyx Remnant", icon: '💀', unlocked: false,
+    unlockHint: "Defeat 100 Zyx Remnants to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Isolated Hive Fragment — Ancient Specimen — Designation ZYX-OMEGA]
+[Common Arena Name: Zyx Remnant]
+[Status: Active Arena Stock, Act III]
+
+ORIGIN:
+The Zyx Remnant is a fragment that has been separated from the Hive for long enough that Arena Authority xenobiologists are no longer certain what to call it. It is not operating on the simplified instinct loop that governs a Skitter or Swarmer. What it is operating on, we cannot determine. Its drive pattern does not match any documented hive fragment state. It does not match any documented fauna state. Arena Authority has filed three separate classification requests over fourteen years. All three have been returned unanswered.
+
+What we know: it is old. The electromagnetic residue on its outer membrane suggests it has been drifting through Zyx Hive transit corridors for longer than the Vol'Krath has been operational. Whether the Hive knows it exists is unknown. Whether it knows the Hive still exists is equally unknown.
+
+COMBAT PROFILE:
+The Remnant does not move fast. It does not need to. Its primary behavior — a localized resonance pulse that pulls everything in its proximity toward it — means the arena comes to the Remnant rather than the other way around. Once close, its strike is slow but anchoring, leaving targets unable to create distance. Fighting the Remnant from range is not an option. Fighting it up close is also not an option. This tension is what makes it dangerous.
+
+BEHAVIORAL NOTES:
+Arena staff have noticed that the Remnant occasionally pauses between engagements and appears to be doing nothing. Xenobiologists reviewed the footage. During these pauses, it is producing a low-frequency vibration in the range associated with Hive coordination signals.
+
+No Hive has responded. The Remnant keeps transmitting.
+
+[CLASSIFIED NOTE: In one documented match, the Remnant survived to the end of a fight with zero HP registered in the arena system. No recording error was detected. It resumed normal behavior in the next encounter. Arena Authority has not filed a report on this. We are not sure how to.]`,
+  },
+  {
+    id: "bestiary_qrix_hauler", title: "Bestiary: Qrix Hauler", icon: '⚓', unlocked: false,
+    unlockHint: "Defeat 100 Qrix Haulers to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Void-Adapted — Cargo Specialist]
+[Common Arena Name: Qrix Hauler]
+[Status: Active Arena Stock, Acts I (Elite) / II]
+
+ORIGIN:
+Not all Qrix are built for speed. The void-transit economy runs on two pillars: the fast movers who find the routes, and the heavy haulers who make the routes matter. A Qrix Hauler's physiology has adapted toward mass-tolerance — wider frame, denser musculature, a pressure resistance profile designed for the kind of cargo runs that would rupture a standard hull. They do not move quickly. They do not need to.
+
+Haulers in the arena are not recruited from the specialist contract market. They take these engagements between transit runs — the Vol'Krath is a layover, not a career. Their presence in Act I is almost incidental. They are passing through on the way to a freight contract and the rates were acceptable.
+
+COMBAT PROFILE:
+The Hauler does not pursue. It plants itself and waits for the engagement to come to it, then applies the same technique it uses for cargo manipulation: Dead Weight, a controlled application of mass and leverage that locks a target in position for an extended period. Combined with a frame that absorbs incoming damage at a rate that frustrates most standard approaches, the Hauler functions as a mobile obstacle that hits back.
+
+BEHAVIORAL NOTES:
+Multiple Qrix Haulers have been observed filling out Qrix Syndicate performance reports during the brief intervals between engagement rounds. Arena staff raised this with the Syndicate. The Syndicate noted that the forms are time-sensitive and the engagements are not.
+
+[ACQUISITION NOTE: The Qrix Syndicate classifies Hauler arena engagements as "transit rest stop supplemental income" in their accounting records. We have asked them to reclassify this under combat contracting. They said that would require a different form. We have not followed up.]`,
+  },
+  {
+    id: "bestiary_qrix_salvager", title: "Bestiary: Qrix Salvager", icon: '🔧', unlocked: false,
+    unlockHint: "Defeat 250 Qrix Salvagers to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Void-Adapted — Recovery Specialist]
+[Common Arena Name: Qrix Salvager]
+[Status: Active Arena Stock, Act II]
+
+ORIGIN:
+A Qrix Salvager's trade is decomposition — not biological, but material. They strip disabled vessels in the void, recovering components that can be sold, recycled, or repurposed. After enough years doing this, a Salvager develops a particular kind of patience and a particular set of tools: corrosive compounds for dissolving hull sections, electromagnetic disruptors for deactivating subsystems, leverage equipment for extracting components that do not want to come out.
+
+All of these translate directly to arena combat. The Salvager is not surprised by this. Every surface is material. Every opponent is a system to be taken apart.
+
+COMBAT PROFILE:
+The Salvager's threat is not raw damage — it is disruption. Reroute, their primary ability, applies corrosive compounds that cause persistent bleeding and simultaneously disrupts the target's operational capacity. A silenced character cannot use abilities. A bleeding character loses HP whether or not anyone is attacking them. The Salvager then continues moving, reassesses the field, and selects the next system to decompose.
+
+BEHAVIORAL NOTES:
+Qrix Salvagers submit the most detailed post-engagement reports Arena Authority receives from any contracted species. Every match is logged: target selection rationale, terrain assessment, timing of ability use, recommendations for arena layout improvements. Arena Authority has implemented three of these recommendations.
+
+The Salvager whose suggestion was rejected filed a formal objection citing arena safety protocol section 7. We reviewed section 7. The Salvager was correct.
+
+[ACQUISITION NOTE: Salvager contracts include a clause permitting the Salvager to retain any items recovered from the arena floor post-engagement. Arena Authority did not notice this clause for six contracts. We have since noticed.]`,
+  },
+  {
+    id: "bestiary_qrix_voidbreacher", title: "Bestiary: Qrix Voidbreacher", icon: '⚡', unlocked: false,
+    unlockHint: "Defeat 100 Qrix Voidbreachers to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Sapient Species — Void-Adapted — Elite Operative]
+[Common Arena Name: Qrix Voidbreacher]
+[Status: Active Arena Stock, Act III Elite]
+
+ORIGIN:
+Standard Qrix void-adaptation is a biological baseline — adequate for deep-space transit, comfortable in radiation environments, functional without atmospheric pressure. A Voidbreacher is what happens when a Qrix continues pushing past that baseline across decades of deep-void exposure. The adaptation compounds. What began as tolerance becomes something else: dampened pain response, reaction timing that Arena Authority's instrumentation cannot fully measure, a spatial awareness that operates on information other species cannot perceive.
+
+The Vol'Krath does not recruit Voidbreachers through the standard Qrix Syndicate contract process. They have their own rates. Their own terms. Their own assessment of which arenas are worth their time. The Vol'Krath qualified. We were informed of this. We were not asked.
+
+COMBAT PROFILE:
+The Voidbreacher closes distance in a way that makes "positioning" a theoretical concept. Phase Step — a void-adapted transit burst — places them adjacent to the chosen target before any response is possible, and the dimensional disruption on arrival silences the target for long enough to finish the engagement before ability use is an option. They hit hard. Their defenses are thin. The expectation is that they will not be hit, because there will not be time to hit them.
+
+This expectation has been correct in the majority of recorded engagements.
+
+BEHAVIORAL NOTES:
+A Qrix Voidbreacher's post-match rate is three times the standard Hunter contract. Arena Authority has been asked not to disclose this figure to other contracted arenas. We agreed. We are disclosing it here because this is an internal document.
+
+[ACQUISITION NOTE: We inquired whether a Voidbreacher would be available for permanent arena placement. The Voidbreacher responded that permanent placement would reduce their market rate by removing scarcity. They are correct. We have not asked again.]`,
+  },
+  {
+    id: "bestiary_cryo_drifter", title: "Bestiary: Cryo Drifter", icon: '🧊', unlocked: false,
+    unlockHint: "Defeat 250 Cryo Drifters to unlock",
+    text: `[ZNYXORGAN ARENA AUTHORITY — LIFEFORM CATALOGUE]
+[Classification: Alien Fauna — Deep-Cold Lifeform — Designation CRYO-THETA]
+[Common Arena Name: Cryo Drifter]
+[Status: Active Arena Stock, Act III]
+
+ORIGIN:
+The Cryo Drifter was sourced from the cryogenic transit corridors of the outer drift — the unmaintained shipping lanes where no active freight runs and temperature approaches absolute zero. In that environment, an organism does not survive by generating heat. It survives by becoming cold — by matching its biology so precisely to its surroundings that it registers as part of the environment rather than an anomaly within it.
+
+The Cryo Drifter does not have a body temperature in any conventional sense. It has a thermal profile: a field of accelerated heat extraction that surrounds it at all times. Anything that enters the field loses heat faster than its biological systems can compensate. This is not an attack. This is simply what the Drifter is.
+
+COMBAT PROFILE:
+Contact with a Cryo Drifter anchors targets in position — the rapid thermal drain causes muscular system impairment that manifests as inability to move. Individual strikes Frost-anchor a single target; the Cryo Pulse ability produces the same effect across a wide area simultaneously. The Drifter itself is not fast. It does not need to be. If the squad cannot disengage, speed becomes irrelevant.
+
+BEHAVIORAL NOTES:
+Arena heating costs for Cryo Drifter matches are significant. The arena temperature drops measurably within two rounds of deployment. Arena Authority has attempted to resolve this with supplemental heating units. The Drifter appears to consume these as well.
+
+Staff are instructed not to spend extended time in the arena after Cryo Drifter deployment. This instruction is followed. The arena returns to standard temperature in approximately forty minutes, assuming no additional Drifters are present.
+
+[SAFETY NOTICE: Do not touch a Cryo Drifter without thermal insulation rated for cryogenic contact. This notice has been issued twenty-two times. It has not always been heeded. Staff turnover in the containment division has been noted.]`,
+  },
+
   // ── Inter-Clone Conversations ──────────────────────────────────────────────
   {
     id: 'conversation_davinci_beethoven', title: 'Recovered Audio — The Mechanism', icon: '🎵', unlocked: false,
@@ -3431,6 +3606,12 @@ const LORE_CAT: Record<string, LoreCategory> = {
   bestiary_qrix_hunter:         'bestiary',
   bestiary_void_wraith:         'bestiary',
   bestiary_velzar:              'bestiary',
+  bestiary_zyx_swarmer:         'bestiary',
+  bestiary_zyx_remnant:         'bestiary',
+  bestiary_qrix_hauler:         'bestiary',
+  bestiary_qrix_salvager:       'bestiary',
+  bestiary_qrix_voidbreacher:   'bestiary',
+  bestiary_cryo_drifter:        'bestiary',
 };
 
 const LORE_SUBS: { id: LoreCategory; label: string; icon: string }[] = [
@@ -4953,90 +5134,84 @@ function AchievementsTab({
             { pts: 600,  icon: '🌐', label: 'Full Map',        sublabel: 'No fog',          tooltip: 'Full map visibility — every node and path revealed from the start' },
             { pts: 700,  icon: '🎁', label: 'Free Box',        sublabel: 'Mystery Box',     tooltip: 'Mystery Box at the merchant is now FREE every visit' },
             { pts: 800,  icon: '🎒', label: 'Slot #7',         sublabel: 'Per character',   tooltip: 'Each character gains a 7th item slot — equip even more powerful gear' },
-            { pts: 1000, icon: '💰', label: '+100% Gold',      sublabel: 'All sources',     tooltip: 'Doubles all gold — stacks with all previous bonuses for +160% total (2.6× multiplier)' },
+            { pts: 900,  icon: '🔥', label: 'Campfire 50%',   sublabel: 'HP restored',     tooltip: 'Campfire restores 50% HP instead of 30% — much more powerful mid-run recovery' },
+            { pts: 1000, icon: '💰', label: '+50% Gold',       sublabel: 'All sources',     tooltip: '+50% gold stacks — total +110% gold at this point' },
+            { pts: 1150, icon: '🃏', label: '4 Cards/Turn',   sublabel: 'Play limit',      tooltip: 'Play up to 4 cards per turn instead of 3 — stacks with Neural Link and other bonuses' },
+            { pts: 1300, icon: '⬆️', label: 'Dual Upgrade',   sublabel: 'At campfire',     tooltip: 'Campfire lets you upgrade TWO cards per rest — twice the deck power' },
+            { pts: 1450, icon: '💰', label: '+50% Gold',       sublabel: 'All sources',     tooltip: '+50% gold stacks again — total +160% gold at this point (2.6× multiplier)' },
+            { pts: 1600, icon: '⭐', label: 'Free Sig. Leg.', sublabel: 'Every run start', tooltip: 'Start every run with a random Signature Legendary already equipped on one of your clones' },
           ];
           // Achievement-gated perks (sig legendaries)
           const achPerks = ACHIEVEMENTS.filter(a => a.runPerk && a.runPerk.id !== 'char_teddy' && a.runPerk.id !== 'char_mansa' && !a.runPerk.id.startsWith('legacy_'));
-          const maxPts = 600;
-          return (
-            <>
-              <div className="relative">
-                <div className="absolute top-7 left-6 right-6 h-0.5" style={{ background: 'rgba(255,255,255,0.07)' }} />
-                <div className="absolute top-7 left-6 h-0.5 transition-all duration-700"
+          const ROW1 = MILESTONES.slice(0, 9);  // 50p – 500p
+          const ROW2 = MILESTONES.slice(9);      // 600p – 1600p
+
+          const renderRow = (rowMilestones: typeof MILESTONES, rowLabel: string) => {
+            const n = rowMilestones.length;
+            let lastIdx = -1;
+            for (let i = 0; i < n; i++) { if (totalUnlockedPoints >= rowMilestones[i].pts) lastIdx = i; }
+            const lineWidth = lastIdx < 0 ? '0%'
+              : lastIdx === n - 1 ? 'calc(100% - 3rem)'
+              : (() => {
+                  const fraction = Math.min(1, (totalUnlockedPoints - rowMilestones[lastIdx].pts) / (rowMilestones[lastIdx + 1].pts - rowMilestones[lastIdx].pts));
+                  return `calc(${((lastIdx + fraction) / (n - 1)) * 100}% - 3rem)`;
+                })();
+            return (
+              <div className="relative mb-6">
+                <div className="font-orbitron text-[8px] tracking-widest mb-3" style={{ color: 'rgba(96,165,250,0.4)' }}>{rowLabel}</div>
+                <div className="absolute top-[2.75rem] left-6 right-6 h-0.5" style={{ background: 'rgba(255,255,255,0.07)' }} />
+                <div className="absolute top-[2.75rem] left-6 h-0.5 transition-all duration-700"
                   style={{
                     background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
                     boxShadow: '0 0 6px rgba(96,165,250,0.5)',
-                    width: (() => {
-                      const uniquePts = [...new Set(MILESTONES.map(m => m.pts))];
-                      const n = uniquePts.length;
-                      if (n < 2) return '0%';
-                      let lastIdx = -1;
-                      for (let i = 0; i < n; i++) { if (totalUnlockedPoints >= uniquePts[i]) lastIdx = i; }
-                      if (lastIdx < 0) return '0%';
-                      if (lastIdx === n - 1) return `calc(100% - 3rem)`;
-                      const fraction = Math.min(1, (totalUnlockedPoints - uniquePts[lastIdx]) / (uniquePts[lastIdx + 1] - uniquePts[lastIdx]));
-                      const pct = ((lastIdx + fraction) / (n - 1)) * 100;
-                      return `calc(${pct}% - 3rem)`;
-                    })(),
-                    right: 'auto',
+                    width: lineWidth, right: 'auto',
                   }} />
-                {/* Milestone circles */}
-                {(() => {
-                  const uniquePts = [...new Set(MILESTONES.map(m => m.pts))];
-                  return (
-                    <div className="relative flex justify-between">
-                      {uniquePts.map((pts) => {
-                        const earned = totalUnlockedPoints >= pts;
-                        const items = MILESTONES.filter(m => m.pts === pts);
-                        const isHov = hoveredMilestone === pts;
-                        const tooltipText = items.map(m => m.tooltip ?? m.sublabel ?? m.label).join(' | ');
-                        return (
-                          <div key={pts} className="flex flex-col items-center gap-1.5 relative" style={{ minWidth: 56 }}
-                            onMouseEnter={() => setHoveredMilestone(pts)}
-                            onMouseLeave={() => setHoveredMilestone(null)}>
-                            {/* Hover tooltip */}
-                            {isHov && tooltipText && (
-                              <div className="absolute bottom-full mb-2 left-1/2 z-50 pointer-events-none"
-                                style={{ transform: 'translateX(-50%)', minWidth: 160, maxWidth: 220 }}>
-                                <div className="font-orbitron text-[9px] leading-relaxed text-center px-3 py-2 rounded-lg"
-                                  style={{
-                                    background: 'rgba(10,15,40,0.97)',
-                                    border: '1px solid rgba(96,165,250,0.4)',
-                                    color: '#93c5fd',
-                                    boxShadow: '0 4px 16px rgba(0,0,0,0.7)',
-                                    whiteSpace: 'normal',
-                                  }}>
-                                  {items.map((m, i) => (
-                                    <div key={i}>
-                                      <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{m.label}</span>
-                                      {m.tooltip && <div style={{ color: '#64748b', marginTop: 2, fontSize: 8 }}>{m.tooltip}</div>}
-                                    </div>
-                                  ))}
-                                </div>
-                                <div style={{ width: 8, height: 8, background: 'rgba(10,15,40,0.97)', border: '1px solid rgba(96,165,250,0.4)', borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg) translateX(-50%)', position: 'absolute', bottom: -5, left: '50%' }} />
-                              </div>
-                            )}
-                            <div className="w-14 h-14 rounded-xl flex items-center justify-center text-xl shrink-0 cursor-default"
-                              style={{
-                                background: earned ? 'rgba(59,130,246,0.22)' : 'rgba(255,255,255,0.04)',
-                                border: `2px solid ${earned ? (isHov ? 'rgba(147,197,253,0.85)' : 'rgba(96,165,250,0.65)') : 'rgba(255,255,255,0.12)'}`,
-                                boxShadow: earned ? (isHov ? '0 0 18px rgba(96,165,250,0.55)' : '0 0 12px rgba(96,165,250,0.35)') : 'none',
-                                filter: earned ? 'none' : 'grayscale(1) brightness(0.5)',
-                                transition: 'all 0.2s',
-                              }}>
-                              {items.length === 1 ? items[0].icon : '⚡'}
+                <div className="relative flex justify-between">
+                  {rowMilestones.map((m) => {
+                    const earned = totalUnlockedPoints >= m.pts;
+                    const isHov = hoveredMilestone === m.pts;
+                    return (
+                      <div key={m.pts} className="flex flex-col items-center gap-1.5 relative" style={{ minWidth: 56 }}
+                        onMouseEnter={() => setHoveredMilestone(m.pts)}
+                        onMouseLeave={() => setHoveredMilestone(null)}>
+                        {isHov && m.tooltip && (
+                          <div className="absolute bottom-full mb-2 left-1/2 z-50 pointer-events-none"
+                            style={{ transform: 'translateX(-50%)', minWidth: 160, maxWidth: 220 }}>
+                            <div className="font-orbitron text-[9px] leading-relaxed text-center px-3 py-2 rounded-lg"
+                              style={{ background: 'rgba(10,15,40,0.97)', border: '1px solid rgba(96,165,250,0.4)', color: '#93c5fd', boxShadow: '0 4px 16px rgba(0,0,0,0.7)', whiteSpace: 'normal' }}>
+                              <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{m.label}</span>
+                              <div style={{ color: '#64748b', marginTop: 2, fontSize: 8 }}>{m.tooltip}</div>
                             </div>
-                            <div className="font-orbitron text-[9px] text-center leading-tight" style={{ color: earned ? '#93c5fd' : 'rgba(255,255,255,0.25)', maxWidth: 64 }}>
-                              {items.map(m => m.label).join(' + ')}
-                            </div>
-                            <div className="font-orbitron text-[9px] text-center font-bold" style={{ color: earned ? 'rgba(96,165,250,0.7)' : 'rgba(255,255,255,0.25)' }}>{pts}p</div>
+                            <div style={{ width: 8, height: 8, background: 'rgba(10,15,40,0.97)', border: '1px solid rgba(96,165,250,0.4)', borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg) translateX(-50%)', position: 'absolute', bottom: -5, left: '50%' }} />
                           </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
+                        )}
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg shrink-0 cursor-default"
+                          style={{
+                            background: earned ? 'rgba(59,130,246,0.22)' : 'rgba(255,255,255,0.04)',
+                            border: `2px solid ${earned ? (isHov ? 'rgba(147,197,253,0.85)' : 'rgba(96,165,250,0.65)') : 'rgba(255,255,255,0.12)'}`,
+                            boxShadow: earned ? (isHov ? '0 0 18px rgba(96,165,250,0.55)' : '0 0 12px rgba(96,165,250,0.35)') : 'none',
+                            filter: earned ? 'none' : 'grayscale(1) brightness(0.5)',
+                            transition: 'all 0.2s',
+                          }}>
+                          {m.icon}
+                        </div>
+                        <div className="font-orbitron text-[9px] text-center leading-tight" style={{ color: earned ? '#93c5fd' : 'rgba(255,255,255,0.25)', maxWidth: 60 }}>
+                          {m.label}
+                        </div>
+                        <div className="font-orbitron text-[9px] text-center font-bold" style={{ color: earned ? 'rgba(96,165,250,0.7)' : 'rgba(255,255,255,0.25)' }}>{m.pts}p</div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+            );
+          };
+
+          return (
+            <>
+              {renderRow(ROW1, '50 — 500')}
+              <div className="border-t border-white/5 mb-6" />
+              {renderRow(ROW2, '600 — 1600')}
               {/* Achievement-gated perks (below track) */}
               {achPerks.length > 0 && (
                 <div className="mt-5 pt-4 border-t border-white/5 flex flex-col gap-2">

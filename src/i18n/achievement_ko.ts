@@ -55,6 +55,18 @@ export const achievementKo: Record<string, { name: string; description: string }
   power_cut:        { name: '전력 차단',         description: '그록스 마그네타르를 50마리 처치하세요.' },
   shellbreaker:     { name: '방패 파괴자',       description: '낙시온 실드베어러를 50마리 처치하세요.' },
   mirror_mirror:    { name: '거울아, 거울아',    description: '브렉스 미믹을 100마리 처치하세요.' },
+  swarmed:               { name: '군집 공격',       description: 'Zyx 스워머를 250마리 처치하세요.' },
+  contract_expired_salvager: { name: '계약 만료',   description: 'Qrix 구조자를 250마리 처치하세요.' },
+  frost_resistant:       { name: '냉기 저항',       description: '크라이오 드리프터를 250마리 처치하세요.' },
+  dead_freight:          { name: '죽은 화물',       description: 'Qrix 운반자를 100마리 처치하세요.' },
+  void_proof:            { name: '보이드 증명',     description: 'Qrix 보이드브리처를 100마리 처치하세요.' },
+  signal_lost:           { name: '신호 없음',       description: 'Zyx 잔재를 100마리 처치하세요.' },
+  swarm_authority:       { name: '군집 지배자',     description: 'Zyx 스워머를 500마리 처치하세요.' },
+  remnant_erased:        { name: '잔재 소멸',       description: 'Zyx 잔재를 200마리 처치하세요.' },
+  full_cargo_cleared:    { name: '화물 정리 완료',  description: 'Qrix 운반자를 200마리 처치하세요.' },
+  salvage_complete:      { name: '구조 완료',       description: 'Qrix 구조자를 500마리 처치하세요.' },
+  void_closed:           { name: '보이드 봉쇄',     description: 'Qrix 보이드브리처를 200마리 처치하세요.' },
+  permafrost:            { name: '영구 동토',       description: '크라이오 드리프터를 500마리 처치하세요.' },
 
   // Observer
   archivist:         { name: '기록가',               description: '로어 항목을 5개 읽으세요.' },

@@ -47,6 +47,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'defensive',
     abilities: [
       { id: 'shell_harden', name: 'Shell Harden', icon: '🐚', description: 'Retracts into armored shell — gains +18 Defense for 2 turns.', cooldown: 5, effect: { type: 'buff_self', defenseBonus: 18, duration: 2 } },
+      { id: 'crushing_charge', name: 'Crushing Charge', icon: '⚡', description: 'Drives its reinforced shell forward — charges 1 hex and deals 1.3× Might damage (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 1, multiplier: 1.3 } },
     ] as EnemyAbilityDef[],
   },
   // Act 1 elites
@@ -59,6 +60,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     abilities: [
       { id: 'battle_rage', name: 'Battle Rage', icon: '🔥', description: 'Gains +25 Might and +10 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: 10, duration: 2 } },
       { id: 'champion_strike', name: "Champion's Strike", icon: '⚔️', description: 'Deals 1× Might damage to the nearest enemy within range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.0, singleTarget: true, useMight: true } },
+      { id: 'battle_roar', name: 'Battle Roar', icon: '📣', description: 'Roars a challenge — Taunts all enemies within range 2 for 1 turn, forcing them to focus the Champion.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'taunted', magnitude: 0, duration: 1 } },
     ] as EnemyAbilityDef[],
   },
   spore_cluster: {
@@ -69,7 +71,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'toxic_cloud', name: 'Toxic Cloud', icon: '☣️', description: 'Applies Poison to all enemies within range 2.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'poison', magnitude: 5, duration: 99 } },
-      { id: 'spore_burst', name: 'Spore Burst', icon: '💥', description: 'Deals 45 damage to all enemies in range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, damage: 45 } },
+      { id: 'spore_web', name: 'Spore Web', icon: '🕸️', description: 'Releases sticky spore tendrils — Roots all enemies within range 2 for 1 turn.', cooldown: 4, effect: { type: 'debuff_enemies', range: 2, debuffType: 'rooted', magnitude: 0, duration: 1 } },
     ] as EnemyAbilityDef[],
   },
   // Act 1 starter — alien beast (first encounter only)
@@ -80,7 +82,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 80, maxHp: 80, might: 25, power: 30, defense: 22, moveRange: 3, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
-      { id: 'predator_leap', name: 'Predator Leap', icon: '🐆', description: 'Launches at the enemy with the lowest Defense — leaps up to range 4 and delivers a savage basic attack on arrival.', cooldown: 3, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.0 } },
+      { id: 'predator_leap', name: 'Predator Leap', icon: '🐆', description: 'Launches at the enemy with the lowest Defense — leaps up to range 4, strikes on arrival, and knocks back any adjacent units 1 hex (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.0 } },
     ] as EnemyAbilityDef[],
   },
   // Act 1 boss
@@ -105,6 +107,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'acid_spray', name: 'Acid Spray', icon: '🧪', description: 'Launches a corrosive burst — applies Armor Break (−20% DEF) to all enemies within range 1 for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'armor_break', magnitude: 20, duration: 2 } },
+      { id: 'hemorrhage_strike', name: 'Hemorrhage Strike', icon: '🩸', description: 'Slashes with a serrated limb — applies Bleed to a single target within range 1.', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'bleed', magnitude: 3, duration: 3, singleTarget: true } },
     ] as EnemyAbilityDef[],
   },
   qrix_hunter: {
@@ -146,7 +149,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'dimensional_drain', name: 'Dimensional Drain', icon: '🔮', description: 'Applies Armor Break (−20% Defense) to all enemies within range 2 for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'armor_break', magnitude: 20, duration: 2 } },
-      { id: 'phase_blink', name: 'Phase Blink', icon: '✨', description: 'Teleports to a position far from all enemies, then attacks the closest from range.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 6, multiplier: 1.0 } },
+      { id: 'phase_blink', name: 'Phase Blink', icon: '✨', description: 'Blinks through dimensions to melee range — strikes for 0.9× Might and Silences the target for 1 turn (DEF applies).', cooldown: 3, effect: { type: 'melee_debuff', multiplier: 0.9, debuffType: 'silence', magnitude: 0, duration: 1 } },
     ] as EnemyAbilityDef[],
   },
   // Act 2 boss
@@ -235,7 +238,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'aggressive',
     abilities: [
       { id: 'imitate', name: 'Imitate', icon: '🎭', description: "Mimics the closest enemy — copies their Might and Power, then strikes for 0.5× their Might + 0.5× their Power.", cooldown: 2, effect: { type: 'copy_attack', multiplier: 1.0 } },
-      { id: 'disorienting_shift', name: 'Disorienting Shift', icon: '🌀', description: 'Shifts form erratically — Roots the target for 1 turn. Range 2.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'rooted', magnitude: 0, duration: 1 } },
+      { id: 'disorienting_shift', name: 'Disorienting Shift', icon: '🌀', description: "Shifts into the target's exact form — Silences them for 1 turn (prevents ability use). Range 2.", cooldown: 2, effect: { type: 'debuff_enemies', range: 2, debuffType: 'silence', magnitude: 0, duration: 1, singleTarget: true } },
     ] as EnemyAbilityDef[],
   },
   // Act 3 Champions — the best warriors the Empire's member species have to offer
@@ -258,6 +261,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'graviton_storm', name: 'Graviton Storm', icon: '🌩️', description: 'Releases a graviton pulse — deals Power×0.55 damage to all enemies within range 3 (DEF applies).', cooldown: 3, effect: { type: 'aoe_damage', range: 3, multiplier: 0.55 } },
+      { id: 'magnetic_pull_titan', name: 'Magnetic Pull', icon: '🧲', description: 'Field density spikes — yanks the nearest target 2 hexes closer and deals Power×0.4 damage (DEF applies).', cooldown: 2, effect: { type: 'pull_attack', pullRange: 2, range: 3, multiplier: 0.4 } },
       { id: 'magnetic_fortress', name: 'Magnetic Fortress', icon: '🛡️', description: 'Converts its own electromagnetic field into a defensive shell — gains +25 Defense for 2 turns.', cooldown: 4, effect: { type: 'buff_self', defenseBonus: 25, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
@@ -281,7 +285,74 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'ranged',
     abilities: [
       { id: 'crystal_burst', name: 'Crystal Burst', icon: '💎', description: 'Erupts in razor shards — deals Power×0.8 to all enemies within range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 0.8 } },
-      { id: 'resonance_field', name: 'Resonance Field', icon: '🔶', description: 'Harmonic vibrations weaken armor — applies Armor Break (−15% DEF) to all enemies within range 2 for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'armor_break', magnitude: 15, duration: 2 } },
+      { id: 'crystalline_shards', name: 'Crystalline Shards', icon: '🔶', description: 'Razor-edged shards embed in all enemies within range 2 — applies Bleed for 2 turns.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'bleed', magnitude: 3, duration: 2 } },
+    ] as EnemyAbilityDef[],
+  },
+  // ── New Enemies ─────────────────────────────────────────────────────────────
+  zyx_swarmer: {
+    id: 'zyx_swarmer', name: 'Zyx Swarmer', icon: '🦟', count: 3,
+    portrait: '/art/enemies/zyx_swarmer_portrait.png',
+    description: "A failed hive separation — three fragments sharing one degraded drive loop. Individually weaker than a Skitter, but all three arrive simultaneously and bleed you out before you can address them.",
+    stats: { hp: 25, maxHp: 25, might: 18, power: 12, defense: 3, moveRange: 4, attackRange: 1 },
+    ai: 'aggressive',
+    abilities: [
+      { id: 'swarm_bite_s', name: 'Swarm Bite', icon: '🦟', description: 'Leaps onto the closest enemy and deals 30 damage to all enemies within range 1 (DEF applies).', cooldown: 4, effect: { type: 'aoe_damage', range: 1, damage: 30 } },
+      { id: 'wound_swarm', name: 'Wound Swarm', icon: '🩸', description: 'Applies Bleed to a single target within range 1.', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'bleed', magnitude: 3, duration: 3, singleTarget: true } },
+    ] as EnemyAbilityDef[],
+  },
+  zyx_remnant: {
+    id: 'zyx_remnant', name: 'Zyx Remnant', icon: '💀', count: 1,
+    portrait: '/art/enemies/zyx_remnant_portrait.png',
+    description: "A hive fragment old enough that Arena Authority cannot classify what it is. Slow, tanky, pulls everything toward it, and refuses to let go.",
+    stats: { hp: 110, maxHp: 110, might: 40, power: 45, defense: 18, moveRange: 2, attackRange: 2 },
+    ai: 'defensive',
+    abilities: [
+      { id: 'recall_pulse', name: 'Recall Pulse', icon: '🌀', description: 'Resonance pulse — yanks the nearest target 2 hexes closer and deals Power×0.3 damage (DEF applies).', cooldown: 3, effect: { type: 'pull_attack', pullRange: 2, range: 3, multiplier: 0.3 } },
+      { id: 'resonance_strike', name: 'Resonance Strike', icon: '❄️', description: 'Strikes the nearest enemy — deals 1× Might damage and Roots the target for 1 turn (DEF applies).', cooldown: 2, effect: { type: 'melee_debuff', multiplier: 1.0, debuffType: 'rooted', magnitude: 0, duration: 1 } },
+    ] as EnemyAbilityDef[],
+  },
+  qrix_hauler: {
+    id: 'qrix_hauler', name: 'Qrix Hauler', icon: '⚓', count: 1,
+    portrait: '/art/enemies/qrix_hauler_portrait.png',
+    description: "A void freight specialist doing an arena engagement between cargo runs. Slow, absurdly durable, and capable of locking a character in place for an uncomfortably long time.",
+    stats: { hp: 125, maxHp: 125, might: 45, power: 28, defense: 22, moveRange: 2, attackRange: 1 },
+    ai: 'defensive',
+    abilities: [
+      { id: 'dead_weight', name: 'Dead Weight', icon: '⚓', description: 'Grabs a target — deals 1× Might damage and Roots them for 2 turns (DEF applies).', cooldown: 3, effect: { type: 'melee_debuff', multiplier: 1.0, debuffType: 'rooted', magnitude: 0, duration: 2 } },
+      { id: 'haul_through', name: 'Haul Through', icon: '💥', description: 'Charges up to 2 hexes and deals 1.2× Might damage on impact (DEF applies).', cooldown: 2, effect: { type: 'dash_attack', dashRange: 2, multiplier: 1.2 } },
+    ] as EnemyAbilityDef[],
+  },
+  qrix_salvager: {
+    id: 'qrix_salvager', name: 'Qrix Salvager', icon: '🔧', count: 1,
+    portrait: '/art/enemies/qrix_salvager_portrait.png',
+    description: "Spent years stripping disabled ships for parts. Now strips your defenses instead. The toolkit is the same; the target has changed.",
+    stats: { hp: 80, maxHp: 80, might: 35, power: 40, defense: 12, moveRange: 3, attackRange: 2 },
+    ai: 'ranged',
+    abilities: [
+      { id: 'reroute', name: 'Reroute', icon: '🔧', description: 'Applies Silence (1 turn) to a single target within range 2 — prevents ability use.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'silence', magnitude: 0, duration: 1, singleTarget: true } },
+      { id: 'corrosive_strike', name: 'Corrosive Strike', icon: '🩸', description: 'Melee attack — deals 0.8× Might damage and applies Armor Break (−20% DEF) for 2 turns (DEF applies).', cooldown: 2, effect: { type: 'melee_debuff', multiplier: 0.8, debuffType: 'armor_break', magnitude: 20, duration: 2 } },
+    ] as EnemyAbilityDef[],
+  },
+  qrix_voidbreacher: {
+    id: 'qrix_voidbreacher', name: 'Qrix Voidbreacher', icon: '⚡', count: 1,
+    portrait: '/art/enemies/qrix_voidbreacher_portrait.png',
+    description: "A Qrix whose void-adaptation has compounded past the baseline. Fastest thing in Act III — by the time you see it, it's already next to your weakest character.",
+    stats: { hp: 105, maxHp: 105, might: 72, power: 55, defense: 14, moveRange: 5, attackRange: 1 },
+    ai: 'berserker',
+    abilities: [
+      { id: 'phase_step_qrix', name: 'Phase Step', icon: '⚡', description: 'Void-transit burst — dashes to the chosen target and deals 0.9× Might damage (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 6, multiplier: 0.9 } },
+      { id: 'void_disruption', name: 'Void Disruption', icon: '🌀', description: 'Dimensional interference — Silences a single target within range 1 for 2 turns.', cooldown: 2, effect: { type: 'debuff_enemies', range: 1, debuffType: 'silence', magnitude: 0, duration: 2, singleTarget: true } },
+    ] as EnemyAbilityDef[],
+  },
+  cryo_drifter: {
+    id: 'cryo_drifter', name: 'Cryo Drifter', icon: '🧊', count: 1,
+    portrait: '/art/enemies/cryo_drifter_portrait.png',
+    description: "A deep-cold organism from the unmaintained transit corridors of the outer drift. Slow, moderate damage — but everything it touches is Rooted solid.",
+    stats: { hp: 95, maxHp: 95, might: 38, power: 42, defense: 15, moveRange: 2, attackRange: 2 },
+    ai: 'aggressive',
+    abilities: [
+      { id: 'frost_strike', name: 'Frost Strike', icon: '🧊', description: 'Melee attack — deals 1× Might damage and Roots the target for 1 turn (DEF applies).', cooldown: 2, effect: { type: 'melee_debuff', multiplier: 1.0, debuffType: 'rooted', magnitude: 0, duration: 1 } },
+      { id: 'cryo_pulse', name: 'Cryo Pulse', icon: '❄️', description: 'Thermal drain burst — Roots all enemies within range 2 for 1 turn.', cooldown: 4, effect: { type: 'debuff_enemies', range: 2, debuffType: 'rooted', magnitude: 0, duration: 1 } },
     ] as EnemyAbilityDef[],
   },
 };
@@ -701,26 +772,28 @@ function buildEncounter(
   // Rows 4-6: mid (tougher bruisers)
   // Rows 7-9: late (dangerous fighters)
   const earlyPool = [ENEMIES.zyx_skitter, ENEMIES.glorp_shambler];
-  const midPool   = [ENEMIES.naxion_scout, ENEMIES.vron_crawler];
-  const latePool  = [ENEMIES.mog_toxin, ENEMIES.qrix_hunter, ENEMIES.void_wraith];
-  const act2EarlyPool = [ENEMIES.vrex_mimic, ENEMIES.crystalline_hive];
-  const act2Pool  = [ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar, ENEMIES.vrex_mimic, ENEMIES.crystalline_hive];
-  const act2LatePool = [...latePool, ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar];
-  // Act 3 Champion's Gauntlet: rows 1-3 ease in with Act 2 faces, then empire champions take over
-  const act3Pool     = [ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade];
-  const act3LatePool = [ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade];
+  const midPool   = [ENEMIES.naxion_scout, ENEMIES.vron_crawler, ENEMIES.vexlar];
+  const latePool  = [ENEMIES.mog_toxin, ENEMIES.qrix_hunter, ENEMIES.void_wraith, ENEMIES.zyx_swarmer];
+  const act2EarlyPool = [ENEMIES.vrex_mimic, ENEMIES.crystalline_hive, ENEMIES.qrix_salvager];
+  const act2Pool  = [ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar, ENEMIES.vrex_mimic, ENEMIES.crystalline_hive, ENEMIES.qrix_salvager, ENEMIES.qrix_hauler];
+  const act2LatePool = [...latePool, ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar, ENEMIES.qrix_salvager];
+  // Act 3 Champion's Gauntlet: rows 1-3 ease in with Act 2 faces, then empire champions + new threats take over
+  const act3Pool     = [ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade, ENEMIES.cryo_drifter];
+  const act3LatePool = [ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade, ENEMIES.cryo_drifter];
   // Act 4: total chaos — every enemy from Acts 1-3 thrown together.
   // Act 1 units are weaker in base stats but the scaleFactor (~1.7-1.9) closes the gap.
   // krath_berserker, phasewarden, and Act 3 champions are elite-tier; kept out of normal pools, elite pool only.
   const act4Pool = [
     // Act 1 originals (familiar faces, now upgraded by scale factor)
-    ENEMIES.glorp_shambler, ENEMIES.zyx_skitter,
-    ENEMIES.naxion_scout,   ENEMIES.vron_crawler,
-    ENEMIES.mog_toxin,      ENEMIES.qrix_hunter,   ENEMIES.void_wraith,
+    ENEMIES.glorp_shambler, ENEMIES.zyx_skitter, ENEMIES.zyx_swarmer,
+    ENEMIES.naxion_scout,   ENEMIES.vron_crawler, ENEMIES.vexlar,
+    ENEMIES.mog_toxin,      ENEMIES.qrix_hunter,  ENEMIES.void_wraith,
     // Act 2 threats
-    ENEMIES.vrex_mimic,     ENEMIES.crystalline_hive,
+    ENEMIES.vrex_mimic, ENEMIES.crystalline_hive, ENEMIES.qrix_salvager,
     // Act 2/3 heavies (normal encounter filler in Act 4)
-    ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar,
+    ENEMIES.naxion_shieldbearer, ENEMIES.grox_magnetar, ENEMIES.qrix_hauler,
+    // Act 3 normals
+    ENEMIES.cryo_drifter,
     // Act 3 champions (these hit hard — Act 4 scaleFactor makes them brutal)
     ENEMIES.naxion_warmaster, ENEMIES.grox_titan, ENEMIES.velthrak_shadowblade,
   ];
@@ -760,6 +833,8 @@ function buildEncounter(
       [ENEMIES.naxion_warmaster],
       [ENEMIES.grox_titan],
       [ENEMIES.velthrak_shadowblade],
+      [ENEMIES.qrix_voidbreacher],
+      [ENEMIES.zyx_remnant],
     ];
     const act4EliteOptions: EnemyTemplate[][] = [
       [ENEMIES.krath_champion],
@@ -771,9 +846,12 @@ function buildEncounter(
       [ENEMIES.velthrak_shadowblade],
       [ENEMIES.naxion_shieldbearer],
       [ENEMIES.grox_magnetar],
+      [ENEMIES.qrix_hauler],
+      [ENEMIES.qrix_voidbreacher],
+      [ENEMIES.zyx_remnant],
     ];
     const baseElites = act === 1
-      ? (useToughElite || rng() < 0.5 ? [ENEMIES.krath_champion] : [ENEMIES.spore_cluster, ENEMIES.spore_cluster, ENEMIES.spore_cluster])
+      ? (useToughElite ? [ENEMIES.krath_champion] : rng() < 0.5 ? [ENEMIES.spore_cluster, ENEMIES.spore_cluster, ENEMIES.spore_cluster] : rng() < 0.5 ? [ENEMIES.krath_champion] : [ENEMIES.qrix_hauler])
       : act === 3
         ? pick(act3EliteOptions, rng)
         : act === 4

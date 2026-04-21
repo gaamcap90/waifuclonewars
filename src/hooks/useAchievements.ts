@@ -70,6 +70,12 @@ export interface AchievementStats {
   kills_qrix_hunter:             number;
   kills_void_wraith:             number;
   kills_velzar:                  number;
+  kills_zyx_swarmer:             number;
+  kills_zyx_remnant:             number;
+  kills_qrix_hauler:             number;
+  kills_qrix_salvager:           number;
+  kills_qrix_voidbreacher:       number;
+  kills_cryo_drifter:            number;
   // Per-character run wins
   napoleon_runs_won:             number;
   genghis_runs_won:              number;
@@ -104,6 +110,9 @@ const DEFAULT_STATS: AchievementStats = {
   kills_glorp_shambler: 0, kills_zyx_skitter: 0, kills_naxion_scout: 0, kills_vron_crawler: 0,
   kills_spore_node: 0, kills_vexlar: 0, kills_mog_toxin: 0, kills_qrix_hunter: 0,
   kills_void_wraith: 0, kills_velzar: 0,
+  kills_zyx_swarmer: 0, kills_zyx_remnant: 0,
+  kills_qrix_hauler: 0, kills_qrix_salvager: 0,
+  kills_qrix_voidbreacher: 0, kills_cryo_drifter: 0,
   leonidas_ultimates: 0, napoleon_grande_armee: 0, napoleon_final_salvo: 0,
   genghis_ultimates: 0, beethoven_ultimates: 0, sunsin_ultimates: 0,
   davinci_ultimates: 0, huang_ultimates: 0, nelson_ultimates: 0,
@@ -232,7 +241,12 @@ export function useAchievements() {
     if (newTotal >= 500) perks.add('gold_bonus_30');
     if (newTotal >= 700) perks.add('mystery_box_free');
     if (newTotal >= 800) perks.add('inv_slot_7');
+    if (newTotal >= 900) perks.add('campfire_heal_50');
     if (newTotal >= 1000) perks.add('gold_bonus_100');
+    if (newTotal >= 1150) perks.add('draw_4_cards');
+    if (newTotal >= 1300) perks.add('campfire_dual_upgrade');
+    if (newTotal >= 1450) perks.add('gold_bonus_50_2');
+    if (newTotal >= 1600) perks.add('free_sig_legendary');
     localStorage.setItem(LS_RUN_PERKS, JSON.stringify([...perks]));
     // Fire perk milestone toasts for newly crossed thresholds
     const oldFog = fogTierFromPts(oldTotal);
@@ -251,7 +265,12 @@ export function useAchievements() {
     if (oldTotal < 500 && newTotal >= 500) setToastQueue(q => [...q, { id: 'perk_gold_30', name: '+30% Gold from all sources', icon: '💰', points: 0, isPerk: true }]);
     if (oldTotal < 700 && newTotal >= 700) setToastQueue(q => [...q, { id: 'perk_mystery_free', name: 'Mystery Box is now FREE', icon: '🎁', points: 0, isPerk: true }]);
     if (oldTotal < 800 && newTotal >= 800) setToastQueue(q => [...q, { id: 'perk_inv_slot', name: 'Inventory slot #7 unlocked per character', icon: '🎒', points: 0, isPerk: true }]);
-    if (oldTotal < 1000 && newTotal >= 1000) setToastQueue(q => [...q, { id: 'perk_gold_100', name: '+100% Gold — all bonuses stack to 160%!', icon: '💰', points: 0, isPerk: true }]);
+    if (oldTotal < 900 && newTotal >= 900) setToastQueue(q => [...q, { id: 'perk_campfire_50', name: 'Campfire now restores 50% HP!', icon: '🔥', points: 0, isPerk: true }]);
+    if (oldTotal < 1000 && newTotal >= 1000) setToastQueue(q => [...q, { id: 'perk_gold_100', name: '+50% Gold — total bonus now 160%!', icon: '💰', points: 0, isPerk: true }]);
+    if (oldTotal < 1150 && newTotal >= 1150) setToastQueue(q => [...q, { id: 'perk_draw4', name: 'Play up to 4 cards per turn!', icon: '🃏', points: 0, isPerk: true }]);
+    if (oldTotal < 1300 && newTotal >= 1300) setToastQueue(q => [...q, { id: 'perk_dual_upgrade', name: 'Campfire: Upgrade TWO cards per rest!', icon: '⬆️', points: 0, isPerk: true }]);
+    if (oldTotal < 1450 && newTotal >= 1450) setToastQueue(q => [...q, { id: 'perk_gold_50_2', name: '+50% Gold — total bonus now 210%!', icon: '💰', points: 0, isPerk: true }]);
+    if (oldTotal < 1600 && newTotal >= 1600) setToastQueue(q => [...q, { id: 'perk_sig_leg', name: 'Start every run with a free Signature Legendary!', icon: '⭐', points: 0, isPerk: true }]);
     // Fire a blue perk toast for achievement-gated run perks (not char unlocks, not legacy stat perks)
     if (a.runPerk && a.runPerk.id !== 'char_teddy' && a.runPerk.id !== 'char_mansa' && !a.runPerk.id.startsWith('legacy_')) {
       setToastQueue(q => [...q, { id: `perk_${a.runPerk!.id}`, name: a.runPerk!.label, icon: '⚡', points: 0, isPerk: true }]);
@@ -373,6 +392,12 @@ export function useAchievements() {
             else if (name === 'Qrix Hunter')         s.kills_qrix_hunter         += 1;
             else if (name === 'Void Wraith')         s.kills_void_wraith         += 1;
             else if (name === "Vel'Zar — Emperor's Will") s.kills_velzar         += 1;
+            else if (name === 'Zyx Swarmer')         s.kills_zyx_swarmer         += 1;
+            else if (name === 'Zyx Remnant')         s.kills_zyx_remnant         += 1;
+            else if (name === 'Qrix Hauler')         s.kills_qrix_hauler         += 1;
+            else if (name === 'Qrix Salvager')       s.kills_qrix_salvager       += 1;
+            else if (name === 'Qrix Voidbreacher')   s.kills_qrix_voidbreacher   += 1;
+            else if (name === 'Cryo Drifter')        s.kills_cryo_drifter        += 1;
           }
         }
 
@@ -578,7 +603,12 @@ export function useAchievements() {
       if (totalUnlockedPoints >= 500) perks.add('gold_bonus_30');
       if (totalUnlockedPoints >= 700) perks.add('mystery_box_free');
       if (totalUnlockedPoints >= 800) perks.add('inv_slot_7');
+      if (totalUnlockedPoints >= 900) perks.add('campfire_heal_50');
       if (totalUnlockedPoints >= 1000) perks.add('gold_bonus_100');
+      if (totalUnlockedPoints >= 1150) perks.add('draw_4_cards');
+      if (totalUnlockedPoints >= 1300) perks.add('campfire_dual_upgrade');
+      if (totalUnlockedPoints >= 1450) perks.add('gold_bonus_50_2');
+      if (totalUnlockedPoints >= 1600) perks.add('free_sig_legendary');
       return perks;
     })(),
     /** Dev flag — all characters force-unlocked. */

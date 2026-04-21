@@ -50,6 +50,7 @@ interface HorizontalGameUIProps {
   onEnemyAbilityHoverRange?: (val: { iconId: string; range: number } | null) => void;
   runStartTime?: number;
   timerPaused?: boolean;
+  hasDraw4Perk?: boolean;
 }
 
 const HorizontalGameUI = ({
@@ -67,6 +68,7 @@ const HorizontalGameUI = ({
   onEnemyAbilityHoverRange,
   runStartTime,
   timerPaused,
+  hasDraw4Perk,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
   const [hoveredCardCost, setHoveredCardCost] = useState<number | null>(null);
@@ -781,7 +783,7 @@ const HorizontalGameUI = ({
                       const cardsUsed = displayIcon?.cardsUsedThisTurn ?? 0;
                       const maxCards = displayIcon?.itemPassiveTags?.includes('cards_per_turn_unlimited')
                         ? 5
-                        : 3 + (displayIcon?.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
+                        : 3 + (hasDraw4Perk ? 1 : 0) + (displayIcon?.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
                       return (
                         <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
                           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>

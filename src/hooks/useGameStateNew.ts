@@ -5546,9 +5546,10 @@ const playCard = useCallback((card: Card, executorId: string) => {
       toast.error(`${executor.name} is SILENCED and cannot use abilities!`);
       return prev;
     }
+    const draw4Bonus = (() => { try { return (JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]).includes('draw_4_cards') ? 1 : 0; } catch { return 0; } })();
     const cardLimit = executor.itemPassiveTags?.includes('cards_per_turn_unlimited')
       ? Infinity
-      : 3 + (executor.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
+      : 3 + draw4Bonus + (executor.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
     if ((executor.cardsUsedThisTurn ?? 0) >= cardLimit) {
       toast.error(getT().messages.cardLimitReached);
       return prev;

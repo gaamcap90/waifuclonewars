@@ -58,14 +58,17 @@ export interface CampfireScreenProps {
   onUpgradeSharedCard: (defId: string) => void;
   onRemoveCard?: (defId: string) => void;
   hasCardRemove?: boolean;
+  hasDualUpgrade?: boolean;
   onLeave: () => void;
 }
 
 type CampfirePhase = 'choose' | 'upgrade_shared' | 'remove_card';
 
-export function CampfireScreen({ runState, onHealAll, onUpgradeSharedCard, onRemoveCard, hasCardRemove, onLeave }: CampfireScreenProps) {
+export function CampfireScreen({ runState, onHealAll, onUpgradeSharedCard, onRemoveCard, hasCardRemove, hasDualUpgrade, onLeave }: CampfireScreenProps) {
   const { t } = useT();
   const [phase, setPhase] = useState<CampfirePhase>('choose');
+  const [upgradesUsed, setUpgradesUsed] = useState(0);
+  const upgradesAllowed = hasDualUpgrade ? 2 : 1;
 
   // Shared cards in deck that can still be upgraded at campfire — each copy shown separately
   const upgradeableShared = useMemo(() => {
@@ -110,7 +113,13 @@ export function CampfireScreen({ runState, onHealAll, onUpgradeSharedCard, onRem
 
   const handleUpgradeShared = (defId: string) => {
     onUpgradeSharedCard(defId);
-    onLeave();
+    const newUsed = upgradesUsed + 1;
+    setUpgradesUsed(newUsed);
+    if (newUsed >= upgradesAllowed) {
+      onLeave();
+    } else {
+      setPhase('choose');
+    }
   };
 
   // ── Phase: choose ──

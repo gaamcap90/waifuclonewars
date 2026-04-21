@@ -55,6 +55,18 @@ export const achievementDe: Record<string, { name: string; description: string }
   power_cut:        { name: 'Stromausfall',           description: 'Besiege 50 Grox-Magnetare.' },
   shellbreaker:     { name: 'Schildbrecher',          description: 'Besiege 50 Naxion-Schildträger.' },
   mirror_mirror:    { name: 'Spiegel, Spiegel',       description: 'Besiege 100 Vrex-Mimiken.' },
+  swarmed:               { name: 'Geschwärmt',           description: 'Besiege 250 Zyx-Schwärmer.' },
+  contract_expired_salvager: { name: 'Vertrag abgelaufen', description: 'Besiege 250 Qrix-Bergungsarbeiterinnen.' },
+  frost_resistant:       { name: 'Frostresistent',       description: 'Besiege 250 Kryo-Drifter.' },
+  dead_freight:          { name: 'Tote Last',             description: 'Besiege 100 Qrix-Lader.' },
+  void_proof:            { name: 'Leersicher',            description: 'Besiege 100 Qrix-Voidbrecher.' },
+  signal_lost:           { name: 'Signal verloren',       description: 'Besiege 100 Zyx-Überreste.' },
+  swarm_authority:       { name: 'Schwarmautorität',      description: 'Besiege 500 Zyx-Schwärmer.' },
+  remnant_erased:        { name: 'Überrest ausgelöscht',  description: 'Besiege 200 Zyx-Überreste.' },
+  full_cargo_cleared:    { name: 'Fracht geräumt',        description: 'Besiege 200 Qrix-Lader.' },
+  salvage_complete:      { name: 'Bergung abgeschlossen', description: 'Besiege 500 Qrix-Bergungsarbeiterinnen.' },
+  void_closed:           { name: 'Leer verschlossen',     description: 'Besiege 200 Qrix-Voidbrecher.' },
+  permafrost:            { name: 'Permafrost',             description: 'Besiege 500 Kryo-Drifter.' },
 
   // Observer
   archivist:         { name: 'Archivar',                   description: 'Lies 5 Lore-Einträge.' },

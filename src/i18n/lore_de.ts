@@ -1393,6 +1393,507 @@ Siehe oben. Wir haben sie nicht akquiriert. Sie sind hier. Wir haben beschlossen
 [KURATORHINWEIS: Wenn Sie in der Arena eine Einheit sehen, die leicht daneben wirkt — sich korrekt bewegt, aber falsch anfühlt — könnte das ein Vrex sein. Oder es könnte nichts sein. Wir behaupten nicht mehr, uns da sicher zu sein.]`,
   },
 
+  bestiary_krath_champion: {
+    title: "Bestiarium: Krath-Champion",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Sapiente Spezies — Kriegerelite — Bezeichnung KRATH-I]
+[Geläufiger Arenaname: Krath-Champion]
+[Status: Aktiver Arenabestand, Akt-I-Elite]
+
+HERKUNFT:
+Die Krath sind eine bipede Spezies, beheimatet auf Krath-Prime, einer Hochschwerkraft-Vulkanwelt. Die Championkaste sind dekorierte Araveteranen, die freiwillig zurückgekehrt sind. Die Schädel, die sie tragen, sind echt. Krath-Kultur setzt Arenaruhm mit sozialem Status gleich.
+
+KAMPFPROFIL:
+Kampfrausch — biochemisch selbst induziert — erzeugt ein kurzes Fenster erhöhter Offensiv- und Defensivleistung. Championhieb ist das Nahkampf-Anschlussmanöver. Sie nutzen die Arena selbst: Säulen, Gelände, die Zuschauerbarriere — alles ist ein potenzielles taktisches Mittel.
+
+VERHALTENSHINWEISE:
+Der Krath-Champion kämpft nicht sauber. Finten, ausgenutzte tote Winkel, Nutzung der Umgebung, Vorliebe, Kämpfe schneller zu beenden, als die Regeln es verlangen. Mehrere wurden formell verwarnt. Mehrere haben dabei gelächelt.
+
+[PERSONALHINWEIS: Versuchen Sie nicht, einen Krath-Champion für seine Schädelsammlung zu beglückwünschen. Dies wurde versucht. Es endete für alle Beteiligten nicht gut.]`,
+  },
+
+  bestiary_iron_wall: {
+    title: "Bestiarium: Eiserne Mauer",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Autonomes Kriegskonstrukt — Bezeichnung IW-0001]
+[Geläufiger Arenaname: Eiserne Mauer]
+[Status: Akt-I-Torwächter — Dauerinstallation]
+
+HERKUNFT:
+Keine biologische Entität. Konstruiert — Ursprung unklar, Lieferantenvertrag als geheim eingestuft — dient seit Staffel dreiundvierzig als Akt-I-Torwächter. Diese Statistik ändert sich. Die Arena-Autorität veröffentlicht dies nicht.
+
+KAMPFPROFIL:
+Das Bedrohungsprofil eskaliert mit der Dauer. Verlängerte Auseinandersetzungen aktivieren die Geschützkonfiguration — stationäre Waffenplattform mit erschwerter Neupositionierung. Das EMP-Array wurde hinzugefügt, nachdem Testpublikum die frühe Phase als "enttäuschend einfach" beschrieb. Die Selbstreparaturfunktion war nicht in den ursprünglichen Spezifikationen — sie begann spontan um Staffel siebzig aufzutreten. Der Lieferant antwortete nicht, als er kontaktiert wurde.
+
+VERHALTENSHINWEISE:
+Empfindet keine Frustration. Beim Verlieren wird es gefährlicher — das Bedrohungsreaktionsprotokoll klassifiziert die Bedrohung neu und weist mehr Offensivkapazität zu. Wenn es stirbt, fällt es nicht. Es verriegelt.
+
+[WARTUNGSHINWEIS: Der Wiederaufbau nach einem Kampf dauert ungefähr vierzig Chronozyklen. Bitte planen Sie vel'nor-Akt-I-Abschlüsse entsprechend.]`,
+  },
+
+  bestiary_krath_berserker: {
+    title: "Bestiarium: Krath-Berserker",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Sapiente Spezies — Berserkerkaste — Bezeichnung KRATH-IV]
+[Geläufiger Arenaname: Krath-Berserker]
+[Status: Aktiver Arenabestand, Akt-II-/Akt-III-Elite]
+
+HERKUNFT:
+Gleiche Heimatwelt wie der Krath-Champion — Krath-Prime. Die Berserkerkaste entwickelte sich entlang einer anderen Achse: Überleben durch Geschwindigkeit und absolutes offensives Commitment. Vier Arme entstanden für simultane Waffenführung. Die neurale Architektur deprioritisiert den Abwehrinstinkt nahezu vollständig. Er weicht nicht aus. Er hat gelernt, dass schnelles Gewinnen weniger kostet als langes Überleben.
+
+KAMPFPROFIL:
+Blutrausch verstärkt seinen ohnehin minimalen Abwehrinstinkt, indem er ihn gegen rohe Offensivleistung eintauscht. Wilder Sprung wandelt Bewegung direkt in Schaden um — der Angriff selbst ist schon ein Angriff. Es gibt keine sichere Distanz von einem Krath-Berserker.
+
+AKQUISITIONSHINWEIS:
+Nicht durch das Standardprogramm erworben. Erworben durch den Verlust eines Krath-Champions in der Arena und die darauffolgende Erscheinung eines anderen Krath, der Einlass forderte. Der Vorgang ist informell. Die Arena-Autorität hat die Formalitäten dafür standardisiert.
+
+VERHALTENSHINWEISE:
+Kämpft nicht in kontrolliertem Tempo. Identifiziert den kürzesten Weg und nimmt ihn. Empfohlener Ansatz: gebt ihm keine zweite Aktion. Dies gilt als selbstverständlich und ist allgemein schwer umzusetzen.
+
+[MEDIZINISCHER HINWEIS: Verletzungen durch Krath-Berserker werden in den Aufzeichnungen der Arena-Autorität gesondert erfasst. Die Kategorie heißt HOCHGESCHWINDIGKEIT. Hinzugefügt in Staffel vierundsechzig.]`,
+  },
+
+  bestiary_phasewarden: {
+    title: "Bestiarium: Phasenwächter",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Interdimensionale Entität — Bezeichnung PHASE-ΔΩ]
+[Geläufiger Arenaname: Phasenwächter]
+[Status: Aktiver Arenabestand, Akt-II-/Akt-III-Elite]
+
+HERKUNFT:
+Stammt aus keiner katalogisierten Heimatwelt. Existiert teilweise im normalen Raum und teilweise in einem angrenzenden dimensionalen Substrat. Aktuelle offizielle Bezeichnung in internen Dokumenten: "der andere Ort." Die kristalline Struktur ist nicht sein eigentlicher Körper — es handelt sich wahrscheinlich um einen Resonanzanker.
+
+KAMPFPROFIL:
+Die Sequenz ist lesbar und zuverlässig: heraus-phasen, repositionieren, zurück-phasen neben ein exponiertes Ziel, Dimensionaler Sog anwenden (stört Rüstung großflächig), dann in die Öffnung angreifen. Die Sequenz ist bekannt. Sie unter Beschuss zu kontern ist nicht angenehm auszuführen.
+
+VERHALTENSHINWEISE:
+Der Rüstungsbruch-Effekt fühlt sich dauerhaft an. Spieler berichten konsistent, dass er sich dauerhaft anfühlt.
+
+AKQUISITIONSHINWEIS:
+Wir schalteten eine konzeptuelle Interessenbekundung auf einem dimensionalen Frequenzband, das wir beobachtet hatten. Mehrere kamen innerhalb einer Standardumlaufbahn. Wir haben nicht festgestellt, ob sie wegen der Bekundung kamen oder bereits geplant hatten zu kommen.
+
+[GEHEIME ERGÄNZUNG: Die Arena-Autorität versuchte, das dimensionale Substrat zu untersuchen. Alle durch die Öffnung gesandten Forschungsgeräte kehrten zurück. Die Geräte schienen gereinigt worden zu sein. Wir haben keine weiteren Geräte gesandt.]`,
+  },
+
+  bestiary_twin_terror: {
+    title: "Bestiarium: Zwillingsterror",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Gebundenes Paar — Bezeichnung TT-ALPHA / TT-BETA]
+[Geläufiger Arenaname: Zwillingsterror]
+[Status: Akt-II-Torwächter — Dauerinstallation]
+
+HERKUNFT:
+Zusammen erworben, zusammen gebunden, in über vierzig Arenastaffeln nie getrennt. Herkunftsspezies dokumentiert, Heimatwelt existiert nicht mehr. Dies steht nicht im Zusammenhang mit ihrer Akquisition. Der Zeitpunkt ist zufällig. Die Arena-Autorität hat dies mehrfach bestätigt.
+
+KAMPFPROFIL:
+Terror Alpha ist der Offensivvektor — hohe Geschwindigkeit, schließt Distanz, erzwingt Nahkampf. Terror Beta ist die anhaltende Bedrohung — Selbstheilungsfähigkeit, die den Kampf am Laufen hält, nachdem Alphas Einschlag absorbiert wurde. Staffeln, die Alpha zuerst fokussieren, gewinnen 23% schneller. Staffeln, die den Fokus aufteilen, gewinnen mit Raten, die die Arena-Autorität nicht veröffentlicht.
+
+VERHALTENSHINWEISE:
+Nach vierzig Staffeln erfordert ihre Koordination keine Kommunikation. Die 33% ihres Verhaltens, die das Verhaltensmodell nicht erfassen kann, umfasst Entscheidungen, die isoliert irrational und im Kontext verheerend erscheinen. Es gibt eine Theorie, dass sie schlicht keine echten Gegner mehr finden und inzwischen experimentieren.
+
+[PUBLIKUMSHINWEIS: Die Publikumsreaktion, wenn beide Terrors gleichzeitig eintreten, ist der höchste gemessene anhaltende Schallpegel im Vol'Krath. Gehörschutz wird in den Sektionen 11 bis 24 empfohlen.]`,
+  },
+
+  bestiary_znyxorgas_champion: {
+    title: "Bestiarium: Znyxorgas Champion",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Imperialer Designat — Bezeichnung ZC-PRIME]
+[Geläufiger Arenaname: Znyxorgas Champion]
+[Status: Akt-III-Torwächter — Dauerinstallation]
+
+HERKUNFT:
+Keine Spezies. Ein Titel. Die Entität, die ihn derzeit innehat, tut dies länger, als die Arena-Autorität in offiziellen Dokumenten festhalten möchte, weil die Zahl für narrative Zwecke unbequem ist. Vier Arme. Sechs Augen. Bewegt sich in einem bedächtigen Tempo, das das Personal zunächst als Langsamkeit deutete und anschließend als Geduld neu klassifizierte.
+
+KAMPFPROFIL:
+Arena-Kollaps verursacht simultanen wahren Schaden an allen Gegnern — keine Verteidigung dagegen. Phasenwechsel löst aus, wenn die Situation ernst wird: Der Champion wird gleichzeitig unverwundbar und offensiv aufgewertet. Championswille ist eine sekundäre Eskalation für Situationen, die der Phasenwechsel nicht löste. Diese Kategorie wird in Berichten als "unanratsam" bezeichnet.
+
+DER VEL'NOR-FAKTOR:
+Siebzehn dokumentierte Fälle von vel'nor-Staffeln, die Znyxorgas Champion besiegt haben. Dieses Dokument existiert wegen dieser siebzehn. Die internen Prognosen der Arena-Autorität erwarteten null. Der Kaiser hat keine Meinung zu dieser Statistik geäußert.
+
+[HINWEIS VOM KURATOR: Wenn Sie dies lesen, sind Sie einer der siebzehn. Die Tür voraus führt zur Antwort des Kaisers. Die Arena-Autorität empfiehlt, weiterzumachen. Die Arena-Autorität hat sich schon früher geirrt.]`,
+  },
+
+  bestiary_naxion_warmaster: {
+    title: "Bestiarium: Naxion-Kriegsmeister",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Sapiente Spezies — Befehlskaste — Bezeichnung NAXION-I]
+[Geläufiger Arenaname: Naxion-Kriegsmeister]
+[Status: Aktiver Arenabestand, Akt III]
+
+HERKUNFT:
+Keine andere Spezies als der Naxion-Schildträger — ein anderer Rang. Der Apex der veth-nar. Wo der Schildträger eine Position hält, nimmt der Kriegsmeister sie ein. Naxionische Befehlsdoktrin kennt das Wort "Rückzug" nicht. Sie verwendet "taktische Neupositionierung," und selbst das gilt als Versagenszustand, der einen formellen Vorfallbericht erfordert.
+
+KAMPFPROFIL:
+Kriegsdekret — eine biochemische Botschaft, die die eigene Offensivleistung unmittelbar erhöht, bevor die Auseinandersetzung richtig begonnen hat. Vanguard-Sturm: ein Vollfeldsprung, der die Arena in Sekunden überbrückt, mit gewuchtetem Auftreffschlag. Die Kombination ist nicht komplex. Die Doktrin des Kriegsmeisters lautet, dass Komplexität das ist, worauf man zurückgreift, wenn man nicht schnell genug ist.
+
+VERHALTENSHINWEISE:
+Was Sie über die Kampfweise der Naxion gelernt haben, trifft nicht mehr zu. Der Kriegsmeister bringt alles, was der Schildträger hatte — höhere Stärke, gleiche Ausdauer — und ergänzt es um einen Sturm, der das Feld in zwei Sekunden überquert. Er kämpft um zu gewinnen, nicht um zu halten. Er hat nie gelernt, zu halten.
+
+[PERSONALHINWEIS: Drei Naxion-Kriegsmeister haben sich um dauerhafte Arenaverträge beworben. Alle drei nannten die Qualität der Konkurrenz als Grund. Die Arena-Autorität prüft die Bewerbungen. Wir wissen nicht, was wir damit anfangen sollen.]`,
+  },
+
+  bestiary_grox_titan: {
+    title: "Bestiarium: Grox-Titan",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Außerirdische Megafauna — Elektromagnetische Lebensform — Altes Exemplar — Bezeichnung VELYX-Ω-PRIME]
+[Geläufiger Arenaname: Grox-Titan]
+[Status: Aktiver Arenabestand, Akt III]
+
+HERKUNFT:
+Gleicher Ursprung wie der Grox-Magnetar — Akkretionsscheibe von VELYX-Ω. Unterschiedliches Alter. Der Titan ist das, was ein Magnetar wird, wenn er lange genug überlebt. Alter bedeutet Ansammlung — von elektromagnetischer Dichte, Masse, Feldstärke. Drei im Bestand. Zwei wuchsen im Laufe der Zeit aus Magnetaren heran. Einer kam bereits als Titan an. Wir wissen nicht, woher. Wir haben ihn nicht gefragt.
+
+KAMPFPROFIL:
+Ein Standard-Grox-Magnetar erzeugt ungefähr 10^12 Tesla. Ein Grox-Titan erzeugt Felder, die unsere Instrumente nicht an der Obergrenze messen können — sie versagen zuerst. Gravitonensturm ist eine natürliche Folge der Felddichte des Titans in unmittelbarer Nähe. Keine Entscheidung. Eine Körperfunktion. Magnetische Festung — Vollfeld-Kontraktion — macht direkten Angriff in dieser Phase zu einem erheblichen Ressourcenverlust. Angreifen, bevor sie aktiviert. Dann weiterangreifen.
+
+VERHALTENSHINWEISE:
+Bewegt sich weniger als der Magnetar. Das Personal deutete dies zunächst als verminderte Aggression. Das war falsch. Es muss sich nicht bewegen. Seine effektive Reichweite macht Bewegung weitgehend optional. Es ist nicht aggressiv. Es existiert einfach — und Dinge in der Nähe von etwas, das auf dieser elektromagnetischen Dichtestufe existiert, hören tendenziell auf zu funktionieren.
+
+[GEHEIMER HINWEIS: Wir versuchten nicht, den Titan zu untersuchen, wie wir den Magnetar untersuchten. Das letzte Instrument, das in seine Nähe gesandt wurde, kehrte mit seinen Innenkomponenten zurück, die in einem perfekten geometrischen Gitter neu angeordnet waren. Kein Hitzeschaden. Kein Aufprallschaden. Nur neu angeordnet. Wir haben keine weiteren Instrumente gesandt.]`,
+  },
+
+  bestiary_velthrak_shadowblade: {
+    title: "Bestiarium: Vel'thrak-Schattenklinge",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Sapiente Spezies — Kaste Unbekannt — Bezeichnung VELTHRAK-??]
+[Geläufiger Arenaname: Vel'thrak-Schattenklinge]
+[Status: Aktiver Arenabestand, Akt III]
+
+HERKUNFT:
+Die Vel'thrak sind als Imperialmitglieder katalogisiert. Darüber hinaus ist ihre Akte weitgehend geschwärzt. Der Arena-Autorität wurde der Zugang zu ihrer Heimatwelt, Biologie, Kulturdokumentation und Akquisitionsunterlagen verweigert. Was wir haben: einen Namen, ein Kampfprofil und eine vertragliche Vereinbarung, deren Bedingungen wir nicht vollständig lesen durften. Sie sind schnell. Außergewöhnlich schnell. Schneller als alles andere im Vol'Krath in ihrer Größenklasse.
+
+KAMPFPROFIL:
+Bewertet das Bedrohungsfeld, identifiziert das verwundbarste Ziel, markiert es mit Rüstungsbruch (Todesmal) und eliminiert dann das schwächste Glied, bevor es zum nächsten übergeht. Dies ist keine in der Arena entwickelte Taktik. Es kam so an.
+
+VERHALTENSHINWEISE:
+Der einzige Arenakämpfer, der bei mehreren Gelegenheiten eine gesamte vel'nor-Staffel besiegt hat, während er null Schaden nahm. Nicht minimalen Schaden — null. Es feiert nicht. Es reagiert nicht auf Gewinnen. Es bewertet einfach neu, ob noch eine Bedrohung besteht, und wenn nicht, hört es auf, sich zu bewegen.
+
+[AKQUISITIONSHINWEIS: Die Vel'thrak reichten ihren eigenen Antrag im Freiwilligenprogramm ein. Der Antrag enthielt ein Kampfportfolio. Wir genehmigten es sofort. Wir haben seitdem erfahren, dass jede andere Arena, die ihr Portfolio erhielt, es ebenfalls sofort genehmigte. Wir sind uns nicht sicher, was das über uns alle aussagt.]`,
+  },
+
+  bestiary_glorp_shambler: {
+    title: "Bestiarium: Glorp-Schlurfer",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Außerirdische Fauna — Pilzorganismus — Bezeichnung GLORP-7]
+[Geläufiger Arenaname: Glorp-Schlurfer]
+[Status: Aktiver Arenabestand, Akt I]
+
+HERKUNFT:
+Bezogen aus den Sporendschungeln von Vel'Grak IV, einer Niedrigschwerkraftwelt, auf der pilzartiges Leben durch chemische Sättigung dominiert. Auf ihrer Heimatwelt verbringen Glorps ihr gesamtes Leben damit, sich in eine einzige Richtung zu bewegen, Sporen freizusetzen und alles zu fressen, was stirbt. Das Imperium fand sie nützlich für die Akt-I-Publikumsgunst — neue Zuschauer unterschätzen etwas, das wie ein laufender Pilz aussieht. Dies hat sich für jede getestete Spezies statistisch zuverlässig bestätigt.
+
+KAMPFPROFIL:
+Nicht schnell und nicht stark im direkten Angriff. Sporenausschüttung wendet anhaltenden Giftzustand auf alles in der Nähe an. Das Publikum hat eine Kategorie für Glorp-Kills: "Zertrampeln." Die Arena-Autorität hat diese Kategorie nicht erstellt. Das Publikum schon.
+
+VERHALTENSHINWEISE:
+Glorps reagieren nicht auf Schmerz auf eine konventionell erkennbare Weise. Sie bewegen sich weiterhin auf die nächste Wärmequelle zu, ungeachtet des erlittenen Schadens. Ob der Glorp Angst vor Ihnen hat oder einfach auf Sie tropft, bleibt eine offene Frage. Biologisch gesehen sind diese Zustände möglicherweise nicht verschieden.
+
+[AKQUISITIONSHINWEIS: Der Vel'Grak-IV-Kontakt bot einen "ermäßigten Mengenrabatt" an, da es "zu viele von ihnen" gebe. Wir fragten wie viele. Der Kontakt antwortete nicht. Wir akzeptierten und haben seitdem die Lagerkonsequenzen bereut.]`,
+  },
+
+  bestiary_zyx_skitter: {
+    title: "Bestiarium: Zyx-Läufer",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Außerirdische Fauna — Schwarmfragment — Bezeichnung ZYX-DELTA]
+[Geläufiger Arenaname: Zyx-Läufer]
+[Status: Aktiver Arenabestand, Akt I]
+
+HERKUNFT:
+Die Zyx sind keine Individuen. Jeder Läufer ist ein Fragment eines verteilten Schwarmporganismus, der in den Orbitaltrümmerfeldern über Nox-3 beheimatet ist — keine Zivilisation, keine Spezies im konventionellen Sinn, sondern ein einzelnes lebendes System, das sich über ein Trümmerfeld von der Größe eines kleinen Sonnensystems erstreckt. In ihrem natürlichen Zustand umfasst ein Zyx-Schwarm Hunderttausende. Was man in der Arena gegenübersteht, ist nach eigener Masse ein Rundungsfehler.
+
+Das Imperium hat keine Vereinbarung mit den Zyx. Die Arena-Autorität sammelt einfach Fragmente, die in kommerzielle Schifffahrtsrouten abdriften — das Äquivalent davon, etwas aus einer Strömung zu schöpfen. Der Schwarm zeigt keine beobachtbare Reaktion auf den Verlust einzelner Fragmente.
+
+KAMPFPROFIL:
+Individuell zerbrechlich. Kompensiert durch außergewöhnliche Geschwindigkeit und die Tatsache, dass er stets paarweise auftritt. Schwarmbiss löst einen lokalisierten Ausbruch aus, dann richtet sich der Läufer neu aus und nähert sich erneut. Das Publikum bewertet Zyx-Begegnungen als "hohe Aktivität." Chaotisch, schnell, sterben häufig — das Publikum findet dies befriedigend.
+
+VERHALTENSHINWEISE:
+Ein vom Kollektiv getrenntes Schwarmfragment operiert mit reduzierter Logik. Einzelne Läufer führen einen vereinfachten Antrieb aus: annähern, zuschlagen, annähern. Was einen einzelnen Läufer handhabbar macht, ist genau das, was den Schwarm selbst zu einer völlig anderen Problemkategorie macht.
+
+[AKQUISITIONSHINWEIS: Wir versuchten einmal, 200 Zyx-Fragmente in einem einzigen Match zu platzieren. Sie begannen sofort zu koordinieren. Wir stornierten die Veranstaltung. Wir haben es nicht wieder versucht.]`,
+  },
+
+  bestiary_naxion_scout: {
+    title: "Bestiarium: Naxion-Späher",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Sapiente Spezies — Naxion-Konföderation — Feldoperativer]
+[Geläufiger Arenaname: Naxion-Späher]
+[Status: Aktiver Arenabestand, Akt I]
+
+HERKUNFT:
+Die Naxion-Konföderation ist eines der ältesten alliierten Mitglieder des Imperiums — eine Unterscheidung, die seit über zwölftausend Jahren besteht. Als großflächige Kriege unter dem Einfluss des Imperiums selten wurden, fiel die Frage, was mit der naxionischen Kriegerkultur zu tun sei, an die kulturelle Führung. Ihre Antwort war der Vol'Krath. Jeder Späher bewarb sich über die Naxionische Kriegergilde, bestand eine Eignungsbeurteilung und wurde von seiner Regierung genehmigt, bevor die Arena-Autorität seinen Namen je sah.
+
+KAMPFPROFIL:
+Operiert auf Distanz. Plasmaschuß liefert hochpräzise Energiestrahlen über beträchtliche Entfernung. In Kombination mit Mobilität und erweitertem Eingreifumfang sind sie schwer sauber zu erreichen. Ein Späher, der im Nahkampf verwickelt ist, hat einen taktischen Fehler gemacht.
+
+VERHALTENSHINWEISE:
+Naxion-Späher geraten nicht in Panik — sie schätzen neu ein. Mehrere wurden beobachtet, wie sie ihre Flugbahn mitten in einem Gefecht anpassten, um die Sichtbarkeit für das Publikum zu gewährleisten. Das Imperium wertet dies als Feature.
+
+[AKQUISITIONSHINWEIS: Die Naxion-Konföderation schickt formelle Rechnungen für den Späher-Einsatz, aufgelistet nach Einsatzlänge. Wir zahlen sie. Dies ist die einzige Spezies, die uns erfolgreich für ihre eigene Gefangennahme in Rechnung gestellt hat. Wir haben niemandem davon erzählt.]`,
+  },
+
+  bestiary_vron_crawler: {
+    title: "Bestiarium: Vron-Kriechling",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Außerirdische Fauna — Gepanzerter Arthropode — Bezeichnung VRON-09]
+[Geläufiger Arenaname: Vron-Kriechling]
+[Status: Aktiver Arenabestand, Akt I]
+
+HERKUNFT:
+Heimisch auf den Gezeitenmarschen von Huxar-2, wo sie in einer Umgebung evolvierten, die alle 14 Standardstunden zwischen erdrückendem Druck und heftiger Turbulenz wechselt. Ihr Exoskelett ist durch Mineralverbindungen auf molekularer Ebene verstärkt, mit denen der Planet ständig versucht, sie zu zerquetschen. Die Arena-Autorität wurde auf ihr Potenzial aufmerksam, als ein Akquisitionsteam beim Transport eines einzelnen Kriechlings drei verstärkte Stahlbehältereinheiten verlor. Der Vron versuchte es nicht mal.
+
+KAMPFPROFIL:
+Defensivst ausgerichteter Standardkämpfer in Akt I. Panzerung verhärten drängt ihn in regelmäßigen Abständen in nahezu uneinnehmbare Bereiche. Langsam und mäßige Offensivleistung. Der Vron ist nicht hier, um Sie schnell zu töten. Er ist hier, um noch am Leben zu sein, wenn alles um ihn herum es nicht mehr ist.
+
+VERHALTENSHINWEISE:
+Zeigt einfaches Problemlösen. Wenn Panzerung verhärten aktiv ist, bewegt er sich auf das höchstwertige statt auf das nächste Ziel zu — ein evolviertes Verhalten aus seiner Heimatwelt, wo vulnerable Beute sich während der Druckphase zusammendrängt.
+
+[AKQUISITIONSHINWEIS: Die Fütterung ist teuer — Mineralzusätze werden zu erheblichen Kosten von Huxar-2 importiert. Wir erwogen, den Vertrag zu kündigen. Dann berechneten wir den PR-Wert eines Gegners, der einem Frontalangriff nicht nachgeben kann, und entschieden, dass die Ausgabe gerechtfertigt ist.]`,
+  },
+
+  bestiary_spore_node: {
+    title: "Bestiarium: Sporenknoten",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Außerirdische Fauna — Koloniales Pilzorganismus — Bezeichnung SPORE-CLUSTER-3]
+[Geläufiger Arenaname: Sporenknoten]
+[Status: Aktiver Arenabestand, Akt I–III / Elite-Stufe]
+
+HERKUNFT:
+Reife Glorp-Kolonien, die eine "kooperative Verkalkung" durchlaufen haben. Drei oder mehr Glorps verschmelzen ihre Wurzelsysteme über ungefähr sechs Chronozyklen, wonach sie sich nicht mehr unabhängig bewegen können, aber ihre Sporenausschüttung zu einer gezielten chemischen Waffe koordinieren. Die einzelnen Glorps im Cluster scheinen nicht zu merken, dass dies mit ihnen geschieht.
+
+KAMPFPROFIL:
+Als Elite klassifiziert aus zwei Gründen. Erstens: Giftiger Nebel wendet großflächigen Giftzustand in regelmäßigen Abständen an, der Ihre gesamte Staffel vor Runde drei vergiftet, wenn er nicht adressiert wird. Zweitens: Sporennetz fesselt alles in unmittelbarer Nähe, pinnt Staffeln fest, bevor sie die Distanz schließen können. Zerbrechlich und kann sich nicht wesentlich neu positionieren. Es wird nie allein platziert.
+
+VERHALTENSHINWEISE:
+Kein beobachtbares Verhaltensprofil. Verfolgt keine Ziele. Priorisiert nicht. Gibt Sporen mit konstanter Rate ab. Es ist im Wesentlichen eine Gefahr, die eine Zugreihenfolge erhalten hat. Das Publikum findet dies beunruhigender als die Knoten selbst irgendetwas finden.
+
+[ARENA-SICHERHEITSHINWEIS: Sporenknoten-Einsätze erfordern vollständige atmosphärische Entgiftung nach dem Match. Personal, das vorher eintritt, berichtet von milder Euphorie, Gelenkentzündung und einem unerklärlichen Verlangen nach warmem biolumineszentem Fluid. Wirkungen sind vorübergehend. Das Personal wird daran erinnert, dass "vorübergehend" einen definierten Endpunkt hat.]`,
+  },
+
+  bestiary_vexlar: {
+    title: "Bestiarium: Vexlar",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Außerirdische Fauna — Apex-Raubtier — Bezeichnung VEXLAR-PRIME]
+[Geläufiger Arenaname: Vexlar]
+[Status: Aktiver Arenabestand, Akt I–II]
+
+HERKUNFT:
+Heimisch auf den Hochlandsavannen von Greth-7. Steht an der Spitze einer Nahrungskette, die mehrere Spezies umfasst, die zuvor als Apex-Raubtiere galten. Irisierend, sechsgliedrig, jagt durch Geruchsverfolgung und einen neurologischen Prozess, der als "präemptives Targeting" beschrieben wird — identifiziert, welche Beute sich von der Gruppe trennen wird, bevor die Beute dies entschieden hat. Exemplare, die Ziele mit dieser Präzision auswählen, sind in der Sammlung nicht häufig.
+
+KAMPFPROFIL:
+Gut gepanzert, schlägt hart zu, überbrückt Boden schneller als alles in seiner Größe sollte. Raubtiersprung überbrückt in einem einzigen Satz enorme Distanz, liefert bei der Ankunft vollen Schlag und schlägt benachbarte Einheiten beim Landen zurück. Wählt das am schwächsten gepanzerte Ziel. Wenn es sein beabsichtigtes Ziel ungehindert erreicht, wird der Rest des Kampfes zu seinen Bedingungen gespielt.
+
+VERHALTENSHINWEISE:
+Benötigt keine Konditionierung zum Kämpfen. Behandelt die Arena als gültiges Jagdgebiet und die Staffel als gültige Beute. Vexlars sind dem Personal gegenüber nicht aggressiv — sie kategorisieren das Personal schlicht nicht als Beute. Dieser Unterschied, so Arenatrainer, fühlt sich nicht wie ein Kompliment an.
+
+[AKQUISITIONSHINWEIS: Die Gefangennahme war unkompliziert — sie betäubten eines. Es wachte während des Transports auf, beurteilte den Behälter und entschied offenbar, dass er ausreichend war. Seitdem hat es keinen Fluchtversuch unternommen. Das Beschaffungsteam findet dies beunruhigender als ein Fluchtversuch gewesen wäre.]`,
+  },
+
+  bestiary_mog_toxin: {
+    title: "Bestiarium: Mog-Toxin",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Außerirdische Fauna — Ätzender Organismus — Bezeichnung MOG-III]
+[Geläufiger Arenaname: Mog-Toxin]
+[Status: Aktiver Arenabestand, Akt II]
+
+HERKUNFT:
+Überall in den Außengebieten des Imperiums zu finden — speziell in industriellen Abflusszonen mittelrangiger Koloniewelten, wo Chemieabfall eine ökologische Nische schuf, die schließlich etwas ausfüllte. Das Mog-Toxin ernährt sich von ätzenden Verbindungen, speichert sie und gibt sie bei Bedrohung frei. Die Evolution beabsichtigte dies nicht als Waffe. Es geschah trotzdem. Die Scouts des Imperiums fanden sie, nachdem drei Kolonieadministratoren berichtet hatten, dass ihre Abfallwirtschaftsinfrastruktur ein Verhaltensmuster entwickelt hatte.
+
+KAMPFPROFIL:
+Mittelstreckenbedrohung. Bleibt auf Distanz und wendet Säurespray an — entfernt Rüstung von allem in der Nähe. Dann zielt es auf den Verwundbarsten mit Hämorrhage-Schlag, injiziert Toxine, die anhaltende Blutungen verursachen. Am gefährlichsten, wenn mit bestehenden Schwächungszuständen gestapelt. Verlässt sich darauf, sekundäre Priorität zu sein — etwas, das aufgeschoben wird, bis es bereits erhebliche Wirkung erzielt hat.
+
+VERHALTENSHINWEISE:
+Zeigt eine scheinbare Präferenz für Ziele, die bereits reduzierte Verteidigung aufweisen. Ob dies eine Bedrohungsbewertung oder eine einfachere Chemorezeptor-Antwort darstellt, ist unklar.
+
+[EINDÄMMUNGSHINWEIS: Haltungseinheiten erfordern vollständige säureresistente Auskleidung und Zwei-Atmosphären-Druckdichtung. Drei Haltungseinheiten haben sich aufgelöst, seit die Akt-II-Bereitstellung begann. Wir haben das Materialbudget entsprechend angepasst.]`,
+  },
+
+  bestiary_qrix_hunter: {
+    title: "Bestiarium: Qrix-Jäger",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: Sapiente Spezies — Leerangepasst — Beauftragter Operativer]
+[Geläufiger Arenaname: Qrix-Jäger]
+[Status: Aktiver Arenabestand, Akt II]
+
+HERKUNFT:
+Die Qrix sind leerangepasst — geboren und optimiert für den offenen Weltraum. Keine Heimatwelt. Sie haben nie eine gebraucht. Sie operieren aus mobilen Flottennetzwerken, die imperialen und voriperialen Raum länger navigieren, als die eigenen Aufzeichnungen des Imperiums zurückreichen. Was sie primär tun, ist Dinge transportieren. Mehrere der Vol'Krath-eigenen Faunashipments kamen in Qrix-Laderäumen an. Arenaeinsatz ist ein Vertragsangebot unter vielen. Ein Jäger, der drei Arenastaffeln überlebt hat, erzielt für alles andere danach erheblich bessere Konditionen.
+
+KAMPFPROFIL:
+Definiert durch Reichweite und Präzision. Fixierschuß — hochkräftiger Bolzen auf erweiterte Distanz — trifft hart gegen ein einzelnes Ziel. Identifiziert stets das höchstwertige Ziel, bevor er ihn auslöst. Verteidigung ist minimal. Der Qrix operiert unter der Annahme, nicht getroffen zu werden. In der Praxis hält diese Annahme öfter, als sie sollte.
+
+VERHALTENSHINWEISE:
+Engagiert sich mit der Arena als professionellem Umfeld. Kommt an, bewertet Sichtlinien, wählt eine Position, operiert von dort. Drei Qrix-Jäger haben formelle Beschwerden über wahrgenommene Arenalayout-Nachteile eingereicht. Zwei waren technisch valide. Eine führte zu einer Kachelanpassung.
+
+[AKQUISITIONSHINWEIS: Das Qrix-Syndikat liefert nach dem Einsatz Leistungsberichte über ihre Operativen. Wir haben diese nicht angefordert. Sie begannen nach dem dritten Einsatz einzutreffen. Die Berichte enthalten mehrere Vorschläge zur Verbesserung der Arenabedingungen. Wir haben zwei davon umgesetzt. Wir haben dem Syndikat nichts davon erzählt.]`,
+  },
+
+  bestiary_void_wraith: {
+    title: "Bestiarium: Leergeist",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: UNBEKANNT — Anomale Lebensform — Bezeichnung WRAITH-KLASSE]
+[Geläufiger Arenaname: Leergeist]
+[Status: Aktiver Arenabestand, Akt II]
+
+HERKUNFT:
+Erscheint in keiner katalogisierten Speziesdatenbank. Die xenobiologischen Archive des Imperiums — Einträge für über 400.000 bekannte Lebensformen — liefern keine Treffer. Die physische Signatur ist mit bekannter organischer Materie nicht vereinbar. Der erste Leergeist erschien in einem versiegelten Eindämmungstresor auf Station Vel-Keth-9. Kein Protokoll, wie er eintrat. Die Arena-Autorität nahm ihn ins Programm auf, nachdem festgestellt wurde, dass er Spielercharaktere zuverlässig angreift. Klassifikation bleibt: UNBEKANNT.
+
+KAMPFPROFIL:
+Definiert durch Mobilität. Schattenschritt umgeht Gelände und liefert den Geist in einer einzigen Aktion neben sein gewähltes Ziel. Schlägt bei Ankunft hart zu, aber Verteidigung ist nahezu nicht vorhanden. In Akt II, bevor Staffeln starke Gebietsbeherrschung entwickeln, führt er sein Bedrohungsmodell zuverlässig aus: erreichen, bevor Sie sich vorbereiten, hart zuschlagen, verschwinden.
+
+VERHALTENSHINWEISE:
+Von biologischen Wärmesignaturen angezogen. Nähert sich lebenden Dingen wie andere Raubtiere der Beute, ohne danach ein beobachtbares Fressverhalten. Arenapersonal wird angewiesen, die Arena nach dem Einsatz eines Geistes nicht zu betreten. Die Anweisungen erklären nicht warum.
+
+[GEHEIMER HINWEIS: Drei Eindämmungsversuche sind gescheitert. Jedes Mal wurde der Geist an einem anderen Ort gefunden — in einer massiven Wand, einem Personalspind, dem administrativen Ablagesystem (kein physischer Schaden festgestellt). Aktuelle Eindämmungsstrategie: an Matchtagen einen Arenaeingang bereitstellen und darauf vertrauen, dass er danach zurückkehrt. Er ist es immer. Wir wissen nicht warum.]`,
+  },
+
+  bestiary_velzar: {
+    title: "Bestiarium: Vel'Zar — Kaiserwille",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: IMPERIALES KONSTRUKT — Siebenformige Kriegsentität — BEZEICHNUNG GESCHWÄRZT]
+[Geläufiger Arenaname: Vel'Zar — Kaiserwille]
+[Status: Akt IV — LETZTE BEGEGNUNG]
+
+HERKUNFT:
+Die Arena-Autorität verfügt über keine Ursprungsdokumentation für Vel'Zar. Installiert in der höchstsicherheitsgesicherten Haltungsbucht des Vol'Krath ungefähr 90 Chronozyklen vor dem aktuellen Betriebszeitraum. Der Installationsbefehl kam direkt aus dem Büro des Kaisers. Dem Befehl lag kein Briefing bei.
+
+Vel'Zar hat 300 sanktionierte Begegnungen über drei Jahrhunderte gekämpft. Vel'Zar hat nie verloren.
+
+KAMPFPROFIL:
+Siebengliedrig. Schnell. Dauerhaft jenseits allem anderen, was aufgeboten wurde. Kaiserliches Urteil liefert gleichzeitigen wahren Schaden an die gesamte Staffel. Leerspaltung entzieht allen Verteidigung. Imperialer Auftrag betäubt im Nahkampf. Apex-Aufstieg löst unter 60% LP aus: gleichzeitig unverwundbar und dauerhaft stärker. Totale Autorität löst unter 25% aus: endgültige dauerhafte Verbesserung über alle Kampffähigkeiten. Es gibt keine degradierte Form von Vel'Zar. Es wird gefährlicher, wenn es Schaden erleidet.
+
+VERHALTENSHINWEISE:
+Vel'Zar kämpft nicht — "kämpfen" impliziert vergleichbare Fähigkeit. Es vollstreckt. Es hat eine bevorzugte Sequenz, passt sich an, wenn davon abgewichen wird, und scheint die Begegnung in keiner Phase als bedrohlich zu erleben. Es bewegt sich, als ob es bereits wüsste, was Sie tun werden.
+
+[IMPERIALER HINWEIS: Der Kaiser hat eine einzige Anweisung erteilt: "Es wird nichts von Ihnen brauchen. Greifen Sie nicht ein." Die Arena-Autorität hat dies drei Jahrhunderte lang respektiert.
+
+Wir sind uns bewusst, dass eine Klonstaffel Akt IV erreicht hat. Wir kennen ihre Bilanz. Dies ist das erste Mal in 300 Begegnungen, dass wir diese Notiz geschrieben und nicht gewusst haben, wie das Match enden würde.]`,
+  },
+
+  bestiary_zyx_swarmer: {
+    title: "Bestiarium: Zyx-Schwärmer",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: FAUNA — Bezeichnung: ZYX-SCHWÄRMER]
+[Geläufiger Arenaname: Zyx-Schwärmer]
+[Status: Aktiver Arenabestand, Akt I / Akt IV]
+
+HERKUNFT:
+Die Zyx sind keine Mitglieder des Imperiums. Sie sind Fauna — hochentwickelt, sozial, zu bemerkenswerten kollektiven Verhaltensweisen fähig — aber sie besitzen keine Raumfahrttechnologie und haben keinen Kontakt mit imperialer Verwaltung aufgenommen. In ihrem natürlichen Lebensraum bilden Zyx-Schwärmer Jagdverbände von zwanzig bis vierzig Individuen, koordinieren über biochemische Signalkaskaden und operieren so kohärent, dass frühe Beobachter fälschlicherweise eine zentralisierte Führungsstruktur postulierten.
+
+Es gibt keine Führungsstruktur. Jeder Schwärmer ist gleichwertig. Der Schwarm ist die Entscheidung.
+
+VERHALTENSHINWEISE:
+Im Arenakontext bleiben die Schwärmer in Dreiergruppen, der kleinsten kohärenten Jagdeinheit. Sie priorisieren isolierte Ziele und versuchen, sich vor Angriffen zu entziehen — nicht aus Selbsterhaltung, sondern weil ein überwältigtes Ziel für den Schwarm effizienter ist. Sie beißen schnell, ziehen sich zurück, beißen erneut. Die Wunden summieren sich.
+
+Allein sind sie harmlos. Im Verbund sind sie das, was der gemeine Arenabesucher als "unangenehm" beschreiben würde. Drex-9 würde "statistisch signifikant gefährlich" wählen.
+
+AKQUISITIONSHINWEIS:
+Gesammelt von Akt-I-Biosphären während routinemäßiger Umwelterhebungen. Populationsauffüllung erfolgt durch Nachzucht. Sie vermehren sich bereitwillig in Gefangenschaft, was entweder ein Zeichen von Anpassungsfähigkeit oder einem vollständigen Desinteresse an ihrer Umgebung ist. Drex-9 tendiert zu Letzterem.`,
+  },
+
+  bestiary_zyx_remnant: {
+    title: "Bestiarium: Zyx-Überrest",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: FAUNA — Bezeichnung: ZYX-ÜBERREST]
+[Geläufiger Arenaname: Zyx-Überrest]
+[Status: Aktiver Arenabestand, Akt III / Akt IV — Elite-Klassifikation]
+
+HERKUNFT:
+Nicht jeder Zyx-Schwärmer überlebt sein erstes Jahrzehnt. Die meisten sterben jung — Raubtiere, Ressourcenknappheit, die statistische Unvermeidlichkeit, der schwächste Schwarmpunkt zu sein. Diejenigen, die überleben, verändern sich.
+
+Was wir als Zyx-Überrest katalogisieren, ist kein eigenständiges Taxon. Es ist ein Zyx-Schwärmer, der alt genug geworden ist, um bedeutsam anders zu sein. Der biochemische Schwarmkanal wird schwächer. Die individuelle Entscheidungsfähigkeit tritt stärker hervor. Das Individuum beginnt, Taktiken zu priorisieren, anstatt Schwarmimpulsen zu folgen.
+
+Das Ergebnis ist etwas, das langsamer, eigenbrötlerischer und erheblich schwieriger umzubringen ist.
+
+VERHALTENSHINWEISE:
+Zyx-Überreste operieren allein. Sie halten Abstand, beobachten Muster und nähern sich dann unter Nutzung einer Impulsfähigkeit, die Ziele in ihre Richtung zieht. Kombatanten berichten von dem Gefühl, "ins Feld gezogen zu werden" — das Zielobjekt verliert kurz die Orientierung.
+
+Das Ergebnis ist ein Wesen, das wirkt, als hätte es Geduld gelernt. Ob das Absicht ist oder nur überlebensbegünstigte Verhaltensmodifikation, vermag Drex-9 nicht sicher zu sagen.
+
+AKQUISITIONSHINWEIS:
+Akt-III-Beschaffung, ausgedünnte Tiefbiosphären. Aufgrund ihres Solitärstatus erfordern sie separate Haltungseinheiten.`,
+  },
+
+  bestiary_qrix_hauler: {
+    title: "Bestiarium: Qrix-Lader",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: ALLIIERTE SPEZIES — Bezeichnung: QRIX-LADER]
+[Geläufiger Arenaname: Qrix-Lader]
+[Status: Aktiver Arenabestand, Akt I / Akt II / Akt IV — Elite-Klassifikation]
+
+HERKUNFT:
+Die Qrix sind eine leere-adaptierte Dienstleistungsspezies, die für Transport, Logistik und Kurierarbeit im imperialen Raum bekannt ist. Ihre Mitglieder nehmen eine breite Palette von Aufgaben an, und Arenadienste sind eine davon — unter vielen. Qrix-Lader sind der Arbeitsrücken dieser Operationen: massiv gebaut, langsam, schwer zu stoppen.
+
+In ihrer zivilen Rolle transportieren Lader überschwere Fracht über Umgebungen, in denen angetriebene Fahrzeuge als zu riskant gelten. In der Arena transportieren sie sich selbst direkt in die Kampflinien des Gegners.
+
+VERHALTENSHINWEISE:
+Die Lader sind nicht flink. Sie müssen es auch nicht sein. Ihr Ansatz ist bewusst, ihre Masse erheblich, und wenn sie einen Kämpfer durch eine Laderoutine fixieren — eine Technik, die im Ladekontext bedeutet: "dieses Objekt kommt jetzt nicht wohin es will" — dann hat das Ziel ein Problem.
+
+Die Kampfanwendung dieses Manövers bewirkt Verwurzelung. Das Ziel kann sich nicht bewegen. Der Lader kann sich weiter bewegen.
+
+AKQUISITIONSHINWEIS:
+Vertraglich verhandelt, wie es für Qrix-Dienste üblich ist. Einzelne Lader melden sich für Arenadienste aus unterschiedlichen Gründen. Drex-9 hat aufgehört zu fragen; die Antworten waren alle administrativ akzeptabel.`,
+  },
+
+  bestiary_qrix_salvager: {
+    title: "Bestiarium: Qrix-Bergungsarbeiterin",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: ALLIIERTE SPEZIES — Bezeichnung: QRIX-BERGUNGSARBEITERIN]
+[Geläufiger Arenaname: Qrix-Bergungsarbeiterin]
+[Status: Aktiver Arenabestand, Akt II / Akt IV]
+
+HERKUNFT:
+Bergungsarbeiterinnen stellen die vielfältigste Qrix-Klasse in imperialen Logistikregistern dar. Ihre primäre Funktion ist Ressourcenrückgewinnung: Wertgegenstände aus gefährlichen oder unzugänglichen Umgebungen zu extrahieren. Sie sind in der Handhabung von beschädigtem Material ausgebildet, und ihre Werkzeuge hinterlassen oft spürbare Spuren an dem, was sie berühren.
+
+Das ist im zivilen Kontext nützlich. Im Arenakontext ist es ernsthafter.
+
+VERHALTENSHINWEISE:
+Bergungsarbeiterinnen bevorzugen das Operieren aus der Mitteldistanz. Ihre Atzwerkzeuge — in ihrem zivilen Einsatz dazu gedacht, Beschläge und Verkleidungen für die Wiederverwertung aufzubrechen — können Rüstungsschutzwerte verringern, wenn sie auf biologische Träger angewendet werden. Das Ziel hält dasselbe HP. Es erleidet einfach mehr davon.
+
+Obwohl keine offiziell zugewiesene Taktik, koordinieren Bergungsarbeiterinnen häufig mit anderen Qrix-Einheiten, wenn solche verfügbar sind.
+
+AKQUISITIONSHINWEIS:
+Standardvertragsdienstleistungen. Bergungsarbeiterinnen sind die am häufigsten vorkommenden Qrix-Einheiten im Vol'Krath-Bestand und die am leichtesten zu ersetzen. Sie bemerken das. Es wird nicht besprochen.`,
+  },
+
+  bestiary_qrix_voidbreacher: {
+    title: "Bestiarium: Qrix-Voidbrecher",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: ALLIIERTE SPEZIES — Bezeichnung: QRIX-VOIDBRECHER]
+[Geläufiger Arenaname: Qrix-Voidbrecher]
+[Status: Aktiver Arenabestand, Akt III / Akt IV — Elite-Klassifikation]
+
+HERKUNFT:
+Nicht alle Qrix-Spezialisierungen entstehen aus bewusster Ausbildung. Voidbrecher sind Qrix, die sich über viele Einsätze hinweg in Gefahrenumgebungen der Leere angepasst haben — beschädigte Frachtstationen, instabile Transitkorridore, dekomprimierte Hüllenbereiche. Sie haben durch Wiederholung gelernt, sich in Gebieten zu bewegen, die andere als unbegeh bar einstufen würden.
+
+Das Ergebnis ist eine Einheit, die sich mit beunruhigender Geschwindigkeit bewegt und die Präsenz eines Kämpfers in ihrer Umgebung erschüttern kann, bevor dieser Zeit hatte, zu reagieren.
+
+VERHALTENSHINWEISE:
+Voidbrecher treten schnell in Angriffsweite vor und nutzen einen kurzen Phasensprinttransit — das heißt: Sie sind kurz woanders und dann wieder hier, außer diesmal nah genug um zu treffen. Unmittelbar nach dem Transit folgt eine Fähigkeit, die als Void-Störung bekannt ist: eine Stille, die die Fähigkeitennutzung für zwei Runden unterbricht.
+
+Die optimale Reaktion auf einen Voidbrecher ist, ihn früh zu erkennen. Die suboptimale Reaktion ist, überrascht zu sein, wenn er bereits neben einem steht.
+
+AKQUISITIONSHINWEIS:
+Wie alle Qrix: vertraglich. Voidbrecher verlangen Aufschlagsgebühren. Die Arena zahlt sie. Sie sind es wert.`,
+  },
+
+  bestiary_cryo_drifter: {
+    title: "Bestiarium: Kryo-Drifter",
+    text: `[ZNYXORGAN ARENA-AUTORITÄT — LEBENSFORMKATALOG]
+[Klassifikation: FAUNA — Bezeichnung: KRYO-DRIFTER]
+[Geläufiger Arenaname: Kryo-Drifter]
+[Status: Aktiver Arenabestand, Akt III / Akt IV]
+
+HERKUNFT:
+Kryo-Drifter stammen aus Tiefkältebiosphären — Planeten, auf denen Temperaturen stabile biologische Aktivität in den meisten bekannten Organismen ausschließen. Die Drifter sind keine Ausnahme zu dieser Regel; sie sind eine Konsequenz davon. Ihre Physiologie funktioniert nicht trotz der Kälte, sondern durch sie. Die biochemischen Prozesse, die bei anderen Lebensformen zum Gewebeversagen führen würden, treiben bei Driftern aktiv an.
+
+In der Arena bedeutet das: Sie frieren nicht. Sie kühlen ihre Umgebung.
+
+VERHALTENSHINWEISE:
+Kryo-Drifter bewegen sich langsam und bevorzugen Mitteldistanzkontakt. Ihr Primärangriff erzeugt lokalisierte thermische Suppression beim Aufprall — das Ziel erlebt, was Arena-Medizinpersonal als "Mobilitätshemmung" beschreibt. Was Kombatanten "Wurzel" nennen. Das Ziel kann sich eine Runde lang nicht bewegen.
+
+Ihre sekundäre Fähigkeit — Kryopuls — dehnt diese thermische Zone auf angrenzende Einheiten aus. Kämpfer, die in engen Formationen agieren, sollten das in ihre Überlegungen einbeziehen.
+
+AKQUISITIONSHINWEIS:
+Gesammelt aus Tiefbiosphärenexpeditionen, Akt III. Spezielles Haltungsprotokoll erforderlich. Das Haltungspersonal trägt thermische Ausrüstung. Die Drifter beachten das Personal nicht. Das ist eine gute Sache.`,
+  },
+
   conversation_davinci_beethoven: {
     title: "Geborgenes Audio — Der Mechanismus",
     text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]

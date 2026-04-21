@@ -1188,6 +1188,7 @@ const Index = () => {
         onHealAll={() => { healAllAtCampfire(); }}
         onUpgradeSharedCard={(defId) => { upgradeSharedCard(defId); }}
         hasCardRemove={activeRunPerks.has('campfire_remove')}
+        hasDualUpgrade={activeRunPerks.has('campfire_dual_upgrade')}
         onRemoveCard={(defId) => { removeCardFromDeck(defId); }}
         onLeave={() => {
           advanceTutorial('campfire_done');
@@ -1980,6 +1981,7 @@ const Index = () => {
             ) : undefined}
             runStartTime={runState?.runStartTime}
             timerPaused={gameState.phase === 'victory' || gameState.phase === 'defeat'}
+            hasDraw4Perk={activeRunPerks.has('draw_4_cards')}
           />
         </div>
       )}

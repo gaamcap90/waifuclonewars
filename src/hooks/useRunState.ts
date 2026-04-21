@@ -6,6 +6,7 @@ import {
 import {
   generateActMap, buildStartingCharacters, SHARED_STARTING_CARDS, CHARACTER_STARTING_CARDS,
   XP_TO_NEXT, pickCardRewards, pickItemReward, rollItemTier, pickBossExclusiveItem,
+  SIGNATURE_LEGENDARIES,
 } from "@/data/roguelikeData";
 import { TUTORIAL_MAP } from "@/data/tutorialData";
 import { seededRng } from "@/utils/rng";
@@ -42,6 +43,23 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
     ...SHARED_STARTING_CARDS,
     ...selectedIds.map(id => CHARACTER_STARTING_CARDS[id]).filter(Boolean),
   ];
+
+  // Free signature legendary at run start (1600p perk)
+  if (runPerksRaw.includes('free_sig_legendary') && characters.length > 0) {
+    const rng = seededRng(seed ^ 0xbeef);
+    const eligibleIds = characters.map(c => c.id).filter(id => SIGNATURE_LEGENDARIES[id as keyof typeof SIGNATURE_LEGENDARIES]);
+    if (eligibleIds.length > 0) {
+      const pickedId = eligibleIds[Math.floor(rng() * eligibleIds.length)] as keyof typeof SIGNATURE_LEGENDARIES;
+      const sigItem = SIGNATURE_LEGENDARIES[pickedId];
+      const charIdx = characters.findIndex(c => c.id === pickedId);
+      if (charIdx >= 0) {
+        const items = [...characters[charIdx].items] as typeof characters[0]['items'];
+        const freeSlot = items.findIndex(s => s === null);
+        if (freeSlot >= 0) items[freeSlot] = sigItem;
+        characters[charIdx] = { ...characters[charIdx], items };
+      }
+    }
+  }
 
   return {
     seed, act: 1, gold: 50,
@@ -432,7 +450,8 @@ export function useRunState() {
         if (p.includes('gold_bonus_10')) bonus += 0.10;
         if (p.includes('gold_bonus_20')) bonus += 0.20;
         if (p.includes('gold_bonus_30')) bonus += 0.30;
-        if (p.includes('gold_bonus_100')) bonus += 1.00;
+        if (p.includes('gold_bonus_100')) bonus += 0.50;
+        if (p.includes('gold_bonus_50_2')) bonus += 0.50;
         return 1 + bonus;
       } catch { return 1; }
     })();
@@ -487,27 +506,31 @@ export function useRunState() {
   const healAtCampfire = useCallback((characterId: CharacterId) => {
     setRunState(prev => {
       if (!prev) return prev;
+      const hasBoostedHeal = (() => { try { return (JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]).includes('campfire_heal_50'); } catch { return false; } })();
+      const healFrac = hasBoostedHeal ? 0.50 : 0.30;
       return {
         ...prev,
         characters: prev.characters.map(c => {
           if (c.id !== characterId) return c;
-          if (c.currentHp <= 0) return c; // dead characters cannot be healed at campfire
-          const healAmount = Math.floor(c.maxHp * 0.30);
+          if (c.currentHp <= 0) return c;
+          const healAmount = Math.floor(c.maxHp * healFrac);
           return { ...c, currentHp: Math.min(c.maxHp, c.currentHp + healAmount) };
         }),
       };
     });
   }, []);
 
-  // Heal all living characters by 30% max HP (campfire heal-all option)
+  // Heal all living characters by 30% (or 50% with perk) max HP
   const healAllAtCampfire = useCallback(() => {
     setRunState(prev => {
       if (!prev) return prev;
+      const hasBoostedHeal = (() => { try { return (JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]).includes('campfire_heal_50'); } catch { return false; } })();
+      const healFrac = hasBoostedHeal ? 0.50 : 0.30;
       return {
         ...prev,
         characters: prev.characters.map(c => {
           if (c.currentHp <= 0) return c;
-          const heal = Math.floor(c.maxHp * 0.30);
+          const heal = Math.floor(c.maxHp * healFrac);
           return { ...c, currentHp: Math.min(c.maxHp, c.currentHp + heal) };
         }),
       };
