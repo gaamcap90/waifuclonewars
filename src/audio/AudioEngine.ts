@@ -154,8 +154,8 @@ class AudioEngine {
       audio.volume = this.settings.muted ? 0 : this.settings.musicVolume;
       audio.loop = false;
       audio.onended = () => { this.nextTrack(); };
-      // Notify on timeupdate so UI can show progress (throttled by browser ~4×/s)
-      audio.ontimeupdate = () => { this.notify(); };
+      // Progress UI polls getCurrentTime directly via setInterval (MusicPlayer).
+      // Notifying on timeupdate would re-render every useAudio subscriber 4×/s.
       audio.play().catch(() => {});
       this.currentMusic = audio;
     } catch { /* ignore */ }

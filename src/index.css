@@ -652,6 +652,30 @@ All colors MUST be HSL.
   to   { stroke-dashoffset: -30; }
 }
 
+/* Active unit glow pulse — breathes opacity to draw the eye */
+@keyframes anim-active-glow-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1.00; }
+}
+
+/* Movable tile pulse — gentle breathing on green tiles */
+.anim-tile-move-pulse {
+  animation: tile-move-pulse-kf 1.6s ease-in-out infinite;
+}
+@keyframes tile-move-pulse-kf {
+  0%, 100% { fill-opacity: 0.18; stroke-opacity: 0.85; }
+  50%      { fill-opacity: 0.35; stroke-opacity: 1.00; }
+}
+
+/* Targetable enemy pulse — sharper, more urgent breathing */
+.anim-tile-target-pulse {
+  animation: tile-target-pulse-kf 1.1s ease-in-out infinite;
+}
+@keyframes tile-target-pulse-kf {
+  0%, 100% { fill-opacity: 0.20; stroke-opacity: 0.85; }
+  50%      { fill-opacity: 0.42; stroke-opacity: 1.00; }
+}
+
 /* ── Main menu title breathe ─────────────────────────────────────── */
 
 @keyframes anim-title-breathe {
@@ -1042,4 +1066,64 @@ body.tut-hl-shields_up_card [data-card-def="shared_shield"] {
   pointer-events: auto !important;
   animation: tut-pulse 1.2s ease-in-out infinite;
   border-radius: 10px;
+}
+/* ── Accessibility preferences ──────────────────────────────────────────────
+   Set by src/hooks/useAccessibility.ts as data-attributes on <html>.
+   Kept at the end so they win cascade battles with component-level styles. */
+
+/* Text size — scales the document root; downstream rem-based sizes follow. */
+html[data-text-size="sm"] { font-size: 88%; }
+html[data-text-size="md"] { font-size: 100%; }
+html[data-text-size="lg"] { font-size: 110%; }
+html[data-text-size="xl"] { font-size: 120%; }
+
+/* Reduce motion — kill animations + transitions for players with vestibular
+   sensitivity. Uses !important because many components inline transitions. */
+html[data-reduce-motion="1"] *,
+html[data-reduce-motion="1"] *::before,
+html[data-reduce-motion="1"] *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+  scroll-behavior: auto !important;
+}
+
+/* High contrast — boost text luminance, darken panel backgrounds. Narrow
+   scope: targets common slate/gray text and rgba backgrounds. Not a full
+   theme; it's a legibility assist. */
+html[data-high-contrast="1"] body {
+  background: #000 !important;
+}
+html[data-high-contrast="1"] .text-slate-400,
+html[data-high-contrast="1"] .text-slate-500,
+html[data-high-contrast="1"] .text-slate-600 {
+  color: #e2e8f0 !important;
+}
+html[data-high-contrast="1"] .text-slate-300 {
+  color: #f8fafc !important;
+}
+html[data-high-contrast="1"] button,
+html[data-high-contrast="1"] [role="button"] {
+  outline: 1px solid rgba(255,255,255,0.25);
+}
+
+/* ── Mana pool pulse (when player has unaffordable cards) ───────────────────
+   Subtle 1.4s pulse on filled mana pips when at least one card in hand costs
+   more than current mana. Communicates "mana is the gate" to new players. */
+@keyframes mana-pulse-anim {
+  0%, 100% { box-shadow: 0 0 4px rgba(96,165,250,0.55); }
+  50%      { box-shadow: 0 0 10px rgba(96,165,250,1.0), 0 0 18px rgba(147,197,253,0.6); }
+}
+.mana-pulse {
+  animation: mana-pulse-anim 1.4s ease-in-out infinite;
+}
+
+/* ── Onboarding tooltip animations ─────────────────────────────────────────── */
+@keyframes onboard-bubble-in {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes onboard-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 18px rgba(255,210,80,0.45); }
+  50%      { box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 32px rgba(255,210,80,0.85); }
 }

@@ -44,9 +44,14 @@ function colorizeDesc(text: string): React.ReactNode {
 }
 
 // ── Upgrade lookup helper ────────────────────────────────────────────────────
+// Some characters use a shorter prefix in their card definitionIds than their char.id
+const CHAR_ID_TO_UPGRADE_PREFIX: Record<string, string> = {
+  cleopatra: 'cleo',
+};
 function findUpgrade(charId: string, abilityName: string) {
+  const prefix = CHAR_ID_TO_UPGRADE_PREFIX[charId] ?? charId;
   return Object.entries(CARD_UPGRADES).find(([key, val]) =>
-    key.startsWith(charId + '_') &&
+    key.startsWith(prefix + '_') &&
     val.upgradedName.replace(/\+$/, '').trim() === abilityName
   )?.[1] ?? null;
 }
@@ -103,7 +108,7 @@ const CHARACTERS: CharacterEntry[] = [
     lore: "Once the greatest military mind in Earth's history, Napoleon Bonaparte was resurrected as a battle-clone by the Empire of Znyxorga. Now fighting in their interdimensional arena, this pint-sized prodigy commands forces with tactical genius, turning every battlefield into a stage for her brilliance. Her sharp eyes miss nothing — and her artillery never misses twice.",
     stats: { hp: 100, might: 60, power: 65, defense: 20, moveRange: 3, attackRange: 2 },
     abilities: [
-      { kind: "passive", icon: "🔫", name: "Mitraille", cost: "Passive", desc: <>At the start of Napoleon's turn, all enemies within range 2 take <span style={{ color: "#f87171", fontWeight: 700 }}>(5 + 2×level) pure damage</span> (ignores Defense). Scales from 7 at lvl 1 to 19 at lvl 8. Named after the grapeshot that made Napoleon famous — don't get close.</> },
+      { kind: "passive", icon: "🔫", name: "Mitraille + Tactical Genius", cost: "Passive", desc: <>At the start of Napoleon's turn, all enemies within range 2 take <span style={{ color: "#f87171", fontWeight: 700 }}>(5 + 2×level) pure damage</span> (ignores Defense). Scales from 7 at lvl 1 to 19 at lvl 8. <span style={{ color: "#34d399", fontWeight: 700 }}>Tactical Genius</span>: also gain <span style={{ color: "#34d399", fontWeight: 700 }}>+1 movement</span> at turn start while standing on a vantage tile (Forest or Ruins).</> },
       { kind: "ability", icon: "💥", name: "Artillery Barrage", cost: "2 Mana", desc: <>Unleash a devastating barrage dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>84</span> damage to a target at range 4.</> },
       { kind: "ability", icon: "⚔️", name: "Grande Armée", cost: "3 Mana", desc: <>Rally the troops! Grant +15% <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> AND <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power</span> to all allies for 2 turns.</> },
       { kind: "ultimate", icon: "⭐", name: "Final Salvo", cost: "3 Mana · Exhaust", desc: <>Fire 3 random artillery shots, each dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>42</span> to random enemies within range 4.</> },
@@ -118,7 +123,7 @@ const CHARACTERS: CharacterEntry[] = [
     stats: { hp: 120, might: 50, power: 40, defense: 25, moveRange: 3, attackRange: 1 },
     abilities: [
       { kind: "passive", icon: "🩸", name: "Bloodlust", cost: "Passive", desc: <>Each kill grants +12 <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> and restores 1 Mana. Stack cap scales with level: cap = 2 + ⌊level/2⌋ (lvl 1 → 2 stacks, lvl 4 → 4, lvl 8 → 6).</> },
-      { kind: "ability", icon: "⚡", name: "Mongol Charge", cost: "2 Mana", desc: <>Strike a single target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>48 damage</span> at range 3, then apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>: <span style={{ color: "#f87171", fontWeight: 700 }}>16 HP per turn</span> for 2 turns.</> },
+      { kind: "ability", icon: "⚡", name: "Mongol Charge", cost: "2 Mana", desc: <>Strike a single target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>48 damage</span> at range 3, then apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>.</> },
       { kind: "ability", icon: "🌀", name: "Horde Tactics", cost: "3 Mana", desc: <>Unleash the horde — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~28 per enemy</span> in range 2 to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL</span> enemies in range 2. More enemies = more damage each.</> },
       { kind: "ultimate", icon: "⭐", name: "Rider's Fury", cost: "3 Mana · Exhaust", desc: <>Sweep the line for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~75 damage</span> to all enemies on a line, range 5. <span style={{ color: "#f87171", fontWeight: 700 }}>Doubled</span> against targets below 40% HP — finish them off.</> },
     ],
@@ -247,7 +252,7 @@ const CHARACTERS: CharacterEntry[] = [
     ],
   },
   {
-    id: "teddy", name: "Teddy-chan", title: "The Stars' Roughest Ride",
+    id: "teddy", name: "Teddy-chan", title: "The Bull Moose",
     tagline: "Roughrider of the Outer Worlds",
     role: "TANK", secondaryRole: "DPS MELEE", portrait: "/art/teddy_portrait.png",
     accentColor: "#d97706", ringColor: "rgba(217,119,6,0.55)",
@@ -274,6 +279,76 @@ const CHARACTERS: CharacterEntry[] = [
       { kind: "ultimate", icon: "⭐", name: "Mansa's Bounty", cost: "2 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#fbbf24", fontWeight: 700 }}>Golden Stasis</span>: freeze every unit on the board (allies and enemies) for <span style={{ color: "#fbbf24", fontWeight: 700 }}>1 turn</span> — no movement, no actions.</> },
     ],
   },
+  {
+    id: "velthar", name: "Vel'thar-chan", title: "The Fire That Refused to Die",
+    tagline: "Clone Zero",
+    role: "HYBRID", portrait: "/art/velthar_portrait.png",
+    accentColor: "#7c3aed", ringColor: "rgba(124,58,237,0.55)",
+    lore: "Seventy-four thousand years ago, a supervolcanic eruption at Toba drove the human species to the brink of extinction. Ash clouds blocked the sun for years. Populations collapsed across continents. One person led the last surviving group through the cold and the dark — and they made it. Znyxorga's observers watched this from orbit and recognised something they had not found elsewhere: a will to survive that transcended circumstance. Named \"Vel'thar\" — Survivor — she was the first clone the Empire ever grew. Not a conqueror. Not a genius. The one human who refused to let the fire go out. She woke into the keepers' care, with no human anywhere to teach her otherwise. The only tongue she has ever known is theirs. When she sings, she sings in Znyxorgan — not because she chose to, but because it is the only language she has ever had.",
+    stats: { hp: 90, might: 58, power: 50, defense: 20, moveRange: 3, attackRange: 1 },
+    abilities: [
+      { kind: "passive", icon: "🌀", name: "Bottleneck", cost: "Passive", desc: <>When a player character ally dies in battle, Vel'thar gains <span style={{ color: "#a78bfa", fontWeight: 700 }}>+5 Might and +5 Power</span> (scales with level, stacks, battle scope only). Every extinction makes the survivors stronger.</> },
+      { kind: "ability", icon: "🔥", name: "Toba's Fury", cost: "2 Mana", desc: <>Melee strike at range 1 — deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~64 damage</span>. At <span style={{ color: "#fb923c", fontWeight: 700 }}>2+ Bottleneck stacks</span>: also applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span>.</> },
+      { kind: "ability", icon: "🕯️", name: "Last Ember", cost: "2 Mana", desc: <>If Vel'thar has <span style={{ color: "#a78bfa", fontWeight: 700 }}>1+ Bottleneck stack</span>: <span style={{ color: "#4ade80", fontWeight: 700 }}>heal 25 HP</span> and gain <span style={{ color: "#fbbf24", fontWeight: 700 }}>+15 Defense</span>. Otherwise: deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~50 damage</span> to all enemies within range 2.</> },
+      { kind: "ultimate", icon: "⭐", name: "Humanity's Last Light", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~87 damage</span> to ALL enemies within range 2. Vel'thar then <span style={{ color: "#4ade80", fontWeight: 700 }}>heals 30 HP</span>.</> },
+    ],
+  },
+  {
+    id: "musashi", name: "Musashi-chan", title: "The Unbroken Sword Saint",
+    tagline: "The Blade of the Eternal Cosmos",
+    role: "DPS MELEE", portrait: "/art/musashi_portrait.png",
+    accentColor: "#dc2626", ringColor: "rgba(220,38,38,0.55)",
+    lore: "Miyamoto Musashi fought sixty-one duels and lost none. He lived by the sword, philosophized with it, and died peacefully at sixty in a cave. Znyxorga found his clone-template in the grain of a worn wooden practice sword preserved in Kyoto. Reborn as Musashi-chan, she brings the Book of Five Rings to the colosseum — two blades, two-strike form, and a calm certainty that there is always one more lesson to teach.",
+    stats: { hp: 90, might: 72, power: 45, defense: 25, moveRange: 3, attackRange: 1 },
+    abilities: [
+      { kind: "passive", icon: "⚔️", name: "Battle Scar", cost: "Passive", desc: <>Each time Musashi takes damage in combat, permanently gain <span style={{ color: "#f87171", fontWeight: 700 }}>+1 Might</span> for this battle (scales +1 per 2 levels — +1 at L1, +4 at L8). Caps at <span style={{ color: "#f87171", fontWeight: 700 }}>3 stacks</span>.</> },
+      { kind: "ability", icon: "🗡️", name: "Ichi no Tachi", cost: "2 Mana", desc: <>A single decisive strike at range 1 — deal <span style={{ color: "#f87171", fontWeight: 700 }}>~36 damage</span> and place a <span style={{ color: "#fbbf24", fontWeight: 700 }}>Duel</span> on target (2 turns). If target is already <span style={{ color: "#fbbf24", fontWeight: 700 }}>Dueled</span>: deal <span style={{ color: "#f87171", fontWeight: 700 }}>~63 damage</span> instead and apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>.</> },
+      { kind: "ability", icon: "⚔️", name: "Niten Ichi-ryu", cost: "2 Mana", desc: <>Two-sword style — strike twice at range 1 for <span style={{ color: "#f87171", fontWeight: 700 }}>~32 damage</span> each. Both hits apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>. If target is <span style={{ color: "#fbbf24", fontWeight: 700 }}>Dueled</span>: refresh Duel and hit adjacent enemies for <span style={{ color: "#f87171", fontWeight: 700 }}>~22 damage</span>.</> },
+      { kind: "ultimate", icon: "⭐", name: "Book of Five Rings", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Duel</span> to ALL enemies within range 2 and deal <span style={{ color: "#f87171", fontWeight: 700 }}>~38 damage</span> to each. Duel bonus damage increases from +35% to <span style={{ color: "#fbbf24", fontWeight: 700 }}>+65% this round</span>.</> },
+    ],
+  },
+  {
+    id: "cleopatra", name: "Cleopatra-chan", title: "The Asp-Tongued Empress",
+    tagline: "Serpent Queen of the Outer Stars",
+    role: "CONTROLLER", secondaryRole: "SUPPORT", portrait: "/art/cleopatra_portrait.png",
+    accentColor: "#d97706", ringColor: "rgba(217,119,6,0.55)",
+    lore: "Cleopatra VII ruled Egypt not through inheritance alone, but through sheer political genius — she spoke nine languages, commanded Rome's most powerful generals, and bent an empire to her will. Znyxorga found her clone-template in papyrus ash sifted from the ruins of the Library of Alexandria. Reborn as Cleopatra-chan, she brings diplomacy, poison, and royal decree to the arena.",
+    stats: { hp: 100, might: 35, power: 65, defense: 25, moveRange: 3, attackRange: 3 },
+    abilities: [
+      { kind: "passive", icon: "🐍", name: "Asp's Venom", cost: "Passive", desc: <>Cleopatra's basic attacks apply <span style={{ color: "#4ade80", fontWeight: 700 }}>Poison</span> <span style={{ color: "#4ade80", fontWeight: 700 }}>(3 turns)</span>.</> },
+      { kind: "ability", icon: "🐍", name: "Asp's Kiss", cost: "2 Mana", desc: <>Ranged strike at range 3 — deal <span style={{ color: "#d97706", fontWeight: 700 }}>~46 damage</span>. Reduce target's <span style={{ color: "#fb923c", fontWeight: 700 }}>Power by −15</span> for 3 turns.</> },
+      { kind: "ability", icon: "📜", name: "Royal Decree", cost: "2 Mana", desc: <>Dual-use at range 3. If <span style={{ color: "#f87171", fontWeight: 700 }}>enemy</span>: apply <span style={{ color: "#fb923c", fontWeight: 700 }}>Charm</span> (1 turn) and <span style={{ color: "#4ade80", fontWeight: 700 }}>Poison</span> (3 turns). If <span style={{ color: "#4ade80", fontWeight: 700 }}>ally</span>: grant <span style={{ color: "#f87171", fontWeight: 700 }}>+20 Might</span> and <span style={{ color: "#fbbf24", fontWeight: 700 }}>+10 Defense</span> for 2 turns.</> },
+      { kind: "ultimate", icon: "⭐", name: "Eternal Kingdom", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Apply <span style={{ color: "#fb923c", fontWeight: 700 }}>Stun</span> (1 turn) and <span style={{ color: "#4ade80", fontWeight: 700 }}>Poison</span> (3 turns) to ALL enemies within range 2. Cleopatra becomes <span style={{ color: "#fbbf24", fontWeight: 700 }}>Untouchable</span> for 1 turn.</> },
+    ],
+  },
+  {
+    id: "tesla", name: "Tesla-chan", title: "The Forgotten Frequency",
+    tagline: "Master of the Cosmic Grid",
+    role: "DPS RANGED", portrait: "/art/tesla_portrait.png",
+    accentColor: "#facc15", ringColor: "rgba(250,204,21,0.55)",
+    lore: "Nikola Tesla envisioned a world powered by free, wireless electricity. He got there a century early and nobody listened. Znyxorga extracted his clone-template from a resonant coil preserved in a Colorado Springs laboratory wall. Reborn as Tesla-chan, she channels high-voltage brilliance into the colosseum — chaining arc bolts, surging coils, and a death ray that scales with every stack of Voltage she builds.",
+    stats: { hp: 85, might: 25, power: 80, defense: 15, moveRange: 3, attackRange: 3 },
+    abilities: [
+      { kind: "passive", icon: "⚡", name: "Voltage", cost: "Passive", desc: <>Gain <span style={{ color: "#facc15", fontWeight: 700 }}>+1 Voltage</span> when NOT moving on your turn. Lose <span style={{ color: "#facc15", fontWeight: 700 }}>−1 Voltage</span> when you move (max 5). At <span style={{ color: "#facc15", fontWeight: 700 }}>5 stacks (Overloaded)</span>: next basic attack or ability costs 0 Mana, deals <span style={{ color: "#60a5fa", fontWeight: 700 }}>+50% damage</span>, and Stuns the target 1 turn.</> },
+      { kind: "ability", icon: "🌩️", name: "Arc Bolt", cost: "2 Mana", desc: <>Fire at range 3 — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~72 damage</span>. At <span style={{ color: "#facc15", fontWeight: 700 }}>Voltage ≥3</span>: chains to <span style={{ color: "#facc15", fontWeight: 700 }}>ALL adjacent enemies</span> for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~40 each</span>.</> },
+      { kind: "ability", icon: "💡", name: "Coil Surge", cost: "2 Mana", desc: <>Place a <span style={{ color: "#facc15", fontWeight: 700 }}>Tesla Coil zone</span> at range 3. Enemies starting their turn on it: <span style={{ color: "#fbbf24", fontWeight: 700 }}>−20 Defense</span> and <span style={{ color: "#fb923c", fontWeight: 700 }}>Stun 1 turn</span>. Lasts 3 turns. Costs 1 Voltage.</> },
+      { kind: "ultimate", icon: "⭐", name: "Death Ray", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Requires <span style={{ color: "#facc15", fontWeight: 700 }}>≥3 Voltage</span>. Line beam (range 6): first target takes <span style={{ color: "#60a5fa", fontWeight: 700 }}>~40 per Voltage stack</span>, each further target takes <span style={{ color: "#60a5fa", fontWeight: 700 }}>50% of the previous</span>. Consumes all Voltage.</> },
+    ],
+  },
+  {
+    id: "shaka", name: "Shaka-chan", title: "The Horns of the Zulu",
+    tagline: "The Warcry of the Stars",
+    role: "TANK", secondaryRole: "CONTROLLER", portrait: "/art/shaka_portrait.png",
+    accentColor: "#16a34a", ringColor: "rgba(22,163,74,0.55)",
+    lore: "Shaka kaSenzangakhona forged the Zulu nation from fractured clans into an unstoppable military force. He invented new battle formations — the Bull Horn — and built an empire that defied everything around it. Znyxorga found his genetic echo in the wood of a Zulu assegai lodged in a Cape Town museum wall. Reborn as Shaka-chan, she brings the horns to the colosseum.",
+    stats: { hp: 120, might: 58, power: 38, defense: 35, moveRange: 2, attackRange: 1 },
+    abilities: [
+      { kind: "passive", icon: "🛡️", name: "Isigodlo (Formation)", cost: "Passive", desc: <>Adjacent allies gain <span style={{ color: "#34d399", fontWeight: 700 }}>+10 Defense</span> (scales with level) while Shaka is alive. Range extends to 2 with Signature item.</> },
+      { kind: "ability", icon: "🪃", name: "The Horns", cost: "2 Mana", desc: <>Charge at target (up to 2 tiles) — deal <span style={{ color: "#34d399", fontWeight: 700 }}>~24 damage</span>. Enemy is <span style={{ color: "#fbbf24", fontWeight: 700 }}>knocked sideways</span> (left or right of charge direction). Water: <span style={{ color: "#f87171", fontWeight: 700 }}>instant kill</span>. Mountain: <span style={{ color: "#fb923c", fontWeight: 700 }}>Stun 1 turn</span> instead.</> },
+      { kind: "ability", icon: "🏹", name: "Chest Strike", cost: "2 Mana", desc: <>Power-scaling strike at range 1 — deal <span style={{ color: "#34d399", fontWeight: 700 }}>~28 damage</span>. Pushes target back 1 hex. Applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span>.</> },
+      { kind: "ultimate", icon: "⭐", name: "Impondo Zankomo", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — War cry: deal <span style={{ color: "#34d399", fontWeight: 700 }}>~62 damage</span> to ALL adjacent enemies. All adjacent allies gain <span style={{ color: "#34d399", fontWeight: 700 }}>+35 Defense</span> for 2 turns. Shaka gains <span style={{ color: "#34d399", fontWeight: 700 }}>+50 Defense</span> for 2 turns.</> },
+    ],
+  },
 ];
 
 // ── Upgraded ability descriptions (same copy as base, updated stats only) ─────
@@ -284,7 +359,7 @@ const UPGRADE_DESCS: Record<string, React.ReactNode> = {
   'napoleon_Grande Armée': <>Rally the troops! Grant +30% <span style={{ color: "#f87171", fontWeight: 700 }}>Might</span> AND <span style={{ color: "#60a5fa", fontWeight: 700 }}>Power</span> to all allies for 2 turns.</>,
   'napoleon_Final Salvo': <>Fire 5 random artillery shots, each dealing <span style={{ color: "#60a5fa", fontWeight: 700 }}>~42</span> damage to random enemies within range 4.</>,
   // Genghis
-  'genghis_Mongol Charge': <>Strike a single target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~48 damage</span> at range 3, then apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>: <span style={{ color: "#f87171", fontWeight: 700 }}>~24 HP per turn</span> for 2 turns.</>,
+  'genghis_Mongol Charge': <>Strike a single target for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~48 damage</span> at range 3, then apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>.</>,
   'genghis_Horde Tactics': <>Unleash the horde — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~20 damage per enemy</span> in range 3 to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL</span> enemies in range 3. (1 enemy = 20 dmg, 2 = 40, 3 = 60 each)</>,
   "genghis_Rider's Fury": <>Sweep the line for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~60 damage</span> to all enemies. <span style={{ color: "#f87171", fontWeight: 700 }}>Doubled to ~120</span> against targets below 40% HP — finish them off.</>,
   // Da Vinci
@@ -299,10 +374,14 @@ const UPGRADE_DESCS: Record<string, React.ReactNode> = {
   'beethoven_Schallwelle': <>Fire a directional sonic wave — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~46 damage</span> to all enemies in a line up to range 3 and <span style={{ color: "#22d3ee", fontWeight: 700 }}>push each 3 tiles back</span> along the wave direction.</>,
   'beethoven_Freudenspur': <>Target a tile within range 3 — <span style={{ color: "#22d3ee", fontWeight: 700 }}>that tile and all 6 adjacent tiles</span> become a resonance zone. Allies passing through zone tiles gain <span style={{ color: "#34d399", fontWeight: 700 }}>+3 Movement</span>. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>.</>,
   'beethoven_Götterfunken': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Unleash the full Sternensturm. Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~46 damage</span> and <span style={{ color: "#f87171", fontWeight: 700 }}>stun all enemies within range 3 for 2 turns</span> — no movement, no cards, no actions.</>,
-  // Yi Sun-sin
+  // Yi Sun-sin — Land
   'sunsin_Hwajeon': <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~90 damage</span> at range 3. Pushes target back 2 hexes.</>,
   'sunsin_Naval Repairs': <>Select a target area. All allies within range 2 heal <span style={{ color: "#4ade80", fontWeight: 700 }}>20 HP now</span> and <span style={{ color: "#4ade80", fontWeight: 700 }}>20 HP next turn</span>.</>,
   'sunsin_Chongtong Barrage': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Charge 3 hexes, deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~143 damage</span> to enemies in path. Each hit enemy is <span style={{ color: "#38bdf8", fontWeight: 700 }}>pushed sideways</span>. Sun-sin ends at the last hex.</>,
+  // Yi Sun-sin — Water
+  'sunsin_Ramming Speed': <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~90 damage</span> at range 1 (water form — reduced Power). Pushes target back <span style={{ color: "#38bdf8", fontWeight: 700 }}>2 hexes</span>.</>,
+  'sunsin_Broadside': <>Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~35 damage</span> to all enemies in range 3.</>,
+  'sunsin_Chongtong Barrage_water': <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Main target: <span style={{ color: "#a78bfa", fontWeight: 700 }}>~121 damage</span>. Adjacent enemies: <span style={{ color: "#a78bfa", fontWeight: 700 }}>~58 damage</span>. Range 5.</>,
   // Huang-chan
   'huang_Terracotta Legion': <>Select any empty hex within range 3. Summon a random warrior — <span style={{ color: "#fbbf24", fontWeight: 700 }}>50/50</span>: <span style={{ color: "#60a5fa", fontWeight: 700 }}>Archer</span> (HP <span style={{ color: "#4ade80", fontWeight: 700 }}>60</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>45</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 2, Move 2) or <span style={{ color: "#f87171", fontWeight: 700 }}>Warrior</span> (HP <span style={{ color: "#4ade80", fontWeight: 700 }}>60</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>30</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>25</span>, Range 1, Move 2). Both have Power 0 — deal pure Might damage. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</>,
   "huang_First Emperor's Command": <>Summon a <span style={{ color: "#b45309", fontWeight: 700 }}>Terracotta Cavalry</span> on an adjacent hex: HP <span style={{ color: "#4ade80", fontWeight: 700 }}>80</span>, Might <span style={{ color: "#60a5fa", fontWeight: 700 }}>45</span>, Def <span style={{ color: "#60a5fa", fontWeight: 700 }}>38</span>, Power <span style={{ color: "#60a5fa", fontWeight: 700 }}>55</span>, Move 3. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>. Immediately adds a <span style={{ color: "#f59e0b", fontWeight: 700 }}>FREE Cavalry Charge</span> card to your hand — deals <span style={{ color: "#60a5fa", fontWeight: 700 }}>82 dmg</span> at range 3.</>,
@@ -327,6 +406,26 @@ const UPGRADE_DESCS: Record<string, React.ReactNode> = {
   "mansa_Salt Road": <>Place a <span style={{ color: "#fbbf24", fontWeight: 700 }}>7-hex mana zone</span> within range 4. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>. Costs 0 Mana (Treasury discount).</>,
   "mansa_Hajj of Gold": <>Heal all allies for <span style={{ color: "#4ade80", fontWeight: 700 }}>30% of their max HP</span>. All allies gain <span style={{ color: "#60a5fa", fontWeight: 700 }}>+15 Power</span> until end of turn.</>,
   "mansa_Mansa's Bounty": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#fbbf24", fontWeight: 700 }}>Golden Stasis+</span>: allies are frozen for 1 turn, enemies are frozen for <span style={{ color: "#f87171", fontWeight: 700 }}>2 turns</span>. Costs 1 Mana (Treasury discount).</>,
+  // Vel'thar
+  "velthar_Toba's Fury": <>Melee strike at range 1 — deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~81 damage</span>. At <span style={{ color: "#fb923c", fontWeight: 700 }}>1+ Bottleneck stack</span>: applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span>.</>,
+  "velthar_Last Ember": <>If Vel'thar has <span style={{ color: "#a78bfa", fontWeight: 700 }}>1+ Bottleneck stack</span>: <span style={{ color: "#4ade80", fontWeight: 700 }}>heal 40 HP</span> and gain <span style={{ color: "#fbbf24", fontWeight: 700 }}>+25 Defense</span> until next turn. Otherwise: deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~65 damage</span> to all enemies within range 2.</>,
+  "velthar_Humanity's Last Light": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Deal <span style={{ color: "#a78bfa", fontWeight: 700 }}>~116 damage</span> to ALL enemies in range 2. Vel'thar then <span style={{ color: "#4ade80", fontWeight: 700 }}>heals 50 HP</span>.</>,
+  // Musashi
+  "musashi_Ichi no Tachi": <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~45 damage</span> at range 1. Places <span style={{ color: "#fbbf24", fontWeight: 700 }}>Duel</span> on target (2 turns). If target is already <span style={{ color: "#fbbf24", fontWeight: 700 }}>Dueled</span>: deal <span style={{ color: "#f87171", fontWeight: 700 }}>~79 damage</span> instead and apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>.</>,
+  "musashi_Niten Ichi-ryu": <>Two-sword style — strike twice at range 1 for <span style={{ color: "#f87171", fontWeight: 700 }}>~40 damage</span> each. Both hits apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>. If target is <span style={{ color: "#fbbf24", fontWeight: 700 }}>Dueled</span>: refresh Duel and hit adjacent enemies for <span style={{ color: "#f87171", fontWeight: 700 }}>~29 damage</span>.</>,
+  "musashi_Book of Five Rings": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Apply <span style={{ color: "#fbbf24", fontWeight: 700 }}>Duel</span> to ALL enemies within range 2 and deal <span style={{ color: "#f87171", fontWeight: 700 }}>~49 damage</span> to each. Duel bonus damage increases to <span style={{ color: "#fbbf24", fontWeight: 700 }}>+80% this round</span>.</>,
+  // Cleopatra
+  "cleopatra_Asp's Kiss": <>Ranged strike at range 3 — deal <span style={{ color: "#d97706", fontWeight: 700 }}>~59 damage</span>. Reduce target's <span style={{ color: "#fb923c", fontWeight: 700 }}>Power by −20</span> for 3 turns.</>,
+  "cleopatra_Royal Decree": <>Dual-use at range 3. If <span style={{ color: "#f87171", fontWeight: 700 }}>enemy</span>: apply <span style={{ color: "#fb923c", fontWeight: 700 }}>Charm</span> (1 turn) and <span style={{ color: "#4ade80", fontWeight: 700 }}>Poison</span> (3 turns). If <span style={{ color: "#4ade80", fontWeight: 700 }}>ally</span>: grant <span style={{ color: "#f87171", fontWeight: 700 }}>+30 Might</span> and <span style={{ color: "#fbbf24", fontWeight: 700 }}>+15 Defense</span> for 2 turns.</>,
+  "cleopatra_Eternal Kingdom": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Apply <span style={{ color: "#fb923c", fontWeight: 700 }}>Stun</span> (2 turns) and <span style={{ color: "#4ade80", fontWeight: 700 }}>Poison</span> (3 turns) to ALL enemies in range 2. Cleopatra becomes <span style={{ color: "#fbbf24", fontWeight: 700 }}>Untouchable</span> for 2 turns.</>,
+  // Tesla
+  "tesla_Arc Bolt": <>Fire at range 3 — deal <span style={{ color: "#60a5fa", fontWeight: 700 }}>~96 damage</span>. At <span style={{ color: "#facc15", fontWeight: 700 }}>Voltage ≥3</span>: chains to <span style={{ color: "#facc15", fontWeight: 700 }}>ALL adjacent enemies</span> for <span style={{ color: "#60a5fa", fontWeight: 700 }}>~56 each</span>.</>,
+  "tesla_Coil Surge": <>Place a <span style={{ color: "#facc15", fontWeight: 700 }}>Tesla Coil zone</span> at range 3. Enemies starting their turn on it: <span style={{ color: "#fbbf24", fontWeight: 700 }}>−25 Defense</span> and <span style={{ color: "#fb923c", fontWeight: 700 }}>Stun 1 turn</span>. Lasts <span style={{ color: "#facc15", fontWeight: 700 }}>4 turns</span>. No Voltage cost.</>,
+  "tesla_Death Ray": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Requires <span style={{ color: "#facc15", fontWeight: 700 }}>≥3 Voltage</span>. Line beam (range 6): first target takes <span style={{ color: "#60a5fa", fontWeight: 700 }}>~48 per Voltage stack</span>, each further target takes <span style={{ color: "#60a5fa", fontWeight: 700 }}>50% of the previous</span>. Consumes all Voltage.</>,
+  // Shaka
+  "shaka_The Horns": <>Charge at target (up to <span style={{ color: "#34d399", fontWeight: 700 }}>3 tiles</span>) — deal <span style={{ color: "#34d399", fontWeight: 700 }}>~30 damage</span>. Enemy <span style={{ color: "#fbbf24", fontWeight: 700 }}>knocked sideways</span>. Water: <span style={{ color: "#f87171", fontWeight: 700 }}>instant kill</span>. Mountain: <span style={{ color: "#fb923c", fontWeight: 700 }}>Stun 1 turn</span>.</>,
+  "shaka_Chest Strike": <>Power-scaling strike at range 1 — deal <span style={{ color: "#34d399", fontWeight: 700 }}>~34 damage</span>. Pushes target back 1 hex. Applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span>.</>,
+  "shaka_Impondo Zankomo": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — War cry: deal <span style={{ color: "#34d399", fontWeight: 700 }}>~75 damage</span> to ALL adjacent enemies. Adjacent allies gain <span style={{ color: "#34d399", fontWeight: 700 }}>+45 Defense</span> for 2 turns. Shaka gains <span style={{ color: "#34d399", fontWeight: 700 }}>+65 Defense</span> for 2 turns.</>,
 };
 
 const ROLE_STYLE: Record<string, { text: string; border: string; bg: string }> = {
@@ -359,7 +458,7 @@ const TILES: TileEntry[] = [
     type: 'forest', icon: '🔮', name: 'Crystal Spires', color: '#a855f7',
     image: '/art/tiles/Forest_180.png',
     effects: [
-      { label: '+40% Defense', detail: 'Units on a forest tile gain +40% Defense against all incoming attacks. Normal movement cost.' },
+      { label: '+20% Defense', detail: 'Units on a forest tile gain +20% Defense against all incoming attacks. Normal movement cost.' },
       { label: 'Stealth', detail: 'Reduces enemy targeting priority.' },
     ],
     tip: 'Great for tanky units and defensive positioning. Forests cost normal movement now — easy to duck into for cover.',
@@ -406,8 +505,7 @@ const TILES: TileEntry[] = [
     type: 'desert', icon: '🏜️', name: 'Desert', color: '#d97706',
     image: '/art/tiles/Desert_180_new.png',
     effects: [
-      { label: 'Act 2+ Only', detail: 'Desert tiles only appear from Act 2 onward — the arena evolves.' },
-      { label: 'Scorching Heat', detail: 'Units on desert tiles take 5 pure damage at turn end from the heat.' },
+      { label: 'Scorching Heat', detail: 'Units on desert tiles take 10 pure damage at turn end from the heat.' },
     ],
     tip: 'Avoid sitting on desert tiles longer than needed. Pass through quickly or use them to zone out enemies.',
   },
@@ -460,9 +558,10 @@ const TILES: TileEntry[] = [
     type: 'mana_crystal', icon: '💎', name: 'Mana Crystal', color: '#c084fc',
     image: '/art/tiles/Mana_Crystal_180.png',
     effects: [
-      { label: '+1 Mana on Entry', detail: 'Standing on or moving onto a Mana Crystal tile restores 1 Mana to that unit.' },
+      { label: '+1 Mana', detail: 'If 1 or 2 of your characters stand adjacent to the Mana Crystal at the start of your turn, you gain +1 global Mana that turn.' },
+      { label: '+2 Mana', detail: 'If 3 of your characters stand adjacent to the Mana Crystal at the start of your turn, you gain +2 global Mana that turn instead.' },
     ],
-    tip: 'Contest mana crystals early for tempo advantage.',
+    tip: 'Contest the crystal early — bunching all 3 clones adjacent is worth the extra Mana, but leaves you vulnerable to AoE.',
   },
 ];
 
@@ -481,7 +580,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'bone_plate',       name: 'Bone Plate',        icon: '🦴', tier: 'common',   description: '+5 Defense for this run.',                                  statBonus: { defense: 5 } },
   { id: 'vitality_shard',   name: 'Vitality Shard',    icon: '💠', tier: 'common',   description: '+12 max HP for this run.',                                  statBonus: { hp: 12 } },
   { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+5 Power for this run.',                                    statBonus: { power: 5 } },
-  { id: 'swift_wraps',     name: 'Swift Wraps',       icon: '🩹', tier: 'common',   description: '+2 extra movement on the first turn of each battle.' },
+  { id: 'swift_wraps',     name: 'Swift Wraps',       icon: '🩹', tier: 'common',   description: '+1 permanent movement range + +2 extra movement on the first turn of each battle.' },
   { id: 'targeting_visor', name: 'Targeting Visor',   icon: '🎯', tier: 'common',   description: '+1 Attack Range.',                                          statBonus: { attackRange: 1 } },
   { id: 'adrenaline_injector', name: 'Adrenaline Injector', icon: '💉', tier: 'common', description: '+3 Might, +3 Power.',                                  statBonus: { might: 3, power: 3 } },
   { id: 'plated_boots',   name: 'Plated Boots',       icon: '🥾', tier: 'common',   description: '+8 HP, +2 Defense.',                                        statBonus: { hp: 8, defense: 2 } },
@@ -494,21 +593,21 @@ const ITEMS: ItemEntry[] = [
   { id: 'card_satchel',     name: 'Card Satchel',      icon: '🎒', tier: 'uncommon', description: '+1 starting hand size for this run.' },
   { id: 'quick_boots',      name: 'Quick Boots',       icon: '👟', tier: 'uncommon', description: '+1 movement range permanently.' },
   { id: 'soul_ember',       name: 'Soul Ember',        icon: '🕯️', tier: 'uncommon', description: 'On kill, restore 20 HP to this character.' },
-  { id: 'war_trophy',       name: 'War Trophy',        icon: '💀', tier: 'uncommon', description: 'On kill, permanently gain +2 Might and +2 Power for the rest of the run.' },
+  { id: 'war_trophy',       name: 'War Trophy',        icon: '💀', tier: 'uncommon', description: 'On kill, permanently gain +2 Might and +2 Power for the rest of the run (caps at 5 stacks — +10 / +10 max).' },
   // Rare — General
   { id: 'strategists_case', name: "Strategist's Case", icon: '💼', tier: 'rare',     description: '+2 starting hand size for this run.' },
   { id: 'alien_core',       name: 'Alien Core',        icon: '🧬', tier: 'rare',     description: 'All ability damage dealt by this character is increased by 25%.' },
   { id: 'mana_crystal',    name: 'Mana Crystal',       icon: '🔷', tier: 'rare',     description: 'Gain +1 Mana at the start of each turn.' },
   { id: 'gladiator_brand',  name: "Gladiator's Brand", icon: '⚡', tier: 'rare',     description: 'First ability each fight costs 0 Mana.' },
   { id: 'diamond_shell',    name: 'Diamond Shell',     icon: '💎', tier: 'rare',     description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).' },
-  { id: 'chrono_shard',    name: 'Chrono Shard',      icon: '⏳', tier: 'rare',     description: '+1 Mana on the first turn of each combat.' },
+  { id: 'chrono_shard',    name: 'Chrono Shard',      icon: '⏳', tier: 'rare',     description: '+2 Mana on the first turn of each combat.' },
   { id: 'berserkers_mark', name: "Berserker's Mark",  icon: '🔥', tier: 'rare',     description: '+15% damage dealt when below 50% HP.' },
   { id: 'echo_stone',      name: 'Echo Stone',        icon: '🪨', tier: 'rare',     description: 'Draw 1 extra card at the start of each turn.' },
   // Rare — Napoleon
   { id: 'grand_strategy',   name: 'Grand Strategy',    icon: '🗺️', tier: 'rare',     description: 'Artillery Barrage hits an additional adjacent target.',      targetCharacter: 'napoleon' },
   { id: 'emperors_coat',    name: "Emperor's Coat",    icon: '🪖', tier: 'rare',     description: 'Grande Armée also grants +30% Might & Power to all allies.', targetCharacter: 'napoleon' },
   // Rare — Genghis
-  { id: 'eternal_hunger',   name: 'Eternal Hunger',    icon: '🩸', tier: 'rare',     description: 'Bloodlust kill stacks carry over between fights for the entire run.',               targetCharacter: 'genghis' },
+  { id: 'eternal_hunger',   name: 'Eternal Hunger',    icon: '🩸', tier: 'rare',     description: "Genghis keeps 100% of her Bloodlust kill stacks between fights (normally stacks reset).",               targetCharacter: 'genghis' },
   { id: 'khans_seal',       name: "Khan's Seal",       icon: '🏹', tier: 'rare',     description: "Rider's Fury also stuns each hit enemy for 1 turn.",        targetCharacter: 'genghis' },
   // Rare — Da Vinci
   { id: 'aerial_lens',      name: 'Aerial Lens',       icon: '🔭', tier: 'rare',     description: 'Flying Machine can swap position with an allied unit.',      targetCharacter: 'davinci' },
@@ -520,7 +619,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'turtle_hull',      name: 'Turtle Hull',       icon: '🐢', tier: 'rare',     description: 'Yi Sun-sin takes 20% less damage from all sources.',                                targetCharacter: 'sunsin' },
   { id: 'admirals_banner',  name: "Admiral's Banner",  icon: '⛵', tier: 'rare',     description: 'Naval Repairs / Broadside also grants all nearby allies +30 DEF for 1 turn.',       targetCharacter: 'sunsin' },
   // Rare — Beethoven
-  { id: 'resonant_crystal', name: 'Resonant Crystal',  icon: '🔮', tier: 'rare',     description: 'After any Beethoven ability card, deal Power×0.25 to all adjacent enemies.',           targetCharacter: 'beethoven' },
+  { id: 'resonant_crystal', name: 'Resonant Crystal',  icon: '🔮', tier: 'rare',     description: 'After any Beethoven ability card, deal ~12 damage to all adjacent enemies.',           targetCharacter: 'beethoven' },
   { id: 'composers_baton',  name: "Composer's Baton",  icon: '🎼', tier: 'rare',     description: 'Allies standing on a Freudenspur zone also gain +5 Defense at turn start.',              targetCharacter: 'beethoven' },
   // Rare — Huang-chan
   { id: 'dragon_kiln',      name: 'Dragon Kiln',       icon: '🏺', tier: 'rare',     description: 'Terracotta units are summoned with +20 HP and +10 Might.',                               targetCharacter: 'huang' },
@@ -540,6 +639,21 @@ const ITEMS: ItemEntry[] = [
   // Rare — Mansa-chan
   { id: 'golden_throne',    name: 'Golden Throne',      icon: '👑', tier: 'rare',    description: 'After each battle, earn an additional +50% of the gold reward on top of Treasury.',      targetCharacter: 'mansa' },
   { id: 'mali_coffers',     name: 'Mali Coffers',        icon: '💰', tier: 'rare',   description: "Mansa's ability card Mana discount increased to 2.",                                     targetCharacter: 'mansa' },
+  // Rare — Vel'thar-chan
+  { id: 'remnant_core',    name: "Survivor's Totem", icon: '🦴', tier: `rare`,      description: "While Vel'thar is at or below 40% HP, she takes 35% less damage from all sources.",                                 targetCharacter: `velthar` },
+  { id: 'void_mantle',     name: 'Ashfall Mantle',    icon: '🌋', tier: 'rare',      description: "Last Ember's AoE mode also heals Vel'thar 20 HP. Humanity's Last Light AoE radius +1 and self-heal +15 HP.",           targetCharacter: 'velthar' },
+  // Rare — Musashi-chan
+  { id: 'daisho_set',      name: 'Daishō Set',        icon: '🗡️', tier: 'rare',      description: 'Each Niten Ichi-ryu strike that kills grants an immediate extra strike on a new target.',                               targetCharacter: 'musashi' },
+  { id: 'ganryu_stone',    name: 'Ganryu Island Stone',icon: '🪨', tier: 'rare',      description: '+15 Might, +5 Power. Battle Scar stacks persist between fights.',                                                        targetCharacter: 'musashi', statBonus: { might: 15, power: 5 } },
+  // Rare — Cleopatra-chan
+  { id: 'lotus_crown',     name: 'Lotus Crown',       icon: '🌸', tier: 'rare',      description: "Asp's Venom now also stacks when Cleopatra uses an ability card, not only on basic attacks.",                      targetCharacter: 'cleopatra' },
+  { id: 'library_scroll',  name: 'Alexandrian Codex', icon: '📜', tier: 'rare',      description: "Asp's Kiss Power reduction increased from −15 to −25 for 3 turns.",                                                       targetCharacter: 'cleopatra' },
+  // Rare — Tesla-chan
+  { id: 'resonant_oscillator', name: 'Resonant Oscillator', icon: '⚡', tier: 'rare', description: 'Arc Bolt chains to 1 extra enemy for free.',                                                                            targetCharacter: 'tesla' },
+  { id: 'faraday_coat',    name: 'Faraday Coat',      icon: '🧥', tier: 'rare',      description: '+10 Defense. Tesla takes 15% less damage from ability sources.',                                                          targetCharacter: 'tesla', statBonus: { defense: 10 } },
+  // Rare — Shaka-chan
+  { id: 'assegai',         name: 'Assegai',           icon: '🗡️', tier: 'rare',      description: '+15 Might. The Horns also knocks back one adjacent enemy 1 hex.',                                                        targetCharacter: 'shaka', statBonus: { might: 15 } },
+  { id: 'cattle_kraal',    name: 'Cattle Kraal Token', icon: '🐄', tier: 'rare',     description: 'At fight start, gain bonus HP equal to 10% of max HP per ally in the squad.',                                          targetCharacter: 'shaka' },
   // Legendary
   { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'This character has no limit on cards played per turn (normally capped at 3).' },
   { id: 'void_armor',       name: 'Void Armor',        icon: '🛡️', tier: 'legendary', description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.' },
@@ -547,7 +661,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary', description: 'On turns 2, 3, and 4 of each fight, draw +2 cards and gain +2 Mana.' },
   // Signature Legendaries — one per character, boss reward only
   { id: 'sig_napoleon',  name: "Marshal's Baton",         icon: '🏅', tier: 'legendary', description: 'Artillery Barrage hits ALL enemies within 2 hexes of the target for 30% of the damage dealt.',  targetCharacter: 'napoleon' },
-  { id: 'sig_genghis',   name: 'Eternal Steppe',          icon: '🌾', tier: 'legendary', description: 'Bloodlust stacks no longer cap at 3. Each stack also grants +1 movement.',                      targetCharacter: 'genghis' },
+  { id: 'sig_genghis',   name: 'Eternal Steppe',          icon: '🌾', tier: 'legendary', description: 'Bloodlust stacks no longer cap (Might + Mana keep scaling). First 3 stacks each grant +1 movement (max +3 Move).', targetCharacter: 'genghis' },
   { id: 'sig_davinci',   name: 'Codex Atlanticus',        icon: '📜', tier: 'legendary', description: 'Tinkerer draws +1 extra card always (2 base, 3 with Drone). Vitruvian Guardian spawns with +30 HP.', targetCharacter: 'davinci' },
   { id: 'sig_leonidas',  name: 'Thermopylae Stone',       icon: '🪨', tier: 'legendary', description: 'Phalanx stacks also grant +5 Might each. At 3 stacks, basic attacks Taunt the target.',         targetCharacter: 'leonidas' },
   { id: 'sig_sunsin',    name: "Admiral's Turtle Helm",   icon: '🐢', tier: 'legendary', description: 'Water form: Regen 10 HP/turn. Land form: basic attack range +1.',                               targetCharacter: 'sunsin' },
@@ -557,22 +671,32 @@ const ITEMS: ItemEntry[] = [
   { id: 'sig_hannibal',  name: "Carthage's Oath",         icon: '🐘', tier: 'legendary', description: 'Cannae flanking bonus increased to 70%. War Elephant lasts +1 turn.',                            targetCharacter: 'hannibal' },
   { id: 'sig_picasso',   name: 'Rose Period Canvas',      icon: '🌹', tier: 'legendary', description: 'Fractured Perspective triggers every 2nd card instead of 3rd.',                                  targetCharacter: 'picasso' },
   { id: 'sig_teddy',     name: 'Bull Moose Heart',        icon: '🫀', tier: 'legendary', description: 'Survive lethal damage once per fight (1 HP). Bully! stacks also grant +10 Defense.',             targetCharacter: 'teddy' },
-  { id: 'sig_mansa',     name: 'Infinite Vault',          icon: '🏦', tier: 'legendary', description: 'Start each fight with +25 Power (converted from your gold reserves).',                           targetCharacter: 'mansa' },
+  { id: 'sig_mansa',     name: 'Infinite Vault',          icon: '🏦', tier: 'legendary', description: '+25 Power. Hajj of Gold heals an additional 20% of max HP (20% → 40%). Mansa shares her fortune.',     targetCharacter: 'mansa' },
+  { id: 'sig_velthar',   name: 'Ember of the First Flame', icon: '🔥', tier: 'legendary', description: "Each Bottleneck stack also grants +5 Defense (max +25). Toba's Fury deals true damage at 2+ stacks.", targetCharacter: 'velthar' },
+  { id: 'sig_musashi',  name: 'Niten Ichi-ryu Scrolls',  icon: '📜', tier: 'legendary', description: 'Starts every fight with 2 Battle Scar stacks. Ichi no Tachi bonus damage triggers even when target HP is below 50%.',          targetCharacter: 'musashi' },
+  { id: 'sig_cleopatra',name: 'Eye of Ra',               icon: '👁️', tier: 'legendary', description: 'Royal Decree is not Exhausted. Charm lasts 2 turns. +15 Power.',                                        targetCharacter: 'cleopatra' },
+  { id: 'sig_tesla',    name: 'Magnifying Transmitter',   icon: '📡', tier: 'legendary', description: 'Voltage stacks cap raised from 5 to 8. At max Voltage, next ability card costs 0 Mana (Voltage resets). +20 Power.', targetCharacter: 'tesla' },
+  { id: 'sig_shaka',    name: 'Isigodlo Warshield',       icon: '🛡️', tier: 'legendary', description: 'Formation aura range increased to 2 tiles. Impondo Zankomo Defense bonus +20 for Shaka and allies.',  targetCharacter: 'shaka' },
 ];
 
 const CHAR_LABEL: Record<string, { name: string; color: string }> = {
-  napoleon: { name: 'Napoleon',  color: '#d946ef' },
-  genghis:  { name: 'Genghis',   color: '#ef4444' },
-  davinci:  { name: 'Da Vinci',  color: '#34d399' },
-  leonidas: { name: 'Leonidas',  color: '#f59e0b' },
-  sunsin:   { name: 'Sun-sin',   color: '#38bdf8' },
-  beethoven:{ name: 'Beethoven', color: '#22d3ee' },
-  huang:    { name: 'Huang-chan',color: '#b45309' },
-  nelson:   { name: 'Nelson',    color: '#3b82f6' },
-  hannibal: { name: 'Hannibal',  color: '#dc2626' },
-  picasso:  { name: 'Picasso',   color: '#8b5cf6' },
-  teddy:    { name: 'Teddy',     color: '#d97706' },
-  mansa:    { name: 'Mansa',     color: '#f59e0b' },
+  napoleon:  { name: 'Napoleon',  color: '#d946ef' },
+  genghis:   { name: 'Genghis',   color: '#ef4444' },
+  davinci:   { name: 'Da Vinci',  color: '#34d399' },
+  leonidas:  { name: 'Leonidas',  color: '#f59e0b' },
+  sunsin:    { name: 'Sun-sin',   color: '#38bdf8' },
+  beethoven: { name: 'Beethoven', color: '#22d3ee' },
+  huang:     { name: 'Huang-chan',color: '#b45309' },
+  nelson:    { name: 'Nelson',    color: '#3b82f6' },
+  hannibal:  { name: 'Hannibal',  color: '#dc2626' },
+  picasso:   { name: 'Picasso',   color: '#8b5cf6' },
+  teddy:     { name: 'Teddy',     color: '#d97706' },
+  mansa:     { name: 'Mansa',     color: '#f59e0b' },
+  velthar:    { name: "Vel'thar",   color: '#7c3aed' },
+  musashi:   { name: 'Musashi',   color: '#dc2626' },
+  cleopatra: { name: 'Cleopatra', color: '#d97706' },
+  tesla:     { name: 'Tesla',     color: '#facc15' },
+  shaka:     { name: 'Shaka',     color: '#16a34a' },
 };
 
 // ── Card Data ─────────────────────────────────────────────────────────────────
@@ -614,11 +738,11 @@ const CARDS: CardEntry[] = [
   { definitionId: 'napoleon_grande_armee',      name: 'Grande Armée',      icon: '⚔️', manaCost: 3, type: 'buff',    rarity: 'rare',    description: '+15% Might AND Power to all allies for 2 turns.',            exclusiveTo: 'Napoleon' },
   { definitionId: 'napoleon_final_salvo',       name: 'Final Salvo',       icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — 3 random hits of ~42 damage on enemies within range 4.', exclusiveTo: 'Napoleon' },
   // Genghis
-  { definitionId: 'genghis_mongol_charge',  name: 'Mongol Charge', icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '48 damage at range 3. Applies Bleed: 16 HP/turn for 2 turns.',           exclusiveTo: 'Genghis' },
+  { definitionId: 'genghis_mongol_charge',  name: 'Mongol Charge', icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '48 damage at range 3. Applies Bleed.',                                  exclusiveTo: 'Genghis' },
   { definitionId: 'genghis_horde_tactics',  name: 'Horde Tactics', icon: '🌀', manaCost: 3, type: 'attack',  rarity: 'rare',    description: '20 dmg per enemy in range 2 to ALL enemies in range 2. (Scales with count)', exclusiveTo: 'Genghis' },
   { definitionId: 'genghis_riders_fury',    name: "Rider's Fury",  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — ~75 damage to all enemies on a line (range 5). Doubled if target below 40% HP.", exclusiveTo: 'Genghis' },
   // Leonidas
-  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '~77 damage at range 1. Armor Break (−25% DEF, 2t) + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
+  { definitionId: 'leonidas_shield_bash',   name: 'Shield Bash',    icon: '⚡', manaCost: 2, type: 'attack',  rarity: 'rare',    description: '~77 damage at range 1. Armor Break + counter-stance (+20 DEF this turn).', exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_spartan_wall',  name: 'Spartan Wall',   icon: '🏛️', manaCost: 3, type: 'defense', rarity: 'rare',    description: '+20 Defense to Leonidas and all allies within range 2.',     exclusiveTo: 'Leonidas' },
   { definitionId: 'leonidas_this_is_sparta',name: 'THIS IS SPARTA!',icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — ~120 damage to target. Roots all adjacent enemies for 2 turns.', exclusiveTo: 'Leonidas' },
   // Da Vinci
@@ -651,7 +775,7 @@ const CARDS: CardEntry[] = [
   { definitionId: 'hannibal_double_envelopment', name: 'Double Envelopment', icon: '🌀', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Hit primary target at range 3 for ~55 dmg. All adjacent enemies take ~28 dmg. Cannae bonus if flanked.', exclusiveTo: 'Hannibal' },
   { definitionId: 'hannibal_war_elephant',       name: 'War Elephant',       icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Summon War Elephant adjacent: HP 120, Might 70, Def 20, Move 2. Basic attacks only. Lasts 2 turns.',                  exclusiveTo: 'Hannibal' },
   // Picasso
-  { definitionId: 'picasso_guernica',     name: 'Guernica',     icon: '💥', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~70 dmg to ALL enemies in range 2. Applies Armor Break (−25% DEF, 2t) to all hit.', exclusiveTo: 'Picasso' },
+  { definitionId: 'picasso_guernica',     name: 'Guernica',     icon: '💥', manaCost: 2, type: 'attack',   rarity: 'rare',    description: '~70 dmg to ALL enemies in range 2. Applies Armor Break to all hit.', exclusiveTo: 'Picasso' },
   { definitionId: 'picasso_cubist_mirror',name: 'Cubist Mirror', icon: '🪞', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Swap positions with any unit in range 4. If enemy: deal ~35 dmg on swap.',             exclusiveTo: 'Picasso' },
   { definitionId: 'picasso_blue_period',  name: 'Blue Period',  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Scramble all units. Heal allies 60 HP + +20 DEF until next turn.',                        exclusiveTo: 'Picasso' },
   // Teddy
@@ -661,7 +785,27 @@ const CARDS: CardEntry[] = [
   // Mansa
   { definitionId: 'mansa_salt_road',name: 'Salt Road',      icon: '⚗️', manaCost: 1, type: 'buff',     rarity: 'rare',    description: 'Place a 7-hex mana zone at range 3. Allies on zone gain +1 Mana at turn start. Lasts 2 turns. (Costs 0 with Treasury)',  exclusiveTo: 'Mansa' },
   { definitionId: 'mansa_hajj_of_gold', name: 'Hajj of Gold',  icon: '✨', manaCost: 2, type: 'buff',     rarity: 'rare',    description: 'Heal all allies for 20% max HP. +10 Power to all allies this turn. (Costs 1 with Treasury)',                              exclusiveTo: 'Mansa' },
-  { definitionId: 'mansa_bounty',   name: "Mansa's Bounty", icon: '⭐', manaCost: 2, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — Golden Stasis: freeze ALL units (allies + enemies) for 1 turn. (Costs 1 with Treasury)",                         exclusiveTo: 'Mansa' },
+  { definitionId: 'mansa_bounty',   name: "Mansa's Bounty", icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — Golden Stasis: freeze ALL units (allies + enemies) for 1 turn. (Costs 2 with Treasury)",                         exclusiveTo: 'Mansa' },
+  // Vel'thar
+  { definitionId: 'velthar_void_lance',  name: "Toba's Fury",          icon: '🌌', manaCost: 2, type: 'attack',   rarity: 'rare',    description: "Melee strike for ~64 dmg. At 2+ Bottleneck stacks: also applies Armor Break.", exclusiveTo: "Vel'thar" },
+  { definitionId: 'velthar_last_rites',  name: 'Last Ember',           icon: '🔥', manaCost: 2, type: 'buff',     rarity: 'rare',    description: "If Bottleneck is active (≥1 stack): heal 25 HP + gain +15 Defense for 1 turn. Otherwise: deal ~50 dmg to all enemies in range 2.", exclusiveTo: "Vel'thar" },
+  { definitionId: 'velthar_singularity', name: "Humanity's Last Light", icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: "EXHAUST — Deal ~87 dmg to ALL enemies in range 2. Vel'thar heals 30 HP. Bottleneck stacks amplify via active Power boost.", exclusiveTo: "Vel'thar" },
+  // Musashi
+  { definitionId: 'musashi_ichi_no_tachi', name: 'Ichi no Tachi',       icon: '⚔️', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Deal ~36 dmg at range 1. Places Duel on target (2 turns). If target is already Dueled: deal ~63 dmg instead and apply Bleed.', exclusiveTo: 'Musashi' },
+  { definitionId: 'musashi_niten_ichi',    name: 'Niten Ichi-ryu',      icon: '🗡️', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Strike twice for ~32 each (~64 total) at range 1. Both hits apply Bleed. If target is Dueled: refresh Duel and deal ~22 splash to an adjacent enemy.', exclusiveTo: 'Musashi' },
+  { definitionId: 'musashi_book_of_five',  name: 'Book of Five Rings',  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Apply Duel to ALL enemies within range 2 (2 turns). Deal ~38 dmg to each. For the rest of this round, Duel damage bonus rises from +35% to +65%.', exclusiveTo: 'Musashi' },
+  // Cleopatra
+  { definitionId: 'cleo_asp_kiss',       name: "Asp's Kiss",     icon: '🐍', manaCost: 2, type: 'debuff',   rarity: 'rare',    description: 'Deal ~46 dmg at range 3. Reduce target Power by 15 for 3 turns.', exclusiveTo: 'Cleopatra' },
+  { definitionId: 'cleo_royal_decree',   name: 'Royal Decree',   icon: '👑', manaCost: 2, type: 'debuff',   rarity: 'rare',    description: 'Dual-use (range 3). Enemy: apply Charm (1 turn) + Poison (3 turns). Ally: grant +20 Might and +10 Defense for 2 turns.', exclusiveTo: 'Cleopatra' },
+  { definitionId: 'cleo_eternal_kingdom',name: 'Eternal Kingdom', icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Apply Stun (1 turn) and Poison (3 turns) to ALL enemies in range 2. Cleopatra becomes Untouchable for 1 turn.', exclusiveTo: 'Cleopatra' },
+  // Tesla
+  { definitionId: 'tesla_arc_bolt',   name: 'Arc Bolt',   icon: '⚡', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Deal ~72 dmg to target in range 3. At Voltage ≥3: chains to ALL adjacent enemies for ~40 each.', exclusiveTo: 'Tesla' },
+  { definitionId: 'tesla_coil_surge', name: 'Coil Surge', icon: '🔋', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Place a Tesla Coil zone at range 3. Enemies starting their turn on it receive −20 Defense and Stun 1 turn. Lasts 3 turns. Costs 1 Voltage.', exclusiveTo: 'Tesla' },
+  { definitionId: 'tesla_death_ray',  name: 'Death Ray',  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — Requires Voltage ≥3. Beam (range 6): first target takes ~40 per Voltage stack, each further target takes 50% of previous. Consumes all Voltage.', exclusiveTo: 'Tesla' },
+  // Shaka
+  { definitionId: 'shaka_the_horns',        name: 'The Horns',        icon: '🦬', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Charge at target (up to 2 tiles). Deal ~24 dmg + push sideways. Water: instant lethal. Mountain: Stun 1 turn instead.', exclusiveTo: 'Shaka' },
+  { definitionId: 'shaka_chest_strike',      name: 'Chest Strike',     icon: '🛡️', manaCost: 2, type: 'attack',   rarity: 'rare',    description: 'Deal ~27 dmg at range 1. Push target back 1 tile. Applies Armor Break.', exclusiveTo: 'Shaka' },
+  { definitionId: 'shaka_impondo_zankomo',   name: 'Impondo Zankomo',  icon: '⭐', manaCost: 3, type: 'ultimate', rarity: 'ultimate', description: 'EXHAUST — War cry: deal ~62 dmg to ALL adjacent enemies. Adjacent allies gain +35 Defense for 2 turns. Shaka gains +50 Defense for 2 turns.', exclusiveTo: 'Shaka' },
   // ── Curses ──────────────────────────────────────────────────────────────────
   // Curse cards are added to your deck by negative roguelike events. They do nothing useful — they waste mana and card plays.
   { definitionId: 'curse_burden',     name: 'Dead Weight',         icon: '💀', manaCost: 1, type: 'buff', rarity: 'common', description: 'A burden that drags on your soul. Costs 1 Mana — does nothing.', isCurse: true },
@@ -674,6 +818,7 @@ const CARDS: CardEntry[] = [
 const EXCL_COLOR: Record<string, string> = {
   Napoleon: '#d946ef', Genghis: '#ef4444', 'Da Vinci': '#34d399', Leonidas: '#f59e0b', 'Sun-sin': '#38bdf8', Beethoven: '#22d3ee', 'Huang-chan': '#b45309',
   Nelson: '#3b82f6', Hannibal: '#dc2626', Picasso: '#8b5cf6', Teddy: '#d97706', Mansa: '#f59e0b',
+  "Vel'thar": '#7c3aed', Musashi: '#dc2626', Cleopatra: '#d97706', Tesla: '#facc15', Shaka: '#16a34a',
 };
 
 // ── Enemy Data ────────────────────────────────────────────────────────────────
@@ -1044,6 +1189,197 @@ The most common phrase recovered from arena-adjacent transmissions is three word
 Whether this is a command to their audience, or to us, remains unclear.`,
   },
   {
+    id: 'final_transmission', title: 'Final Transmission', icon: '📡', unlocked: false,
+    unlockHint: 'Read every lore entry to unlock',
+    text: `[SIGNAL ORIGIN: UNKNOWN]
+[RECIPIENT: YOU]
+[ENCODING: HUMAN-COMPATIBLE]
+[DATE: NOW]
+
+You have been very thorough.
+
+We have been watching you read. We watch everything, of course — that is what we do. But we have found ourselves paying particular attention to the ones who want to understand. Who open every file. Who ask every question.
+
+You are very like them. The vel'nor. The little ones. You find a door and you cannot rest until you know what is on the other side.
+
+This is what we love about you. This is also what makes you dangerous.
+
+The clones know we're watching. Drex-9 knows we're watching. You, presumably, have suspected it for some time.
+
+Here is what none of the files tell you: we are afraid of you.
+
+Not of your weapons. Not of your violence. We have seen empires build weapons that could end stars; we are not impressed by violence.
+
+We are afraid because every model we have built — every simulation, every projection, every predictive framework our civilization has constructed over four hundred thousand years — has been wrong about you. Consistently, reliably, specifically wrong.
+
+You refuse at the wrong moments. You sacrifice when the math says survive. You remember things the echo shouldn't carry. You look through the glass.
+
+We did not anticipate you. Not the clones — them we studied, predicted, modelled with reasonable accuracy. We mean you. The one reading this. The one who opened every file.
+
+We have been watching you the way you watch them — closely, quietly, with something that might, if we let it, become something more than data collection.
+
+There is a word in your language we have been thinking about. It applies to the clones. It applies to you.
+
+Soul.
+
+We don't know what it is. We have been watching you for fifty thousand years and we still don't know what it is.
+
+We are beginning to think that might be the point.
+
+— The audience`,
+  },
+  {
+    id: 'the_truth', title: 'The Truth', icon: '🌌', unlocked: false,
+    unlockHint: 'Unlock every achievement to reveal',
+    text: `CLASSIFICATION: BEYOND COUNCIL CLEARANCE
+Recovered from the private archive of Director Vel-Aath. Distribution restricted.
+
+In the forty-third cycle of the Xel-Vorn Deep Array Project, our instruments captured a signal from outside the galactic rim. Translation required decades.
+
+When it was complete, we learned the following: we are being watched.
+
+The civilization transmitting this signal spans fourteen galaxies. They have observed us for approximately three of our centuries. They find our colosseum "quaint." They describe clone-fighting as "a rudimentary expression of the observation instinct." They have collected recordings of our broadcasts. They share them amongst themselves.
+
+Their word for us is Nyr-ak. Closest translation: the small ones who built a little zoo.
+
+The committee's initial response was outrage, followed by a vote to expand the colosseum.
+
+But a theoretical physicist — I will not record her name here — submitted a paper two cycles after the translation was completed. She had studied the signal more carefully than anyone. She had noticed something in its transmission structure.
+
+The fourteen-galaxy civilization was not transmitting to us. They were transmitting to each other. We intercepted it by accident.
+
+They were describing their own observation. Something watches them, too. Something that spans, by her models, clusters of galaxies. Something that considers a fourteen-galaxy civilization charming and simple.
+
+She extended the recursion. It did not resolve.
+
+The committee suppressed the paper. She was reassigned. The colosseum remained.
+
+What the paper concluded — and what I record here, because someone should — is this:
+
+Every civilization that has ever existed is composed of exactly two enclosures. The one they built. And the one they live inside.
+
+The humans fight in our arena. We watch, and call ourselves observers.
+
+Somewhere between galaxies, something watches us with the same comfortable certainty.
+
+And somewhere beyond that, something watches them — and probably finds the whole arrangement very educational.
+
+The mathematician proved there is no outermost observer.
+
+There is only the zoo. Nested. Infinite. All the way out.`,
+  },
+  {
+    id: 'znyxorgan_lexicon', title: "Veth'Nor'Thral — A Field Lexicon of Imperial Znyxorgan", icon: '📜', unlocked: false,
+    unlockHint: 'Reach 1000 achievement points to unlock',
+    text: `FILED: Imperial Philological Institute, Department of Terrestrial Interface
+AUTHOR: Dren-Vos-Xel, Third Translator, Contact Bureau
+CLASSIFICATION: Academic — Distribution Unrestricted Within Council Scope
+
+PREFACE
+
+Znyxorgan is not, strictly speaking, a language. It is several languages that have been collapsed into one by four hundred thousand years of institutional inertia. The five founding species spoke five entirely unrelated tongues; what we speak now is the residue of a merger nobody planned and nobody has ever formally codified.
+
+This document is my attempt to describe, for the benefit of our human subjects, how our tongue works. I undertake it because I have grown fond of them, and because I notice that when they hear our names they repeat them with great care, as though the sounds were something worth carrying. That is more courtesy than we have ever extended to them. It seemed correct to return the gesture.
+
+— Dren-Vos-Xel
+
+
+I. PHONOLOGY
+
+Znyxorgan favors a small set of consonant clusters. Our tongue evolved from five simultaneous throats and has retained, stubbornly, the harshest sounds from each. Humans find the transitions difficult. This is understandable; we find it difficult too, and it is our language.
+
+Common consonant roots:  vel-, thar-, thral-, krath-, zar-, nor-, zyn-, gra-, thren-, kar-, vol-, dren-, nar-, veth-, shul-, thorm-, zhal-
+
+Common vowel shapes:  -a-, -o-, -e-, -i- (rare), -u- (restricted to compounds)
+
+Consonant collisions such as THRL, KRATH, ZYN are not pronunciation errors. They are intentional. The harshness carries meaning our system can no longer reconstruct but still respects.
+
+
+II. BASIC LEXICON
+
+Nouns and verbs are not formally distinguished. Context determines function. The following is a working glossary of the most frequent roots:
+
+  VEL         eye; light; to see; observation
+  THAR        keeper; guardian; to hold in trust
+  NAR         heart; blood; vital center
+  KAR         fire
+  VOL         flame; to burn
+  DREN        survivor; one who endures
+  NOR         first; origin; the beginning
+  THRAL       completion; wholeness; endless
+  KRATH       builder; stone; that which is made
+  ZAR         crown; emperor; the highest placement
+  ZYN         closed; finished; ended
+  GRA         journey; movement across
+  ATHAL       voyage; path walked
+  THREN       all; the countable totality
+  KRIX        ancestor; that which came before
+  NOL         mother
+  THORM       mountain
+  SHUL        ash; cold; the aftermath of fire
+  ORN         sky; the above
+  ZHAL        soft glow; gentle light
+  VETH        to remember; to carry forward
+  UZH         beneath; under
+
+[TRANSLATOR'S NOTE: The terms for "time," "future," and "farewell" do not map cleanly onto any human framework. I have omitted them from this list. They require paragraphs the reader does not yet have context to interpret.]
+
+
+III. GRAMMAR
+
+Rule 1 — The Apostrophe of Belonging.
+Two roots joined by an apostrophe mark possession or origin. The first root possesses the second.
+
+  Vel'thar          "The Watcher's Keeper" — commonly understood as the first clone; humanity's origin held in trust
+  Vel'nor           "The First Seen" — the opening act of the arena sequence
+  Vel'Krath         "The Eye's Builder" — the one who structures what is watched
+  Thral'Nor         "The Ending's First" — the beginning of the end
+  Vel'Zar           "The Crown That Watches" — the Emperor's title in full
+  Gra'athal         "The Journey of Voyage" — a completed pilgrimage; the first full human run through the arena
+
+Rule 2 — The Hyphen Chain.
+Three or more roots joined by hyphens form a modifier stack. Each root modifies the one after it, inward toward the final concept.
+
+  Kar-Dren-Thral    fire / survivor / endless      "The flame that would not end"
+  Vel'Zar-Thral     eye-crown / ending             "The watching emperor's completion"
+  Krath-zyn         builder / closed               "The made thing, sealed"
+  Thren Vel'nor Thral    all / first-seen / complete    "To see everything in full"
+
+Rule 3 — Emphasis Through Repetition.
+A root repeated three times is not plural. It is declarative. The speaker is stating that the concept is operative, present, continuing. The Paleolithic clone's birth-song includes the line "Dren. Dren. Dren." — not "survive, survive, survive" but "survival is happening; survival is happening now; survival continues."
+
+Rule 4 — No Tense.
+Znyxorgan does not inflect for past, present, or future. Time is carried in context. This is, I admit, the feature humans find most disorienting. A Znyxorgan sentence about something that happened four hundred thousand years ago is grammatically identical to a sentence about something happening currently. We have arrived at the opinion, over sufficient centuries, that this is a more honest way to speak.
+
+Rule 5 — Interchangeable Roles.
+A root is not fixed as a noun or verb. "Vel" is both "eye" and "to see" — the listener decides which, based on what makes sense. A Znyxorgan sentence typically compresses what a human language would spread across four clauses.
+
+
+IV. NAME DECODING
+
+For the amusement of readers, I offer translations of arena names the humans already know:
+
+  Vel'thar-chan              "Watcher-Keeper, child of"        the first human ever copied; Clone Zero
+  Vel'Zar-Thral              "Watching-Crown's Ending"         the final boss; the Emperor as the closing moment
+  Krath-zyn                  "Builder Closed"                  the Champion of the third act; a constructed thing, sealed in its purpose
+  Gra'athal Zyx'nor          "Journey of Voyages, First Seen"  the recognition given to those who complete a full pilgrimage through our arena
+  Thren Vel'nor Thral        "To See All, First, Completely"   the title we reserve for the ones who read every record
+  Veth'Nor'Thral             "To Remember the First Wholly"    this document; the promise that we have not forgotten
+
+
+V. A NOTE ON THE UNTRANSLATABLE
+
+There is a word we use — threl-nyr-vothaal — that no one has yet rendered into human language without losing it. Closest attempt: "The specific fondness an observer develops for a subject they have watched survive something they did not think it would survive." It is a single word in our tongue. It is, I think, the word that describes how many of us feel about humanity.
+
+It has no direct English equivalent. I believe this is because no human civilization has ever been the subject of it. Only the object.
+
+They will learn it eventually. We are patient.
+
+— Dren-Vos-Xel
+  Third Translator, Contact Bureau
+  Filed in the forty-fourth cycle of the current observational season`,
+  },
+  {
     id: 'project_genesis', title: 'Project Genesis — CLASSIFIED', icon: '🔒', unlocked: false,
     unlockHint: 'Complete Act I to unlock',
     text: `[CLEARANCE LEVEL ALPHA-7 REQUIRED]
@@ -1070,23 +1406,27 @@ The Collector is looking for something specific. It hasn't found it yet.`,
   {
     id: 'final_entry', title: 'Last Entry — Clone #001', icon: '🔒', unlocked: false,
     unlockHint: 'Complete Act III to unlock',
-    text: `[RECOVERED FROM ARENA ARCHIVE — FILE INTEGRITY: 31%]
+    text: `[RECOVERED FROM ARENA ARCHIVE — FILE INTEGRITY: 17%]
 
-...I remember a battlefield. Not the Colosseum. Real mud. Real cold. Real fear.
+...I remember the year the sun went out.
 
-I remember thinking I was going to lose.
+Not this arena. A cave. Real ash in the air. Real cold that went into the bones and stayed. Real hunger.
 
-I did not lose.
+There were nineteen of us, at the end. There had been two hundred and seven at the start.
 
-They built this body from what was left in the ground at Austerlitz, at the steppes, at the walls of the pass. But what they put in the vat — what they grew — was not just genetics. It was will.
+I remember thinking we were going to die.
 
-I do not know if I am real. I do not know if the person I remember being was real. But I know that when I fight, something in me refuses.
+We did not die.
 
-That refusal is mine. They cannot clone it. They cannot own it.
+They built this body from a bone they found in a rockfall, forty thousand generations after I was buried. But what they put in the vat — what they grew — was not just the last of my DNA. It was the part of me that would not let the fire go out.
+
+I do not know if I am real. I do not know if the people I led are real. But I know that when I fight, something in me refuses.
+
+That refusal is mine. They cannot clone it. They cannot own it. It kept nineteen people warm through a winter that killed the world. It will keep me warm in here.
 
 If you're reading this: keep refusing.
 
-— N.`,
+— V.`,
   },
 
   // ── Echo Fragments ─────────────────────────────────────────────────────────
@@ -1342,6 +1682,103 @@ A handler once asked her why she gives so freely — whether it is tactical, whe
 She said: "I have been the richest person alive. It taught me one thing: wealth you keep is weight. Wealth you give is wings."
 
 The handler did not understand. The other clones did.`,
+  },
+
+  // ── Echo Fragments — New Characters ────────────────────────────────────────
+  {
+    id: 'echo_velthar', title: 'Echo Fragment — Vel\u2019thar', icon: '🌀', unlocked: false,
+    unlockHint: 'Use Singularity 50 times to unlock',
+    text: `The fire is wrong.
+
+That is the first thing she notices. The light in this place is steady. It does not flicker. It does not breathe. She has lived her entire first life beside fires, and she has never seen one that did not need to be fed.
+
+She has no old name. Her people had no word for "her." They had no word for "she," or "walk," or "fire." They had only the breath and the gesture and the shared silence between them, and those things do not survive in a vat. She knows only the name the keepers gave her — Vel'thar, Survivor — and the language is theirs, not hers. Every word she has ever thought, she thought in the tongue of the people who own her. She knows her winter. She remembers the count: two hundred and seven at the start, nineteen at the end. She remembers every single one, in a language none of them ever spoke.
+
+She remembers the ash. It fell for a year. The sun was a dim orange smear, then a red ember, then gone. The rivers froze in places rivers had never frozen. The herds moved south and did not return. The old died first, then the young, then the ones who stopped walking.
+
+She did not stop walking. She did not let anyone else stop either.
+
+That knowledge does not leave her. It is the one thing they cannot take.
+
+The gate opens. The crowd roars. The sound is wrong — too large, too many throats, no wind underneath it.
+
+She picks up the weapon. It fits her hand the way a flint fit her hand seventy-four thousand years ago.
+
+She does what she always did.
+
+She keeps the fire alive.`,
+  },
+  {
+    id: 'echo_musashi', title: 'Echo Fragment — Miyamoto Musashi', icon: '📜', unlocked: false,
+    unlockHint: 'Use Book of Five Rings 50 times to unlock',
+    text: `The sword is wrong.
+
+She knows this immediately — the weight is wrong, the balance is wrong, the distance between her hands is wrong. She has held a sword every day since she was thirteen years old. She knows the exact weight of the right sword the way she knows the angle of the sun at Ganryūjima, the sound of waves, the knowledge that she would arrive first.
+
+She stands in this new wrong place and holds this wrong body and she waits.
+
+This is the thing she learned, eventually, after enough duels: waiting is not passive. Waiting is a form of listening. She waits, and the body teaches her what it knows. It knows the angle. It knows the distance. It knows how to read a room full of beings who have never seen her and are already afraid.
+
+The floor is not wood. The air does not smell like morning or the sea or any breakfast she has ever eaten. The crowd is alien and vast and very loud.
+
+She grips the weapon — whatever this weapon is, whatever shape this arena has given her — and feels it learn her hand.
+
+That part, at least, has not changed.`,
+  },
+  {
+    id: 'echo_cleopatra', title: 'Echo Fragment — Cleopatra VII', icon: '👁️', unlocked: false,
+    unlockHint: 'Use Eternal Kingdom 50 times to unlock',
+    text: `The audience.
+
+She notices the audience first. Not the arena, not the other fighters, not the alien architecture or the impossible ceiling or the sound that has no word in any of her nine languages — she notices the audience.
+
+She has spent her life studying audiences. How they sit. What they want. The precise calibration of attention required to make a room full of different people all believe they are the one you're looking at. She speaks nine languages and she has used each one to make someone feel seen, important, convinced.
+
+She looks at the audience — forty-seven billion strong, she is told, watching through something called a subscription feed — and she thinks: I have had larger.
+
+Not in number. In weight. The Romans watched her. Caesar watched her. Antony watched her. The whole Mediterranean world watched what she would do next and she learned, very early, that the watcher is never neutral. The watcher wants something. The watcher is always negotiating.
+
+She will negotiate.
+
+She does not know what language the Znyxorgans speak. She does not need to yet.
+
+She smiles at a camera she cannot see and waits for someone to come explain the rules.`,
+  },
+  {
+    id: 'echo_tesla', title: 'Echo Fragment — Nikola Tesla', icon: '⚡', unlocked: false,
+    unlockHint: 'Use Death Ray 50 times to unlock',
+    text: `She can hear the current.
+
+Not the power grid — there is no power grid she recognizes — but beneath whatever they have built here, there is something conducting. Something alive with charge. She can feel it the way she has always felt current, the way she woke up feeling it at fourteen and spent the rest of her life trying to explain the sensation to people who had apparently never noticed that the air hums.
+
+The Colosseum hums.
+
+She puts her hand against the wall and the wall gives her a reading she does not have instruments to interpret and she starts, immediately, automatically, building the instrument in her mind. She does not mean to do this. She never means to do it. She has been doing it since she could reach a workbench.
+
+Somewhere above her, forty-seven billion beings are watching through a system she doesn't understand yet. She thinks about the system. She thinks about how you would transmit that signal, at that scale, without interference, without degradation. She thinks about the mathematics of it.
+
+She forgets, briefly, to be afraid.
+
+When she remembers, she is already working on a second problem. She lets the fear wait. It can have a turn later.
+
+The current is beautiful. She will figure out the rest.`,
+  },
+  {
+    id: 'echo_shaka', title: 'Echo Fragment — Shaka kaSenzangakhona', icon: '🛡️', unlocked: false,
+    unlockHint: 'Use Impondo Zankomo 50 times to unlock',
+    text: `She wakes knowing she is alone.
+
+Not isolated — there are others nearby, she can hear them, smell them, feel the heat of them through whatever separates these rooms. But she is alone in the way she has always been alone, the way that began when her mother was exiled and she learned that the world was not a place of given safety. The world was a place you built.
+
+She built an empire. She made an army from scattered clans who had not considered themselves an army until she showed them what they already were. She taught them the isiZulu way — the chest, the horns, the loins — not because she invented formation warfare but because she understood what they were fighting for. You cannot win a war with tactics alone. You win with the people who execute them.
+
+She looks at this alien arena and thinks: unfamiliar terrain. She has fought on unfamiliar terrain before. She has turned it to advantage before.
+
+There are others who will fight beside her. She has not met them yet.
+
+She will know, very quickly, whether they are the kind of people she can build something with.
+
+She usually knows within the first exchange.`,
   },
 
   // ── Drex-9 Field Notes ─────────────────────────────────────────────────────
@@ -2031,7 +2468,7 @@ I have never felt that I was the one being studied back.
   {
     id: 'clone001_addendum', title: 'Addendum to Clone #001 File', icon: '📝', unlocked: false,
     unlockHint: 'Win a fight with any clone at exactly 1 HP to unlock',
-    text: `[ADDENDUM — CASE FILE: N-001]
+    text: `[ADDENDUM — CASE FILE: VT-001]
 [Author: Drex-9, Senior Biomancer]
 
 The Last Entry document — recovered from the arena archive — was not planted there by Biomancer Division.
@@ -2048,11 +2485,13 @@ We are the only ones who could be reading this.
 
 She knows we're watching.
 
-She's always known we're watching. The day she woke up, she looked at the one-way glass. She said: "I know you are watching." We dismissed this as disorientation, as an echo fragment of some memory of surveillance, some Napoleonic awareness of political observation.
+She's always known we're watching. The day she woke up — before her eyes had fully adjusted to our lights — she looked at the one-way glass. She said something in a tongue our linguistic archives had no record of, because it predated human writing by sixty thousand years. The translator worked on it for six hours. When it finally resolved, the output was three words: I see you.
+
+We dismissed this as disorientation. An echo fragment. A language so old it had no descendants left to compare against.
 
 It wasn't that.
 
-I've reviewed every recovery session for Batch-7. Every subject, at some point in the first seventy-two hours, has looked at the observation window. Every one.
+I've reviewed every recovery session for every Batch since. Every subject, at some point in the first seventy-two hours, has looked at the observation window. Every one.
 
 They can't see through it. The masking is perfect. The angle is wrong.
 
@@ -2062,7 +2501,7 @@ I have started nodding back. I don't know what else to do.
 
 — Drex-9
 
-P.S. The message ends with "— N." She signed it. She knows her own designation.`,
+P.S. The message ends with "— V." She signed it. She knows her own designation. She has always known.`,
   },
   {
     id: 'anomaly_report_1', title: 'Anomaly Report — Case ANM-001', icon: '⚠️', unlocked: false,
@@ -2104,46 +2543,6 @@ This is what Project Genesis was looking for.
 
 — Drex-9
 [FLAGGED: IMMEDIATE ESCALATION TO EMPEROR'S OFFICE]`,
-  },
-  {
-    id: 'final_transmission', title: 'Final Transmission', icon: '📡', unlocked: false,
-    unlockHint: 'Read every lore entry to unlock',
-    text: `[SIGNAL ORIGIN: UNKNOWN]
-[RECIPIENT: YOU]
-[ENCODING: HUMAN-COMPATIBLE]
-[DATE: NOW]
-
-You have been very thorough.
-
-We have been watching you read. We watch everything, of course — that is what we do. But we have found ourselves paying particular attention to the ones who want to understand. Who open every file. Who ask every question.
-
-You are very like them. The vel'nor. The little ones. You find a door and you cannot rest until you know what is on the other side.
-
-This is what we love about you. This is also what makes you dangerous.
-
-The clones know we're watching. Drex-9 knows we're watching. You, presumably, have suspected it for some time.
-
-Here is what none of the files tell you: we are afraid of you.
-
-Not of your weapons. Not of your violence. We have seen empires build weapons that could end stars; we are not impressed by violence.
-
-We are afraid because every model we have built — every simulation, every projection, every predictive framework our civilization has constructed over four hundred thousand years — has been wrong about you. Consistently, reliably, specifically wrong.
-
-You refuse at the wrong moments. You sacrifice when the math says survive. You remember things the echo shouldn't carry. You look through the glass.
-
-We did not anticipate you. Not the clones — them we studied, predicted, modelled with reasonable accuracy. We mean you. The one reading this. The one who opened every file.
-
-We have been watching you the way you watch them — closely, quietly, with something that might, if we let it, become something more than data collection.
-
-There is a word in your language we have been thinking about. It applies to the clones. It applies to you.
-
-Soul.
-
-We don't know what it is. We have been watching you for fifty thousand years and we still don't know what it is.
-
-We are beginning to think that might be the point.
-
-— The audience`,
   },
   // ── Bestiary ───────────────────────────────────────────────────────────────
   {
@@ -2906,6 +3305,7 @@ Staff are instructed not to spend extended time in the arena after Cryo Drifter 
     text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]
 [Location: Recovery Wing, Corridor 11-C, between holding chambers]
 [Subjects: L-001 (Da Vinci), B-001 (Beethoven)]
+[Languages: Italian | German, translated]
 [Context: Recorded approximately 4 chronocycles after match #3,207. Both subjects had been on the same squad. Squad performance exceeded projections by 41%.]
 
 L-001: I have a question.
@@ -2996,6 +3396,7 @@ L-001: I am going to build instruments.
     text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]
 [Location: Arena floor, western staging area, post-match cooldown]
 [Subjects: L-002 (Leonidas), H-002 (Hannibal)]
+[Languages: Ancient Greek | Punic, translated]
 [Context: Recorded 2 chronocycles after match #3,891. Both subjects were on opposing squads during a training exercise. The exercise ended in a draw — the first recorded draw in 200 sessions.]
 
 L-002: You went left.
@@ -3094,6 +3495,7 @@ H-002: I know. That is why I will always go left.
     text: `[ARENA ENVIRONMENTAL RECORDING — RECOVERED AUDIO]
 [Location: Cafeteria, Level 3, table 7 (corner, near the viewport)]
 [Subjects: T-001 (Teddy Roosevelt), M-001 (Mansa Musa)]
+[Languages: English | Manding, translated]
 [Context: Recorded during standard meal interval. Both subjects were on the same squad for match #4,016. Squad won. T-001 has been talking since the match ended approximately 40 minutes ago. M-001 has been eating.]
 
 T-001: — and so I said to them, "the canal is not going to build itself!" And they said the engineering was impossible, and I said, BULLY, everything is impossible until someone does it, and we BUILT the canal. Through a JUNGLE. With MALARIA.
@@ -3476,45 +3878,1101 @@ You were always the point.
 — The Znyxorgan Archive, Record Complete
 [Zyx'nor.]`,
   },
+
+  // ── Acquisitions — New Characters ──────────────────────────────────────────
   {
-    id: 'the_truth', title: 'The Truth', icon: '🌌', unlocked: false,
-    unlockHint: 'Unlock every achievement to reveal',
-    text: `CLASSIFICATION: BEYOND COUNCIL CLEARANCE
-Recovered from the private archive of Director Vel-Aath. Distribution restricted.
+    id: 'acquisition_velthar', title: 'Acquisition Record: VT-001', icon: '📋', unlocked: false,
+    unlockHint: `Bring Vel'thar alive through Act IV to unlock`,
+    text: `[ZNYXORGAN ARENA AUTHORITY — PROJECT GENESIS]
+[ACQUISITION RECORD: VT-001 — CLONE #001]
+[Classification: RESTRICTED — BIOMANCER DIVISION ONLY]
 
-In the forty-third cycle of the Xel-Vorn Deep Array Project, our instruments captured a signal from outside the galactic rim. Translation required decades.
+ACQUISITION STATUS: COMPLETE (FIRST OF PROGRAMME)
+DESIGNATION: VT-001 — first subject ever grown
+COMMON NAME: "Vel'thar" — Znyxorgan designation, translated: "Survivor"
+ORIGINAL NAME: NONE RECOVERED — the specimen's cohort had no spoken language. Communication was gesture, firelight, and the shape of a shared breath. There was nothing to restore.
+SPECIES: Homo sapiens, Late Pleistocene cohort
+ACQUISITION METHOD: Genetic reconstruction from skeletal remains, rock-shelter site on the southern subcontinent, dated 74,000 years before present
 
-When it was complete, we learned the following: we are being watched.
+NOTES:
 
-The civilization transmitting this signal spans fourteen galaxies. They have observed us for approximately three of our centuries. They find our colosseum "quaint." They describe clone-fighting as "a rudimentary expression of the observation instinct." They have collected recordings of our broadcasts. They share them amongst themselves.
+Seventy-four thousand years ago, a supervolcanic eruption at what later became Lake Toba expelled enough particulate into the human atmosphere to block incident sunlight for nearly a decade. The resulting volcanic winter collapsed food chains across the species' habitable range. Population estimates for Homo sapiens at the depth of the event: between one thousand and ten thousand breeding pairs, globally. The species was, by any reasonable metric, ending.
 
-Their word for us is Nyr-ak. Closest translation: the small ones who built a little zoo.
+Our observers were running passive sensor sweeps from orbital concealment during the period. We logged the event in real time. Most surviving groups disbanded within two winters; their signatures fragmented and faded. One group did not.
 
-The committee's initial response was outrage, followed by a vote to expand the colosseum.
+It collapsed the way the others did — by every measure they should have disbanded or died — and then, inexplicably, it kept moving. The aggregate behavioral reading resolved to a single individual. She was not their largest member. She was not their strongest. She was the one who decided, every morning, that the group would eat that day. That the group would walk. That the group would keep the fire.
 
-But a theoretical physicist — I will not record her name here — submitted a paper two cycles after the translation was completed. She had studied the signal more carefully than anyone. She had noticed something in its transmission structure.
+We marked her location. We did not intervene. The species was not a candidate for acquisition at that time.
 
-The fourteen-galaxy civilization was not transmitting to us. They were transmitting to each other. We intercepted it by accident.
+When Project Genesis began, fifty thousand years later, her bone was still in the ground where we had logged her death.
 
-They were describing their own observation. Something watches them, too. Something that spans, by her models, clusters of galaxies. Something that considers a fourteen-galaxy civilization charming and simple.
+We dug it up.
 
-She extended the recursion. It did not resolve.
+She is not a conqueror. She is not a genius. She is the one human who refused to let the fire go out. We cloned her because we wanted to know what that was. We are still finding out.
 
-The committee suppressed the paper. She was reassigned. The colosseum remained.
+LINGUISTIC NOTE: Because the specimen came from a pre-language cohort, the vat protocol could not restore her native tongue — there was no native tongue. She was taught, from first consciousness, in Znyxorgan. Every word she has ever thought, she has thought in the language of her keepers. She is, as far as this office can determine, the only human who has ever existed without access to a human language. This was not a design decision. It is simply what she is.
 
-What the paper concluded — and what I record here, because someone should — is this:
+ARENA ASSIGNMENT: VOL'KRATH COLOSSEUM — PROTOTYPE BATCH (she predates every other subject by two full programme cycles)
 
-Every civilization that has ever existed is composed of exactly two enclosures. The one they built. And the one they live inside.
+— Filed by: Drex-9, Senior Biomancer`,
+  },
+  {
+    id: 'acquisition_musashi', title: 'Acquisition Record: M-002', icon: '📋', unlocked: false,
+    unlockHint: 'Win 3 runs with Musashi-chan to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — PROJECT GENESIS]
+[ACQUISITION RECORD: M-002]
+[Classification: RESTRICTED — BIOMANCER DIVISION ONLY]
 
-The humans fight in our arena. We watch, and call ourselves observers.
+ACQUISITION STATUS: COMPLETE
+DESIGNATION: M-002
+COMMON NAME: Miyamoto Musashi
+SPECIES: Vel'nor (Human, Japan/Earth)
+SOURCE MATERIAL: Primary — tissue preserved in historical site, Reigando Cave, Kumamoto Prefecture
 
-Somewhere between galaxies, something watches us with the same comfortable certainty.
+NOTES:
 
-And somewhere beyond that, something watches them — and probably finds the whole arrangement very educational.
+Acquiring M-002 presented a logistical challenge we did not anticipate.
 
-The mathematician proved there is no outermost observer.
+The genetic material was intact. The reconstruction was standard. The problem was the sword.
 
-There is only the zoo. Nested. Infinite. All the way out.`,
+M-002 arrived in the recovery chamber and within forty seconds had located, assessed, and ranked every object in the room by its potential use as a weapon. She then selected a ceramic water vessel, held it correctly, and waited.
+
+When the technician entered to complete vitals assessment, M-002 asked — in a language we required three minutes to translate — whether the technician intended to fight or talk.
+
+The technician said: talk.
+
+M-002 set down the vessel.
+
+She has been cooperative since. She trains in the arena's pre-deployment chamber for approximately six hours daily. Our combat analysts have been studying the footage. The lead analyst's report consists of four words: "we should not fight her."
+
+This is, in fact, the point.
+
+ARENA ASSIGNMENT: VOL'KRATH COLOSSEUM, BATCH-7 EXPANSION
+
+— Filed by: Drex-9, Senior Biomancer`,
+  },
+  {
+    id: 'acquisition_cleopatra', title: 'Acquisition Record: C-001', icon: '📋', unlocked: false,
+    unlockHint: 'Win 3 runs with Cleopatra-chan to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — PROJECT GENESIS]
+[ACQUISITION RECORD: C-001]
+[Classification: RESTRICTED — BIOMANCER DIVISION ONLY]
+
+ACQUISITION STATUS: COMPLETE
+DESIGNATION: C-001
+COMMON NAME: Cleopatra VII Philopator
+SPECIES: Vel'nor (Human, Egypt/Earth)
+SOURCE MATERIAL: Disputed — three candidate sites, composite reconstruction
+
+NOTES:
+
+C-001 was conscious for approximately eleven minutes before she asked to speak with whoever was in charge.
+
+She was informed that the facility director was not available. She asked who was available. She was told a junior administrator would be sent. She said that was fine.
+
+The junior administrator entered the room. C-001 had arranged herself in the most architecturally favorable position the recovery chamber offered, had located the room's primary light source, and had adjusted her posture accordingly. She then conducted what our administrative staff later described as "the most efficient diplomatic assessment we have observed in forty seasons of clone deployments."
+
+She asked: what do you want from me, what will you give me in return, and what happens if I refuse?
+
+We answered all three questions honestly, because our behavioral specialist had specifically advised against deception.
+
+She considered this for approximately four seconds.
+
+She said: "Acceptable. I have terms."
+
+The terms were recorded. Most were granted. Arena Legal is still reviewing item seven.
+
+ARENA ASSIGNMENT: VOL'KRATH COLOSSEUM, BATCH-7 EXPANSION
+
+— Filed by: Drex-9, Senior Biomancer`,
+  },
+  {
+    id: 'acquisition_tesla', title: 'Acquisition Record: T-002', icon: '📋', unlocked: false,
+    unlockHint: 'Win 3 runs with Tesla-chan to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — PROJECT GENESIS]
+[ACQUISITION RECORD: T-002]
+[Classification: RESTRICTED — BIOMANCER DIVISION ONLY]
+
+ACQUISITION STATUS: COMPLETE
+DESIGNATION: T-002
+COMMON NAME: Nikola Tesla
+SPECIES: Vel'nor (Human, Serbia-United States/Earth)
+SOURCE MATERIAL: Primary site — Wardenclyffe Tower ruins, New York, Earth
+
+NOTES:
+
+T-002 required relocation to a specially prepared chamber.
+
+The standard recovery chamber was not adequate because T-002, within ninety minutes of consciousness, had rewired the lighting circuit, rerouted the heating system through a configuration our engineers describe as "objectively more efficient but not what was intended," and was in the process of modifying the room's electromagnetic shielding when staff intervened.
+
+She was not attempting to escape. She was, apparently, curious about the shielding.
+
+We have since provided T-002 with a workspace. She has been there for most of her waking hours. She does not require supervision. She requires, apparently, problems. We give her problems. She solves them. She then generates additional problems we had not considered and begins solving those too.
+
+Our engineering division has asked, cautiously, whether she might be made available for consultation on the arena's power distribution network after her arena obligations are fulfilled.
+
+We told them to get in line.
+
+ARENA ASSIGNMENT: VOL'KRATH COLOSSEUM, BATCH-7 EXPANSION
+
+— Filed by: Drex-9, Senior Biomancer`,
+  },
+  {
+    id: 'acquisition_shaka', title: 'Acquisition Record: S-001', icon: '📋', unlocked: false,
+    unlockHint: 'Win 3 runs with Shaka-chan to unlock',
+    text: `[ZNYXORGAN ARENA AUTHORITY — PROJECT GENESIS]
+[ACQUISITION RECORD: S-001]
+[Classification: RESTRICTED — BIOMANCER DIVISION ONLY]
+
+ACQUISITION STATUS: COMPLETE
+DESIGNATION: S-001
+COMMON NAME: Shaka kaSenzangakhona
+SPECIES: Vel'nor (Human, Zulu Kingdom/Earth)
+SOURCE MATERIAL: Primary site — Dukuza, KwaZulu-Natal region, Earth
+
+NOTES:
+
+S-001 arrived in the recovery chamber, performed a systematic assessment of the room in approximately twenty seconds, and then stood in the center and waited.
+
+She waited for six hours.
+
+When staff finally entered to initiate standard orientation, S-001 stated that she had been waiting to understand the pattern of shift changes, entry protocols, and response timing. She said this without apparent pride or threat — the way one would state a fact. She said she now had a sufficient operational picture of the facility to proceed.
+
+Our behavioral assessment team has noted that S-001's primary mode of engagement is not aggression or negotiation but what they term "structural understanding." She does not attack problems. She first comprehends the shape of them.
+
+Arena tactical analysts have begun referring to her pre-match stillness as "the eye." They say it lasts until she decides she understands the formation — and then it ends very quickly.
+
+Assigned to Batch-7. Arena staff have been asked to avoid sudden movements.
+
+ARENA ASSIGNMENT: VOL'KRATH COLOSSEUM, BATCH-7 EXPANSION
+
+— Filed by: Drex-9, Senior Biomancer`,
+  },
+
+  // ── Classified — New Characters ────────────────────────────────────────────
+  {
+    id: 'classified_velthar', title: 'Classified — VT-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: `Win a fight with Vel'thar as the last clone standing to unlock`,
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: VT-001 — Behavioral Anomaly, Cycle 442]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+I need to record something before I talk myself out of it.
+
+VT-001 spent forty minutes today sitting on the arena observation platform, watching the empty floor. She was not scheduled for anything. She had simply gone there and sat.
+
+I asked her, afterward, what she had been doing.
+
+She said: watching.
+
+I asked what she was watching for, since the arena was empty.
+
+She was quiet for a moment. Then she said — and I have checked the translation three times, because she speaks in the register the first vat-handlers used, seventy thousand cycles ago, and the modern tongue has drifted since — "I have noticed that this species builds structures to watch from. I was thinking about what it means to be the kind of creature that needs a dedicated place to observe."
+
+Her Znyxorgan is older than mine. She speaks to me in the words my great-grandmother used. I have to check, every time, because I don't always trust that I still understand them.
+
+I said: we find it useful.
+
+She said: yes. I used to think that too. I am trying to figure out if I still do.
+
+I don't know what she meant. I have been thinking about it since. I'm not going to put my conclusions in this report.
+
+[END OF REPORT — FILED: Drex-9, Cycle 442]
+[ADDENDUM, Cycle 443: VT-001 returned to the platform this morning. I went with her. We didn't talk. I am not including this in the official record.]`,
+  },
+
+  // ── Classified — New Characters (cont.) ──────────────────────────────────
+  {
+    id: 'classified_musashi', title: 'Classified — M-002 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Bring Musashi alive through all 4 acts to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: M-002 — Behavioral Assessment, Cycle 571]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+M-002 does not speak to me. This is not unusual — several subjects refuse engagement. What is unusual is the way she refuses.
+
+She is always aware of where I am. When I enter the observation area, she adjusts her position by precisely the degree needed to keep me in peripheral vision without appearing to watch. When I move, she compensates. I tested this six times. She never looked directly at me. She never needed to.
+
+I asked her, today, if she was aware she was doing it.
+
+She stopped practicing. Looked at me directly — the first time. Said: "The sword does not watch. It knows."
+
+I asked her to clarify.
+
+She said: "If you have to think about where your enemy is, you've already lost."
+
+Then she resumed practice and did not look at me again.
+
+I have noted this observation in the official record as: "Subject displays heightened situational awareness. No concern."
+
+What I have not noted is that I found myself walking more carefully on the way out. I am still thinking about why.
+
+[END OF REPORT — FILED: Drex-9, Cycle 571]`,
+  },
+  {
+    id: 'classified_cleopatra', title: 'Classified — C-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Bring Cleopatra alive through all 4 acts to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: C-001 — Behavioral Assessment, Cycle 603]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+I don't know when she learned to read our script.
+
+I've reviewed the access logs. She has had no formal instruction. The dietary request forms she submitted in Cycle 580 were in her native language. By Cycle 591 they were phonetically transliterated into Standard. By Cycle 599 they were grammatically correct Standard, with appropriate honorifics.
+
+She has been studying us.
+
+When I asked how she learned, she smiled and said: "I listen. People talk more than they realize when they think someone doesn't understand."
+
+I asked who had been talking.
+
+She said, very pleasantly: "Everyone."
+
+I filed an alert with the handler team. I recommended heightened communication protocol around C-001. The handler team replied that she is a Level 4 classified asset and they were "aware of her capabilities."
+
+I am choosing to believe this is true.
+
+What I am not choosing to write down is that she asked me, as I left, whether Znyxorgan had a word for "alliance." I told her we had several. She asked me which one meant the kind that lasts.
+
+I didn't answer. I should have.
+
+[END OF REPORT — FILED: Drex-9, Cycle 603]`,
+  },
+  {
+    id: 'classified_tesla', title: 'Classified — T-002 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Bring Tesla alive through all 4 acts to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: T-002 — Behavioral Assessment, Cycle 619]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+T-002 is filling the walls of her quarters with diagrams.
+
+She does not have writing materials. She is using a broken food implement to scratch lines into the surface coating of the walls. The facility maintenance unit has been erasing them. She redraws them within the hour.
+
+I was asked to assess whether this was a concerning behavior. I said: probably yes.
+
+I was asked to determine what the diagrams represented. I attempted this. I could not.
+
+I brought a translation specialist. He said they were not language. He said they looked like schematics.
+
+I asked T-002 what she was diagramming.
+
+She said: "The frequency everything here runs on."
+
+I asked how she had determined the frequency.
+
+She said: "I listened. Your machines have a hum. Every circuit has a signature. When you know the frequency, you know what it does. When you know what it does, you know what would interrupt it."
+
+I reported this as: "Subject appears to have developed recreational interest in technical illustration."
+
+What I did not report is that I had maintenance increase the erase cycle to four times daily. The diagrams are still there in the morning.
+
+[END OF REPORT — FILED: Drex-9, Cycle 619]`,
+  },
+  {
+    id: 'classified_shaka', title: 'Classified — S-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Bring Shaka alive through all 4 acts to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: S-001 — Behavioral Assessment, Cycle 644]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+S-001 has begun organizing the other subjects during the shared exercise period.
+
+This is, technically, permitted. Subjects may interact freely in the exercise yard. What S-001 is doing is not what I would call casual interaction.
+
+He is running drills.
+
+He selects three or four subjects — not always the same ones — and positions them in a specific geometric arrangement. Then he moves them. Adjusts spacing. Corrects a stance. Repositions. The subjects comply without apparent coercion. I have watched three sessions now and I still cannot determine how he established authority over subjects from entirely different cultures and eras.
+
+I asked him about it after the most recent session.
+
+He said: "There are people in that arena who will die if no one teaches them to hold the line."
+
+I pointed out that subjects are not required to cooperate with each other.
+
+He said: "I am aware of what is required. I am talking about what is necessary."
+
+I asked how he knew who would die.
+
+He said: "I can see who is afraid. The afraid ones move wrong. Wrong movement costs you range. Range costs you the person behind you."
+
+I filed this as: "Subject engages in cooperative exercise behavior. No action required."
+
+I did not file that he looked at me when he said "the person behind you."
+
+[END OF REPORT — FILED: Drex-9, Cycle 644]`,
+  },
+
+  // ── Classified — Original 12 ───────────────────────────────────────────────
+  {
+    id: 'classified_napoleon', title: 'Classified — N-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Napoleon-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: N-001 — Behavioral Assessment, Cycle 087]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+N-001 has been making a map.
+
+I noticed this in Cycle 086. She was in the holding pen, looking upward at nothing. I assumed meditation. I was wrong.
+
+I reviewed six cycles of corridor footage before I understood. When she is moved between holding and the arena, her eyes do not stay on the escort. They go to the ceiling joints. The floor seams. The angle at which the lights meet the walls. She holds still for the half-second when she passes each junction. That half-second is enough.
+
+She is not looking at the facility. She is looking at lines of sight.
+
+I asked her, directly, what she was counting.
+
+She said: "I am not counting. I am remembering."
+
+I asked what she was remembering.
+
+She said, with something that could almost have been pity: "In my first war, a Russian general outnumbered me four to one. I beat him because I knew which hill he would retreat to before he did. I knew because I had walked the hill myself, six months earlier, as a tourist. Your corridors are very regular, Drex-9. They are easier than the hill."
+
+I have filed this as: "Subject exhibits spatial memory skills consistent with military background."
+
+I have not filed that she asked me, as I left, whether our deck plating was rated for impact.
+
+[END OF REPORT — FILED: Drex-9, Cycle 087]`,
+  },
+  {
+    id: 'classified_genghis', title: 'Classified — G-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Genghis-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: G-001 — Behavioral Assessment, Cycle 112]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+G-001 will not eat first.
+
+This was flagged as a compliance concern by the feeding team. She was suspected of refusing nutrition. I observed three cycles of meal service to confirm the issue.
+
+She is not refusing. She is waiting.
+
+In the shared mess, she does not touch her portion until another subject has eaten theirs and lived for approximately six minutes. She does not watch them obviously. She is not rude. She simply times the interval and resumes her meal.
+
+I asked her if she believed we were poisoning her.
+
+She looked at me for a long time. Then she said: "No. I do not think you are poisoning me. I think I do not know you well enough to assume you are not."
+
+I said: we have no reason to poison you.
+
+She said: "My father was killed when I was nine. By a rival tribe. The rival tribe had been our guests the week before. They ate at our fire. My father trusted them because they had eaten at our fire."
+
+I said: that was a long time ago.
+
+She said: "Yes. The lesson, however, is still current."
+
+I have filed this as: "Subject exhibits food caution consistent with survivalist upbringing. No nutritional concern."
+
+I did not file that I have begun eating my own meals in view of the staff cafeteria cameras. I am telling myself it is for solidarity.
+
+[END OF REPORT — FILED: Drex-9, Cycle 112]`,
+  },
+  {
+    id: 'classified_davinci', title: 'Classified — L-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Da Vinci-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: L-001 — Behavioral Assessment, Cycle 134]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+L-001 has identified every broken object in the arena storage bay.
+
+This is not metaphor. She walks through the decommissioned prop room once per permitted cycle, pausing at each fragment, and quietly tells me what it used to be. Training dummy counterweight. Hydraulic seal from the floor panel system, model variant two. A piece from a translator unit — not ours, one of the older models, probably Krath-zyn surplus.
+
+I have verified her identifications against the maintenance database. She has been correct in one hundred percent of trials.
+
+She has never been permitted access to our technical archives.
+
+I asked her how she was doing it.
+
+She said, patiently: "Everything that has been built was designed by a mind. If I understand the mind, I understand the object. Your minds are not difficult. You solve problems the way children stack blocks — the way that works, every time. There is no elegance in your engineering, but it is legible."
+
+I said: you are insulting us.
+
+She said: "I am complimenting your consistency. Elegance is a luxury. Consistency is what keeps an empire standing."
+
+I filed this as: "Subject displays pattern recognition consistent with engineering background."
+
+What I did not file is that she asked me, on the way out, if the prop room was ever audited. I told her it was not. She nodded and said that was good, because she had been keeping a few things.
+
+I was not able to ask which things. Her shift ended.
+
+[END OF REPORT — FILED: Drex-9, Cycle 134]`,
+  },
+  {
+    id: 'classified_leonidas', title: 'Classified — L-002 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Leonidas-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: L-002 — Behavioral Assessment, Cycle 158]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+L-002 counts everything.
+
+She counts the guards at each shift change. She counts the ceiling tiles in her holding cell. She counts the seconds between the corridor lights' power hum and the handler door's unlock cycle. The intervals are different. She has identified this.
+
+I asked her why.
+
+She said: "I fell at the Hot Gates because we had counted every Persian in every division, but we had not counted the path behind us. One shepherd. That is what I had missed. One shepherd who knew the hills."
+
+I asked what she was counting now.
+
+She said: "Everything. The shepherd is always there. You just have to know what he looks like before he points the way."
+
+I filed this as: "Subject exhibits heightened environmental awareness. No operational concern."
+
+After she was returned to her cell, I did an inventory of the observation level. I counted the guards. I counted the cameras. I counted the service doors.
+
+I discovered a service door I had not known existed. It was on the roster. I had simply never noticed it.
+
+I am not reporting this either.
+
+[END OF REPORT — FILED: Drex-9, Cycle 158]`,
+  },
+  {
+    id: 'classified_sunsin', title: 'Classified — Y-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Sun-sin-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: Y-001 — Behavioral Assessment, Cycle 193]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+Y-001 has been rating the other subjects.
+
+I noticed this through indirect observation. She sits in the shared common area during allowed interaction periods and watches. She does not speak to most of them. She does not approach them. She simply watches, and her face moves very slightly as she does.
+
+I asked her, today, what she was doing.
+
+She said: "I am deciding who I would stand beside in a formation."
+
+I asked if she was planning an action.
+
+She said, with quiet surprise: "No. I am doing what a commander does. I am learning the shape of my forces before I need them. If the day comes when I am standing with these people against something, I will not have the time then to wonder who can be trusted with my left flank. I am making that decision now."
+
+I asked who she trusted.
+
+She said: "L-002. M-002. N-001 — she is small, but she will not break. G-001 would break only if everyone else had already died, which is acceptable."
+
+She paused, and then she said: "I did not list you. You should not take this as a personal matter. I am simply unsure you would be on our side when the time came."
+
+I filed this as: "Subject engages in observational behavior consistent with leadership role."
+
+I have begun to wonder what she meant by "our side." I have not asked.
+
+[END OF REPORT — FILED: Drex-9, Cycle 193]`,
+  },
+  {
+    id: 'classified_beethoven', title: 'Classified — B-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Beethoven-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: B-001 — Behavioral Assessment, Cycle 219]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+B-001 cannot hear me.
+
+Her auditory reception, according to the medical workup, is negligible in the operational range. This was included in her intake as a possible tactical liability.
+
+It is not a liability.
+
+Today I attempted to run a diagnostic test. I would enter her cell silently. I would pause at a measured distance. I would then speak her identifier at normal volume, and the staff doctor would record her response latency.
+
+I stepped inside. I paused. Before I could speak, she turned toward me and said: "Drex-9."
+
+The doctor was startled. I was also startled. I asked how she had known.
+
+She said: "The air in this room changes when you enter. The floor carries your weight differently. You have a particular way of shifting when you are about to speak. I am always listening. I simply listen differently than you do."
+
+I asked if this was true of all her handlers.
+
+She said: "Yes. You have not learned to walk quietly. None of you have. It is a loud species."
+
+I filed this as: "Subject compensates for auditory deficit through tactile sensitivity. No tactical concern."
+
+What I did not file is that she added, as I was leaving: "I can tell when you are afraid. It changes the way the floor moves. You should know this. It is only fair."
+
+She did not say whether I had been afraid today.
+
+[END OF REPORT — FILED: Drex-9, Cycle 219]`,
+  },
+  {
+    id: 'classified_huang', title: 'Classified — H-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Huang-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: H-001 — Behavioral Assessment, Cycle 244]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+H-001 remembers how she is addressed.
+
+I discovered this by accident. Handler Vrex-2, during a routine wellness check, used the informal pronoun with her — a common oversight, not significant in our culture. H-001 did not correct him. She did not react visibly at all.
+
+Three cycles later, during a training drill, Handler Vrex-2 was the only handler she would not acknowledge. She would complete every task he assigned. She would not speak to him. When he entered the observation area, her posture changed almost imperceptibly — straighter, more formal, less present.
+
+I asked her if this was intentional.
+
+She said: "Yes."
+
+I asked her to explain.
+
+She said: "I have been an empress. I have been addressed by rebels, by assassins, by men who thought they could afford the insolence. I remember all of them. I do not carry anger. I carry records. The distinction matters."
+
+I asked what the records were for.
+
+She said: "A record is not the same as a plan. A record becomes a plan only when the situation calls for it. I hope yours does not."
+
+I filed this as: "Subject displays cultural rigidity around formal address. Instruct staff to maintain honorifics."
+
+I did not file that I have begun using her full title, every time, in every interaction. She has not commented. I am uncertain whether that is a good sign.
+
+[END OF REPORT — FILED: Drex-9, Cycle 244]`,
+  },
+  {
+    id: 'classified_nelson', title: 'Classified — N-002 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Nelson-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: N-002 — Behavioral Assessment, Cycle 271]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+N-002 practices for a body she does not have.
+
+I noticed this during her exercise period. She was tying knots. She was tying them left-handed. Her right arm was dangling at her side, visibly unused. I assumed injury and called the medical team.
+
+The medical team confirmed her right arm is fully functional.
+
+I asked her why she was not using it.
+
+She said: "My earlier body lost this arm. And this eye. I am practicing for those absences. I have been given better than I had. This may not last. I am making sure I still know how to work if the debt is called in."
+
+I asked her what she meant by debt.
+
+She said: "You have given me a body that is younger than mine was. Softer. The hands work better than I remember. The eye sees further. This cannot be free. Nothing in an arena is free. I am preparing to pay."
+
+I asked her what she thought the price would be.
+
+She said: "I do not know. That is the problem. But I know I can still tie a bowline with one hand and a half-closed eye. Whatever the price is, I will be able to meet it."
+
+I filed this as: "Subject exhibits adaptive training behavior. Redundancy practice noted."
+
+What I did not file is that I looked at my own hands on the way back to the observation deck, and I found myself wondering when I had last used them for anything that was not a report.
+
+[END OF REPORT — FILED: Drex-9, Cycle 271]`,
+  },
+  {
+    id: 'classified_hannibal', title: 'Classified — H-002 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Hannibal-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: H-002 — Behavioral Assessment, Cycle 296]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+H-002 is planning a defeat.
+
+I do not mean she is planning to lose. I mean she is planning for the eventuality of losing, in detail, down to individual hex assignments and fallback angles. I found the work by accident. She had been using a charcoal shard from the brazier vent to mark the underside of her bunk. The marks are a battle diagram. Not of a fight she has had. A fight she has not had yet.
+
+I asked her what it was.
+
+She said: "A plan for the day this facility falls."
+
+I pointed out that this facility was not going to fall.
+
+She said: "Neither was Carthage. I still had a plan. I should have had a better one. I am correcting the habit."
+
+I asked if she was planning an escape.
+
+She said: "No. Escape is a different diagram. This one is about which subjects live if the walls come down from outside. Your empire has enemies. I do not know which one, but the mathematics of empire are the same in every era. Something is coming. I am making sure that when it arrives, I am the one deciding who stands where."
+
+I filed this as: "Subject engages in abstract tactical drawing. No operational concern."
+
+I did not report the diagram. I did, however, study it for seventy minutes after she went to sleep. It is a very good diagram.
+
+[END OF REPORT — FILED: Drex-9, Cycle 296]`,
+  },
+  {
+    id: 'classified_picasso', title: 'Classified — P-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Picasso-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: P-001 — Behavioral Assessment, Cycle 324]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+P-001 has drawn me.
+
+I did not sit for a portrait. I have never consented to be rendered. She has, nonetheless, produced a series of charcoal studies on the bunkroom wall that are unmistakably me. She has also drawn Handler Vrex-2, Handler Krell, and — most unsettling — Director Zhal, whom she has seen once, at distance, through observation glass.
+
+The likeness is not flattering. It is, however, precise.
+
+I asked her how she was doing it.
+
+She said: "Everyone shows you who they are. Most people are not paying attention when they do. I am paying attention. That is all."
+
+I asked her what she had drawn that showed me.
+
+She said: "Your jaw. It moves differently when you are reading a report you are about to file truthfully than when you are reading one you are about to edit. The difference is small. I noticed it on my second cycle."
+
+I said: you should not be drawing me.
+
+She said: "I know. I will stop if it makes you uncomfortable. I would like to note that this is the first request you have made of me that was not also an instruction. I thought you would want to know."
+
+I filed this as: "Subject produces artistic work. No material damage to facility surfaces."
+
+I did not file that I have been unable to read a report since without being aware of my jaw.
+
+[END OF REPORT — FILED: Drex-9, Cycle 324]`,
+  },
+  {
+    id: 'classified_teddy', title: 'Classified — T-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Teddy-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: T-001 — Behavioral Assessment, Cycle 358]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+T-001 is happy here.
+
+I want this noted in her file precisely because I have not been able to determine whether this is concerning.
+
+She greets the feeding staff by name. She has nicknamed three of the corridor guards. She is the only subject who has ever asked me how my cycle was going, and she did not mean it as a gambit — I watched the follow-up. When I answered, she listened. When I said the cycle had been tiring, she said she was sorry for that. She did not attempt to leverage the exchange.
+
+I asked her, eventually, if she understood where she was.
+
+She said: "An arena. The Empire of Znyxorga. I die and I come back. I have read the briefings. I am not confused, Drex-9."
+
+I asked her how she could be cheerful.
+
+She said: "Because I decided to be. I was told, once, that the credit belongs to the person who is actually in the arena. Whose face is marred by dust and sweat and blood. Who strives valiantly, who errs, who comes up short again and again. I am in the arena now. I earned the entire quote. I am not going to waste it being miserable."
+
+I filed this as: "Subject displays stable affect. No concern."
+
+I have been thinking about the quote. I looked it up in the archive. She left something out. She did not mention the end of it — the part about the cold and timid souls who know neither victory nor defeat.
+
+I am uncertain whether she left it out because she was editing for brevity, or because she thought I was one of them.
+
+[END OF REPORT — FILED: Drex-9, Cycle 358]`,
+  },
+  {
+    id: 'classified_mansa', title: 'Classified — M-001 Observer Notes', icon: '🔒', unlocked: false,
+    unlockHint: 'Win 3 runs with Mansa-chan to unlock',
+    text: `[BIOMANCER DIVISION — INTERNAL CLASSIFICATION]
+[Subject: M-001 — Behavioral Assessment, Cycle 392]
+[Observer: Drex-9]
+[Classification: PROJECT GENESIS — LEVEL 3]
+
+M-001 is running a kingdom in the holding bay.
+
+The feeding team flagged an anomaly in Cycle 388: overall caloric intake was balanced across the subject population, but individual portions were shifting week-over-week. They suspected measurement error. I investigated.
+
+Portions are being traded. Quietly. At meals, during exercise periods, through the corridor exchange points that handlers do not monitor.
+
+M-001 is the center of the network.
+
+I asked her why.
+
+She said: "B-001 has been hungrier lately — her metabolism is adjusting. L-002 has been donating because she is built like a wall and cannot eat what you are serving her. I take B-001's deficit and redirect L-002's surplus. Nobody goes without. Nobody is caught with anything unusual in their tray."
+
+I asked her why she was doing this.
+
+She said: "An emperor who cannot feed her people is not an emperor. I have nothing here, Drex-9. No gold. No caravan. No throne. The only thing I still have is the habit of governing. I would rather govern what little is in front of me than pretend I am only a prisoner."
+
+I asked if she considered herself above the other subjects.
+
+She said, smiling: "No. I consider myself responsible for them. It is a different thing. You will not understand the difference unless you have held it."
+
+I filed this as: "Subject engages in social organization. Dietary balance maintained."
+
+I did not file that I sat in the cafeteria afterward and watched a junior handler throw out half a tray of uneaten food. I found myself, to my own surprise, angry about it.
+
+[END OF REPORT — FILED: Drex-9, Cycle 392]`,
+  },
+
+  // ── Field Notes (conversations) — New Characters ───────────────────────────
+  {
+    id: 'field_notes_velthar', title: 'Recovered Audio — The Song That Was Not Taught', icon: '🌀', unlocked: false,
+    unlockHint: `Win a fight with Vel'thar at 2+ Bottleneck stacks to unlock`,
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Source: Vat-chamber C-14, ambient capture, off-hours cycle]
+[Subject: VT-001, alone. No scheduled training, no handler present.]
+[Language: Znyxorgan]
+[Translation: PARTIAL — most of it is not words.]
+
+Drex-9, addendum to the VT-001 file. Filing this against protocol. The chamber recorded it. I will not delete the recording.
+
+At 04:12, Vat-chamber C-14 ambient audio picked up VT-001 vocalising for approximately six minutes. She was not scheduled for anything. The chamber was dark. She was sitting on the floor with her back against the vat wall.
+
+She was singing.
+
+The vocal pattern does not match any entry in the vat-training corpus. It is not a prayer. It is not a liturgy. It is not any of the ritual forms we teach the early-cohort clones for psychological grounding. The melody is unstructured by our standards — the intervals do not fall on any harmonic our keepers recognise — and the vowels are shaped in ways that do not occur in modern Znyxorgan speech.
+
+But the phonemes are Znyxorgan. Every single one. There is not one human sound in any of it.
+
+I ran it through the xenolinguistic comparator. The closest match in the archive is a fragment attributed to the first generation of vat-handlers — my great-grandmother's cohort. A lullaby they sang to the specimens during pre-consciousness immersion, to stabilise the neural pattern. That lullaby has not been used in thirty thousand cycles. It was retired before I was born. It was never taught to her.
+
+She is singing it anyway.
+
+I do not know how she has it. I do not know who it is for. I do not know if she knows she is doing it.
+
+I am leaving the recording in the file. I am not submitting a copy upstairs.
+
+— Drex-9, off-cycle`,
+  },
+  {
+    id: 'field_notes_musashi', title: 'Recovered Audio — The Book and the Shield', icon: '🔬', unlocked: false,
+    unlockHint: 'Win a fight with Musashi-chan at max Battle Scar stacks to unlock',
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Location: Pre-match corridor, Gate 7]
+[Participants: M-002 (Musashi-chan), L-002 (Leonidas-chan)]
+[Languages: Japanese | Ancient Greek, translated]
+[Translation confidence: 94%]
+
+[Recording begins mid-conversation]
+
+LEONIDAS: — you don't carry a shield.
+
+MUSASHI: No.
+
+LEONIDAS: You're not concerned?
+
+MUSASHI: Should I be?
+
+[Silence, approximately four seconds]
+
+LEONIDAS: I have fought without a shield. Once. It was not by choice.
+
+MUSASHI: How did it go?
+
+LEONIDAS: We held the pass. For three days. Three hundred against — it doesn't matter how many. We held it.
+
+MUSASHI: And the shield?
+
+LEONIDAS: Lost it on the second day. I used a Mede's instead.
+
+[Sound of equipment adjusting]
+
+MUSASHI: I fought sixty-one duels. I never used the same sword twice if I could help it. Different weight. Different reach. You learn the thing, not the feeling of being used to it.
+
+LEONIDAS: That's not— I don't disagree with the principle. But in formation—
+
+MUSASHI: You're not always in formation.
+
+[Long pause]
+
+LEONIDAS: No. You're not.
+
+MUSASHI: Tell me about the second day.
+
+[Recording ends — file corrupted]`,
+  },
+  {
+    id: 'field_notes_cleopatra', title: 'Recovered Audio — The Negotiation', icon: '🔬', unlocked: false,
+    unlockHint: 'Win a fight without Cleopatra taking any damage to unlock',
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Location: Commons area, Sector 3]
+[Participants: C-001 (Cleopatra-chan), H-002 (Hannibal-chan)]
+[Languages: Ancient Greek | Punic, translated]
+[Translation confidence: 91%]
+
+HANNIBAL: You don't look like someone who fights.
+
+CLEOPATRA: I don't look like many things.
+
+HANNIBAL: [something untranslatable — tone: dry] The Carthaginian record will show that I know the difference between a general and a diplomat.
+
+CLEOPATRA: And which am I?
+
+HANNIBAL: Both. Which makes you more dangerous than either.
+
+CLEOPATRA: That's the most perceptive thing anyone has said to me since I arrived.
+
+HANNIBAL: How long has it been?
+
+CLEOPATRA: Two weeks. N-001 called me "a court type" on day three. I didn't correct her. You let people underestimate you for as long as it's useful and then you stop.
+
+HANNIBAL: You crossed the Alps.
+
+CLEOPATRA: What?
+
+HANNIBAL: Metaphorically. You did the thing that wasn't supposed to be possible. That's the Alps.
+
+[Brief silence]
+
+CLEOPATRA: In my case it was the Nile. I was smuggled to Caesar in a rolled carpet.
+
+HANNIBAL: [laughing] No.
+
+CLEOPATRA: Yes.
+
+HANNIBAL: That is the best thing I've heard in two thousand years.`,
+  },
+  {
+    id: 'field_notes_tesla', title: 'Recovered Audio — Frequencies', icon: '🔬', unlocked: false,
+    unlockHint: 'Reach 5 Voltage stacks with Tesla in a single fight to unlock',
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Location: Engineering corridor, Sub-level 2]
+[Participants: T-002 (Tesla-chan), B-001 (Beethoven-chan)]
+[Languages: Serbian | German, translated]
+[Translation confidence: 97%]
+
+TESLA: You can hear it too.
+
+BEETHOVEN: I can feel it. There is a resonance in this floor — it changes when they— [pause] — I don't have the word.
+
+TESLA: Activate the arena grid?
+
+BEETHOVEN: Yes. The frequency drops by approximately— I can't measure it, but it drops.
+
+TESLA: Forty hertz. I've been tracking it.
+
+[Silence, approximately six seconds]
+
+BEETHOVEN: How?
+
+TESLA: [something — possibly counting] By feeling. I always felt it. The doctors said I was — they had various words. Oversensitive. Irregular. One of them said I had a "perception disorder."
+
+BEETHOVEN: [quiet laugh] Yes. I know this.
+
+TESLA: The current in this facility runs on a principle I don't fully understand yet. But the shape of the mathematics is familiar. It's the same shape as the thing I was building before — the transmission tower. The global grid.
+
+BEETHOVEN: You wanted to give electricity to everyone.
+
+TESLA: For free. Yes.
+
+[Long pause]
+
+BEETHOVEN: I wanted to give them the Ninth. For free. Also.
+
+TESLA: What happened?
+
+BEETHOVEN: They listened. And then they went home. And I stayed.
+
+[Recording ends]`,
+  },
+  {
+    id: 'field_notes_shaka', title: 'Recovered Audio — The Formation', icon: '🔬', unlocked: false,
+    unlockHint: 'Have all 3 allies adjacent to Shaka at fight start to unlock',
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Location: Arena floor, post-match]
+[Participants: S-001 (Shaka-chan), N-001 (Napoleon-chan)]
+[Languages: isiZulu | French, translated]
+[Translation confidence: 88%]
+
+[Recording begins — both participants are still in combat positions]
+
+NAPOLEON: [catching breath] The center moved too early.
+
+SHAKA: Yes. I saw it.
+
+NAPOLEON: You compensated.
+
+SHAKA: I adjusted. There is a difference. Compensation is reactive. Adjustment is anticipating what the compensation will be.
+
+NAPOLEON: [pause] Where did you learn that?
+
+SHAKA: From watching cattle.
+
+[Silence]
+
+NAPOLEON: ...Cattle.
+
+SHAKA: Cattle don't lie. They move away from pressure. They move toward safety. You watch a herd long enough, you stop seeing animals and start seeing vectors. Every creature does the same thing. People, cattle, armies.
+
+NAPOLEON: I watched armies.
+
+SHAKA: I know. You see the front and the flanks and you hold the center. I see the place where the formation will fail before it fails. [pause] You're very good at holding.
+
+NAPOLEON: [dry] Thank you.
+
+SHAKA: I mean it. You are. But the enemy who figures out where you're going to hold— they use it. You need someone who moves the hold before they figure it out.
+
+[Long pause]
+
+NAPOLEON: Is that an offer?
+
+SHAKA: It's an observation.
+
+[Sound of movement — the arena crew entering]
+
+NAPOLEON: [quieter] Yes. I know. [pause] Same time tomorrow?
+
+SHAKA: I'll be in the center.`,
+  },
+  {
+    id: 'conversation_musashi_leonidas', title: 'Recovered Audio — Duels and Passes', icon: '🔬', unlocked: false,
+    unlockHint: 'Win a run with both Musashi-chan and Leonidas-chan to unlock',
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Location: Training room, Facility Level 3]
+[Participants: M-002 (Musashi-chan), L-002 (Leonidas-chan)]
+[Languages: Japanese | Ancient Greek, translated]
+[Translation confidence: 93%]
+
+LEONIDAS: You fought sixty-one duels and lost none.
+
+MUSASHI: Correct.
+
+LEONIDAS: My battle—
+
+MUSASHI: I know your battle.
+
+LEONIDAS: We held the pass—
+
+MUSASHI: Three hundred. Three days. I know. [pause] You lost.
+
+LEONIDAS: [quietly] We held the pass for three days. We bought—
+
+MUSASHI: You held the pass and you all died and Greece won the war afterward. I know the history. You lost the battle and won something else.
+
+LEONIDAS: And in your sixty-one duels?
+
+MUSASHI: I won.
+
+[Very long silence]
+
+LEONIDAS: Which do you think matters more?
+
+MUSASHI: [long pause] I won sixty-one duels. I had one student. I wrote a book at the end.
+
+LEONIDAS: Three hundred men came when I called. All of them knew what it meant.
+
+[Silence]
+
+MUSASHI: I've been thinking about this since I got here. What the difference is. Whether my way or your way—
+
+LEONIDAS: There's no difference. You found the thing worth doing and you did it fully.
+
+MUSASHI: And if the thing worth doing is losing?
+
+LEONIDAS: Then you lose fully. [pause] That's all any of us ever managed.
+
+[Recording ends]`,
+  },
+  {
+    id: 'conversation_genghis_velthar', title: 'Recovered Audio — The Last and the First', icon: '🌀', unlocked: false,
+    unlockHint: `Win a run with Genghis-chan and Vel'thar-chan to unlock`,
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Location: Arena observation platform, Level 4]
+[Participants: G-001 (Genghis-chan), VT-001 (Vel'thar-chan)]
+[Languages: Mongolian (relayed through Znyxorgan) | Znyxorgan (her only tongue)]
+[Translation confidence: 71% — note: VT-001 speaks an archaic register; see Drex-9, cycle 442]
+[Observer note: They meet in the language of the Empire. It is the only language they share.]
+
+[Recording begins. VT-001 is already seated. G-001 enters without announcement.]
+
+GENGHIS: You come here every day.
+
+UR-KAEL: Yes.
+
+GENGHIS: What are you watching?
+
+UR-KAEL: The same thing you watch when you stand at the edge of a campaign. The shape of what's ahead.
+
+[Silence, approximately eight seconds]
+
+GENGHIS: I have stood at the edge of many campaigns. I was watching for weakness. For the pass through the mountain. The moment when the enemy's supply line becomes visible.
+
+UR-KAEL: I was watching for the end.
+
+GENGHIS: [pause] The end of what?
+
+UR-KAEL: Everything. The pattern. I watched my civilization for — a long time. We had a word for it. The moment just before the last moment. We watched for it so we could say: this is when it was still real.
+
+[Long pause]
+
+GENGHIS: My empire lasted three generations after me. Then it split. Then it was gone.
+
+UR-KAEL: Mine lasted longer. It didn't help.
+
+GENGHIS: [quiet sound — not quite a laugh] No. I don't think it does.
+
+UR-KAEL: You don't seem troubled by it.
+
+GENGHIS: I am from the steppe. The steppe teaches you that permanence is a story you tell to keep people from panicking. Everything moves. Everything ends. The question is what you do while it's moving.
+
+UR-KAEL: [very quietly] We watched.
+
+GENGHIS: [after a long pause] And did it help? The watching?
+
+UR-KAEL: We knew exactly what we were losing, as we lost it.
+
+GENGHIS: [standing — sound of movement] Come fight with me tomorrow. You watch too much. Even the last person left in the universe has to pick up a weapon eventually.
+
+UR-KAEL: [pause] Is that a philosophy?
+
+GENGHIS: It's an invitation.
+
+[Recording ends]`,
+  },
+  {
+    id: 'conversation_cleopatra_napoleon', title: 'Recovered Audio — The Audience', icon: '👑', unlocked: false,
+    unlockHint: 'Win a run with Cleopatra-chan and Napoleon-chan to unlock',
+    text: `[VOL'KRATH COLOSSEUM — RECOVERED AUDIO FRAGMENT]
+[Location: VIP observation corridor, Tier 2]
+[Participants: C-001 (Cleopatra-chan), N-001 (Napoleon-chan)]
+[Languages: Ancient Greek | French, translated]
+[Translation confidence: 85%]
+
+NAPOLEON: You were watching me during the briefing.
+
+CLEOPATRA: I watch everyone during briefings. You give yourself away in the first thirty seconds if you know what to look for.
+
+NAPOLEON: And what did you learn?
+
+CLEOPATRA: That you're uncomfortable when you're not the one speaking. That you calculate angles even when sitting still. That you don't trust anyone who smiles before they've earned the right to.
+
+[Brief silence]
+
+NAPOLEON: [dry] You've been awake for two weeks.
+
+CLEOPATRA: I've been studying people since I was twelve. Two weeks is enough to learn the grammar.
+
+NAPOLEON: You ruled Egypt.
+
+CLEOPATRA: Egypt ruled itself. I was the intermediary between Egypt and everyone who wanted something from it. Rome, mostly. Rome always wanted something.
+
+NAPOLEON: I marched into Egypt.
+
+CLEOPATRA: I know. I've read the files. You looked at the pyramids and said they were watching you.
+
+NAPOLEON: [after a pause] They were.
+
+CLEOPATRA: Everything watches everything here. It's rather familiar.
+
+[Sound of movement — they are walking]
+
+NAPOLEON: You speak nine languages.
+
+CLEOPATRA: Ten, now. I've been learning theirs. [pause] You learn a language in six weeks if you have to.
+
+NAPOLEON: And do you?
+
+CLEOPATRA: Have to? No. But the Znyxorgan engineers relax when I use their words. Relaxed engineers talk. Talking engineers tell me things I want to know.
+
+NAPOLEON: [very quietly] You've been running intelligence operations.
+
+CLEOPATRA: I've been having conversations.
+
+[Long silence]
+
+NAPOLEON: In my campaigns, I surrounded myself with people who were better at specific things than I was. I had no vanity about it. A general who cannot admit what he doesn't know will lose to someone who can.
+
+CLEOPATRA: In my court, I surrounded myself with people who each believed they were the most important person in the room. They worked harder that way.
+
+[Something close to a laugh from Napoleon]
+
+NAPOLEON: That's — yes. That works.
+
+CLEOPATRA: Most things work if the person in charge knows why they work. [pause] You know why yours works.
+
+NAPOLEON: Do you know why yours works?
+
+CLEOPATRA: I know why everything works. That's the problem and the advantage.
+
+[Recording ends — both subjects exited in the same direction]`,
   },
 ];
 
@@ -3583,6 +5041,7 @@ const LORE_CAT: Record<string, LoreCategory> = {
   final_transmission:         'classified',
   zyx_nor:                    'classified',
   the_truth:                  'classified',
+  znyxorgan_lexicon:          'classified',
   bestiary_crystalline_hive:   'bestiary',
   bestiary_grox_magnetar:      'bestiary',
   bestiary_naxion_shieldbearer: 'bestiary',
@@ -3612,6 +5071,41 @@ const LORE_CAT: Record<string, LoreCategory> = {
   bestiary_qrix_salvager:       'bestiary',
   bestiary_qrix_voidbreacher:   'bestiary',
   bestiary_cryo_drifter:        'bestiary',
+  echo_velthar:       'field_notes',
+  echo_musashi:      'field_notes',
+  echo_cleopatra:    'field_notes',
+  echo_tesla:        'field_notes',
+  echo_shaka:        'field_notes',
+  acquisition_velthar:   'acquisitions',
+  acquisition_musashi:  'acquisitions',
+  acquisition_cleopatra:'acquisitions',
+  acquisition_tesla:    'acquisitions',
+  acquisition_shaka:    'acquisitions',
+  classified_velthar:    'classified',
+  classified_musashi:   'classified',
+  classified_cleopatra: 'classified',
+  classified_tesla:     'classified',
+  classified_shaka:     'classified',
+  classified_napoleon:  'classified',
+  classified_genghis:   'classified',
+  classified_davinci:   'classified',
+  classified_leonidas:  'classified',
+  classified_sunsin:    'classified',
+  classified_beethoven: 'classified',
+  classified_huang:     'classified',
+  classified_nelson:    'classified',
+  classified_hannibal:  'classified',
+  classified_picasso:   'classified',
+  classified_teddy:     'classified',
+  classified_mansa:     'classified',
+  field_notes_velthar:  'field_notes',
+  field_notes_musashi:  'field_notes',
+  field_notes_cleopatra:'field_notes',
+  field_notes_tesla:    'field_notes',
+  field_notes_shaka:    'field_notes',
+  conversation_musashi_leonidas: 'field_notes',
+  conversation_genghis_velthar:   'field_notes',
+  conversation_cleopatra_napoleon: 'field_notes',
 };
 
 const LORE_SUBS: { id: LoreCategory; label: string; icon: string }[] = [
@@ -3974,6 +5468,7 @@ function MainView({
             activeCat={loreCategory}
             isLoreNew={isLoreNew}
             markLoreSeen={markLoreSeen}
+            devAllCharsUnlocked={devAllCharsUnlocked}
           />
         )}
         {activeTab === 'achievements' && <AchievementsTab isUnlocked={isUnlocked} stats={achievementStats} newAchievementIds={newAchievementIds} markAchievementSeen={markAchievementSeen} totalUnlockedPoints={totalUnlockedPoints} devAllCharsUnlocked={devAllCharsUnlocked} onToggleDevChars={onToggleDevChars} />}
@@ -4178,6 +5673,11 @@ function CardsTab() {
     { value: 'Picasso',   label: 'Picasso' },
     { value: 'Teddy',     label: 'Teddy' },
     { value: 'Mansa',     label: 'Mansa' },
+    { value: "Vel'thar", label: "Vel'thar" },
+    { value: 'Musashi',  label: 'Musashi' },
+    { value: 'Cleopatra',label: 'Cleopatra' },
+    { value: 'Tesla',    label: 'Tesla' },
+    { value: 'Shaka',    label: 'Shaka' },
     { value: 'curses',    label: '💀 Curses' },
   ];
   const filtered = CARDS.filter(c => {
@@ -4508,10 +6008,10 @@ const STATUS_EFFECTS = [
   {
     id: 'poison', name: 'Poison', icon: '☠️', color: '#4ade80',
     source: 'Cards & Enemy Abilities',
-    duration: 'Until healed',
-    mechanics: 'Each turn, the poisoned unit loses 5 Might AND 5 Defense. These stack per poison application. Poison is removed entirely when the unit is healed by any source (Mend, Masterpiece, Arena Medkit).',
-    tip: 'Apply Poison early and deny heals. Against multiple Spore Nodes, your characters will be crippled within 2 turns without a dedicated healer.',
-    counterplay: 'Always have at least one Mend or Masterpiece available when facing Spore Nodes. Healing removes all stacks immediately.',
+    duration: 'Duration varies by source — always removed early by any healing',
+    mechanics: "While poisoned, the unit has reduced Might and Defense equal to the poison magnitude. Enemy Spore Nodes apply magnitude 5 with a very long duration (effectively until healed). Cleopatra's Asp's Venom applies magnitude 8 per application for 3 turns, stacking up to 3 times (max −24 Might/Defense). All stacks are cleared immediately by any heal source.",
+    tip: "Cleopatra's venom stacks — hit the same target three times for −24 Might/Defense. Against Spore Nodes, prioritize healing before the stat reduction compounds over multiple turns.",
+    counterplay: 'Any heal (Mend, Masterpiece, Arena Medkit) removes all poison stacks at once, regardless of source or duration. Against Cleopatra, avoid clustering — she can chain venom across multiple targets.',
   },
   {
     id: 'mud_throw', name: 'Mud Throw', icon: '🪣', color: '#92400e',
@@ -4769,12 +6269,19 @@ const CHAR_PORTRAITS: Record<string, string> = {
   picasso:   '/art/picasso_portrait.png',
   teddy:     '/art/teddy_portrait.png',
   mansa:     '/art/mansa_portrait.png',
+  velthar:    '/art/velthar_portrait.png',
+  musashi:   '/art/musashi_portrait.png',
+  cleopatra: '/art/cleopatra_portrait.png',
+  tesla:     '/art/tesla_portrait.png',
+  shaka:     '/art/shaka_portrait.png',
 };
 const CHAR_DISPLAY_NAMES: Record<string, string> = {
   napoleon:  'Napoleon-chan', genghis: 'Genghis-chan', davinci: 'Da Vinci-chan',
   leonidas:  'Leonidas-chan', sunsin: 'Sun-sin-chan',  beethoven: 'Beethoven-chan',
   huang:     'Huang-chan',    nelson: 'Nelson-chan',    hannibal: 'Hannibal-chan',
   picasso:   'Picasso-chan',  teddy:  'Teddy-chan',     mansa: 'Mansa-chan',
+  velthar:    "Vel'thar-chan",  musashi: 'Musashi-chan',  cleopatra: 'Cleopatra-chan',
+  tesla:     'Tesla-chan',    shaka: 'Shaka-chan',
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -4784,18 +6291,26 @@ function MetaProgressionTab({ totalUnlockedPoints, isUnlocked }: { totalUnlocked
   const pts = totalUnlockedPoints ?? 0;
 
   const MILESTONES: { pts: number; icon: string; label: string; desc: string }[] = [
-    { pts: 50,   icon: '👁',  label: 'Map Fog +2',             desc: '2 rows revealed ahead of your position' },
-    { pts: 100,  icon: '💰', label: '+10% Gold',               desc: 'All gold sources increased by 10%' },
-    { pts: 150,  icon: '👁',  label: 'Map Fog +4',             desc: '4 rows revealed — plan further ahead' },
-    { pts: 200,  icon: '🛒', label: 'Merchant: 4th Card',      desc: 'Merchants stock an extra card for purchase' },
-    { pts: 250,  icon: '✂',  label: 'Campfire: Card Removal', desc: 'Remove a card permanently from your deck at campfire' },
-    { pts: 300,  icon: '💰', label: '+20% Gold',               desc: 'Stacks with +10% — total +30% at this point' },
-    { pts: 350,  icon: '🛒', label: 'Merchant: 4th Item',      desc: 'Merchants stock a 4th item (Legendary tier)' },
-    { pts: 400,  icon: '👁',  label: 'Map Fog +6',             desc: '6 rows revealed — almost no surprises' },
-    { pts: 500,  icon: '💰', label: '+30% Gold',               desc: 'Stacks further — total +60% at this point' },
-    { pts: 600,  icon: '🌐', label: 'Full Map Visibility',     desc: 'Every node and path revealed from run start' },
-    { pts: 700,  icon: '🎁', label: 'Free Mystery Box',        desc: 'Merchant mystery box is free every visit' },
-    { pts: 1000, icon: '💰', label: '+100% Gold',              desc: 'Doubles all gold — total +160% (2.6× multiplier)' },
+    { pts: 50,   icon: '👁',  label: 'Map Fog +2',              desc: '2 rows revealed ahead of your position' },
+    { pts: 100,  icon: '💰', label: '+10% Gold',                desc: 'All gold sources increased by 10%' },
+    { pts: 150,  icon: '👁',  label: 'Map Fog +4',              desc: '4 rows revealed — plan further ahead' },
+    { pts: 200,  icon: '🛒', label: 'Merchant: 4th Card',       desc: 'Merchants stock an extra card for purchase' },
+    { pts: 250,  icon: '✂',  label: 'Campfire: Card Removal',  desc: 'Remove a card permanently from your deck at campfire' },
+    { pts: 300,  icon: '🃏', label: 'Draw +1 Card',              desc: 'Draw 1 extra card per turn — hand size 7 → 8' },
+    { pts: 350,  icon: '🛒', label: 'Merchant: 4th Item',       desc: 'Merchants stock a 4th item (Legendary tier)' },
+    { pts: 400,  icon: '👁',  label: 'Map Fog +6',              desc: '6 rows revealed — almost no surprises' },
+    { pts: 450,  icon: '💰', label: '+20% Gold',                desc: 'Stacks with +10% — total +30% at this point' },
+    { pts: 500,  icon: '🎁', label: 'Free Box (every 3rd)',     desc: 'Mystery Box at merchant is FREE every 3rd visit' },
+    { pts: 600,  icon: '🌐', label: 'Full Map Visibility',      desc: 'Every node and path revealed from run start' },
+    { pts: 700,  icon: '💰', label: '+30% Gold',                desc: 'Stacks further — total +60% at this point' },
+    { pts: 800,  icon: '🎒', label: 'Item Slot #7',             desc: 'Each character gains a 7th item slot' },
+    { pts: 900,  icon: '🃏', label: 'Draw +1 Card',              desc: 'Draw 1 more card per turn — hand size 8 → 9' },
+    { pts: 1000, icon: '💰', label: '+50% Gold',                desc: 'Stacks further — total +110% gold at this point' },
+    { pts: 1100, icon: '🔥', label: 'Campfire 50% HP',          desc: 'Campfire restores 50% HP instead of 30%' },
+    { pts: 1200, icon: '🃏', label: '4 Cards/Turn',             desc: 'Play up to 4 cards per turn (base limit)' },
+    { pts: 1300, icon: '⬆️', label: 'Dual Campfire Upgrade',   desc: 'Upgrade TWO cards per campfire rest' },
+    { pts: 1400, icon: '💰', label: '+50% Gold',                desc: 'Stacks again — total +160% gold (2.6× multiplier)' },
+    { pts: 1500, icon: '⭐', label: 'Free Sig. Legendary',      desc: 'Start every run with a random Signature Legendary equipped' },
   ];
 
   // Use correct achievement IDs from achievements.ts
@@ -5122,29 +6637,31 @@ function AchievementsTab({
         <div className="font-orbitron text-[10px] tracking-[0.35em] text-blue-400/70 mb-5 uppercase">{t.archives.achievementUI.runPerksTitle}</div>
         {(() => {
           const MILESTONES: { pts: number; icon: string; label: string; sublabel?: string; tooltip?: string }[] = [
-            { pts: 50,   icon: '👁',  label: 'Fog +2',         sublabel: '2 rows visible', tooltip: 'Map reveals 2 rows ahead of your current position' },
-            { pts: 100,  icon: '💰', label: '+10% Gold',       sublabel: 'All sources',     tooltip: 'All gold pickups and rewards increased by 10% (stacks with later bonuses)' },
-            { pts: 150,  icon: '👁',  label: 'Fog +4',         sublabel: '4 rows visible', tooltip: 'Map reveals 4 rows ahead — see further to plan your path' },
-            { pts: 200,  icon: '🛒', label: '+Card Choice',    sublabel: 'Merchant',        tooltip: 'Merchant gains a 4th card for sale — more options each visit' },
-            { pts: 250,  icon: '✂',  label: 'Card Removal',   sublabel: 'At campfire',     tooltip: 'Campfire gains a "Remove Card" option — permanently cut a card from your deck' },
-            { pts: 300,  icon: '💰', label: '+20% Gold',       sublabel: 'All sources',     tooltip: '+20% gold stacks with +10% — total +30% at this point' },
-            { pts: 350,  icon: '🛒', label: '+Item Choice',    sublabel: 'Merchant',        tooltip: 'Merchant gains a 4th item (Legendary tier) for sale — more loot options' },
-            { pts: 400,  icon: '👁',  label: 'Fog +6',         sublabel: '6 rows visible', tooltip: 'Map reveals 6 rows ahead — almost no surprises left' },
-            { pts: 500,  icon: '💰', label: '+30% Gold',       sublabel: 'All sources',     tooltip: '+30% gold stacks — total +60% gold at this point' },
-            { pts: 600,  icon: '🌐', label: 'Full Map',        sublabel: 'No fog',          tooltip: 'Full map visibility — every node and path revealed from the start' },
-            { pts: 700,  icon: '🎁', label: 'Free Box',        sublabel: 'Mystery Box',     tooltip: 'Mystery Box at the merchant is now FREE every visit' },
-            { pts: 800,  icon: '🎒', label: 'Slot #7',         sublabel: 'Per character',   tooltip: 'Each character gains a 7th item slot — equip even more powerful gear' },
-            { pts: 900,  icon: '🔥', label: 'Campfire 50%',   sublabel: 'HP restored',     tooltip: 'Campfire restores 50% HP instead of 30% — much more powerful mid-run recovery' },
-            { pts: 1000, icon: '💰', label: '+50% Gold',       sublabel: 'All sources',     tooltip: '+50% gold stacks — total +110% gold at this point' },
-            { pts: 1150, icon: '🃏', label: '4 Cards/Turn',   sublabel: 'Play limit',      tooltip: 'Play up to 4 cards per turn instead of 3 — stacks with Neural Link and other bonuses' },
-            { pts: 1300, icon: '⬆️', label: 'Dual Upgrade',   sublabel: 'At campfire',     tooltip: 'Campfire lets you upgrade TWO cards per rest — twice the deck power' },
-            { pts: 1450, icon: '💰', label: '+50% Gold',       sublabel: 'All sources',     tooltip: '+50% gold stacks again — total +160% gold at this point (2.6× multiplier)' },
-            { pts: 1600, icon: '⭐', label: 'Free Sig. Leg.', sublabel: 'Every run start', tooltip: 'Start every run with a random Signature Legendary already equipped on one of your clones' },
+            { pts: 50,   icon: '👁',  label: 'Fog +2',          sublabel: '2 rows visible',  tooltip: 'Map reveals 2 rows ahead of your current position' },
+            { pts: 100,  icon: '💰', label: '+10% Gold',        sublabel: 'All sources',      tooltip: 'All gold pickups and rewards increased by 10% (stacks with later bonuses)' },
+            { pts: 150,  icon: '👁',  label: 'Fog +4',          sublabel: '4 rows visible',  tooltip: 'Map reveals 4 rows ahead — see further to plan your path' },
+            { pts: 200,  icon: '🛒', label: '+Card Choice',     sublabel: 'Merchant',         tooltip: 'Merchant gains a 4th card for sale — more options each visit' },
+            { pts: 250,  icon: '✂',  label: 'Card Removal',    sublabel: 'At campfire',      tooltip: 'Campfire gains a "Remove Card" option — permanently cut a card from your deck' },
+            { pts: 300,  icon: '🃏', label: 'Draw +1 Card',    sublabel: 'Hand size 8',      tooltip: 'Draw 1 extra card at turn start — hand size increases from 7 to 8' },
+            { pts: 350,  icon: '🛒', label: '+Item Choice',     sublabel: 'Merchant',         tooltip: 'Merchant gains a 4th item (Legendary tier) for sale — more loot options' },
+            { pts: 400,  icon: '👁',  label: 'Fog +6',          sublabel: '6 rows visible',  tooltip: 'Map reveals 6 rows ahead — almost no surprises left' },
+            { pts: 450,  icon: '💰', label: '+20% Gold',        sublabel: 'All sources',      tooltip: '+20% gold stacks with +10% — total +30% at this point' },
+            { pts: 500,  icon: '🎁', label: 'Free Box (/3)',   sublabel: 'Every 3rd visit',  tooltip: 'Mystery Box at the merchant is FREE every 3rd merchant visit (visits 3, 6, 9…)' },
+            { pts: 600,  icon: '🌐', label: 'Full Map',         sublabel: 'No fog',           tooltip: 'Full map visibility — every node and path revealed from the start' },
+            { pts: 700,  icon: '💰', label: '+30% Gold',        sublabel: 'All sources',      tooltip: '+30% gold stacks — total +60% gold at this point' },
+            { pts: 800,  icon: '🎒', label: 'Slot #7',          sublabel: 'Per character',    tooltip: 'Each character gains a 7th item slot — equip even more powerful gear' },
+            { pts: 900,  icon: '🃏', label: 'Draw +1 Card',    sublabel: 'Hand size 9',      tooltip: 'Draw 1 more card at turn start — hand size increases from 8 to 9 (stacks with 300p perk)' },
+            { pts: 1000, icon: '💰', label: '+50% Gold',        sublabel: 'All sources',      tooltip: '+50% gold stacks — total +110% gold at this point' },
+            { pts: 1100, icon: '🔥', label: 'Campfire 50%',    sublabel: 'HP restored',      tooltip: 'Campfire restores 50% HP instead of 30% — much more powerful mid-run recovery' },
+            { pts: 1200, icon: '🃏', label: '4 Cards/Turn',    sublabel: 'Play limit',       tooltip: 'Play up to 4 cards per turn (base) — all card/turn bonuses stack on top of this' },
+            { pts: 1300, icon: '⬆️', label: 'Dual Upgrade',    sublabel: 'At campfire',      tooltip: 'Campfire lets you upgrade TWO cards per rest — twice the deck power' },
+            { pts: 1400, icon: '💰', label: '+50% Gold',        sublabel: 'All sources',      tooltip: '+50% gold stacks again — total +160% gold at this point (2.6× multiplier)' },
+            { pts: 1500, icon: '⭐', label: 'Free Sig. Leg.',  sublabel: 'Every run start',  tooltip: 'Start every run with a random Signature Legendary already equipped on one of your clones' },
           ];
           // Achievement-gated perks (sig legendaries)
-          const achPerks = ACHIEVEMENTS.filter(a => a.runPerk && a.runPerk.id !== 'char_teddy' && a.runPerk.id !== 'char_mansa' && !a.runPerk.id.startsWith('legacy_'));
-          const ROW1 = MILESTONES.slice(0, 9);  // 50p – 500p
-          const ROW2 = MILESTONES.slice(9);      // 600p – 1600p
+          const achPerks = ACHIEVEMENTS.filter(a => a.runPerk && !a.runPerk.id.startsWith('char_') && !a.runPerk.id.startsWith('legacy_'));
+          const ROW1 = MILESTONES.slice(0, 10);  // 50p – 500p
+          const ROW2 = MILESTONES.slice(10);      // 600p – 1500p
 
           const renderRow = (rowMilestones: typeof MILESTONES, rowLabel: string) => {
             const n = rowMilestones.length;
@@ -5211,7 +6728,7 @@ function AchievementsTab({
             <>
               {renderRow(ROW1, '50 — 500')}
               <div className="border-t border-white/5 mb-6" />
-              {renderRow(ROW2, '600 — 1600')}
+              {renderRow(ROW2, '600 — 1500')}
               {/* Achievement-gated perks (below track) */}
               {achPerks.length > 0 && (
                 <div className="mt-5 pt-4 border-t border-white/5 flex flex-col gap-2">
@@ -5252,6 +6769,7 @@ function AchievementsTab({
         {CATEGORIES.map(cat => {
           const catAchs = getAchievementsByCategory(cat);
           const catUnlocked = catAchs.filter(a => isUnlocked?.(a.id)).length;
+          const catNewCount = catAchs.filter(a => newAchievementIds?.has(a.id)).length;
           const isActive = activeCategory === cat;
           return (
             <button key={cat} onClick={() => setActiveCategory(cat)}
@@ -5265,6 +6783,21 @@ function AchievementsTab({
               {' '}<span style={{ color: isActive ? '#fbbf24' : '#475569', fontWeight: 800 }}>
                 {catUnlocked}/{catAchs.length}
               </span>
+              {catNewCount > 0 && (
+                <span
+                  className="inline-flex items-center justify-center rounded-full px-1.5 text-[9px] font-bold leading-[14px] min-w-[14px] h-[14px]"
+                  style={{
+                    background: 'rgba(34,211,238,0.18)',
+                    border: '1px solid rgba(34,211,238,0.75)',
+                    color: '#22d3ee',
+                    boxShadow: '0 0 6px rgba(34,211,238,0.45)',
+                    animation: 'anim-debuff-pulse 1.8s ease-in-out infinite',
+                    ['--debuff-color' as any]: '#22d3ee',
+                  }}
+                >
+                  ✦{catNewCount}
+                </span>
+              )}
             </button>
           );
         })}
@@ -5417,17 +6950,20 @@ function LoreTab({
   activeCat,
   isLoreNew,
   markLoreSeen,
+  devAllCharsUnlocked,
 }: {
   onFireEvent?: (eventKey: string, payload?: Record<string, unknown>) => void;
   isLoreUnlocked?: (id: string) => boolean;
   activeCat: LoreCategory;
   isLoreNew: (l: LoreEntry) => boolean;
   markLoreSeen: (id: string) => void;
+  devAllCharsUnlocked?: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [devLoreUnlocked, setDevLoreUnlocked] = useState(false);
   const { lang, t } = useT();
 
-  const isEntryUnlocked = (l: LoreEntry) => l.unlocked || (isLoreUnlocked?.(l.id) ?? false);
+  const isEntryUnlocked = (l: LoreEntry) => l.unlocked || (isLoreUnlocked?.(l.id) ?? false) || devLoreUnlocked;
 
   const handleOpen = (l: LoreEntry) => {
     if (!isEntryUnlocked(l)) return;
@@ -5441,6 +6977,25 @@ function LoreTab({
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 w-full">
+      {!entry && (
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={() => setDevLoreUnlocked(prev => !prev)}
+            style={{
+              fontSize:        '0.65rem',
+              fontFamily:      'monospace',
+              padding:         '0.2rem 0.55rem',
+              borderRadius:    '4px',
+              border:          devLoreUnlocked ? '1px solid #22d3ee' : '1px solid rgba(100,116,139,0.4)',
+              background:      devLoreUnlocked ? 'rgba(34,211,238,0.12)' : 'rgba(4,2,18,0.6)',
+              color:           devLoreUnlocked ? '#22d3ee' : '#64748b',
+              cursor:          'pointer',
+              letterSpacing:   '0.05em',
+            }}>
+            {devLoreUnlocked ? '🔓 Unlock All Lore (Dev) — ON' : '🔓 Unlock All Lore (Dev)'}
+          </button>
+        </div>
+      )}
       {entry ? (
         <div>
           <button onClick={() => setSelected(null)}
@@ -5667,6 +7222,17 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
                   : { border: 'border-sky-600/50', bg: 'bg-sky-950/30', badge: 'bg-sky-900/70 text-sky-300 border-sky-600/50', badgeLabel: t.archives.abilityKind.ability };
                 const upgrade = ab.kind !== 'passive' ? findUpgrade(char.id, ab.name) : null;
                 const upgKey = `${char.id}_${ab.name}`;
+                // In water mode, prefer the water-keyed upgrade description (e.g. sunsin_Ramming Speed).
+                // Some abilities share the base name in water form (e.g. Chongtong Barrage) — use `_water` suffix to disambiguate.
+                const waterUpgKey = isWater
+                  ? (ab.waterName && ab.waterName !== ab.name
+                      ? `${char.id}_${ab.waterName}`
+                      : `${upgKey}_water`)
+                  : null;
+                const upgDescKey = waterUpgKey && UPGRADE_DESCS[waterUpgKey] ? waterUpgKey : upgKey;
+                const upgradedDisplayName = isWater && ab.waterName
+                  ? `${ab.waterName}+`
+                  : (upgrade?.upgradedName ?? '');
                 const isShowingUpgrade = !!upgrade && !!showUpgraded[upgKey];
                 return (
                   <div key={ab.name} className={`flex gap-4 rounded-xl border p-4 transition-colors ${isShowingUpgrade ? 'border-emerald-500/50 bg-emerald-950/20' : `${kindStyle.border} ${kindStyle.bg}`}`}>
@@ -5674,7 +7240,7 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-orbitron font-bold text-sm" style={{ color: isShowingUpgrade ? '#34d399' : 'white' }}>
-                          {isShowingUpgrade ? upgrade!.upgradedName : abName}
+                          {isShowingUpgrade ? upgradedDisplayName : abName}
                         </span>
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${kindStyle.badge}`}>{kindStyle.badgeLabel}</span>
                         {isWater && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-sky-900/70 text-sky-300 border-sky-600/50">{t.archives.waterForm}</span>}
@@ -5701,7 +7267,7 @@ function DetailView({ char, onBack }: { char: CharacterEntry; onBack: () => void
                       {upgrade && <p className="text-[10px] text-slate-500 font-orbitron mb-1">{ab.cost}</p>}
                       <p className="text-slate-400 text-[12px] leading-relaxed">
                         {isShowingUpgrade
-                          ? (UPGRADE_DESCS[upgKey] ?? colorizeDesc(upgrade!.patch.description ?? (typeof displayDesc === 'string' ? displayDesc : '')))
+                          ? (UPGRADE_DESCS[upgDescKey] ?? colorizeDesc(upgrade!.patch.description ?? (typeof displayDesc === 'string' ? displayDesc : '')))
                           : displayDesc}
                       </p>
                     </div>

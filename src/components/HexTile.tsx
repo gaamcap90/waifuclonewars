@@ -272,8 +272,8 @@ function HexTile({
             className={cn(
               "fill-transparent transition-colors",
               tile.highlighted   && "stroke-gray-300 stroke-[1px]",
-              isTargetable       && "stroke-red-400 stroke-[2px] fill-red-500/20",
-              isValidMovement    && "stroke-green-400 stroke-[2px] fill-green-400/20",
+              isTargetable       && "stroke-red-400 stroke-[2px] fill-red-500/20 anim-tile-target-pulse",
+              isValidMovement    && "stroke-green-400 stroke-[2px] fill-green-400/20 anim-tile-move-pulse",
               isInAttackRange    && "stroke-red-400 stroke-[2px] fill-red-400/20",
               isInAbilityRange   && "stroke-orange-400 stroke-[2px] fill-orange-400/20",
               isRespawnTarget    && "stroke-blue-400 stroke-[2px] fill-blue-400/20",
@@ -292,22 +292,32 @@ function HexTile({
             />
           )}
 
-          {/* Active-turn animated ring — soft glow + spinning dashes */}
+          {/* Active-turn animated ring — pulsing glow + spinning dashes + team-colored inner halo */}
           {isActiveIcon && (
             <>
-              {/* Outer blurred glow */}
+              {/* Outer pulsing blurred glow */}
               <polygon
                 points={pts}
-                fill="rgba(250,210,0,0.07)"
-                stroke="rgba(250,210,0,0.45)"
-                strokeWidth={9}
-                style={{ filter: 'blur(3px)' }}
+                fill="rgba(250,210,0,0.10)"
+                stroke="rgba(250,210,0,0.55)"
+                strokeWidth={11}
+                style={{ filter: 'blur(4px)', animation: 'anim-active-glow-pulse 1.6s ease-in-out infinite' }}
               />
+              {/* Team-colored inner halo (subtle) */}
+              {playerColor && (
+                <polygon
+                  points={pts}
+                  fill="none"
+                  stroke={playerColor === "blue" ? "rgba(96,165,250,0.55)" : "rgba(248,113,113,0.55)"}
+                  strokeWidth={6}
+                  style={{ filter: 'blur(2px)', animation: 'anim-active-glow-pulse 1.6s ease-in-out infinite' }}
+                />
+              )}
               {/* Spinning dashed ring */}
               <polygon
                 points={pts}
                 fill="none"
-                stroke="rgba(250,210,0,0.92)"
+                stroke="rgba(250,210,0,0.95)"
                 strokeWidth={3}
                 strokeDasharray="10 5"
                 style={{ animation: 'anim-active-ring-dash 2.0s linear infinite' }}

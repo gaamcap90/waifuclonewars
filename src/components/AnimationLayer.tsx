@@ -29,13 +29,18 @@ function FloatingNumber({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: num
   const val = anim.value ?? 0;
   const isBig = isDamage && val >= 30;
   const isMassive = isDamage && val >= 50;
+  const isCrit = isDamage && val >= 80;
 
-  const text = isDamage ? `-${val}` : `+${val}`;
-  const color  = isDamage ? (isMassive ? '#ff9900' : '#ff4444') : '#44ff88';
+  const text = isDamage ? (isCrit ? `−${val}!` : `−${val}`) : `+${val}`;
+  const color  = isDamage
+    ? isCrit ? '#fde047' : isMassive ? '#ff9900' : '#ff4444'
+    : '#44ff88';
   const shadow = isDamage
-    ? isMassive
-      ? '0 0 18px rgba(255,140,0,1.0), 0 0 8px rgba(255,60,0,0.8), 2px 2px 4px #000'
-      : '0 0 12px rgba(255,60,60,0.95), 1px 1px 3px #000'
+    ? isCrit
+      ? '0 0 24px rgba(253,224,71,1.0), 0 0 12px rgba(255,200,0,0.95), 2px 2px 4px #000'
+      : isMassive
+        ? '0 0 18px rgba(255,140,0,1.0), 0 0 8px rgba(255,60,0,0.8), 2px 2px 4px #000'
+        : '0 0 12px rgba(255,60,60,0.95), 1px 1px 3px #000'
     : '0 0 10px rgba(50,255,100,0.9), 1px 1px 3px #000';
 
   const fontSize = isDamage
@@ -43,7 +48,8 @@ function FloatingNumber({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: num
     : val < 20  ? '1.25rem'
     : val < 35  ? '1.55rem'
     : val < 50  ? '1.95rem'
-    :             '2.4rem'
+    : val < 80  ? '2.4rem'
+    :             '2.8rem'
     : '1.05rem';
 
   // Deterministic horizontal jitter — numbers fan out instead of stacking
@@ -69,12 +75,14 @@ function FloatingNumber({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: num
         padding: isBig ? '2px 7px' : '1px 5px',
         borderRadius: '6px',
         background: isDamage
-          ? isMassive
-            ? 'rgba(40,12,0,0.82)'
-            : 'rgba(30,5,5,0.72)'
+          ? isCrit
+            ? 'rgba(60,40,0,0.85)'
+            : isMassive
+              ? 'rgba(40,12,0,0.82)'
+              : 'rgba(30,5,5,0.72)'
           : 'rgba(5,30,10,0.72)',
-        border: `1px solid ${color}55`,
-        boxShadow: isBig ? `0 0 14px ${color}60` : 'none',
+        border: `1px solid ${color}${isCrit ? 'aa' : '55'}`,
+        boxShadow: isCrit ? `0 0 22px ${color}90, 0 0 8px ${color}` : isBig ? `0 0 14px ${color}60` : 'none',
       }}>
         <span style={{
           color,
@@ -88,8 +96,25 @@ function FloatingNumber({ anim, ox, oy }: { anim: AnimEvent; ox: number; oy: num
         }}>
           {text}
         </span>
-        {/* "!!" badge for massive hits */}
-        {isMassive && (
+        {/* CRIT badge for huge hits */}
+        {isCrit && (
+          <span style={{
+            position: 'absolute',
+            top: '-10px', right: '-12px',
+            fontSize: '0.6rem',
+            fontWeight: 900,
+            color: '#fde047',
+            fontFamily: 'var(--font-orbitron, monospace)',
+            textShadow: '0 0 8px rgba(253,224,71,1.0)',
+            letterSpacing: '0.15em',
+            background: 'rgba(60,40,0,0.85)',
+            padding: '1px 4px',
+            borderRadius: '4px',
+            border: '1px solid #fde04788',
+          }}>CRIT</span>
+        )}
+        {/* "!!" badge for massive hits (non-crit) */}
+        {isMassive && !isCrit && (
           <span style={{
             position: 'absolute',
             top: '-8px', right: '-6px',

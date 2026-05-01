@@ -71,12 +71,10 @@ export function movementCostForTile(tile: HexTile, allowLake?: boolean): number 
   // River: shallow water — Sun-sin ignores the extra cost (her passive), everyone else pays 2
   if (tile.terrain.type === "river") return allowLake ? 1 : 2;
   // Slow terrain — costs 2 movement to enter
-  if (
-    tile.terrain.type === "snow" ||
-    tile.terrain.type === "mud"
-  ) return 2;
-  // Forest costs 1 movement (normal) but grants +40% DEF while standing in it
-  // All other passable terrain (plain, forest, ice, ash, ruins, spawn, etc.) costs 1
+  if (tile.terrain.type === "mud") return 2;
+  // Snow is normal movement (cost 1) but applies Blizzard (−10 Might/Power) via buffs.ts.
+  // Forest costs 1 movement (normal) and grants +20% DEF while standing in it.
+  // All other passable terrain (plain, snow, forest, ice, ash, ruins, spawn, etc.) costs 1.
   return 1;
 }
 

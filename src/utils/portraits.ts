@@ -14,6 +14,11 @@ const HERO_3D_BUSTS: Array<[string, string]> = [
   ["Picasso",     "/art/picasso_3d.png"],
   ["Teddy",       "/art/teddy_3d.png"],
   ["Mansa",       "/art/mansa_3d.png"],
+  ["Vel'thar",    "/art/velthar_3d.png"],
+  ["Musashi",     "/art/musashi_3d.png"],
+  ["Cleopatra",   "/art/cleopatra_3d.png"],
+  ["Tesla",       "/art/tesla_3d.png"],
+  ["Shaka",       "/art/shaka_3d.png"],
 ];
 
 // Hero 3D sprites — full body on pedestal, used on the game board
@@ -30,6 +35,11 @@ const HERO_SPRITES: Array<[string, string]> = [
   ["Picasso",     "/art/picasso_sprite.png"],
   ["Teddy",       "/art/teddy_sprite.png"],
   ["Mansa",       "/art/mansa_sprite.png"],
+  ["Vel'thar",    "/art/velthar_sprite.png"],
+  ["Musashi",     "/art/musashi_sprite.png"],
+  ["Cleopatra",   "/art/cleopatra_sprite.png"],
+  ["Tesla",       "/art/tesla_sprite.png"],
+  ["Shaka",       "/art/shaka_sprite.png"],
 ];
 
 // Hero portraits — 2D art, used in CharacterSelection, VictoryScreen, Archives
@@ -46,6 +56,11 @@ const HERO_PORTRAITS: Array<[string, string]> = [
   ["Picasso",     "/art/picasso_portrait.png"],
   ["Teddy",       "/art/teddy_portrait.png"],
   ["Mansa",       "/art/mansa_portrait.png"],
+  ["Vel'thar",    "/art/velthar_portrait.png"],
+  ["Musashi",     "/art/musashi_portrait.png"],
+  ["Cleopatra",   "/art/cleopatra_portrait.png"],
+  ["Tesla",       "/art/tesla_portrait.png"],
+  ["Shaka",       "/art/shaka_portrait.png"],
 ];
 
 // Summoned unit portraits

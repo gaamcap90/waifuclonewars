@@ -20,7 +20,9 @@ const TIER_COLOR: Record<string, string> = {
 
 const EXCLUSIVE_COLOR: Record<string, string> = {
   Napoleon: '#d946ef', Genghis: '#ef4444', 'Da Vinci': '#34d399', Leonidas: '#f59e0b',
-  'Sun-sin': '#06b6d4', Beethoven: '#8b5cf6', 'Huang-chan': '#b45309',
+  'Sun-sin': '#38bdf8', Beethoven: '#22d3ee', 'Huang-chan': '#b45309',
+  Nelson: '#3b82f6', Hannibal: '#dc2626', Picasso: '#8b5cf6', Teddy: '#d97706', Mansa: '#f59e0b',
+  "Vel'thar": '#7c3aed', Musashi: '#dc2626', Cleopatra: '#d97706', Tesla: '#facc15', Shaka: '#16a34a',
 };
 
 function ScreenWrapper({ children }: { children: React.ReactNode }) {
@@ -428,12 +430,13 @@ export function MerchantScreen({ runState, nodeId, purchasedCardDefs, onCardPurc
 
   const removalCost = 75 + (runState.cardRemovalsThisRun ?? 0) * 25;
 
-  // 3 random cards priced by rarity, stable on mount
+  // 3 random cards priced by rarity, stable on mount. Seed rotates per merchant visit so shops don't repeat.
   const shopCards = useMemo<{ card: CardReward; price: number }[]>(() => {
-    const rng = seededRng(runState.seed ^ 0xC0FFEE);
+    const nodeHash = (nodeId ?? '').split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
+    const rng = seededRng((runState.seed ^ 0xC0FFEE) ^ nodeHash);
     const runCharIds = runState.characters.map(c => c.id);
     const picks = pickCardRewards(runState.deckCardIds, rng, runCharIds, 'merchant', 1, hasMerchant4th ? 4 : 3);
-    const priceRng = seededRng(runState.seed ^ 0xABCDE);
+    const priceRng = seededRng((runState.seed ^ 0xABCDE) ^ nodeHash);
     const BASE_PRICE: Record<string, [number, number]> = {
       common:   [45,  70],
       uncommon: [80,  120],
@@ -452,13 +455,19 @@ export function MerchantScreen({ runState, nodeId, purchasedCardDefs, onCardPurc
     const deadIds = (runState.permanentlyDeadIds ?? []) as string[];
     const teamCharIds = runState.characters.filter(c => c.currentHp > 0).map(c => c.id);
     const tiers: string[] = hasMerchant4thItem ? ['common', 'uncommon', 'rare', 'legendary'] : ['common', 'uncommon', 'rare'];
-    return tiers.map(tier => {
+    const slots = tiers.map(tier => {
       let item = pickItemReward(tier as 'common' | 'uncommon' | 'rare' | 'legendary', rng, teamCharIds);
       for (let i = 0; i < 6 && item?.targetCharacter && deadIds.includes(item.targetCharacter); i++) {
         item = pickItemReward(tier as 'common' | 'uncommon' | 'rare' | 'legendary', rng, teamCharIds);
       }
       return { item, price: BUY_ITEM_PRICE[tier] ?? 190 };
     });
+    // Shuffle display order so legendary isn't always at slot 4 (stable per-visit via same rng).
+    for (let i = slots.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [slots[i], slots[j]] = [slots[j], slots[i]];
+    }
+    return slots;
   }, [hasMerchant4thItem]);
 
   const handleBuyCard = (cardId: string, price: number, defId: string) => {
@@ -1489,6 +1498,100 @@ function formatRunTime(startTime: number): string {
     : `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 }
 
+// ── RevivalShrineScreen ────────────────────────────────────────────────────────
+
+export interface RevivalShrineScreenProps {
+  runState: RunState;
+  onRevive: (charId: CharacterId) => void;
+  onLeave: () => void;
+}
+
+const REVIVAL_GOLD_COST = 200;
+
+export function RevivalShrineScreen({ runState, onRevive, onLeave }: RevivalShrineScreenProps) {
+  const { t } = useT();
+  const deadChars = runState.characters.filter(c => runState.permanentlyDeadIds.includes(c.id));
+  const survivors = runState.characters.filter(c => c.currentHp > 0);
+  const goldOk = (runState.gold ?? 0) >= REVIVAL_GOLD_COST;
+  const canRevive = deadChars.length > 0 && goldOk;
+
+  const survivorsWithItems = survivors.filter(c => c.items.some(i => i !== null));
+  const itemsLost = survivorsWithItems.length; // one random item per survivor with items
+
+  return (
+    <ScreenWrapper>
+      <div className="rounded-2xl p-8 max-w-3xl" style={PANEL_STYLE}>
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-3">⚱️</div>
+          <p className="font-orbitron text-[9px] tracking-[0.5em] text-purple-400/70 mb-2">{t.revivalShrine.label}</p>
+          <h1 className="font-orbitron font-black text-2xl text-white mb-3"
+            style={{ textShadow: '0 0 24px rgba(168,85,247,0.5)' }}>
+            {t.revivalShrine.title}
+          </h1>
+          <p className="text-slate-300 text-sm leading-relaxed max-w-lg mx-auto">{t.revivalShrine.flavor}</p>
+        </div>
+
+        {/* Cost summary */}
+        <div className="rounded-xl p-4 mb-6 text-center"
+          style={{ background: 'rgba(88,28,135,0.18)', border: '1px solid rgba(168,85,247,0.4)' }}>
+          <p className="font-orbitron text-[9px] tracking-[0.4em] text-purple-300 mb-2">{t.revivalShrine.priceLabel}</p>
+          <div className="flex items-center justify-center gap-6 text-sm">
+            <span className={goldOk ? 'text-amber-300 font-bold' : 'text-red-400 line-through'}>
+              💰 {REVIVAL_GOLD_COST} gold
+            </span>
+            <span className="text-slate-400">+</span>
+            <span className="text-slate-300">
+              {t.revivalShrine.itemCost.replace('{n}', String(itemsLost))}
+            </span>
+          </div>
+        </div>
+
+        {/* Dead character list — pick one to revive */}
+        {deadChars.length === 0 ? (
+          <div className="text-center text-slate-400 mb-6 italic">{t.revivalShrine.noDead}</div>
+        ) : (
+          <div>
+            <p className="font-orbitron text-[10px] tracking-[0.4em] text-slate-500 mb-3 text-center">{t.revivalShrine.pickToRevive}</p>
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {deadChars.map(char => (
+                <button
+                  key={char.id}
+                  onClick={() => canRevive && onRevive(char.id)}
+                  disabled={!canRevive}
+                  className="rounded-xl p-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:scale-105"
+                  style={{
+                    background: 'rgba(88,28,135,0.12)',
+                    border: '1px solid rgba(168,85,247,0.45)',
+                  }}>
+                  <img src={char.portrait} alt={char.displayName}
+                    className="w-16 h-16 rounded-full object-cover border-2 mx-auto mb-2"
+                    style={{ borderColor: '#a855f7', filter: 'grayscale(0.3) brightness(0.8)' }} />
+                  <div className="font-orbitron text-[12px] font-bold text-white text-center">{char.displayName.replace('-chan', '')}</div>
+                  <div className="font-orbitron text-[9px] text-purple-300 text-center mt-1">
+                    {t.revivalShrine.reviveAt.replace('{hp}', String(Math.max(1, Math.floor(char.maxHp * 0.5))))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="text-center">
+          <button onClick={onLeave}
+            className="font-orbitron font-bold px-8 py-3 rounded-xl text-xs tracking-widest transition-all hover:scale-105"
+            style={{
+              background: 'rgba(71,85,105,0.15)',
+              border: '1.5px solid rgba(148,163,184,0.4)',
+              color: '#cbd5e1',
+            }}>
+            {t.revivalShrine.leave}
+          </button>
+        </div>
+      </div>
+    </ScreenWrapper>
+  );
+}
+
 // ── RunDefeatScreen ────────────────────────────────────────────────────────────
 
 export interface RunDefeatScreenProps {
@@ -1499,6 +1602,7 @@ export interface RunDefeatScreenProps {
 export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps) {
   const { t } = useT();
   const rs = runState.runStats ?? { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 };
+  const cause = runState.lastDefeatCause;
   const stats = [
     { icon: '⏱️', value: formatRunTime(runState.runStartTime ?? Date.now()), label: t.runEnd.statTime },
     { icon: '🗺️', value: t.runEnd.actLabel.replace('{n}', String(runState.act)), label: t.runEnd.statReached },
@@ -1516,7 +1620,23 @@ export function RunDefeatScreen({ runState, onBackToMenu }: RunDefeatScreenProps
           style={{ color: '#ef4444', textShadow: '0 0 40px rgba(239,68,68,0.55)' }}>
           {t.runEnd.runOver}
         </h1>
-        <p className="text-slate-400 text-sm mb-8">{t.runEnd.clonesFallen}</p>
+        <p className="text-slate-400 text-sm mb-4">{t.runEnd.clonesFallen}</p>
+
+        {cause && (
+          <div className="mx-auto mb-6 rounded-xl px-5 py-3 text-left max-w-md"
+            style={{ background: 'rgba(127,29,29,0.25)', border: '1px solid rgba(239,68,68,0.4)' }}>
+            <div className="font-orbitron text-[9px] tracking-[0.35em] text-red-400/80 mb-1">FINAL BLOW</div>
+            <div className="text-[13px] text-slate-100">
+              <span className="font-bold" style={{ color: '#f87171' }}>{cause.killerName}</span>
+              <span className="text-slate-400"> used </span>
+              <span className="font-bold" style={{ color: '#fbbf24' }}>{cause.sourceName}</span>
+              <span className="text-slate-400"> on </span>
+              <span className="font-bold" style={{ color: '#60a5fa' }}>{cause.victimName}</span>
+              <span className="text-slate-400"> for </span>
+              <span className="font-bold" style={{ color: '#ef4444' }}>{cause.damage} dmg</span>
+            </div>
+          </div>
+        )}
 
         {/* Characters — all shown as fallen */}
         <div className="flex justify-center gap-5 mb-8">
@@ -1627,6 +1747,26 @@ export function RunVictoryScreen({ runState, onBackToMenu }: RunVictoryScreenPro
               </div>
             );
           })}
+        </div>
+
+        {/* Credits */}
+        <div
+          className="mb-6 mx-auto max-w-md rounded-xl p-4 border"
+          style={{
+            background: 'rgba(251,191,36,0.04)',
+            borderColor: 'rgba(251,191,36,0.18)',
+          }}
+        >
+          <div className="font-orbitron tracking-[0.3em] text-[10px] mb-2" style={{ color: 'rgba(251,191,36,0.7)' }}>
+            ⸻ CREDITS ⸻
+          </div>
+          <div className="text-slate-300 text-sm font-semibold mb-1">Guilherme Arten-Meyer</div>
+          <div className="text-slate-500 text-[11px] italic">
+            Design · Code · Art · Music · Writing
+          </div>
+          <div className="mt-3 pt-3 text-slate-400 text-[11px] leading-relaxed" style={{ borderTop: '1px solid rgba(251,191,36,0.12)' }}>
+            Thank you for playing.
+          </div>
         </div>
 
         <button

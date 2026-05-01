@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Card, Icon, GameState } from "@/types/game";
 import { calcEffectiveStats } from "@/combat/buffs";
@@ -21,6 +21,11 @@ function charColor(card: Card): { border: string; ribbon: string; glow: string }
   if (card.exclusiveTo.includes("Picasso"))  return { border: "border-violet-500",  ribbon: "bg-violet-900", glow: "shadow-violet-500/60" };
   if (card.exclusiveTo.includes("Teddy"))    return { border: "border-amber-600",   ribbon: "bg-amber-900",  glow: "shadow-amber-600/60" };
   if (card.exclusiveTo.includes("Mansa"))    return { border: "border-yellow-500",  ribbon: "bg-yellow-900", glow: "shadow-yellow-500/60" };
+  if (card.exclusiveTo.includes("Vel'thar"))  return { border: "border-fuchsia-500", ribbon: "bg-fuchsia-700", glow: "shadow-fuchsia-500/60" };
+  if (card.exclusiveTo.includes("Musashi"))   return { border: "border-rose-500",    ribbon: "bg-rose-700",    glow: "shadow-rose-500/60" };
+  if (card.exclusiveTo.includes("Cleopatra")) return { border: "border-orange-500",  ribbon: "bg-orange-700",  glow: "shadow-orange-500/60" };
+  if (card.exclusiveTo.includes("Tesla"))     return { border: "border-yellow-300",  ribbon: "bg-yellow-600",  glow: "shadow-yellow-300/60" };
+  if (card.exclusiveTo.includes("Shaka"))     return { border: "border-emerald-500", ribbon: "bg-emerald-700", glow: "shadow-emerald-500/60" };
   return { border: "border-gray-500", ribbon: "bg-gray-700", glow: "shadow-gray-400/30" };
 }
 
@@ -38,6 +43,11 @@ function charLabel(card: Card): string | null {
   if (card.exclusiveTo.includes("Picasso"))  return "Picasso";
   if (card.exclusiveTo.includes("Teddy"))    return "Teddy";
   if (card.exclusiveTo.includes("Mansa"))    return "Mansa";
+  if (card.exclusiveTo.includes("Vel'thar"))  return "Vel'thar";
+  if (card.exclusiveTo.includes("Musashi"))   return "Musashi";
+  if (card.exclusiveTo.includes("Cleopatra")) return "Cleopatra";
+  if (card.exclusiveTo.includes("Tesla"))     return "Tesla";
+  if (card.exclusiveTo.includes("Shaka"))     return "Shaka";
   return null;
 }
 
@@ -146,8 +156,9 @@ function effectLabel(card: Card, executor: Icon | null, gameState?: GameState): 
   }
   if (e.damageType === 'atk') {
     if (executor && gameState) {
+      // calcEffectiveStats already folds cardBuffAtk into might — don't double-add it.
       const eff = calcEffectiveStats(gameState, executor);
-      const might = eff.might + (executor.cardBuffAtk ?? 0);
+      const might = eff.might;
       if (e.mightMult !== undefined) {
         const atk = Math.floor(might * e.mightMult);
         return atk > 0 ? ef.mightDmg.replace('{n}', String(atk)) : ef.mightAtk;
@@ -290,17 +301,30 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
   const overchargeActive = overchargePlayerId !== undefined && overchargePlayerId === executor?.playerId && !card.effect.overcharge;
   const playable = !isExhausted && canPlay(card, executor, globalMana, overchargeActive);
   const cardRef = useRef<HTMLButtonElement>(null);
-  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!cardRef.current || !playable) return;
-    const rect = cardRef.current.getBoundingClientRect();
+    const el = cardRef.current;
+    if (!el || !playable) return;
+    const rect = el.getBoundingClientRect();
     const dx = (e.clientX - (rect.left + rect.width / 2))  / (rect.width  / 2);
     const dy = (e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2);
-    setTilt({ rx: -dy * 12, ry: dx * 16 });
+    const rx = -dy * 12;
+    const ry = dx * 16;
+    // Apply transform directly to DOM — bypasses React re-render per mousemove
+    el.style.transform = `perspective(400px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-12px) scale(1.12)`;
+    el.style.transition = 'transform 0.07s linear';
+    if (!isHovered) setIsHovered(true);
   };
 
-  const handleCardMouseLeave = () => setTilt({ rx: 0, ry: 0 });
+  const handleCardMouseLeave = () => {
+    const el = cardRef.current;
+    if (el) {
+      el.style.transform = '';
+      el.style.transition = 'transform 0.25s ease-out, box-shadow 0.25s ease-out';
+    }
+    setIsHovered(false);
+  };
   const isUltimate = card.type === "ultimate";
   const isCurse = card.definitionId.startsWith('curse_');
   const colors = isCurse
@@ -328,23 +352,15 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
 
   const art = cardArtSrc(card);
 
-  // Character color as raw hex for inline glow effects
-  const glowHex = isCurse ? '#991b1b'
-    : isUltimate ? '#ca8a04'
-    : !label ? '#4b5563'
-    : label === 'Napoleon' ? '#7c3aed'
-    : label === 'Genghis'  ? '#b91c1c'
-    : label === 'Da Vinci' ? '#15803d'
-    : label === 'Leonidas' ? '#b45309'
-    : label === 'Sun-sin'  ? '#0e7490'
-    : label === 'Beethoven'? '#6d28d9'
-    : label === 'Huang'    ? '#c2410c'
-    : label === 'Nelson'   ? '#1d4ed8'
-    : label === 'Hannibal' ? '#991b1b'
-    : label === 'Picasso'  ? '#6d28d9'
-    : label === 'Teddy'    ? '#b45309'
-    : label === 'Mansa'    ? '#a16207'
-    : '#4b5563';
+  const CHAR_GLOW: Record<string, string> = {
+    Napoleon: '#7c3aed', Genghis:  '#b91c1c', 'Da Vinci': '#15803d',
+    Leonidas: '#b45309', 'Sun-sin': '#0e7490', Beethoven: '#6d28d9',
+    Huang:    '#c2410c', Nelson:   '#1d4ed8', Hannibal:  '#991b1b',
+    Picasso:  '#6d28d9', Teddy:    '#b45309', Mansa:     '#a16207',
+    "Vel'thar": '#a21caf', Musashi: '#be123c', Cleopatra: '#c2410c',
+    Tesla:     '#ca8a04', Shaka:   '#047857',
+  };
+  const glowHex = isCurse ? '#991b1b' : isUltimate ? '#ca8a04' : (label ? (CHAR_GLOW[label] ?? '#4b5563') : '#4b5563');
 
   return (
     <button
@@ -364,7 +380,7 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
         !playable
           ? "opacity-40 cursor-not-allowed grayscale"
           : "cursor-pointer hover:z-10",
-        playable && !isSelected && !isCurse && tilt.rx === 0 && tilt.ry === 0 ? "card-glow-pulse" : "",
+        playable && !isSelected && !isCurse && !isHovered ? "card-glow-pulse" : "",
       ].join(" ")}
       style={{
         background: isCurse
@@ -378,15 +394,9 @@ const CardTile: React.FC<CardTileProps & { globalMana: number }> = ({ card, exec
             : '0 0 0 1px #7f1d1d66, 0 0 10px #7f1d1d44, 0 2px 8px rgba(0,0,0,0.6)'
           : isSelected
           ? `0 0 0 1px ${glowHex}99, 0 0 18px ${glowHex}66, 0 8px 24px rgba(0,0,0,0.7)`
-          : playable && (tilt.rx !== 0 || tilt.ry !== 0)
+          : playable && isHovered
           ? `0 0 0 1px ${glowHex}55, 0 0 22px ${glowHex}44, 0 12px 28px rgba(0,0,0,0.7)`
-          : playable
-          ? undefined
           : undefined,
-        transform: (tilt.rx !== 0 || tilt.ry !== 0)
-          ? `perspective(400px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translateY(-12px) scale(1.12)`
-          : undefined,
-        transition: (tilt.rx === 0 && tilt.ry === 0) ? 'transform 0.25s ease-out, box-shadow 0.25s ease-out' : 'transform 0.07s linear',
       }}
     >
       {/* Curse stripe overlay — diagonal warning pattern */}
@@ -556,10 +566,15 @@ const CardHand: React.FC<CardHandProps> = ({
 
   const selectedCard = cards.find((c) => c.id === selectedCardId) ?? null;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const scroll = useCallback((dir: -1 | 1) => {
-    scrollRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' });
-  }, []);
-  const SCROLL_THRESHOLD = 8;
+  const [hoveredCardIdx, setHoveredCardIdx] = useState<number | null>(null);
+
+  // STS-style compression: cards compress to fit when hand grows beyond 8
+  const CARD_W = 80;   // w-20 in px
+  const NORMAL_STEP = 84; // card width + 4px gap
+  const MAX_NORMAL = 8;
+  const n = cards.length;
+  const step = n > MAX_NORMAL ? (MAX_NORMAL * NORMAL_STEP) / n : NORMAL_STEP;
+  const marginRight = step - CARD_W; // negative = overlap
 
   const handleCardClick = (card: Card) => {
     const overchargeId = (gameState as any)?.overchargePlayerId;
@@ -588,19 +603,15 @@ const CardHand: React.FC<CardHandProps> = ({
           <span className="text-[9px] text-gray-500">{t.game.hud.discardLabel}</span>
         </button>
 
-        {/* Cards */}
-        {cards.length > SCROLL_THRESHOLD && (
-          <button
-            onClick={() => scroll(-1)}
-            className="flex-shrink-0 w-7 h-10 rounded-lg bg-gray-800/80 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition-colors flex items-center justify-center text-sm font-bold"
-          >‹</button>
-        )}
+        {/* Cards — STS-style compression: overlap increases as hand grows beyond 8 */}
         <div
           ref={scrollRef}
-          className={`flex items-end gap-1 ${cards.length > SCROLL_THRESHOLD ? 'overflow-x-hidden' : ''}`}
-          style={cards.length > SCROLL_THRESHOLD ? { maxWidth: `${SCROLL_THRESHOLD * 84}px` } : undefined}
+          data-onboard="hand"
+          className="flex items-end"
+          style={{ gap: 0 }}
         >
-          {cards.map((card) => {
+          {cards.map((card, idx) => {
+            const isLast = idx === n - 1;
             const drawDelay = newCardDelays.get(card.id);
             const isNewCard = drawDelay !== undefined;
             return (
@@ -609,10 +620,14 @@ const CardHand: React.FC<CardHandProps> = ({
               data-card-def={card.definitionId}
               className={`relative${isNewCard ? ' card-draw-in' : ''}`}
               style={{
+                marginRight: isLast ? 0 : `${marginRight}px`,
+                zIndex: hoveredCardIdx === idx ? 100 : n - idx,
+                transition: 'margin-right 0.3s ease',
                 ...(isNewCard ? { animationDelay: `${drawDelay}ms`, animationFillMode: 'both' as const } : {}),
                 ...(flyingCardId === card.id ? { animation: 'anim-card-flyout 0.42s ease-in forwards', pointerEvents: 'none' as const } : {}),
               }}
               onMouseEnter={(e) => {
+                setHoveredCardIdx(idx);
                 onCardHover?.(card.manaCost ?? 0);
                 // For exclusive cards, use that character as the range-preview executor (not the currently selected character)
                 const cardOwner = card.exclusiveTo
@@ -640,6 +655,7 @@ const CardHand: React.FC<CardHandProps> = ({
                 setTooltip({ card, rect: e.currentTarget.getBoundingClientRect() });
               }}
               onMouseLeave={() => {
+                setHoveredCardIdx(null);
                 onCardHover?.(null);
                 onCardHoverRange?.(null);
                 onCardHoverExecutorId?.(null);
@@ -659,12 +675,6 @@ const CardHand: React.FC<CardHandProps> = ({
             );
           })}
         </div>
-        {cards.length > SCROLL_THRESHOLD && (
-          <button
-            onClick={() => scroll(1)}
-            className="flex-shrink-0 w-7 h-10 rounded-lg bg-gray-800/80 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 transition-colors flex items-center justify-center text-sm font-bold"
-          >›</button>
-        )}
 
         {/* Draw pile */}
         <button

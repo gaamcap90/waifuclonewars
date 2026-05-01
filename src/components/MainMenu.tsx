@@ -11,6 +11,8 @@ interface MainMenuProps {
   onContinueRun?: () => void;
   hasSavedRun?: boolean;
   newUnlockCount?: number;
+  newAchievementOnlyCount?: number;
+  newLoreCount?: number;
   achievementPoints?: number;
 }
 
@@ -27,7 +29,7 @@ interface NavItem {
 const PRIMARY_ACCENT = "#f59e0b";
 const CONTINUE_ACCENT = "#a855f7";
 
-export default function MainMenu({ onStartGame, onArchives, onAchievements, onSettings, onContinueRun, hasSavedRun, newUnlockCount, achievementPoints = 0 }: MainMenuProps) {
+export default function MainMenu({ onStartGame, onArchives, onAchievements, onSettings, onContinueRun, hasSavedRun, newUnlockCount, newAchievementOnlyCount, newLoreCount, achievementPoints = 0 }: MainMenuProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const { t } = useT();
 
@@ -298,7 +300,7 @@ export default function MainMenu({ onStartGame, onArchives, onAchievements, onSe
                       {achievementPoints} pts
                     </span>
                   )}
-                  {item.id === 'achieve' && !!newUnlockCount && newUnlockCount > 0 && (
+                  {item.id === 'achieve' && !!newAchievementOnlyCount && newAchievementOnlyCount > 0 && (
                     <span
                       className="font-orbitron font-black text-[10px] shrink-0 w-5 h-5 flex items-center justify-center rounded-full animate-pulse"
                       style={{
@@ -306,11 +308,26 @@ export default function MainMenu({ onStartGame, onArchives, onAchievements, onSe
                         color: '#060316',
                         boxShadow: '0 0 8px rgba(34,211,238,0.65)',
                         minWidth: '1.25rem',
-                        padding: newUnlockCount > 9 ? '0 4px' : undefined,
-                        borderRadius: newUnlockCount > 9 ? '9999px' : '50%',
+                        padding: newAchievementOnlyCount > 9 ? '0 4px' : undefined,
+                        borderRadius: newAchievementOnlyCount > 9 ? '9999px' : '50%',
                       }}
                     >
-                      {newUnlockCount > 99 ? '99+' : newUnlockCount}
+                      {newAchievementOnlyCount > 99 ? '99+' : newAchievementOnlyCount}
+                    </span>
+                  )}
+                  {item.id === 'arch' && !!newLoreCount && newLoreCount > 0 && (
+                    <span
+                      className="font-orbitron font-black text-[10px] shrink-0 w-5 h-5 flex items-center justify-center rounded-full animate-pulse"
+                      style={{
+                        background: '#22d3ee',
+                        color: '#060316',
+                        boxShadow: '0 0 8px rgba(34,211,238,0.65)',
+                        minWidth: '1.25rem',
+                        padding: newLoreCount > 9 ? '0 4px' : undefined,
+                        borderRadius: newLoreCount > 9 ? '9999px' : '50%',
+                      }}
+                    >
+                      {newLoreCount > 99 ? '99+' : newLoreCount}
                     </span>
                   )}
                 </button>

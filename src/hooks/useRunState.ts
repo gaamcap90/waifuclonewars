@@ -10,20 +10,38 @@ import {
 } from "@/data/roguelikeData";
 import { TUTORIAL_MAP } from "@/data/tutorialData";
 import { seededRng } from "@/utils/rng";
+import { SaveStorage } from "@/utils/saveStorage";
 
 const LS_RUN_KEY = 'wcw_active_run_v1';
 
+// Schema version — bump when RunState shape changes in a breaking way.
+// v1 = initial envelope format. Pre-envelope saves are treated as v0 and migrated here.
+const CURRENT_SAVE_VERSION = 1;
+
+const runSaveStorage = new SaveStorage<RunState>({
+  key: LS_RUN_KEY,
+  currentVersion: CURRENT_SAVE_VERSION,
+  migrations: {
+    // v0 → v1: backfill fields that may be missing from pre-envelope saves.
+    0: (old: unknown) => {
+      const state = old as RunState;
+      if (state.permanentManaBonus === undefined) {
+        state.permanentManaBonus = Math.max(0, state.act - 1);
+      }
+      if (state.permanentCardBonus === undefined) state.permanentCardBonus = 0;
+      if (state.merchantVisitCount === undefined) state.merchantVisitCount = 0;
+      if (state.veteransFuryActive === undefined) state.veteransFuryActive = false;
+      return state;
+    },
+  },
+  onError: (err, ctx) => {
+    // eslint-disable-next-line no-console
+    console.warn(`[wcw save] ${ctx}:`, err.message);
+  },
+});
+
 function loadSavedRun(): RunState | null {
-  try {
-    const raw = localStorage.getItem(LS_RUN_KEY);
-    if (!raw) return null;
-    const state = JSON.parse(raw) as RunState;
-    // Migrate saves that predate permanentManaBonus: derive from act (act N means N-1 bosses cleared)
-    if (state.permanentManaBonus === undefined) {
-      state.permanentManaBonus = Math.max(0, state.act - 1);
-    }
-    return state;
-  } catch { return null; }
+  return runSaveStorage.load();
 }
 
 function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
@@ -61,8 +79,10 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
     }
   }
 
+  const startingGold = 50 + (runPerksRaw.includes('emperors_coffers') ? 150 : 0);
+
   return {
-    seed, act: 1, gold: 50,
+    seed, act: 1, gold: startingGold,
     currentNodeId: null,
     completedNodeIds: [],
     unlockedNodeIds: row0Ids,
@@ -76,18 +96,24 @@ function makeInitialRunState(seed: number, selectedIds: string[]): RunState {
     signatureLegendaryCharIds: [],
     runStats: { enemiesKilled: 0, itemsObtained: 0, cardsObtained: 0 },
     runStartTime: Date.now(),
+    permanentManaBonus: 0,
+    permanentCardBonus: 0,
+    merchantVisitCount: 0,
+    veteransFuryActive: false,
   };
 }
 
 export function useRunState() {
   const [runState, setRunState] = useState<RunState | null>(() => loadSavedRun());
 
-  // Auto-persist every non-tutorial run to localStorage
+  // Auto-persist every non-tutorial run via SaveStorage (versioned + backup slot).
+  // Rotates prior save into backup BEFORE overwriting primary, so a mid-write
+  // crash leaves the previous run recoverable.
   useEffect(() => {
     if (runState && !runState.isTutorialRun) {
-      localStorage.setItem(LS_RUN_KEY, JSON.stringify(runState));
+      runSaveStorage.save(runState);
     } else if (!runState) {
-      localStorage.removeItem(LS_RUN_KEY);
+      runSaveStorage.clear();
     }
   }, [runState]);
 
@@ -126,7 +152,7 @@ export function useRunState() {
   }, []);
 
   const abandonRun = useCallback(() => {
-    localStorage.removeItem(LS_RUN_KEY);
+    runSaveStorage.clear();
     setRunState(null);
   }, []);
 
@@ -142,7 +168,13 @@ export function useRunState() {
         const sibling = prev.map.find(n => n.id === uid);
         return sibling?.row !== node.row;
       });
-      return { ...prev, currentNodeId: nodeId, unlockedNodeIds: newUnlocked };
+      const isMerchant = node?.type === 'merchant';
+      return {
+        ...prev,
+        currentNodeId: nodeId,
+        unlockedNodeIds: newUnlocked,
+        merchantVisitCount: isMerchant ? (prev.merchantVisitCount ?? 0) + 1 : (prev.merchantVisitCount ?? 0),
+      };
     });
   }, []);
 
@@ -234,11 +266,17 @@ export function useRunState() {
           const deathItemSlots = (JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]).includes('inv_slot_7') ? 7 : 6;
           return { ...c, currentHp: 0, items: Array(deathItemSlots).fill(null), passiveStacks: undefined };
         }
-        // Bloodlust stacks always carry at 50% (floor) — lose half between fights, keep momentum
+        // Bloodlust stacks: only persist between fights if Genghis has Eternal Hunger (genghis_bloodlust_persist tag). Otherwise reset to 0.
         const endStacks = c.id === 'genghis' ? (result.finalPassiveStacks?.[c.id] ?? 0) : 0;
-        const persistedStacks = endStacks > 0 ? Math.floor(endStacks / 2) : undefined;
+        const hasPersistItem = (c.items ?? []).some(i => i?.passiveTag === 'genghis_bloodlust_persist');
+        const persistedStacks = endStacks > 0 && hasPersistItem ? endStacks : undefined;
         return { ...c, currentHp: newHp, passiveStacks: persistedStacks };
       });
+
+      const furyTriggered = newDeadIds.length > 0;
+      const runPerksForFury = new Set<string>(JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]);
+      const veteransFuryActive = (prev.veteransFuryActive ?? false) ||
+        (furyTriggered && runPerksForFury.has('veterans_fury'));
 
       return {
         ...prev,
@@ -249,6 +287,9 @@ export function useRunState() {
         pendingRewards: pending,
         permanentlyDeadIds: [...prev.permanentlyDeadIds, ...newDeadIds] as any,
         battleCount: prev.battleCount + 1,
+        veteransFuryActive,
+        // Preserve defeat cause for the RunDefeatScreen (only set on a loss)
+        lastDefeatCause: !result.won && result.defeatCause ? result.defeatCause : prev.lastDefeatCause,
         runStats: {
           ...prev.runStats,
           enemiesKilled: (prev.runStats?.enemiesKilled ?? 0) + (result.enemiesKilled ?? 0),
@@ -275,6 +316,11 @@ export function useRunState() {
       const newDeck = chosenCardId
         ? [...prev.deckCardIds, chosenCardId]
         : prev.deckCardIds;
+
+      // If the chosen card definition was already upgraded, mark the new copy upgraded too
+      const newUpgraded = chosenCardId && prev.upgradedCardDefIds.includes(chosenCardId)
+        ? [...prev.upgradedCardDefIds, chosenCardId]
+        : prev.upgradedCardDefIds;
 
       // Apply XP and check level ups (only if rewards exist; dead characters don't gain XP)
       const killBlows = r?.killBlowsByName ?? {};
@@ -318,9 +364,8 @@ export function useRunState() {
       const bossJustCompleted = prev.map.some(n => n.type === 'boss' && (prev.completedNodeIds.includes(n.id) || n.id === pendingCompletedId));
       if (bossJustCompleted && prev.act < 4) {
         const newAct = (prev.act + 1) as 1 | 2 | 3 | 4;
-        const newMap = generateActMap(prev.seed + newAct * 12345, newAct);
+        const newMap = generateActMap(prev.seed + newAct * 12345, newAct, { allowRevivalShrine: !prev.revivalShrineUsed });
         const newRow0Ids = newMap.filter(n => n.row === 0).map(n => n.id);
-        const newManaBonus = (prev.permanentManaBonus ?? 0) + 1;
         return {
           ...prev,
           act: newAct,
@@ -329,10 +374,10 @@ export function useRunState() {
           unlockedNodeIds: newRow0Ids,
           gold: newGold,
           deckCardIds: newDeck,
+          upgradedCardDefIds: newUpgraded,
           characters: charsWithItem,
           pendingRewards: null,
-          permanentManaBonus: newManaBonus,
-          pendingActBonusNotice: newManaBonus,
+          pendingActBonusChoice: true,
         };
       }
 
@@ -350,6 +395,7 @@ export function useRunState() {
         ...prev,
         gold: newGold,
         deckCardIds: newDeck,
+        upgradedCardDefIds: newUpgraded,
         characters: charsWithItem,
         unlockedNodeIds: newUnlocked,
         pendingRewards: null,
@@ -634,6 +680,57 @@ export function useRunState() {
     setRunState(prev => prev ? { ...prev, pendingActBonusNotice: undefined } : prev);
   }, []);
 
+  const makeActBonusChoice = useCallback((choice: 'mana' | 'card') => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      if (choice === 'mana') {
+        const newManaBonus = (prev.permanentManaBonus ?? 0) + 1;
+        return { ...prev, permanentManaBonus: newManaBonus, pendingActBonusChoice: false, pendingActBonusNotice: newManaBonus };
+      } else {
+        return { ...prev, permanentCardBonus: (prev.permanentCardBonus ?? 0) + 1, pendingActBonusChoice: false };
+      }
+    });
+  }, []);
+
+  // Revival Shrine: revive one permanently dead character at 50% HP, no items.
+  // Cost: 200 gold + one random item from each surviving character.
+  const reviveCharacter = useCallback((reviveCharId: CharacterId) => {
+    setRunState(prev => {
+      if (!prev) return prev;
+      if ((prev.gold ?? 0) < 200) return prev;
+      if (!prev.permanentlyDeadIds.includes(reviveCharId)) return prev;
+      if (prev.revivalShrineUsed) return prev;
+
+      // Pick a random item slot to clear from each surviving (alive, non-revived) character
+      const newCharacters = prev.characters.map(c => {
+        if (c.id === reviveCharId) {
+          // Revive: 50% HP, items already empty (cleared on death). All slots null.
+          const itemSlots = c.items.length;
+          const halfHp = Math.max(1, Math.floor(c.maxHp * 0.5));
+          return { ...c, currentHp: halfHp, items: Array(itemSlots).fill(null) };
+        }
+        if (c.currentHp <= 0) return c; // also dead — leave alone
+        // Surviving: strip one random equipped item
+        const equippedSlots = c.items
+          .map((item, idx) => ({ item, idx }))
+          .filter(s => s.item !== null);
+        if (equippedSlots.length === 0) return c;
+        const stripIdx = equippedSlots[Math.floor(Math.random() * equippedSlots.length)].idx;
+        const newItems = [...c.items];
+        newItems[stripIdx] = null;
+        return { ...c, items: newItems };
+      });
+
+      return {
+        ...prev,
+        characters: newCharacters,
+        gold: prev.gold - 200,
+        permanentlyDeadIds: prev.permanentlyDeadIds.filter(id => id !== reviveCharId),
+        revivalShrineUsed: true,
+      };
+    });
+  }, []);
+
   const hasSavedRun = runState !== null && !runState.isTutorialRun;
 
   return {
@@ -662,5 +759,7 @@ export function useRunState() {
     removeItemFromCharacter,
     grantSignatureLegendary,
     clearActBonusNotice,
+    makeActBonusChoice,
+    reviveCharacter,
   };
 }

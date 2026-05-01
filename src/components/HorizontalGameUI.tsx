@@ -50,7 +50,7 @@ interface HorizontalGameUIProps {
   onEnemyAbilityHoverRange?: (val: { iconId: string; range: number } | null) => void;
   runStartTime?: number;
   timerPaused?: boolean;
-  hasDraw4Perk?: boolean;
+  extraCardsPerTurn?: number;
 }
 
 const HorizontalGameUI = ({
@@ -68,7 +68,7 @@ const HorizontalGameUI = ({
   onEnemyAbilityHoverRange,
   runStartTime,
   timerPaused,
-  hasDraw4Perk,
+  extraCardsPerTurn,
 }: HorizontalGameUIProps) => {
   const [selectedCharacter, setSelectedCharacter] = useState<{ id: string; position: { x: number; y: number } } | null>(null);
   const [hoveredCardCost, setHoveredCardCost] = useState<number | null>(null);
@@ -160,6 +160,12 @@ const HorizontalGameUI = ({
     const extState = gameState as any;
     const mana: number = extState.globalMana?.[pid] ?? 0;
     const maxMana: number = extState.globalMaxMana?.[pid] ?? 5;
+    // Detect: it's THIS player's turn, they have cards in hand that cost more than current mana,
+    // and they have at least 1 card they can't afford. Pulses the mana pool to signal the bottleneck.
+    const hand = extState.hands?.[pid];
+    const isActiveTurn = extState.activePlayerId === pid;
+    const hasUnaffordableCard = isActiveTurn && Array.isArray(hand?.cards)
+      && hand.cards.some((c: any) => (c?.manaCost ?? 0) > mana && (c?.manaCost ?? 0) > 0);
     return (
       <div data-tut="mana_display" className="space-y-1">
         <div className="flex items-center justify-between">
@@ -168,7 +174,8 @@ const HorizontalGameUI = ({
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(maxMana, 5)}, 1fr)`, gap: 3 }}>
           {Array.from({ length: maxMana }).map((_, i) => (
-            <div key={i} className="h-1.5 rounded-full transition-colors"
+            <div key={i}
+              className={`h-1.5 rounded-full transition-colors ${i < mana && hasUnaffordableCard ? 'mana-pulse' : ''}`}
               style={{
                 background: i < mana ? "#60a5fa" : "rgba(255,255,255,0.08)",
                 boxShadow: i < mana ? "0 0 4px rgba(96,165,250,0.55)" : "none",
@@ -203,6 +210,8 @@ const HorizontalGameUI = ({
     const eff = calcEffectiveStats(gameState, icon);
     const borderHex = teamColor === "blue" ? "#3b82f6" : "#ef4444";
     const bgFill = teamColor === "blue" ? "rgba(37,99,235,0.9)" : "rgba(185,28,28,0.9)";
+    // "Acted" — has used their card-this-turn allowance. Only meaningful for the player team.
+    const hasActed = icon.playerId === 0 && icon.isAlive && !!icon.cardUsedThisTurn;
 
 
     const passiveDesc = (() => {
@@ -217,6 +226,11 @@ const HorizontalGameUI = ({
       if (icon.name.includes("Picasso"))    return t.characters.picasso.passive.desc;
       if (icon.name.includes("Teddy"))      return t.characters.teddy.passive.desc;
       if (icon.name.includes("Mansa"))      return t.characters.mansa.passive.desc;
+      if (icon.name.includes("Vel'thar"))   return t.characters.velthar.passive.desc;
+      if (icon.name.includes("Musashi"))    return t.characters.musashi.passive.desc;
+      if (icon.name.includes("Cleopatra"))  return t.characters.cleopatra.passive.desc;
+      if (icon.name.includes("Tesla"))      return t.characters.tesla.passive.desc;
+      if (icon.name.includes("Shaka"))      return t.characters.shaka.passive.desc;
       if (icon.name === "Combat Drone")     return t.game.hud.combatDronePassive;
       if (icon.name === "Terracotta Archer" || icon.name === "Terracotta Warrior" || icon.name === "Terracotta Cavalry") return t.game.hud.terracottaPassive;
       if (icon.name.includes("Sun-sin")) {
@@ -249,14 +263,15 @@ const HorizontalGameUI = ({
             const rect = e.currentTarget.getBoundingClientRect();
             setSelectedCharacter({ id: icon.id, position: { x: rect.left + rect.width / 2, y: rect.bottom } });
           }}
-          className="w-9 h-9 rounded-full overflow-hidden shrink-0 transition-all"
+          className="w-9 h-9 rounded-full overflow-hidden shrink-0 transition-all relative"
           style={{
             border: `2px solid ${isSelected ? "rgba(250,180,0,0.70)" : borderHex + "77"}`,
             boxShadow: isSelected ? "0 0 8px rgba(250,180,0,0.40)" : "none",
             cursor: icon.isAlive ? "pointer" : "default",
-            filter: !icon.isAlive ? "grayscale(1)" : icon.terracottaControlled ? "sepia(0.8) saturate(0.6) hue-rotate(10deg)" : "none",
+            filter: !icon.isAlive ? "grayscale(1)" : icon.terracottaControlled ? "sepia(0.8) saturate(0.6) hue-rotate(10deg)" : hasActed ? "grayscale(0.6) brightness(0.75)" : "none",
+            opacity: hasActed ? 0.78 : 1,
           }}
-          title={`${icon.name} — click for details`}
+          title={hasActed ? `${icon.name} — already played this turn` : `${icon.name} — click for details`}
         >
           {portrait ? (
             <img
@@ -269,6 +284,20 @@ const HorizontalGameUI = ({
             <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
               style={{ background: bgFill }}>
               {icon.name === "Combat Drone" ? "⚙" : icon.name.charAt(0)}
+            </div>
+          )}
+          {/* "Acted" check overlay */}
+          {hasActed && (
+            <div
+              className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center pointer-events-none"
+              style={{
+                background: "rgba(15,15,20,0.92)",
+                border: "1.5px solid rgba(110,231,183,0.85)",
+                boxShadow: "0 0 6px rgba(52,211,153,0.4)",
+              }}
+              title={t.game.hud.acted ?? "Acted this turn"}
+            >
+              <span style={{ color: "#6ee7b7", fontSize: 9, lineHeight: 1, fontWeight: 700 }}>✓</span>
             </div>
           )}
         </button>
@@ -317,10 +346,32 @@ const HorizontalGameUI = ({
               pills.push(<span key="atk" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-orange-900/70 border-orange-600/60 text-orange-200">⚔+{icon.cardBuffAtk}</span>);
             if ((icon.cardBuffDef ?? 0) > 0)
               pills.push(<span key="def" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-blue-900/70 border-blue-600/60 text-blue-200">🛡+{icon.cardBuffDef}</span>);
+            if ((icon.cardBuffPow ?? 0) > 0)
+              pills.push(<span key="pow" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-purple-900/70 border-purple-600/60 text-purple-200">✨+{icon.cardBuffPow}</span>);
             if (icon.name.includes("Genghis") && (icon.passiveStacks ?? 0) > 0)
-              pills.push(<span key="stacks" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-red-900/70 border-red-600/60 text-red-200">🩸×{icon.passiveStacks}</span>);
+              pills.push(<span key="stacks" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-red-900/70 border-red-600/60 text-red-200" title={`Bloodlust ×${icon.passiveStacks}/3`}>🩸×{icon.passiveStacks}/3</span>);
             if (icon.name.includes("Leonidas") && (icon.passiveStacks ?? 0) > 0)
-              pills.push(<span key="phalanx" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-amber-900/70 border-amber-600/60 text-amber-200">🛡×{icon.passiveStacks}</span>);
+              pills.push(<span key="phalanx" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-amber-900/70 border-amber-600/60 text-amber-200" title={`Phalanx ×${icon.passiveStacks}`}>🛡×{icon.passiveStacks}</span>);
+            if (icon.name.includes("Beethoven") && (icon.passiveStacks ?? 0) > 0)
+              pills.push(<span key="crescendo" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-cyan-900/70 border-cyan-600/60 text-cyan-200" title={`Crescendo ×${icon.passiveStacks}/15`}>🎵×{icon.passiveStacks}/15</span>);
+            if (icon.name.includes("Vel'thar") && (icon.passiveStacks ?? 0) > 0)
+              pills.push(<span key="bottleneck" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-purple-900/70 border-purple-600/60 text-purple-200" title={`Bottleneck ×${icon.passiveStacks}`}>🌀×{icon.passiveStacks}</span>);
+            if (icon.name.includes("Musashi") && (icon.passiveStacks ?? 0) > 0)
+              pills.push(<span key="battlescar" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-rose-900/70 border-rose-600/60 text-rose-200" title={`Battle Scar ×${icon.passiveStacks}/3`}>⚔×{icon.passiveStacks}/3</span>);
+            if (icon.name.includes("Teddy") && (icon.passiveStacks ?? 0) > 0)
+              pills.push(<span key="bully" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-orange-900/70 border-orange-600/60 text-orange-200" title={`Bully! ×${icon.passiveStacks}/3`}>💪×{icon.passiveStacks}/3</span>);
+            if (icon.name.includes("Tesla")) {
+              const voltCap = icon.itemPassiveTags?.includes('sig_tesla_transmitter') ? 8 : 5;
+              const volt = icon.passiveStacks ?? 0;
+              const overloaded = volt >= voltCap;
+              pills.push(
+                <span key="voltage" className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] ${overloaded ? 'bg-yellow-400/30 border-yellow-300 text-yellow-100 font-bold' : 'bg-yellow-900/70 border-yellow-600/60 text-yellow-200'}`}
+                  style={overloaded ? { animation: 'anim-debuff-pulse 1.2s ease-in-out infinite', ['--debuff-color' as any]: '#facc15' } : undefined}
+                  title={overloaded ? 'OVERLOADED — next action costs 0 Mana, +50% dmg, Stuns target' : `Voltage ${volt}/${voltCap}`}>
+                  ⚡{volt}/{voltCap}{overloaded ? ' ⚠' : ''}
+                </span>
+              );
+            }
             if (icon.name.includes("Sun-sin")) {
               const terrainType = (gameState as any).board?.find((tile: any) => tile.coordinates.q === icon.position.q && tile.coordinates.r === icon.position.r)?.terrain.type;
               if (terrainType === 'lake' || terrainType === 'river') pills.push(<span key="turtle" className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[10px] bg-cyan-900/80 border-cyan-600/60 text-cyan-200">{t.game.turtle}</span>);
@@ -456,6 +507,11 @@ const HorizontalGameUI = ({
               : icon.name.includes("Picasso") ? "picasso"
               : icon.name.includes("Teddy") ? "teddy"
               : icon.name.includes("Mansa") ? "mansa"
+              : icon.name.includes("Vel'thar") ? "velthar"
+              : icon.name.includes("Musashi") ? "musashi"
+              : icon.name.includes("Cleopatra") ? "cleopatra"
+              : icon.name.includes("Tesla") ? "tesla"
+              : icon.name.includes("Shaka") ? "shaka"
               : null;
             const items = nameKey ? runItemsByCharacter?.[nameKey]?.filter(Boolean) : null;
             if (!items?.length) return null;
@@ -783,7 +839,7 @@ const HorizontalGameUI = ({
                       const cardsUsed = displayIcon?.cardsUsedThisTurn ?? 0;
                       const maxCards = displayIcon?.itemPassiveTags?.includes('cards_per_turn_unlimited')
                         ? 5
-                        : 3 + (hasDraw4Perk ? 1 : 0) + (displayIcon?.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
+                        : 3 + (extraCardsPerTurn ?? 0) + (displayIcon?.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
                       return (
                         <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
                           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>

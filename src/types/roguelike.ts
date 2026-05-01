@@ -1,9 +1,9 @@
 // src/types/roguelike.ts
 
-export type NodeType = 'enemy' | 'elite' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'boss';
+export type NodeType = 'enemy' | 'elite' | 'campfire' | 'merchant' | 'treasure' | 'unknown' | 'boss' | 'revival_shrine';
 export type FightObjective = 'defeat_all' | 'destroy_base' | 'survive' | 'onslaught';
 export type ItemTier = 'common' | 'uncommon' | 'rare' | 'legendary';
-export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas' | 'sunsin' | 'beethoven' | 'huang' | 'nelson' | 'hannibal' | 'picasso' | 'teddy' | 'mansa';
+export type CharacterId = 'napoleon' | 'genghis' | 'davinci' | 'leonidas' | 'sunsin' | 'beethoven' | 'huang' | 'nelson' | 'hannibal' | 'picasso' | 'teddy' | 'mansa' | 'velthar' | 'musashi' | 'cleopatra' | 'tesla' | 'shaka';
 
 export interface RunNode {
   id: string;
@@ -144,6 +144,13 @@ export interface CombatResult {
   finalPassiveStacks?: Record<string, number>; // passive stacks to persist (e.g. Genghis bloodlust)
   enemiesKilled?: number;
   killBlowsByName?: Record<string, number>; // display name → kill count (for bonus XP)
+  // Defeat attribution: who/what delivered the lethal blow that wiped the squad
+  defeatCause?: {
+    victimName: string;    // player char that died
+    killerName: string;    // enemy name
+    sourceName: string;    // ability/card/"Basic Attack"
+    damage: number;
+  };
 }
 
 export interface PendingRewards {
@@ -179,6 +186,17 @@ export interface RunState {
   runStartTime: number; // Date.now() timestamp when run began
   cardRemovalsThisRun?: number;  // how many cards removed at merchants this run (affects removal cost)
   isTutorialRun?: boolean;
-  permanentManaBonus?: number;   // +1 per completed act (act 1 boss → +1, act 2 boss → +2, etc.)
-  pendingActBonusNotice?: number; // set when act advances, cleared after notification display
+  permanentManaBonus?: number;    // +1 per act boss if player chose mana
+  permanentCardBonus?: number;    // +1 per act boss if player chose extra card
+  pendingActBonusChoice?: boolean; // true after beating an act boss — player must pick mana or card
+  pendingActBonusNotice?: number; // set after mana choice so the toast can fire; cleared after display
+  merchantVisitCount?: number;    // how many merchant nodes visited this run (for every-3rd free box)
+  veteransFuryActive?: boolean;   // true once any character has died this run — triggers +15% M&P perk
+  revivalShrineUsed?: boolean;    // true after the Revival Shrine has been used this run (max 1/run)
+  lastDefeatCause?: {             // set when the run ends in defeat — shown on RunDefeatScreen
+    victimName: string;
+    killerName: string;
+    sourceName: string;
+    damage: number;
+  };
 }

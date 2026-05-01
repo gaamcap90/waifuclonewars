@@ -190,8 +190,8 @@ export function useCloneDialogue(gameState: GameState, battleCount = 0) {
     const prevEnemy   = prevEnemyRef.current;
     const fired       = firedRef.current;
 
-    // ── Squad intro: staged until first interaction ───────────────────────
-    if (!fired.squadIntro && gameState.phase === 'combat' && playerIcons.length >= 2) {
+    // ── Squad intro: only on the FIRST combat of a run, staged until first interaction ─────
+    if (!fired.squadIntro && gameState.phase === 'combat' && playerIcons.length >= 2 && battleCount === 0) {
       const charIds = new Set(playerIcons.filter(i => i.charId).map(i => i.charId!));
       for (let si = 0; si < SQUAD_INTROS.length; si++) {
         const intro = SQUAD_INTROS[si];
@@ -221,20 +221,37 @@ export function useCloneDialogue(gameState: GameState, battleCount = 0) {
     // Need previous snapshot to detect changes
     if (prev.length > 0) {
       // ── On kill (enemy died) ───────────────────────────────────────────
+      // Resolve the current actor from the speed queue — that's who just acted
+      const actingIconId = gameState.speedQueue?.[gameState.queueIndex ?? 0];
+      const actingPlayerIcon = actingIconId ? playerIcons.find(i => i.id === actingIconId && i.isAlive && i.charId) : null;
+
       for (const enemy of enemyIcons) {
         const wasAlive = prevEnemy.find(e => e.id === enemy.id)?.isAlive;
         if (wasAlive && !enemy.isAlive) {
-          const activeIcon = playerIcons.find(i => i.isAlive && i.charId);
-          if (activeIcon?.charId) {
+          // Credit the kill to whoever's turn it is, if a player icon; otherwise
+          // fall back to the nearest alive player icon (proxy for melee/ranged AoE)
+          let killer = actingPlayerIcon;
+          if (!killer) {
+            const living = playerIcons.filter(i => i.isAlive && i.charId);
+            if (living.length > 0) {
+              living.sort((a, b) => {
+                const dA = Math.max(Math.abs(a.q - enemy.q), Math.abs(a.r - enemy.r), Math.abs((a.q + a.r) - (enemy.q + enemy.r)));
+                const dB = Math.max(Math.abs(b.q - enemy.q), Math.abs(b.r - enemy.r), Math.abs((b.q + b.r) - (enemy.q + enemy.r)));
+                return dA - dB;
+              });
+              killer = living[0];
+            }
+          }
+          if (killer?.charId) {
             // Always track last killer for the victory line
-            lastKillerRef.current = activeIcon.charId;
+            lastKillerRef.current = killer.charId;
             // Only show kill bubble 20% of the time
             if (Math.random() < KILL_CHANCE) {
-              const entry = ON_KILL_LINES.find(e => e.characterId === activeIcon.charId);
+              const entry = ON_KILL_LINES.find(e => e.characterId === killer!.charId);
               if (entry) {
                 const [text, idx] = pickIdx(entry.lines);
-                const vk = `${activeIcon.charId}_kill_${idx}`;
-                enqueue(makeLine(activeIcon.charId, text, { q: activeIcon.q, r: activeIcon.r }, vk));
+                const vk = `${killer.charId}_kill_${idx}`;
+                enqueue(makeLine(killer.charId, text, { q: killer.q, r: killer.r }, vk));
               }
             }
           }

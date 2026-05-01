@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { Icon, GameState } from "@/types/game";
 import { Crosshair, Sword, Heart } from "lucide-react";
 import HPBar from "./HPBar";
-import { useBuffCalculation } from "@/hooks/useBuffCalculation";
 import { calcEffectiveStats } from "@/combat/buffs";
 import { useT } from "@/i18n";
 import { getCharacterPortrait } from "@/utils/portraits";
@@ -23,20 +22,29 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
     return () => document.removeEventListener("click", handle);
   }, [onClose]);
 
-  const { calculateBuffedStats } = useBuffCalculation();
-  const buffedStats = calculateBuffedStats(character, gameState);
   const eff = calcEffectiveStats(gameState, character);
+
+  const tile = gameState.board.find(t =>
+    t.coordinates.q === character.position.q && t.coordinates.r === character.position.r
+  );
+  const isOnHomeBase = tile?.terrain.type === 'base' &&
+    ((character.playerId === 0 && tile.coordinates.q < 0) ||
+     (character.playerId === 1 && tile.coordinates.q > 0));
+  const isOnForest = tile?.terrain.type === 'forest';
 
   const baseMight   = character.stats.might;
   const basePower   = character.stats.power;
   const baseDefense = character.stats.defense;
 
-  const homeBaseMightBonus    = buffedStats.isOnHomeBase ? (baseMight   * 20) / 100 : 0;
-  const homeBasePowerBonus    = buffedStats.isOnHomeBase ? (basePower   * 20) / 100 : 0;
-  const homeBaseDefenseBonus  = buffedStats.isOnHomeBase ? (baseDefense * 20) / 100 : 0;
-  const forestDefenseBonus    = buffedStats.isOnForest && !character.name.includes("Napoleon")
-    ? (baseDefense * 25) / 100 : 0;
-  const napoleonForestRange   = character.name.includes("Napoleon") && buffedStats.isOnForest;
+  const homeBaseMightBonus    = isOnHomeBase ? (baseMight   * 20) / 100 : 0;
+  const homeBasePowerBonus    = isOnHomeBase ? (basePower   * 20) / 100 : 0;
+  const homeBaseDefenseBonus  = isOnHomeBase ? (baseDefense * 20) / 100 : 0;
+  const forestDefenseBonus    = isOnForest && !character.name.includes("Napoleon")
+    ? (baseDefense * 20) / 100 : 0;
+  const napoleonForestRange   = character.name.includes("Napoleon") && isOnForest;
+
+  const cardBuffAtk = character.cardBuffAtk ?? 0;
+  const cardBuffDef = character.cardBuffDef ?? 0;
 
   const fmt = (v: number) => (v % 1 === 0 ? v.toString() : v.toFixed(1));
 
@@ -65,12 +73,19 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
       return `${t.characters.leonidas.passive.name}: ${t.characters.leonidas.passive.desc}${(character.passiveStacks ?? 0) > 0 ? ` ${character.passiveStacks}/3 stacks.` : ""}`;
     if (character.name.includes("Sun-sin"))
       return `${t.characters.sunsin.passive.name}: ${t.characters.sunsin.passive.desc} — ${t.characters.sunsin.passive.waterDesc}`;
+    if (character.name.includes("Tesla")) {
+      const voltCap = character.itemPassiveTags?.includes('sig_tesla_transmitter') ? 8 : 5;
+      const volt = character.passiveStacks ?? 0;
+      const tt = (t.characters as any).tesla;
+      const passive = tt?.passive;
+      return `${passive?.name ?? 'Voltage'}: ${passive?.desc ?? ''} (${volt}/${voltCap} stacks)`;
+    }
     return character.passive ?? t.game.popup.noPassive;
   })();
 
   const portrait = getCharacterPortrait(character.name);
 
-  const HERO_NAMES = ["Napoleon", "Genghis", "Da Vinci", "Leonidas", "Sun-sin", "Beethoven", "Huang"];
+  const HERO_NAMES = ["Napoleon", "Genghis", "Da Vinci", "Leonidas", "Sun-sin", "Beethoven", "Huang", "Nelson", "Hannibal", "Picasso", "Teddy", "Mansa", "Vel'thar", "Musashi", "Cleopatra", "Tesla", "Shaka"];
   const hasPassive = HERO_NAMES.some(n => character.name.includes(n)) || !!character.passive;
 
   const isBlue       = character.playerId === 0;
@@ -152,10 +167,10 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)" }}>
               <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.might.toUpperCase()}</div>
               <div className="font-bold text-red-400">{Math.floor(eff.might)}</div>
-              {(homeBaseMightBonus > 0 || buffedStats.cardBuffAtk > 0) && (
+              {(homeBaseMightBonus > 0 || cardBuffAtk > 0) && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
-                  {homeBaseMightBonus   > 0 && `+${fmt(homeBaseMightBonus)} base `}
-                  {buffedStats.cardBuffAtk > 0 && <span className="text-yellow-400">+{buffedStats.cardBuffAtk} card</span>}
+                  {homeBaseMightBonus > 0 && `+${fmt(homeBaseMightBonus)} base `}
+                  {cardBuffAtk > 0 && <span className="text-yellow-400">+{cardBuffAtk} card</span>}
                 </div>
               )}
             </div>
@@ -163,9 +178,10 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.20)" }}>
               <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.power.toUpperCase()}</div>
               <div className="font-bold text-blue-400">{Math.floor(eff.power)}</div>
-              {homeBasePowerBonus > 0 && (
+              {(homeBasePowerBonus > 0 || (character.cardBuffPow ?? 0) > 0) && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
-                  {homeBasePowerBonus  > 0 && `+${fmt(homeBasePowerBonus)} base`}
+                  {homeBasePowerBonus > 0 && `+${fmt(homeBasePowerBonus)} base `}
+                  {(character.cardBuffPow ?? 0) > 0 && <span className="text-yellow-400">+{character.cardBuffPow} card</span>}
                 </div>
               )}
             </div>
@@ -173,11 +189,11 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
             <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.20)" }}>
               <div className="font-orbitron text-[9px] text-slate-500 tracking-wider">{t.archives.statLabels.defense.toUpperCase()}</div>
               <div className="font-bold text-emerald-400">{Math.floor(eff.defense)}</div>
-              {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0 || buffedStats.cardBuffDef > 0) && (
+              {(homeBaseDefenseBonus > 0 || forestDefenseBonus > 0 || cardBuffDef > 0) && (
                 <div className="text-[9px] text-slate-500 mt-0.5">
                   {homeBaseDefenseBonus > 0 && `+${fmt(homeBaseDefenseBonus)} base `}
                   {forestDefenseBonus   > 0 && `+${fmt(forestDefenseBonus)} forest `}
-                  {buffedStats.cardBuffDef > 0 && <span className="text-yellow-400">+{buffedStats.cardBuffDef} card</span>}
+                  {cardBuffDef > 0 && <span className="text-yellow-400">+{cardBuffDef} card</span>}
                 </div>
               )}
             </div>
@@ -192,7 +208,7 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
           </div>
 
           {/* Bloodlust / Phalanx stacks */}
-          {(character.passiveStacks ?? 0) > 0 && (
+          {(character.passiveStacks ?? 0) > 0 && (character.name.includes("Genghis") || character.name.includes("Leonidas")) && (
             <div className="rounded-lg px-2 py-1.5 text-[11px]"
               style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)" }}>
               {character.name.includes("Genghis") && (
@@ -207,6 +223,82 @@ const CharacterDetailPopup = ({ character, gameState, onClose, position }: Chara
               )}
             </div>
           )}
+
+          {/* Beethoven Crescendo stacks */}
+          {character.name.includes("Beethoven") && (character.passiveStacks ?? 0) > 0 && (() => {
+            const perStack = character.itemPassiveTags?.includes('sig_beethoven_heiligenstadt') ? 3 : 2;
+            const bonus = (character.passiveStacks ?? 0) * perStack;
+            return (
+              <div className="rounded-lg px-2 py-1.5 text-[11px]"
+                style={{ background: "rgba(34,211,238,0.10)", border: "1px solid rgba(34,211,238,0.25)" }}>
+                <span className="text-cyan-300">🎵 Crescendo ×{character.passiveStacks}/15 (+{bonus} Power)</span>
+              </div>
+            );
+          })()}
+
+          {/* Vel'thar Bottleneck stacks */}
+          {character.name.includes("Vel'thar") && (character.passiveStacks ?? 0) > 0 && (() => {
+            const level = character.level ?? 1;
+            const perStack = 3 + 2 * level;
+            const bonus = (character.passiveStacks ?? 0) * perStack;
+            return (
+              <div className="rounded-lg px-2 py-1.5 text-[11px]"
+                style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.35)" }}>
+                <span className="text-purple-300">🌀 Bottleneck ×{character.passiveStacks} (+{bonus} Might, +{bonus} Power)</span>
+              </div>
+            );
+          })()}
+
+          {/* Musashi Battle Scar stacks */}
+          {character.name.includes("Musashi") && (character.passiveStacks ?? 0) > 0 && (() => {
+            const level = character.level ?? 1;
+            const perStack = 2 + level;
+            const stacks = Math.min(character.passiveStacks ?? 0, 3);
+            const bonus = stacks * perStack;
+            return (
+              <div className="rounded-lg px-2 py-1.5 text-[11px]"
+                style={{ background: "rgba(244,63,94,0.10)", border: "1px solid rgba(244,63,94,0.30)" }}>
+                <span className="text-rose-300">⚔ Battle Scar ×{stacks}/3 (+{bonus} Might)</span>
+              </div>
+            );
+          })()}
+
+          {/* Teddy Bully! stacks */}
+          {character.name.includes("Teddy") && (character.passiveStacks ?? 0) > 0 && (() => {
+            const level = character.level ?? 1;
+            const perStack = 8 + level;
+            const stacks = character.passiveStacks ?? 0;
+            const bonus = stacks * perStack;
+            const hasBullMoose = character.itemPassiveTags?.includes('sig_teddy_bull_moose');
+            const defBonus = hasBullMoose ? stacks * 10 : 0;
+            return (
+              <div className="rounded-lg px-2 py-1.5 text-[11px]"
+                style={{ background: "rgba(249,115,22,0.10)", border: "1px solid rgba(249,115,22,0.30)" }}>
+                <span className="text-orange-300">
+                  💪 Bully! ×{stacks}/3 (+{bonus} Might{hasBullMoose ? `, +${defBonus} Defense` : ''})
+                </span>
+              </div>
+            );
+          })()}
+
+          {/* Tesla Voltage stacks */}
+          {character.name.includes("Tesla") && (() => {
+            const voltCap = character.itemPassiveTags?.includes('sig_tesla_transmitter') ? 8 : 5;
+            const volt = character.passiveStacks ?? 0;
+            const overloaded = volt >= voltCap;
+            return (
+              <div className="rounded-lg px-2 py-1.5 text-[11px]"
+                style={{
+                  background: overloaded ? "rgba(250,204,21,0.18)" : "rgba(250,204,21,0.08)",
+                  border: `1px solid ${overloaded ? "rgba(250,204,21,0.6)" : "rgba(250,204,21,0.25)"}`,
+                  boxShadow: overloaded ? "0 0 8px rgba(250,204,21,0.3)" : "none",
+                }}>
+                <span className="text-yellow-200">
+                  ⚡ Voltage {volt}/{voltCap}{overloaded ? " — OVERLOADED (next action: 0 Mana, +50% dmg, Stun)" : ""}
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Active debuffs */}
           {(character.debuffs ?? []).length > 0 && (

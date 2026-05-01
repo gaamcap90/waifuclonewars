@@ -2,7 +2,7 @@
 // Achievement system — persistence, event dispatch, and toast queue.
 // Usage: call useAchievements() once in Index.tsx, pass fireEvent + helpers down as props.
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP, CHARACTER_UNLOCK_THRESHOLDS, CHARACTER_UNLOCK_EVENTS, type AchievementDef } from '@/data/achievements';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
@@ -89,6 +89,42 @@ export interface AchievementStats {
   picasso_runs_won:              number;
   teddy_runs_won:                number;
   mansa_runs_won:                number;
+  velthar_runs_won:               number;
+  musashi_runs_won:              number;
+  cleopatra_runs_won:            number;
+  tesla_runs_won:                number;
+  shaka_runs_won:                number;
+  ult_used_velthar:               number;
+  ult_used_musashi:              number;
+  ult_used_cleopatra:            number;
+  ult_used_tesla:                number;
+  ult_used_shaka:                number;
+  // Kit-moment counters (threshold: 10 each)
+  napoleon_alive_4kills:         number;
+  genghis_bloodlust_4:           number;
+  davinci_drone_alive_win:       number;
+  leonidas_max_phalanx:          number;
+  sunsin_wins_on_water:          number;
+  beethoven_10_crescendo:        number;
+  huang_terracotta_alive_win:    number;
+  nelson_full_hp_win:            number;
+  hannibal_elephant_alive_win:   number;
+  picasso_guernica_win:          number;
+  teddy_max_bully:               number;
+  mansa_treasury_win:            number;
+  velthar_solo_win:               number;
+  bottleneck_5_stacks:           number;
+  musashi_dual_kill:             number;
+  musashi_max_stacks_win:        number;
+  cleo_stun_3:                   number;
+  cleo_royal_decree_used:        number;
+  cleopatra_no_damage_win:       number;
+  tesla_chain_3:                 number;
+  tesla_death_ray_300:           number;
+  tesla_max_voltage:             number;
+  shaka_water_kill:              number;
+  shaka_impondo_3:               number;
+  shaka_full_formation:          number;
   // Set-tracking stored as arrays in JSON
   _viewed_lore_ids:              string[];
   _viewed_char_ids:              string[];
@@ -120,6 +156,16 @@ const DEFAULT_STATS: AchievementStats = {
   napoleon_runs_won: 0, genghis_runs_won: 0, davinci_runs_won: 0, leonidas_runs_won: 0,
   sunsin_runs_won: 0, beethoven_runs_won: 0, huang_runs_won: 0, nelson_runs_won: 0,
   hannibal_runs_won: 0, picasso_runs_won: 0, teddy_runs_won: 0, mansa_runs_won: 0,
+  velthar_runs_won: 0, musashi_runs_won: 0, cleopatra_runs_won: 0, tesla_runs_won: 0, shaka_runs_won: 0,
+  ult_used_velthar: 0, ult_used_musashi: 0, ult_used_cleopatra: 0, ult_used_tesla: 0, ult_used_shaka: 0,
+  napoleon_alive_4kills: 0, genghis_bloodlust_4: 0, davinci_drone_alive_win: 0,
+  leonidas_max_phalanx: 0, sunsin_wins_on_water: 0, beethoven_10_crescendo: 0,
+  huang_terracotta_alive_win: 0, nelson_full_hp_win: 0, hannibal_elephant_alive_win: 0,
+  picasso_guernica_win: 0, teddy_max_bully: 0, mansa_treasury_win: 0,
+  velthar_solo_win: 0, bottleneck_5_stacks: 0, musashi_dual_kill: 0, musashi_max_stacks_win: 0,
+  cleo_stun_3: 0, cleo_royal_decree_used: 0, cleopatra_no_damage_win: 0,
+  tesla_chain_3: 0, tesla_death_ray_300: 0, tesla_max_voltage: 0,
+  shaka_water_kill: 0, shaka_impondo_3: 0, shaka_full_formation: 0,
   _viewed_lore_ids: [], _viewed_char_ids: [], _found_item_ids: [],
 };
 
@@ -201,6 +247,34 @@ export function useAchievements() {
     () => localStorage.getItem(LS_DEV_CHARS) === 'true'
   );
 
+  // Re-sync wcw_run_perks_v1 on every mount so perks added in newer code versions
+  // take effect immediately without requiring the user to earn another achievement.
+  useEffect(() => {
+    const pts = totalPointsRef.current;
+    const perks = new Set<string>();
+    for (const ach of ACHIEVEMENTS) {
+      if (unlockedRef.current.has(ach.id) && ach.runPerk && !ach.runPerk.id.startsWith('legacy_')) perks.add(ach.runPerk.id);
+    }
+    if (pts >= 100)  perks.add('gold_bonus_10');
+    if (pts >= 200)  perks.add('merchant_4th');
+    if (pts >= 250)  perks.add('campfire_remove');
+    if (pts >= 300)  perks.add('card_draw_bonus_1');
+    if (pts >= 350)  perks.add('merchant_4th_item');
+    if (pts >= 450)  perks.add('gold_bonus_20');
+    if (pts >= 500)  perks.add('mystery_box_free');
+    if (pts >= 600)  perks.add('mystery_box_every3');
+    if (pts >= 700)  perks.add('gold_bonus_30');
+    if (pts >= 800)  perks.add('inv_slot_7');
+    if (pts >= 900)  perks.add('card_draw_bonus_2');
+    if (pts >= 1000) perks.add('gold_bonus_100');
+    if (pts >= 1100) perks.add('campfire_heal_50');
+    if (pts >= 1200) perks.add('draw_4_cards');
+    if (pts >= 1300) perks.add('campfire_dual_upgrade');
+    if (pts >= 1400) perks.add('gold_bonus_50_2');
+    if (pts >= 1500) perks.add('free_sig_legendary');
+    localStorage.setItem(LS_RUN_PERKS, JSON.stringify([...perks]));
+  }, []);
+
   const toggleDevCharUnlock = useCallback(() => {
     setDevAllCharsUnlocked(prev => {
       const next = !prev;
@@ -224,6 +298,9 @@ export function useAchievements() {
   const grantAchievement = useCallback((a: AchievementDef) => {
     if (unlockedRef.current.has(a.id)) return;
     unlockedRef.current.add(a.id);
+    // Mirror to Steam if running in Electron with the Steamworks bridge wired.
+    // No-op in web/dev — the bridge is not present and the call is silently dropped.
+    void import('@/utils/steamAchievements').then(m => m.unlockSteamAchievement(a.id));
     const oldTotal = totalPointsRef.current;
     const newTotal = oldTotal + a.points;
     totalPointsRef.current = newTotal;
@@ -236,17 +313,20 @@ export function useAchievements() {
     if (newTotal >= 100) perks.add('gold_bonus_10');
     if (newTotal >= 200) perks.add('merchant_4th');
     if (newTotal >= 250) perks.add('campfire_remove');
-    if (newTotal >= 300) perks.add('gold_bonus_20');
+    if (newTotal >= 300) perks.add('card_draw_bonus_1');
     if (newTotal >= 350) perks.add('merchant_4th_item');
-    if (newTotal >= 500) perks.add('gold_bonus_30');
-    if (newTotal >= 700) perks.add('mystery_box_free');
+    if (newTotal >= 450) perks.add('gold_bonus_20');
+    if (newTotal >= 500) perks.add('mystery_box_free');
+    if (newTotal >= 600) perks.add('mystery_box_every3');
+    if (newTotal >= 700) perks.add('gold_bonus_30');
     if (newTotal >= 800) perks.add('inv_slot_7');
-    if (newTotal >= 900) perks.add('campfire_heal_50');
+    if (newTotal >= 900) perks.add('card_draw_bonus_2');
     if (newTotal >= 1000) perks.add('gold_bonus_100');
-    if (newTotal >= 1150) perks.add('draw_4_cards');
+    if (newTotal >= 1100) perks.add('campfire_heal_50');
+    if (newTotal >= 1200) perks.add('draw_4_cards');
     if (newTotal >= 1300) perks.add('campfire_dual_upgrade');
-    if (newTotal >= 1450) perks.add('gold_bonus_50_2');
-    if (newTotal >= 1600) perks.add('free_sig_legendary');
+    if (newTotal >= 1400) perks.add('gold_bonus_50_2');
+    if (newTotal >= 1500) perks.add('free_sig_legendary');
     localStorage.setItem(LS_RUN_PERKS, JSON.stringify([...perks]));
     // Fire perk milestone toasts for newly crossed thresholds
     const oldFog = fogTierFromPts(oldTotal);
@@ -260,19 +340,41 @@ export function useAchievements() {
     if (oldTotal < 100 && newTotal >= 100) setToastQueue(q => [...q, { id: 'perk_gold_10', name: '+10% Gold from all sources', icon: '💰', points: 0, isPerk: true }]);
     if (oldTotal < 200 && newTotal >= 200) setToastQueue(q => [...q, { id: 'perk_merchant', name: 'Merchant: 4th card slot unlocked', icon: '🛒', points: 0, isPerk: true }]);
     if (oldTotal < 250 && newTotal >= 250) setToastQueue(q => [...q, { id: 'perk_campfire', name: 'Campfire: Card removal added', icon: '✂', points: 0, isPerk: true }]);
-    if (oldTotal < 300 && newTotal >= 300) setToastQueue(q => [...q, { id: 'perk_gold_20', name: '+20% Gold from all sources', icon: '💰', points: 0, isPerk: true }]);
+    if (oldTotal < 300 && newTotal >= 300) setToastQueue(q => [...q, { id: 'perk_card_draw_1', name: 'Draw +1 extra card per turn — hand size 8!', icon: '🃏', points: 0, isPerk: true }]);
     if (oldTotal < 350 && newTotal >= 350) setToastQueue(q => [...q, { id: 'perk_merchant_item', name: 'Merchant: 4th item slot unlocked', icon: '🛒', points: 0, isPerk: true }]);
-    if (oldTotal < 500 && newTotal >= 500) setToastQueue(q => [...q, { id: 'perk_gold_30', name: '+30% Gold from all sources', icon: '💰', points: 0, isPerk: true }]);
-    if (oldTotal < 700 && newTotal >= 700) setToastQueue(q => [...q, { id: 'perk_mystery_free', name: 'Mystery Box is now FREE', icon: '🎁', points: 0, isPerk: true }]);
+    if (oldTotal < 450 && newTotal >= 450) setToastQueue(q => [...q, { id: 'perk_gold_20', name: '+20% Gold from all sources', icon: '💰', points: 0, isPerk: true }]);
+    if (oldTotal < 500 && newTotal >= 500) setToastQueue(q => [...q, { id: 'perk_mystery_free', name: 'Mystery Box FREE every 3rd merchant visit!', icon: '🎁', points: 0, isPerk: true }]);
+    if (oldTotal < 700 && newTotal >= 700) setToastQueue(q => [...q, { id: 'perk_gold_30', name: '+30% Gold from all sources', icon: '💰', points: 0, isPerk: true }]);
     if (oldTotal < 800 && newTotal >= 800) setToastQueue(q => [...q, { id: 'perk_inv_slot', name: 'Inventory slot #7 unlocked per character', icon: '🎒', points: 0, isPerk: true }]);
-    if (oldTotal < 900 && newTotal >= 900) setToastQueue(q => [...q, { id: 'perk_campfire_50', name: 'Campfire now restores 50% HP!', icon: '🔥', points: 0, isPerk: true }]);
-    if (oldTotal < 1000 && newTotal >= 1000) setToastQueue(q => [...q, { id: 'perk_gold_100', name: '+50% Gold — total bonus now 160%!', icon: '💰', points: 0, isPerk: true }]);
-    if (oldTotal < 1150 && newTotal >= 1150) setToastQueue(q => [...q, { id: 'perk_draw4', name: 'Play up to 4 cards per turn!', icon: '🃏', points: 0, isPerk: true }]);
+    if (oldTotal < 900 && newTotal >= 900) setToastQueue(q => [...q, { id: 'perk_card_draw_2', name: 'Draw +1 extra card per turn — hand size 9!', icon: '🃏', points: 0, isPerk: true }]);
+    if (oldTotal < 1000 && newTotal >= 1000) {
+      setToastQueue(q => [...q, { id: 'perk_gold_100', name: '+50% Gold — total bonus now 110%!', icon: '💰', points: 0, isPerk: true }]);
+      // Unlock the Znyxorgan Lexicon lore + hidden achievement (Veth'Nor'Thral)
+      if (!unlockedRef.current.has('veth_nor_thral')) {
+        unlockedRef.current.add('veth_nor_thral');
+        unlockedLoreRef.current.add('znyxorgan_lexicon');
+        persist();
+        setToastQueue(q => [...q, { id: 'veth_nor_thral', name: "Veth'Nor'Thral", icon: '📜', points: 0, hasLore: true }]);
+        setNewCounts(c => {
+          const next = { a: c.a + 1, l: c.l + 1 };
+          localStorage.setItem(LS_NEW_COUNTS, JSON.stringify(next));
+          return next;
+        });
+        setNewAchievementIds(prev => {
+          const next = new Set(prev);
+          next.add('veth_nor_thral');
+          localStorage.setItem(LS_NEW_IDS, JSON.stringify([...next]));
+          return next;
+        });
+      }
+    }
+    if (oldTotal < 1100 && newTotal >= 1100) setToastQueue(q => [...q, { id: 'perk_campfire_50', name: 'Campfire now restores 50% HP!', icon: '🔥', points: 0, isPerk: true }]);
+    if (oldTotal < 1200 && newTotal >= 1200) setToastQueue(q => [...q, { id: 'perk_draw4', name: 'Play up to 4 base cards per turn!', icon: '🃏', points: 0, isPerk: true }]);
     if (oldTotal < 1300 && newTotal >= 1300) setToastQueue(q => [...q, { id: 'perk_dual_upgrade', name: 'Campfire: Upgrade TWO cards per rest!', icon: '⬆️', points: 0, isPerk: true }]);
-    if (oldTotal < 1450 && newTotal >= 1450) setToastQueue(q => [...q, { id: 'perk_gold_50_2', name: '+50% Gold — total bonus now 210%!', icon: '💰', points: 0, isPerk: true }]);
-    if (oldTotal < 1600 && newTotal >= 1600) setToastQueue(q => [...q, { id: 'perk_sig_leg', name: 'Start every run with a free Signature Legendary!', icon: '⭐', points: 0, isPerk: true }]);
+    if (oldTotal < 1400 && newTotal >= 1400) setToastQueue(q => [...q, { id: 'perk_gold_50_2', name: '+50% Gold — total bonus now 160%!', icon: '💰', points: 0, isPerk: true }]);
+    if (oldTotal < 1500 && newTotal >= 1500) setToastQueue(q => [...q, { id: 'perk_sig_leg', name: 'Start every run with a free Signature Legendary!', icon: '⭐', points: 0, isPerk: true }]);
     // Fire a blue perk toast for achievement-gated run perks (not char unlocks, not legacy stat perks)
-    if (a.runPerk && a.runPerk.id !== 'char_teddy' && a.runPerk.id !== 'char_mansa' && !a.runPerk.id.startsWith('legacy_')) {
+    if (a.runPerk && !a.runPerk.id.startsWith('char_') && !a.runPerk.id.startsWith('legacy_')) {
       setToastQueue(q => [...q, { id: `perk_${a.runPerk!.id}`, name: a.runPerk!.label, icon: '⚡', points: 0, isPerk: true }]);
     }
     const hasLore = !!a.loreUnlockId;
@@ -349,6 +451,11 @@ export function useAchievements() {
           else if (charId === 'picasso')   s.picasso_ultimates   += 1;
           else if (charId === 'teddy')     s.teddy_ultimates     += 1;
           else if (charId === 'mansa')     s.mansa_ultimates     += 1;
+          else if (charId === 'velthar')    s.ult_used_velthar    += 1;
+          else if (charId === 'musashi')   s.ult_used_musashi   += 1;
+          else if (charId === 'cleopatra') s.ult_used_cleopatra += 1;
+          else if (charId === 'tesla')     s.ult_used_tesla     += 1;
+          else if (charId === 'shaka')     s.ult_used_shaka     += 1;
           else if (charId === 'napoleon') {
             if (ultimateId === 'final_salvo') s.napoleon_final_salvo  += 1;
             else                              s.napoleon_grande_armee += 1;
@@ -414,14 +521,43 @@ export function useAchievements() {
           if ((payload.turnsElapsed as number) <= 3)          tryEvent('fight_3_turns');
           if (payload.oneCloneAlive)                          tryEvent('one_clone_win');
           if (enemiesKilled >= 3)                             tryEvent('multi_kill_3');
+          if (enemiesKilled >= 10)                            tryEvent('multi_kill_10');
           if (s.consecutive_wins >= 3)                        tryEvent('three_consecutive_wins');
-          if (s.consecutive_wins >= 5)                        tryEvent('five_consecutive_wins');
+          if (s.consecutive_wins >= 10)                       tryEvent('ten_consecutive_wins');
+          if (s.consecutive_wins >= 25)                       tryEvent('twentyfive_consecutive_wins');
+          if (s.consecutive_wins >= 100)                      tryEvent('hundred_consecutive_wins');
           if (payload.anyAt1Hp)                               tryEvent('win_at_1hp');
           if (payload.napoleonUltimate && payload.genghisUltimate) tryEvent('napoleon_genghis_both_ultimates');
+          // Original character kit moments — stat counters (threshold: 10)
+          if (payload.napoleonAlive4Kills)      s.napoleon_alive_4kills         += 1;
+          if (payload.genghisBloodlust4)        s.genghis_bloodlust_4           += 1;
+          if (payload.davinciDroneAliveWin)     s.davinci_drone_alive_win       += 1;
+          if (payload.leonidasMaxPhalanx)       s.leonidas_max_phalanx          += 1;
+          if (payload.sunsinWinsOnWater)        s.sunsin_wins_on_water          += 1;
+          if (payload.beethoven10Crescendo)     s.beethoven_10_crescendo        += 1;
+          if (payload.huangTerracottaAliveWin)  s.huang_terracotta_alive_win    += 1;
+          if (payload.nelsonFullHpWin)          s.nelson_full_hp_win            += 1;
+          if (payload.hannibalElephantAliveWin) s.hannibal_elephant_alive_win   += 1;
+          if (payload.picassoGuernicaWin)       s.picasso_guernica_win          += 1;
+          if (payload.teddyMaxBully)            s.teddy_max_bully               += 1;
+          if (payload.mansaTreasuryWin)         s.mansa_treasury_win            += 1;
+          // New character kit moments — stat counters (threshold: 10)
+          if (payload.veltharAloneWin)           s.velthar_solo_win               += 1;
+          if (payload.bottleneck5Stacks)        s.bottleneck_5_stacks           += 1;
+          if (payload.musashiMaxScars)          s.musashi_max_stacks_win        += 1;
+          if (payload.cleoperfectWin)           s.cleopatra_no_damage_win       += 1;
+          if (payload.teslaMaxVoltage)          s.tesla_max_voltage             += 1;
         } else {
           s.consecutive_wins             = 0;
           s.consecutive_no_damage_fights = 0;
         }
+        break;
+      }
+
+      // ── Kit moment (mid-fight engine events) ────────────────────────────────
+      case 'kit_moment': {
+        const key = payload?.key as string;
+        if (key && key in s) (s as any)[key] += 1;
         break;
       }
 
@@ -558,6 +694,10 @@ export function useAchievements() {
     dismissToast,
     /** Combined count of new unlocked achievements + lore entries since last Archives visit. */
     newUnlockCount: newCounts.a + newCounts.l,
+    /** New achievements only (for the Achievements button badge). */
+    newAchievementOnlyCount: newCounts.a,
+    /** New lore entries only (for the Archives button badge). */
+    newLoreCount: newCounts.l,
     /** Set of newly unlocked achievement IDs (shrinks as user hovers over them in Archives). */
     newAchievementIds,
     /** Count of new achievements — live, equals newAchievementIds.size. */
@@ -598,17 +738,20 @@ export function useAchievements() {
       if (totalUnlockedPoints >= 100) perks.add('gold_bonus_10');
       if (totalUnlockedPoints >= 200) perks.add('merchant_4th');
       if (totalUnlockedPoints >= 250) perks.add('campfire_remove');
-      if (totalUnlockedPoints >= 300) perks.add('gold_bonus_20');
+      if (totalUnlockedPoints >= 300) perks.add('card_draw_bonus_1');
       if (totalUnlockedPoints >= 350) perks.add('merchant_4th_item');
-      if (totalUnlockedPoints >= 500) perks.add('gold_bonus_30');
-      if (totalUnlockedPoints >= 700) perks.add('mystery_box_free');
+      if (totalUnlockedPoints >= 450) perks.add('gold_bonus_20');
+      if (totalUnlockedPoints >= 500) perks.add('mystery_box_free');
+      if (totalUnlockedPoints >= 600) perks.add('mystery_box_every3');
+      if (totalUnlockedPoints >= 700) perks.add('gold_bonus_30');
       if (totalUnlockedPoints >= 800) perks.add('inv_slot_7');
-      if (totalUnlockedPoints >= 900) perks.add('campfire_heal_50');
+      if (totalUnlockedPoints >= 900) perks.add('card_draw_bonus_2');
       if (totalUnlockedPoints >= 1000) perks.add('gold_bonus_100');
-      if (totalUnlockedPoints >= 1150) perks.add('draw_4_cards');
+      if (totalUnlockedPoints >= 1100) perks.add('campfire_heal_50');
+      if (totalUnlockedPoints >= 1200) perks.add('draw_4_cards');
       if (totalUnlockedPoints >= 1300) perks.add('campfire_dual_upgrade');
-      if (totalUnlockedPoints >= 1450) perks.add('gold_bonus_50_2');
-      if (totalUnlockedPoints >= 1600) perks.add('free_sig_legendary');
+      if (totalUnlockedPoints >= 1400) perks.add('gold_bonus_50_2');
+      if (totalUnlockedPoints >= 1500) perks.add('free_sig_legendary');
       return perks;
     })(),
     /** Dev flag — all characters force-unlocked. */

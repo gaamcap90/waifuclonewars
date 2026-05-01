@@ -30,6 +30,7 @@ export default function AIIntentBadge({ intents, playerIcons, onHoverRange }: AI
 
   return (
     <div
+      data-onboard="ai-intent"
       className="relative flex flex-col items-center gap-0.5"
       onMouseEnter={() => { setShowTip(true);  onHoverRange?.(mainIntent?.range ?? null); }}
       onMouseLeave={() => { setShowTip(false); onHoverRange?.(null); }}

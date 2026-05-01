@@ -13,6 +13,7 @@ import { hexDistance } from "@/engine/turnEngine";
 import { useT } from "@/i18n";
 import { getCharacterPortrait, getCharacterSprite } from "@/utils/portraits";
 import { AnimEvent } from "@/hooks/useAnimations";
+import { useHoverPreview } from "@/hooks/useHoverPreview";
 import { tileKey, reachableWithCosts } from "@/utils/movement";
 
 const _HEX_SZ = 50;
@@ -43,15 +44,16 @@ interface GameBoardProps {
   onTileClick: (coordinates: Coordinates) => void;
   onTileHover?: (tile: GameState['board'][number] | null) => void;
   animations?: AnimEvent[];
-  hoverPreviewRange?: number | null;
-  hoverPreviewExecutorId?: string | null;
-  externalIntentRange?: { iconId: string; range: number } | null;
   activeDialogue?: ActiveDialogue | null;
 }
 
 
-const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], hoverPreviewRange, hoverPreviewExecutorId, externalIntentRange, activeDialogue }) => {
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onTileClick, onTileHover, animations = [], activeDialogue }) => {
   const { t } = useT();
+  // Hover preview state lives in a module-level store so card-hover updates
+  // (60Hz mousemove territory) don't cascade through Index → GameBoard's parent.
+  // Subscribing here means only GameBoard re-renders when hover changes.
+  const { range: hoverPreviewRange, executorId: hoverPreviewExecutorId, intentRange: externalIntentRange } = useHoverPreview();
 
   // ── Sprite animation tracking ─────────────────────────────────────────
   // Maps iconId → current animation ('attack' | 'ability')

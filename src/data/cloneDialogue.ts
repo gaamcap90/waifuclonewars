@@ -35,6 +35,11 @@ export function nameToCharId(name: string): CharacterId | null {
   if (name.includes('Picasso'))   return 'picasso';
   if (name.includes('Teddy'))     return 'teddy';
   if (name.includes('Mansa'))     return 'mansa';
+  if (name.includes("Vel'thar"))  return 'velthar';
+  if (name.includes('Musashi'))   return 'musashi';
+  if (name.includes('Cleopatra')) return 'cleopatra';
+  if (name.includes('Tesla'))     return 'tesla';
+  if (name.includes('Shaka'))     return 'shaka';
   return null;
 }
 
@@ -53,6 +58,11 @@ export const CHARACTER_COLORS: Record<CharacterId, string> = {
   picasso:   '#ec4899',
   teddy:     '#78716c',
   mansa:     '#eab308',
+  velthar:    '#7c3aed',
+  musashi:   '#dc2626',
+  cleopatra: '#d97706',
+  tesla:     '#0891b2',
+  shaka:     '#16a34a',
 };
 
 // Short display name for bubbles
@@ -69,6 +79,11 @@ export const CHARACTER_SHORT_NAMES: Record<CharacterId, string> = {
   picasso:   'Picasso',
   teddy:     'Teddy',
   mansa:     'Mansa',
+  velthar:    "Vel'thar",
+  musashi:   'Musashi',
+  cleopatra: 'Cleopatra',
+  tesla:     'Tesla',
+  shaka:     'Shaka',
 };
 
 // ── Squad Intro (first fight, once per run) ──────────────────────────────────
@@ -187,6 +202,42 @@ export const SQUAD_INTROS: SquadIntroEntry[] = [
       { characterId: 'napoleon', text: 'I know. I borrowed your notes.' },
     ],
   },
+  // ── New character pairs ─────────────────────────────────────────────────────
+  {
+    pair: ['velthar', 'huang'],
+    lines: [
+      { characterId: 'huang',    text: 'Clone Zero. They say you were the first.' },
+      { characterId: 'velthar',  text: 'Nor. And you also. Nor.' },
+    ],
+  },
+  {
+    pair: ['musashi', 'leonidas'],
+    lines: [
+      { characterId: 'leonidas', text: 'You fight with two swords.' },
+      { characterId: 'musashi',  text: 'You fight behind a shield. Both work.' },
+    ],
+  },
+  {
+    pair: ['cleopatra', 'mansa'],
+    lines: [
+      { characterId: 'mansa',    text: 'Queen to queen. Shall we make the arena kneel?' },
+      { characterId: 'cleopatra', text: 'I thought you\'d never ask.' },
+    ],
+  },
+  {
+    pair: ['tesla', 'davinci'],
+    lines: [
+      { characterId: 'davinci',  text: 'You went further than I did.' },
+      { characterId: 'tesla',    text: 'You drew the blueprint. I just plugged it in.' },
+    ],
+  },
+  {
+    pair: ['shaka', 'genghis'],
+    lines: [
+      { characterId: 'genghis',  text: 'Bull horns. I like it.' },
+      { characterId: 'shaka',    text: 'Cavalry wings. I approve.' },
+    ],
+  },
 ];
 
 // ── On Kill (~20% chance) ────────────────────────────────────────────────────
@@ -204,6 +255,11 @@ export const ON_KILL_LINES: SingleLineEntry[] = [
   { characterId: 'sunsin',    lines: ['The current takes them.', 'As the tide wills.', 'Yi Sun-sin does not lose.', 'They brought ships to a turtle fight.'] },
   { characterId: 'davinci',   lines: ['Fascinating. And unfortunate.', 'Noted.', 'I\'ll draw this from memory.', 'Science is occasionally violent.'] },
   { characterId: 'huang',     lines: ['This is how empires are built.', 'Another stone in the wall.', 'Centuries will remember this.', 'The empress does not fall.'] },
+  { characterId: 'velthar',   lines: ['Kar-vol-zyn. The flame closes.', 'They fall. The tribe holds.', 'Another ash on the fire.', 'Dren. They did not.'] },
+  { characterId: 'musashi',   lines: ['One stroke.', 'The sword does not hesitate.', 'Sixty-two.', 'Efficient.'] },
+  { characterId: 'cleopatra', lines: ['Kneel. Or die. Your choice.', 'The serpent does not negotiate.', 'Caesar survived longer than you.', 'Another suitor, disappointed.'] },
+  { characterId: 'tesla',     lines: ['Conducted.', 'Three. Six. Nine. Discharged.', 'The current found its path.', 'Edison could never.'] },
+  { characterId: 'shaka',     lines: ['Impondo zankomo.', 'The bull horn closes.', 'USUTHU!', 'Another for the nation.'] },
 ];
 
 // ── On Protect (heal/shield ally) ────────────────────────────────────────────
@@ -221,6 +277,11 @@ export const ON_PROTECT_LINES: SingleLineEntry[] = [
   { characterId: 'hannibal',  lines: ['Survive. I need you for the second move.', 'Carthage does not abandon its own.', 'Stay. I have a plan for this.', 'Don\'t fall. The trap isn\'t sprung yet.'] },
   { characterId: 'picasso',   lines: ['Don\'t move. The frame needs you.', 'A painting without its subject is nothing.', 'Hold on. This is the interesting part.', 'Every composition needs contrast. Survive.'] },
   { characterId: 'huang',     lines: ['The empress does not lose her people.', 'China remembers those who stand firm.', 'I built walls to protect. Now I am the wall.', 'Not one more falls today.'] },
+  { characterId: 'velthar',   lines: ['Behind me. Under the mountain.', 'Nol thar. Mother protects.', 'The fire does not let go.', 'I have done this for forty thousand years.'] },
+  { characterId: 'musashi',   lines: ['Stay. I will handle this one.', 'Your blade is not needed here.', 'Rest. The duel is mine.', 'Niten Ichi — two swords. Enough for both of us.'] },
+  { characterId: 'cleopatra', lines: ['Stay close. Queens protect their own.', 'The pharaoh watches over you.', 'Egypt does not lose her children.', 'Behind me, always.'] },
+  { characterId: 'tesla',     lines: ['I\'ve calculated your odds. Let me help.', 'Stand back. High voltage.', 'The shield will hold. I designed it.', 'Grounded. You\'re safe.'] },
+  { characterId: 'shaka',     lines: ['The nation does not fall.', 'Stand behind the shield.', 'You are Zulu. Zulu does not die alone.', 'Impondo — the horns protect the head.'] },
 ];
 
 // ── On Low HP (<25%) — once per character per fight ──────────────────────────
@@ -238,6 +299,11 @@ export const ON_LOW_HP_LINES: SingleLineEntry[] = [
   { characterId: 'nelson',    lines: ['Not yet. The signal has not been given.', 'At Tenerife I lost my arm. I kept going.', 'England has not lost yet. So neither have I.', 'One more broadside. I can take it.'] },
   { characterId: 'picasso',   lines: ['The painting is not complete.', 'Guernica wasn\'t finished in a day.', 'Even the bleeding is a kind of color.', 'Art survives. So do I.'] },
   { characterId: 'mansa',     lines: ['There is still more to give.', 'Mali endured drought and war. So can I.', 'My pilgrimage was harder. I walked every step.', 'Wealth is nothing without the will to spend it.'] },
+  { characterId: 'velthar',   lines: ['Toba did not kill me. This will not either.', 'I am older than your grave.', 'Ash. Winter. I remember. I survived.', 'Dren. Dren. Dren.'] },
+  { characterId: 'musashi',   lines: ['A true swordsman does not flinch.', 'The Book of Five Rings does not end here.', 'Pain is a teacher.', 'I have bled before. I won before.'] },
+  { characterId: 'cleopatra', lines: ['I have outlived empires. I will outlive this.', 'A queen does not flinch.', 'The Nile has not stopped flowing.', 'I charmed Caesar. I can charm death.'] },
+  { characterId: 'tesla',     lines: ['The theorem is not yet proven.', 'I have eight more inventions.', 'They said I was mad. I am still here.', 'The current does not stop. Neither do I.'] },
+  { characterId: 'shaka',     lines: ['A Zulu does not kneel.', 'The assegai is still in my hand.', 'Blood. Earth. I am still here.', 'Igazi lamaZulu — still flowing.'] },
 ];
 
 // ── On Ultimate Use ──────────────────────────────────────────────────────────
@@ -255,6 +321,11 @@ export const ON_ULTIMATE_LINES: SingleLineEntry[] = [
   { characterId: 'picasso',   lines: ['Let me show you what I see.', 'Les Demoiselles d\'Avignon were just sketches.', 'I paint destruction and call it art.', 'Every angle. All at once. NOW.'] },
   { characterId: 'teddy',     lines: ['UP THE HILL!', 'ROUGH RIDERS — CHARGE!', 'I speak softly. But I carry a BIG STICK!', 'BULLY! BULLY! BULLY!'] },
   { characterId: 'mansa',     lines: ['Everything I have is yours.', 'The wealth of Mali flows through me.', 'Let the whole world remember this generosity.', 'I gave so much gold the markets crashed. What is this?'] },
+  { characterId: 'velthar',   lines: ['The mountain speaks.', 'Humanity\'s last light — BURN.', 'Shul-orn. Fire from the sky.', 'KAR-DREN-THRAL!'] },
+  { characterId: 'musashi',   lines: ['Earth. Water. Fire. Wind. Void.', 'Two heavens. One path.', 'The Book of Five Rings — opened.', 'I have studied this moment for thirty years.'] },
+  { characterId: 'cleopatra', lines: ['Eternal Kingdom — rise.', 'I am Isis. I am Aphrodite. I am Egypt.', 'The last Pharaoh commands.', 'Even the stars kneel.'] },
+  { characterId: 'tesla',     lines: ['Three. Six. Nine.', 'Wardenclyffe — reborn.', 'Every atom. Every pulsar. MINE.', 'I will light the cosmos.'] },
+  { characterId: 'shaka',     lines: ['Impondo zankomo — CLOSE!', 'For the nation. For the blood.', 'BAYEDE!', 'The bull horns encircle.'] },
 ];
 
 // ── On Victory ───────────────────────────────────────────────────────────────
@@ -272,4 +343,9 @@ export const ON_VICTORY_LINES: SingleLineEntry[] = [
   { characterId: 'nelson',    lines: ['Victory. Signal the fleet.', 'England expected. England received.', 'Strike the signal: battle won.', 'Trafalgar was grander. But this was satisfying.'] },
   { characterId: 'hannibal',  lines: ['They never saw the angle.', 'Cannae taught me: the perfect battle always looks messy from outside.', 'Carthage wins. As it should.', 'The flanks held. Of course they did. I designed them.'] },
   { characterId: 'picasso',   lines: ['A masterpiece.', 'I would paint this but it would take a lifetime.', 'Even destruction can be beautiful.', 'The composition was perfect. As I planned.'] },
+  { characterId: 'velthar',   lines: ['Another day. The tribe continues.', 'Dren.', 'The fire did not go out.', 'Forty thousand more.'] },
+  { characterId: 'musashi',   lines: ['One more duel. One more lesson.', 'The sword returns to its sheath.', 'Sixty-two. Undefeated.', 'The path continues.'] },
+  { characterId: 'cleopatra', lines: ['As expected.', 'Another kingdom. Another crown.', 'Egypt endures.', 'Men always underestimate me. Men are always wrong.'] },
+  { characterId: 'tesla',     lines: ['Conducted successfully.', 'Another experiment. Another success.', 'The future is electric.', 'The stars are listening.'] },
+  { characterId: 'shaka',     lines: ['The nation grows.', 'Our blood holds the land.', 'USUTHU!', 'Kwakha isizwe. We build a nation.'] },
 ];

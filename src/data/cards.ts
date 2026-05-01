@@ -27,6 +27,11 @@ export const CHARACTER_IDS = {
   picasso:   "Picasso",
   teddy:     "Teddy",
   mansa:     "Mansa",
+  velthar:    "Vel'thar",
+  musashi:   "Musashi",
+  cleopatra: "Cleopatra",
+  tesla:     "Tesla",
+  shaka:     "Shaka",
 } as const;
 
 // How many copies of each shared card go into a deck (default 2)
@@ -619,12 +624,172 @@ const CARD_DEFS: CardDef[] = [
   {
     definitionId: "mansa_bounty",
     name: "Mansa's Bounty",
-    manaCost: 2,
+    manaCost: 3,
     type: "ultimate",
     rarity: "ultimate",
     description: "ULTIMATE (Exhaust) — Golden Stasis: all units on the board (allies and enemies) are frozen in golden light and cannot act for 1 turn.",
     exclusiveTo: CHARACTER_IDS.mansa,
     effect: { mansaBounty: true },
+  },
+
+  // ── Vel'thar ───────────────────────────────────────────────────────────────────
+  {
+    definitionId: "velthar_void_lance",
+    name: "Toba's Fury",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Melee strike for ~64 damage. At 2+ Bottleneck stacks: also applies Armor Break.",
+    exclusiveTo: "Vel'thar",
+    effect: { powerMult: 1.1, range: 1, armorBreakAtStacks: 2 },
+  },
+  {
+    definitionId: "velthar_last_rites",
+    name: "Last Ember",
+    manaCost: 2,
+    type: "buff",
+    rarity: "rare",
+    description: "If Bottleneck is active (≥1 stack): Vel'thar heals 25 HP and gains +15 Defense until next turn. Otherwise: deal ~50 damage to all enemies within range 2.",
+    exclusiveTo: "Vel'thar",
+    effect: { lastRites: true, selfHealIfLost: 25, selfDefenseIfLost: 15, powerMult: 1.0, range: 2 },
+  },
+  {
+    definitionId: "velthar_singularity",
+    name: "Humanity's Last Light",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Deal ~87 damage to all enemies within range 2. Vel'thar heals 30 HP. Bottleneck stacks amplify this via the Power boost already active.",
+    exclusiveTo: "Vel'thar",
+    effect: { humanitysLastLight: true, powerMult: 1.5, range: 2, selfHeal: 30 },
+  },
+
+  // ── Musashi ───────────────────────────────────────────────────────────────────
+  {
+    definitionId: "musashi_ichi_no_tachi",
+    name: "Ichi no Tachi",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Deal ~36 damage at range 1. Places Duel on target (2 turns). If target is already Dueled: deal ~63 damage instead and apply Bleed.",
+    exclusiveTo: "Musashi",
+    effect: { powerMult: 0.8, range: 1, duelApply: true, duelPowerMult: 1.4, duelBleed: true },
+  },
+  {
+    definitionId: "musashi_niten_ichi",
+    name: "Niten Ichi-ryu",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Strike twice for ~32 each (~64 total) at range 1. Both hits apply Bleed. If target is Dueled: refresh Duel and deal ~22 splash to an adjacent enemy.",
+    exclusiveTo: "Musashi",
+    effect: { powerMult: 0.7, multiHit: 2, range: 1, bleedOnHit: true, duelRefresh: true, duelSplashMult: 0.5 },
+  },
+  {
+    definitionId: "musashi_book_of_five",
+    name: "Book of Five Rings",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Apply Duel to ALL enemies within range 2 (2 turns). Deal ~38 damage to each. For the rest of this round, Musashi's Duel damage bonus rises from +35% to +65%.",
+    exclusiveTo: "Musashi",
+    effect: { bookOfFiveRings: true, powerMult: 0.85, range: 2, applyDuelAll: true, duelBonusBoost: 65 },
+  },
+
+  // ── Cleopatra ─────────────────────────────────────────────────────────────────
+  {
+    definitionId: "cleo_asp_kiss",
+    name: "Asp's Kiss",
+    manaCost: 2,
+    type: "debuff",
+    rarity: "rare",
+    description: "Deal ~46 damage at range 3. Reduce target's Power by 15 for 3 turns.",
+    exclusiveTo: "Cleopatra",
+    effect: { powerMult: 0.7, range: 3, powerReduction: 15, powerReductionDuration: 3 },
+  },
+  {
+    definitionId: "cleo_royal_decree",
+    name: "Royal Decree",
+    manaCost: 2,
+    type: "debuff",
+    rarity: "rare",
+    description: "Dual-use (range 3). Enemy: Charm for 1 turn (attacks nearest ally) + applies Poison. Ally: grant +20 Might and +10 Defense for 2 turns.",
+    exclusiveTo: "Cleopatra",
+    effect: { royalDecree: true, range: 3, charm: true, charmedApplyPoison: true, allyMightBonus: 20, allyDefBonus: 10, allyBuffTurns: 2 },
+  },
+  {
+    definitionId: "cleo_eternal_kingdom",
+    name: "Eternal Kingdom",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Apply Poison and Stun (1 turn) to ALL enemies within range 2. Cleopatra becomes Untouchable for 1 turn.",
+    exclusiveTo: "Cleopatra",
+    effect: { eternalKingdom: true, range: 2, debuffType: 'stunned', debuffDuration: 1, massPoison: true, untouchable: 1 },
+  },
+
+  // ── Tesla ─────────────────────────────────────────────────────────────────────
+  {
+    definitionId: "tesla_arc_bolt",
+    name: "Arc Bolt",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Deal ~72 damage to target within range 3. At Voltage ≥ 3: chains to ALL adjacent enemies for ~40 each.",
+    exclusiveTo: "Tesla",
+    effect: { powerMult: 0.9, range: 3, chainAllAdjacent: true, chainThreshold: 3, chainPct: 0.5 },
+  },
+  {
+    definitionId: "tesla_coil_surge",
+    name: "Coil Surge",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Place a Tesla Coil zone on target tile (range 3). Enemies who start their turn on it receive −20 Defense and are Stunned 1 turn. Lasts 3 turns. Costs 1 Voltage stack.",
+    exclusiveTo: "Tesla",
+    effect: { coilZone: true, range: 3, coilDuration: 3, coilDefPenalty: 20, coilStun: true, voltageCost: 1 },
+  },
+  {
+    definitionId: "tesla_death_ray",
+    name: "Death Ray",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — Requires Voltage ≥ 1. Fire a beam (range 6) — first target takes ~40 per Voltage stack, each further target takes 50% of the previous. Consumes all Voltage.",
+    exclusiveTo: "Tesla",
+    effect: { deathRay: true, lineTarget: true, range: 6, voltageRequired: 1, voltagePerStackMult: 0.5, chainFalloffPct: 0.5 },
+  },
+
+  // ── Shaka ─────────────────────────────────────────────────────────────────────
+  {
+    definitionId: "shaka_the_horns",
+    name: "The Horns",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Charge at target (up to 2 tiles). Deal ~24 damage. Enemy is knocked sideways (left or right of charge direction). Water: instant lethal. Mountain: Stun 1 turn instead.",
+    exclusiveTo: "Shaka",
+    effect: { chargeHorns: true, powerMult: 0.6, range: 2, chargePushSideways: true, waterKill: true, mountainStun: true },
+  },
+  {
+    definitionId: "shaka_chest_strike",
+    name: "Chest Strike",
+    manaCost: 2,
+    type: "attack",
+    rarity: "rare",
+    description: "Deal ~27 damage at range 1. Push target back 1 tile. Applies Armor Break.",
+    exclusiveTo: "Shaka",
+    effect: { powerMult: 0.7, range: 1, pushBack: 1, debuffType: 'armor_break', debuffMagnitude: 35, debuffDuration: 2 },
+  },
+  {
+    definitionId: "shaka_impondo_zankomo",
+    name: "Impondo Zankomo",
+    manaCost: 3,
+    type: "ultimate",
+    rarity: "ultimate",
+    description: "ULTIMATE (Exhaust) — War cry: deal ~62 damage to ALL adjacent enemies. All adjacent allies gain +35 Defense for 2 turns. Shaka gains +50 Defense for 2 turns.",
+    exclusiveTo: "Shaka",
+    effect: { impondo: true, powerMult: 1.5, aoeAdjacent: true, allyDefBonus: 35, allyDefTurns: 2, selfDefBonus: 50, selfDefTurns: 2 },
   },
 
   // ── Curses (passive penalties — added to deck by events, not drafted) ────────
@@ -763,7 +928,7 @@ export const CARD_UPGRADES: Record<string, {
   napoleon_artillery_barrage: {
     upgradedName: 'Artillery Barrage+',
     descriptionUpgrade: 'Multiplier 1.3× → 1.6×',
-    patch: { description: 'Power×1.6 damage at range 4.', effect: { powerMult: 1.6, range: 4 } },
+    patch: { description: '~94 damage at range 4.', effect: { powerMult: 1.6, range: 4 } },
   },
   napoleon_grande_armee: {
     upgradedName: 'Grande Armée+',
@@ -1047,6 +1212,86 @@ export const CARD_UPGRADES: Record<string, {
     upgradedName: 'Eternal Army+',
     descriptionUpgrade: 'Control 2 → 3 turns',
     patch: { description: 'ULTIMATE (Exhaust) — Control a non-boss enemy within range 3 for 3 turns.', effect: { controlEnemy: true, range: 3, controlDuration: 3 } },
+  },
+  // Vel'thar
+  velthar_void_lance: {
+    upgradedName: "Toba's Fury+",
+    descriptionUpgrade: 'Power×1.1 → 1.4, Armor Break threshold 2+ → 1+ stack',
+    patch: { description: "Melee strike for ~81 damage. At 1+ Bottleneck stack: also applies Armor Break.", effect: { powerMult: 1.4, range: 1, armorBreakAtStacks: 1 } },
+  },
+  velthar_last_rites: {
+    upgradedName: 'Last Ember+',
+    descriptionUpgrade: 'Heal 25 → 40 HP, Defense +15 → +25, AoE ×1.0 → ×1.3',
+    patch: { description: "If Bottleneck is active (≥1 stack): Vel'thar heals 40 HP and gains +25 Defense until next turn. Otherwise: deal ~65 damage to all enemies within range 2.", effect: { lastRites: true, selfHealIfLost: 40, selfDefenseIfLost: 25, powerMult: 1.3, range: 2 } },
+  },
+  velthar_singularity: {
+    upgradedName: "Humanity's Last Light+",
+    descriptionUpgrade: 'Damage ×1.5 → ×2.0, heal 30 → 50 HP',
+    patch: { description: "ULTIMATE (Exhaust) — Deal ~116 damage to all enemies within range 2. Vel'thar heals 50 HP. Bottleneck stacks amplify this via the Power boost already active.", effect: { humanitysLastLight: true, powerMult: 2.0, range: 2, selfHeal: 50 } },
+  },
+  // Musashi
+  musashi_ichi_no_tachi: {
+    upgradedName: 'Ichi no Tachi+',
+    descriptionUpgrade: 'Base ×0.8 → ×1.0, Dueled version ×1.4 → ×1.75',
+    patch: { description: 'Deal ~45 damage at range 1. Places Duel on target (2 turns). If target is already Dueled: deal ~79 damage instead and apply Bleed.', effect: { powerMult: 1.0, range: 1, duelApply: true, duelPowerMult: 1.75, duelBleed: true } },
+  },
+  musashi_niten_ichi: {
+    upgradedName: 'Niten Ichi-ryu+',
+    descriptionUpgrade: '×0.7 → ×0.9 per hit, splash ×0.5 → ×0.65',
+    patch: { description: 'Strike twice for ~40 each (~81 total) at range 1. Both hits apply Bleed. If Dueled: refresh Duel and deal ~29 splash to an adjacent enemy.', effect: { powerMult: 0.9, multiHit: 2, range: 1, bleedOnHit: true, duelRefresh: true, duelSplashMult: 0.65 } },
+  },
+  musashi_book_of_five: {
+    upgradedName: 'Book of Five Rings+',
+    descriptionUpgrade: 'Damage ×0.85 → ×1.1, Duel bonus cap +65% → +80%',
+    patch: { description: 'ULTIMATE (Exhaust) — Apply Duel to ALL enemies within range 2 (2 turns). Deal ~49 damage to each. For the rest of this round, Duel damage bonus rises to +80%.', effect: { bookOfFiveRings: true, powerMult: 1.1, range: 2, applyDuelAll: true, duelBonusBoost: 80 } },
+  },
+  // Cleopatra
+  cleo_asp_kiss: {
+    upgradedName: "Asp's Kiss+",
+    descriptionUpgrade: 'Damage ×0.7 → ×0.9, Power reduction 15 → 20',
+    patch: { description: "Deal ~59 damage at range 3. Reduce target's Power by 20 for 3 turns.", effect: { powerMult: 0.9, range: 3, powerReduction: 20, powerReductionDuration: 3 } },
+  },
+  cleo_royal_decree: {
+    upgradedName: 'Royal Decree+',
+    descriptionUpgrade: 'Ally buff +20/+10 → +30/+15 Might/Defense',
+    patch: { description: 'Dual-use (range 3). Enemy: Charm for 1 turn + applies Poison. Ally: grant +30 Might and +15 Defense for 2 turns.', effect: { royalDecree: true, range: 3, charm: true, charmedApplyPoison: true, allyMightBonus: 30, allyDefBonus: 15, allyBuffTurns: 2 } },
+  },
+  cleo_eternal_kingdom: {
+    upgradedName: 'Eternal Kingdom+',
+    descriptionUpgrade: 'Stun 1t → 2t, Untouchable 1t → 2t',
+    patch: { description: 'ULTIMATE (Exhaust) — Apply Poison and Stun (2 turns) to ALL enemies within range 2. Cleopatra becomes Untouchable for 2 turns.', effect: { eternalKingdom: true, range: 2, debuffType: 'stunned', debuffDuration: 2, massPoison: true, untouchable: 2 } },
+  },
+  // Tesla
+  tesla_arc_bolt: {
+    upgradedName: 'Arc Bolt+',
+    descriptionUpgrade: '×0.9 → ×1.2 primary, chain ×0.5 → ×0.7',
+    patch: { description: 'Deal ~96 damage to target within range 3. At Voltage ≥ 3: chains to ALL adjacent enemies for ~56 each.', effect: { powerMult: 1.2, range: 3, chainAllAdjacent: true, chainThreshold: 3, chainPct: 0.7 } },
+  },
+  tesla_coil_surge: {
+    upgradedName: 'Coil Surge+',
+    descriptionUpgrade: 'Coil lasts 3 → 4 turns, DEF penalty 20 → 25, no longer costs Voltage',
+    patch: { description: 'Place a Tesla Coil zone on target tile (range 3). Enemies who start their turn on it receive −25 Defense and are Stunned 1 turn. Lasts 4 turns. No Voltage cost.', effect: { coilZone: true, range: 3, coilDuration: 4, coilDefPenalty: 25, coilStun: true, voltageCost: 0 } },
+  },
+  tesla_death_ray: {
+    upgradedName: 'Death Ray+',
+    descriptionUpgrade: 'Per-stack ×0.5 → ×0.6, max falloff chain unchanged',
+    patch: { description: 'ULTIMATE (Exhaust) — Requires Voltage ≥ 1. Fire a beam (range 6) — first target takes ~48 per Voltage stack, each further target takes 50% of the previous. Consumes all Voltage.', effect: { deathRay: true, lineTarget: true, range: 6, voltageRequired: 1, voltagePerStackMult: 0.6, chainFalloffPct: 0.5 } },
+  },
+  // Shaka
+  shaka_the_horns: {
+    upgradedName: 'The Horns+',
+    descriptionUpgrade: 'Damage ×0.6 → ×0.8, charge range 2 → 3',
+    patch: { description: 'Charge at target (up to 3 tiles). Deal ~30 damage. Enemy knocked sideways. Water: instant lethal. Mountain: Stun 1 turn.', effect: { chargeHorns: true, powerMult: 0.8, range: 3, chargePushSideways: true, waterKill: true, mountainStun: true } },
+  },
+  shaka_chest_strike: {
+    upgradedName: 'Chest Strike+',
+    descriptionUpgrade: 'Damage ×0.7 → ×0.9, Armor Break unchanged',
+    patch: { description: 'Deal ~34 damage at range 1. Push target back 1 tile. Applies Armor Break.', effect: { powerMult: 0.9, range: 1, pushBack: 1, debuffType: 'armor_break', debuffMagnitude: 35, debuffDuration: 2 } },
+  },
+  shaka_impondo_zankomo: {
+    upgradedName: 'Impondo Zankomo+',
+    descriptionUpgrade: 'Damage ×1.5 → ×1.8, ally DEF 35 → 45, Shaka DEF 50 → 65',
+    patch: { description: 'ULTIMATE (Exhaust) — War cry: deal ~75 damage to ALL adjacent enemies. Adjacent allies gain +45 Defense for 2 turns. Shaka gains +65 Defense for 2 turns.', effect: { impondo: true, powerMult: 1.8, aoeAdjacent: true, allyDefBonus: 45, allyDefTurns: 2, selfDefBonus: 65, selfDefTurns: 2 } },
   },
 };
 

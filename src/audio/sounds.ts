@@ -55,6 +55,11 @@ export const PLAYLIST: TrackDef[] = [
   { id: 'genghis2',       name: 'Тэнгэрийн Охин',    src: '/audio/genghis2_theme.mp3' },
   { id: 'nonsumosclones', name: 'Non Sumos Clones', src: '/audio/nonsumosclones_theme.mp3' },
   { id: 'thesamesoul',    name: 'The Same Soul',   src: '/audio/thesamesoul_theme.mp3' },
+  { id: 'musashi',        name: '五輪の書',            src: '/audio/musashi_theme.mp3' },
+  { id: 'cleopatra',      name: 'Η Τελευταία Φαραώ', src: '/audio/cleopatra_theme.mp3' },
+  { id: 'tesla',          name: 'Svetlost Svemira',   src: '/audio/tesla_theme.mp3' },
+  { id: 'shaka',          name: 'Bayede',             src: '/audio/shaka_theme.mp3' },
+  { id: 'velthar',        name: 'Kar-Dren-Thral',     src: '/audio/velthar_theme.mp3' },
 ];
 
 // Character theme clips: { src, startSec, endSec } — used only in Historical Archives preview

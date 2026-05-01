@@ -16,7 +16,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 60, maxHp: 60, might: 35, power: 25, defense: 8, moveRange: 2, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
-      { id: 'spore_release', name: 'Spore Release', icon: '☁️', description: 'Releases toxic spores — applies Poison to all enemies within range 1.', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'poison', magnitude: 5, duration: 99 } },
+      { id: 'spore_release', name: 'Spore Release', icon: '☁️', description: 'Releases toxic spores — applies Poison to all enemies within range 1.', cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'poison', magnitude: 5, duration: 3 } },
     ] as EnemyAbilityDef[],
   },
   zyx_skitter: {
@@ -55,10 +55,10 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'krath_champion', name: 'Krath Champion', icon: '⚔️', count: 1,
     portrait: '/art/enemies/krath_champion_portrait.png',
     description: "A seasoned Krath arena veteran decorated with the skulls of past opponents. Fights dirty, hard, and with a grin that says it's already killed better than you.",
-    stats: { hp: 105, maxHp: 105, might: 55, power: 40, defense: 18, moveRange: 3, attackRange: 1 },
+    stats: { hp: 85, maxHp: 85, might: 40, power: 35, defense: 14, moveRange: 3, attackRange: 1 },
     ai: 'berserker',
     abilities: [
-      { id: 'battle_rage', name: 'Battle Rage', icon: '🔥', description: 'Gains +25 Might and +10 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 25, defenseBonus: 10, duration: 2 } },
+      { id: 'battle_rage', name: 'Battle Rage', icon: '🔥', description: 'Gains +15 Might and +10 Defense for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 15, defenseBonus: 10, duration: 2 } },
       { id: 'champion_strike', name: "Champion's Strike", icon: '⚔️', description: 'Deals 1× Might damage to the nearest enemy within range 2 (DEF applies).', cooldown: 2, effect: { type: 'aoe_damage', range: 2, multiplier: 1.0, singleTarget: true, useMight: true } },
       { id: 'battle_roar', name: 'Battle Roar', icon: '📣', description: 'Roars a challenge — Taunts all enemies within range 2 for 1 turn, forcing them to focus the Champion.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'taunted', magnitude: 0, duration: 1 } },
     ] as EnemyAbilityDef[],
@@ -70,7 +70,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 40, maxHp: 40, might: 20, power: 30, defense: 5, moveRange: 1, attackRange: 2 },
     ai: 'ranged',
     abilities: [
-      { id: 'toxic_cloud', name: 'Toxic Cloud', icon: '☣️', description: 'Applies Poison to all enemies within range 2.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'poison', magnitude: 5, duration: 99 } },
+      { id: 'toxic_cloud', name: 'Toxic Cloud', icon: '☣️', description: 'Applies Poison to all enemies within range 2.', cooldown: 3, effect: { type: 'debuff_enemies', range: 2, debuffType: 'poison', magnitude: 5, duration: 3 } },
       { id: 'spore_web', name: 'Spore Web', icon: '🕸️', description: 'Releases sticky spore tendrils — Roots all enemies within range 2 for 1 turn.', cooldown: 4, effect: { type: 'debuff_enemies', range: 2, debuffType: 'rooted', magnitude: 0, duration: 1 } },
     ] as EnemyAbilityDef[],
   },
@@ -160,7 +160,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 160, maxHp: 160, might: 60, power: 55, defense: 20, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
-      { id: 'alpha_rush', name: 'Alpha Rush', icon: '🗡️', description: 'Charges 4 hexes and deals 1.5× Might damage on impact.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.5 } },
+      { id: 'alpha_rush', name: 'Alpha Rush', icon: '🗡️', description: 'Charges 4 hexes and deals 1.25× Might damage on impact.', cooldown: 2, effect: { type: 'dash_attack', dashRange: 4, multiplier: 1.25 } },
       { id: 'twin_fury', name: 'Twin Fury', icon: '🔥', description: 'Gains +20 Might for 2 turns.', cooldown: 3, effect: { type: 'buff_self', mightBonus: 20, duration: 2 } },
     ] as EnemyAbilityDef[],
   },
@@ -374,7 +374,7 @@ export const ITEMS: RunItem[] = [
     description: '+5 Power for this run.',
     statBonus: { power: 5 } },
   { id: 'swift_wraps', name: 'Swift Wraps', icon: '🩹', tier: 'common',
-    description: '+2 extra movement on the first turn of each battle.',
+    description: '+1 permanent movement range + +2 extra movement on the first turn of each battle.',
     passiveTag: 'swift_wraps_burst' },
   { id: 'targeting_visor', name: 'Targeting Visor', icon: '🎯', tier: 'common',
     description: '+1 Attack Range for this run.',
@@ -388,7 +388,7 @@ export const ITEMS: RunItem[] = [
   // UNCOMMON
   { id: 'battle_drum', name: 'Battle Drum', icon: '🥁', tier: 'uncommon',
     description: 'After killing an enemy, draw 1 card.',
-    passiveTag: 'draw_2_on_kill' },
+    passiveTag: 'draw_on_kill' },
   { id: 'arena_medkit', name: 'Arena Medkit', icon: '💊', tier: 'uncommon',
     description: 'Heal 25 HP at the start of your turn if below 40% HP.',
     passiveTag: 'regen_low_hp' },
@@ -405,7 +405,7 @@ export const ITEMS: RunItem[] = [
     description: 'On kill, restore 20 HP to this character.',
     passiveTag: 'on_kill_heal_15' },
   { id: 'war_trophy', name: 'War Trophy', icon: '💀', tier: 'uncommon',
-    description: 'On kill, permanently gain +2 Might and +2 Power for the rest of the run.',
+    description: 'On kill, permanently gain +2 Might and +2 Power for the rest of the run (caps at 5 stacks — +10 / +10 max).',
     passiveTag: 'on_kill_might_power_plus3' },
   // RARE — general
   { id: 'alien_core', name: 'Alien Core', icon: '🧬', tier: 'rare',
@@ -421,7 +421,7 @@ export const ITEMS: RunItem[] = [
     description: 'The first attack that deals damage to this character each fight is negated (deals 0 damage).',
     passiveTag: 'negate_first_hit' },
   { id: 'chrono_shard', name: 'Chrono Shard', icon: '⏳', tier: 'rare',
-    description: '+1 Mana on the first turn of each combat.',
+    description: '+2 Mana on the first turn of each combat.',
     passiveTag: 'chrono_shard_t1' },
   { id: 'berserker_mark', name: "Berserker's Mark", icon: '🔥', tier: 'rare',
     description: '+15% damage dealt when below 50% HP.',
@@ -441,7 +441,7 @@ export const ITEMS: RunItem[] = [
   // RARE — Genghis
   { id: 'eternal_hunger', name: 'Eternal Hunger', icon: '🩸', tier: 'rare',
     targetCharacter: 'genghis',
-    description: 'Bloodlust kill stacks carry over between fights for the entire run.',
+    description: "Genghis keeps 100% of her Bloodlust kill stacks between fights (normally stacks reset). The Khan's hunger never sleeps.",
     passiveTag: 'genghis_bloodlust_persist' },
   { id: 'khans_seal', name: "Khan's Seal", icon: '🏹', tier: 'rare',
     targetCharacter: 'genghis',
@@ -537,6 +537,54 @@ export const ITEMS: RunItem[] = [
     targetCharacter: 'mansa',
     description: "Mansa's ability card Mana discount increased to 2.",
     passiveTag: 'mansa_discount_2' },
+  // RARE — Vel'thar-chan
+  { id: 'velthar_remnant_core', name: "Survivor's Totem", icon: '🦴', tier: 'rare',
+    targetCharacter: 'velthar',
+    description: "While Vel'thar is at or below 40% HP, she takes 35% less damage from all sources.",
+    passiveTag: 'velthar_low_hp_resilience' },
+  { id: 'velthar_void_mantle', name: 'Ashfall Mantle', icon: '🌋', tier: 'rare',
+    targetCharacter: 'velthar',
+    description: "Last Ember's AoE mode also heals Vel'thar 20 HP. Humanity's Last Light AoE radius +1 and self-heal +15 HP.",
+    passiveTag: 'velthar_ashfall_mantle' },
+  // RARE — Musashi-chan
+  { id: 'musashi_daisho', name: 'Daishō Set', icon: '⚔️', tier: 'rare',
+    targetCharacter: 'musashi',
+    description: 'Each Niten Ichi-ryu strike that kills grants an immediate extra strike on a new target.',
+    passiveTag: 'musashi_niten_kill_bonus' },
+  { id: 'musashi_ganryu_stone', name: 'Ganryu Island Stone', icon: '🪨', tier: 'rare',
+    targetCharacter: 'musashi',
+    description: '+15 Might, +5 Power. Battle Scar stacks persist between fights.',
+    statBonus: { might: 15, power: 5 },
+    passiveTag: 'musashi_scar_persist' },
+  // RARE — Cleopatra-chan
+  { id: 'cleo_lotus_crown', name: 'Lotus Crown', icon: '🌸', tier: 'rare',
+    targetCharacter: 'cleopatra',
+    description: "Asp's Venom now also applies when Cleopatra uses an ability card, not only on basic attacks.",
+    passiveTag: 'cleo_venom_on_abilities' },
+  { id: 'cleo_library_scroll', name: 'Alexandrian Codex', icon: '📜', tier: 'rare',
+    targetCharacter: 'cleopatra',
+    description: "Asp's Kiss Power reduction increased from −15 to −25 for 3 turns.",
+    passiveTag: 'cleo_asp_power_reduction_boost' },
+  // RARE — Tesla-chan
+  { id: 'tesla_oscillator', name: 'Resonant Oscillator', icon: '⚡', tier: 'rare',
+    targetCharacter: 'tesla',
+    description: 'Arc Bolt chains to 1 extra enemy for free.',
+    passiveTag: 'tesla_arc_extra_chain' },
+  { id: 'tesla_faraday_coat', name: 'Faraday Coat', icon: '🧥', tier: 'rare',
+    targetCharacter: 'tesla',
+    description: '+10 Defense. Tesla takes 15% less damage from abilities.',
+    statBonus: { defense: 10 },
+    passiveTag: 'tesla_faraday_coat_15' },
+  // RARE — Shaka-chan
+  { id: 'shaka_assegai', name: 'Assegai', icon: '🗡️', tier: 'rare',
+    targetCharacter: 'shaka',
+    description: '+15 Might. The Horns also knocks back an adjacent enemy 1 hex.',
+    statBonus: { might: 15 },
+    passiveTag: 'shaka_horns_splash' },
+  { id: 'shaka_cattle_kraal', name: 'Cattle Kraal Token', icon: '🐄', tier: 'rare',
+    targetCharacter: 'shaka',
+    description: 'At fight start, gain bonus HP equal to 10% of max HP per ally in the squad.',
+    passiveTag: 'shaka_kraal_shield' },
   // LEGENDARY
   { id: 'znyxorgas_eye', name: "Znyxorga's Eye", icon: '👁️', tier: 'legendary',
     description: 'This character has no limit on cards played per turn (normally capped at 3).',
@@ -575,7 +623,7 @@ export const SIGNATURE_LEGENDARIES: Record<CharacterId, RunItem> = {
   genghis: {
     id: 'sig_genghis', name: 'Eternal Steppe', icon: '🌾', tier: 'legendary',
     targetCharacter: 'genghis', isSignature: true,
-    description: 'Bloodlust stacks no longer cap at 3. Each stack also grants +1 movement.',
+    description: 'Bloodlust stacks no longer cap (Might + Mana keeps scaling). First 3 stacks each grant +1 movement (max +3 Move).',
     passiveTag: 'sig_genghis_uncapped_bloodlust',
   },
   davinci: {
@@ -635,9 +683,41 @@ export const SIGNATURE_LEGENDARIES: Record<CharacterId, RunItem> = {
   mansa: {
     id: 'sig_mansa', name: 'Infinite Vault', icon: '🏦', tier: 'legendary',
     targetCharacter: 'mansa', isSignature: true,
-    description: 'Start each fight with +25 Power (converted from your gold reserves).',
+    description: '+25 Power. Hajj of Gold heals an additional 20% of max HP (20% → 40%). Mansa shares her fortune.',
     statBonus: { power: 25 },
     passiveTag: 'sig_mansa_vault',
+  },
+  velthar: {
+    id: 'sig_velthar', name: 'Ember of the First Flame', icon: '🔥', tier: 'legendary',
+    targetCharacter: 'velthar', isSignature: true,
+    description: "Each Bottleneck stack also grants +5 Defense (max +25). Toba's Fury deals true damage at 2+ stacks.",
+    passiveTag: 'sig_velthar_ember',
+  },
+  musashi: {
+    id: 'sig_musashi', name: 'Niten Ichi-ryu Scrolls', icon: '📜', tier: 'legendary',
+    targetCharacter: 'musashi', isSignature: true,
+    description: 'Starts every fight with 2 Battle Scar stacks pre-loaded. Duel also applies Blinded (1 turn) to the marked target.',
+    passiveTag: 'sig_musashi_niten_scrolls',
+  },
+  cleopatra: {
+    id: 'sig_cleopatra', name: 'Eye of Ra', icon: '👁️', tier: 'legendary',
+    targetCharacter: 'cleopatra', isSignature: true,
+    description: "Royal Decree Charm lasts 2 turns instead of 1. Asp's Venom also reduces target's Power by 5 per turn. +15 Power.",
+    statBonus: { power: 15 },
+    passiveTag: 'sig_cleopatra_eye_of_ra',
+  },
+  tesla: {
+    id: 'sig_tesla', name: 'Magnifying Transmitter', icon: '📡', tier: 'legendary',
+    targetCharacter: 'tesla', isSignature: true,
+    description: 'Voltage stacks cap raised from 5 to 8. At max Voltage, next ability card costs 0 Mana. +20 Power.',
+    statBonus: { power: 20 },
+    passiveTag: 'sig_tesla_transmitter',
+  },
+  shaka: {
+    id: 'sig_shaka', name: 'Isigodlo Warshield', icon: '🛡️', tier: 'legendary',
+    targetCharacter: 'shaka', isSignature: true,
+    description: 'Formation aura range increased to 2 tiles. Impondo Zankomo Defense bonus +20 for Shaka and allies.',
+    passiveTag: 'sig_shaka_isigodlo',
   },
 };
 
@@ -731,7 +811,32 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'mansa_salt_road',   name: 'Salt Road',    icon: '⚗️', manaCost: 1, rarity: 'rare',    description: 'Place a 7-hex mana zone within range 3. Allies starting their turn on it restore 1 Mana. Lasts 2 turns.', exclusiveTo: 'Mansa' },
   { definitionId: 'mansa_hajj_of_gold',name: 'Hajj of Gold', icon: '✨', manaCost: 2, rarity: 'rare',    description: 'Heal all allies for 20% of max HP. All allies gain +10 Power until end of turn.', exclusiveTo: 'Mansa' },
   // ── Ultimate — Mansa-chan ─────────────────────────────────────────────────
-  { definitionId: 'mansa_bounty', name: "Mansa's Bounty", icon: '⭐', manaCost: 2, rarity: 'ultimate', description: "ULTIMATE — Golden Stasis: freeze all units on the board for 1 turn. Use the pause to reposition and plan.", exclusiveTo: 'Mansa' },
+  { definitionId: 'mansa_bounty', name: "Mansa's Bounty", icon: '⭐', manaCost: 3, rarity: 'ultimate', description: "ULTIMATE — Golden Stasis: freeze all units on the board for 1 turn. Use the pause to reposition and plan.", exclusiveTo: 'Mansa' },
+  // ── Rare — Vel'thar-chan ──────────────────────────────────────────────────
+  { definitionId: 'velthar_void_lance', name: "Toba's Fury", icon: '🔥', manaCost: 2, rarity: 'rare', description: "Melee strike ~64 dmg. At 2+ Bottleneck stacks: applies Armor Break.", exclusiveTo: "Vel'thar" },
+  { definitionId: 'velthar_last_rites', name: 'Last Ember', icon: '🕯️', manaCost: 2, rarity: 'rare', description: "Bottleneck active: heal 25 HP + +15 DEF. Otherwise: ~50 AoE dmg range 2.", exclusiveTo: "Vel'thar" },
+  // ── Ultimate — Vel'thar-chan ──────────────────────────────────────────────
+  { definitionId: 'velthar_singularity', name: "Humanity's Last Light", icon: '⭐', manaCost: 3, rarity: 'ultimate', description: "ULTIMATE — ~87 AoE dmg range 2. Vel'thar heals 30 HP. Scales with Bottleneck Power boost.", exclusiveTo: "Vel'thar" },
+  // ── Rare — Musashi-chan ───────────────────────────────────────────────────
+  { definitionId: 'musashi_ichi_no_tachi', name: 'Ichi no Tachi', icon: '⚔️', manaCost: 2, rarity: 'rare', description: '~36 dmg at range 1. Places Duel 2t. If Dueled: ~63 dmg + Bleed.', exclusiveTo: 'Musashi' },
+  { definitionId: 'musashi_niten_ichi', name: 'Niten Ichi-ryu', icon: '🗡️', manaCost: 2, rarity: 'rare', description: 'Strike twice ~32 each (~64 total). Both apply Bleed. If Dueled: refresh Duel + ~22 splash.', exclusiveTo: 'Musashi' },
+  // ── Ultimate — Musashi-chan ───────────────────────────────────────────────
+  { definitionId: 'musashi_book_of_five', name: 'Book of Five Rings', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Duel ALL visible enemies. Deal ~45 dmg each. Duel bonus +35% → +65% this round.', exclusiveTo: 'Musashi' },
+  // ── Rare — Cleopatra-chan ─────────────────────────────────────────────────
+  { definitionId: 'cleo_asp_kiss', name: "Asp's Kiss", icon: '🐍', manaCost: 2, rarity: 'rare', description: '~46 dmg at range 3. Reduce target Power by −15 for 3 turns.', exclusiveTo: 'Cleopatra' },
+  { definitionId: 'cleo_royal_decree', name: 'Royal Decree', icon: '👑', manaCost: 2, rarity: 'rare', description: 'Dual-use (range 3). Enemy: Charm 1t + Poison. Ally: +20 Might, +10 DEF for 2 turns.', exclusiveTo: 'Cleopatra' },
+  // ── Ultimate — Cleopatra-chan ─────────────────────────────────────────────
+  { definitionId: 'cleo_eternal_kingdom', name: 'Eternal Kingdom', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Stun + Poison ALL enemies range 2 for 1t. Cleopatra Untouchable 1t.', exclusiveTo: 'Cleopatra' },
+  // ── Rare — Tesla-chan ─────────────────────────────────────────────────────
+  { definitionId: 'tesla_arc_bolt', name: 'Arc Bolt', icon: '⚡', manaCost: 2, rarity: 'rare', description: '~72 dmg at range 3. At Voltage ≥3: chains to ALL adjacent enemies for ~40 each.', exclusiveTo: 'Tesla' },
+  { definitionId: 'tesla_coil_surge', name: 'Coil Surge', icon: '🌀', manaCost: 2, rarity: 'rare', description: 'Place Tesla Coil zone on tile (range 3). Enemies starting turn on it: −20 DEF + Stun 1t. Lasts 3t. Costs 1 Voltage.', exclusiveTo: 'Tesla' },
+  // ── Ultimate — Tesla-chan ─────────────────────────────────────────────────
+  { definitionId: 'tesla_death_ray', name: 'Death Ray', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Requires Voltage ≥3. Line beam range 6: ~40 dmg × stacks per target, 50% falloff. Consumes all Voltage.', exclusiveTo: 'Tesla' },
+  // ── Rare — Shaka-chan ─────────────────────────────────────────────────────
+  { definitionId: 'shaka_the_horns', name: 'The Horns', icon: '🐃', manaCost: 2, rarity: 'rare', description: 'Charge at target (up to 2 tiles), deal ~24 dmg, knock sideways. Water: lethal. Mountain: Stun 1t.', exclusiveTo: 'Shaka' },
+  { definitionId: 'shaka_chest_strike', name: 'Chest Strike', icon: '💥', manaCost: 2, rarity: 'rare', description: '~27 dmg at range 1. Push back 1 tile. Applies Armor Break.', exclusiveTo: 'Shaka' },
+  // ── Ultimate — Shaka-chan ─────────────────────────────────────────────────
+  { definitionId: 'shaka_impondo_zankomo', name: 'Impondo Zankomo', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — ~19 dmg to ALL adjacent enemies. Adjacent allies +35 DEF, Shaka +50 DEF for 2 turns.', exclusiveTo: 'Shaka' },
 ];
 
 // ── Encounter Builders ────────────────────────────────────────────────────────
@@ -863,7 +968,7 @@ function buildEncounter(
     const extraEnemies = Array.from({ length: extraCount }, () => pick(eliteExtraPool, rng));
     enemies = [...baseElites, ...extraEnemies];
     name = 'Elite Encounter';
-    xp = Math.round((60 + row * 2) * actXpScale); gold = 40 + Math.floor(rng() * 25); dropChance = 0.90;
+    xp = Math.round((60 + row * 2) * actXpScale); gold = (act <= 2 ? 53 : 40) + Math.floor(rng() * 25); dropChance = 0.90;
   } else if (act === 4) {
     // Act 4: more enemies than Acts 1-3, but capped to keep fights winnable.
     // krath_berserker and phasewarden only appear in elite fights (too strong for normal pools).
@@ -886,7 +991,7 @@ function buildEncounter(
     const count = isLateRow ? baseCount * 2 + 1 : baseCount * 2; // late: 3 or 5; normal: 2 or 4
     enemies = Array.from({ length: count }, () => pick(enemyPool, rng));
     name = `${count} Enemies`;
-    xp = Math.round((35 + row * 3) * actXpScale); gold = 18 + Math.floor(rng() * 20) + row; dropChance = 0.60 + row * 0.02;
+    xp = Math.round((35 + row * 3) * actXpScale); gold = (act <= 2 ? 25 : 18) + Math.floor(rng() * 20) + row; dropChance = 0.60 + row * 0.02;
   }
 
   // Objective: bosses always destroy_base; elites 50% destroy_base; regular enemies 30% destroy_base, 15% survive
@@ -995,7 +1100,7 @@ export const FIRST_ENCOUNTER: EncounterDef = {
 // monotone constraint, so paths can cross, branch, and merge freely. All paths
 // converge to the single boss node (row 14, col 2).
 
-export function generateActMap(seed: number, act: 1 | 2 | 3 | 4): RunNode[] {
+export function generateActMap(seed: number, act: 1 | 2 | 3 | 4, options?: { allowRevivalShrine?: boolean }): RunNode[] {
   const rng = seededRng(seed + act * 997);
   const ROWS = 15; // rows 0–14; row 13 = pre-boss campfire, row 14 = boss
   const COLS = 5;
@@ -1139,6 +1244,21 @@ export function generateActMap(seed: number, act: 1 | 2 | 3 | 4): RunNode[] {
     if (node) node.connections = [...toIds];
   }
 
+  // ── Revival Shrine injection (Acts 3-4, max 1/run) ─────────────────────────
+  // Convert a single mid-act unknown/treasure node to a revival_shrine. Skip rows
+  // 0/13/14 (forced types) and require act === 3 or 4. Caller gates with `allowRevivalShrine`
+  // based on RunState.revivalShrineUsed to enforce one-per-run.
+  if (options?.allowRevivalShrine && (act === 3 || act === 4)) {
+    const candidates = [...nodeMap.values()].filter(
+      n => (n.type === 'unknown' || n.type === 'treasure') && n.row >= 4 && n.row <= 11
+    );
+    if (candidates.length > 0) {
+      const picked = candidates[Math.floor(rng() * candidates.length)];
+      picked.type = 'revival_shrine';
+      picked.encounter = undefined;
+    }
+  }
+
   return [...nodeMap.values()];
 }
 
@@ -1168,6 +1288,11 @@ export const CHARACTER_STARTING_CARDS: Record<string, string> = {
   picasso:   'picasso_guernica',
   teddy:     'teddy_speak_softly',
   mansa:     'mansa_hajj_of_gold',
+  velthar:    'velthar_void_lance',
+  musashi:   'musashi_ichi_no_tachi',
+  cleopatra: 'cleo_royal_decree',
+  tesla:     'tesla_arc_bolt',
+  shaka:     'shaka_the_horns',
 };
 
 // ── Starting Characters ───────────────────────────────────────────────────────
@@ -1259,6 +1384,41 @@ export function buildStartingCharacters(itemSlots = 6): CharacterRunState[] {
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
       items: [...emptyItems],
     },
+    {
+      id: `velthar`, displayName: "Vel'thar-chan", portrait: `/art/velthar_portrait.png`,
+      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [...emptyItems],
+    },
+    {
+      id: 'musashi', displayName: 'Musashi-chan', portrait: '/art/musashi_portrait.png',
+      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [...emptyItems],
+    },
+    {
+      id: 'cleopatra', displayName: 'Cleopatra-chan', portrait: '/art/cleopatra_portrait.png',
+      currentHp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [...emptyItems],
+    },
+    {
+      id: 'tesla', displayName: 'Tesla-chan', portrait: '/art/tesla_portrait.png',
+      currentHp: 85, maxHp: 85, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [...emptyItems],
+    },
+    {
+      id: 'shaka', displayName: 'Shaka-chan', portrait: '/art/shaka_portrait.png',
+      currentHp: 120, maxHp: 120, level: 1, xp: 0, xpToNext: 100,
+      statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
+      pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
+      items: [...emptyItems],
+    },
   ];
 }
 
@@ -1285,7 +1445,7 @@ export function pickCardRewards(
   // Block owned ultimates (one per character); filter exclusives by current party
   function eligible(c: CardReward): boolean {
     if (c.exclusiveTo) {
-      const norm = c.exclusiveTo.toLowerCase().replace(/[\s-]/g, '');
+      const norm = c.exclusiveTo.toLowerCase().replace(/[\s\-']/g, '');
       if (characterIds.length > 0 && !characterIds.includes(norm)) return false;
     }
     if (c.rarity === 'ultimate' && currentDeck.includes(c.definitionId)) return false;

@@ -172,6 +172,56 @@ const AVAILABLE: Character[] = [
       { kind: "ultimate", icon: "⭐", name: "Mansa's Bounty",     desc: "" },
     ],
   },
+  {
+    id: "velthar", name: "Vel'thar-chan", tagline: "", role: "hybrid",
+    stats: { hp: 90, might: 58, power: 50 },
+    badges: [
+      { kind: "passive",  icon: "🌀", name: "Bottleneck",             desc: "When a player character ally dies, gain +5 Might and +5 Power (scales with level). Stacks, battle scope only." },
+      { kind: "ability",  icon: "🔥", name: "Toba's Fury",            desc: "" },
+      { kind: "ability",  icon: "🕯️", name: "Last Ember",             desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Humanity's Last Light",  desc: "" },
+    ],
+  },
+  {
+    id: "musashi", name: "Musashi-chan", tagline: "", role: "dps_melee",
+    stats: { hp: 90, might: 72, power: 45 },
+    badges: [
+      { kind: "passive",  icon: "🗡️", name: "Battle Scar",       desc: "Each time Musashi takes damage, gain +1 Might (scales +1 per 2 levels, max 3 stacks). Stacks reset on fight end." },
+      { kind: "ability",  icon: "🗡️", name: "Ichi no Tachi",     desc: "" },
+      { kind: "ability",  icon: "⚔️", name: "Niten Ichi-ryu",    desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Book of Five Rings", desc: "" },
+    ],
+  },
+  {
+    id: "cleopatra", name: "Cleopatra-chan", tagline: "", role: "controller",
+    stats: { hp: 100, might: 35, power: 65 },
+    badges: [
+      { kind: "passive",  icon: "🐍", name: "Asp's Venom",    desc: "Basic attacks apply Poison (reduces enemy Might and Defense per turn, stacks up to 3)." },
+      { kind: "ability",  icon: "🐍", name: "Asp's Kiss",     desc: "" },
+      { kind: "ability",  icon: "📜", name: "Royal Decree",   desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Eternal Kingdom", desc: "" },
+    ],
+  },
+  {
+    id: "tesla", name: "Tesla-chan", tagline: "", role: "dps_ranged",
+    stats: { hp: 85, might: 25, power: 80 },
+    badges: [
+      { kind: "passive",  icon: "⚡", name: "Voltage",      desc: "Staying still charges Voltage (+1/turn, max 5). Moving loses 1 stack. At 5 stacks (Overloaded): next basic attack or ability is free, +50% dmg, Stuns." },
+      { kind: "ability",  icon: "🌩️", name: "Arc Bolt",    desc: "" },
+      { kind: "ability",  icon: "💡", name: "Coil Surge",  desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Death Ray",   desc: "" },
+    ],
+  },
+  {
+    id: "shaka", name: "Shaka-chan", tagline: "", role: "tank", secondaryRole: "controller",
+    stats: { hp: 120, might: 58, power: 38 },
+    badges: [
+      { kind: "passive",  icon: "🐂", name: "Isigodlo (Formation)", desc: "Adjacent allies gain +10 Defense while Shaka lives (scales with level). Shaka deals +20% damage from the flank." },
+      { kind: "ability",  icon: "🪃", name: "The Horns",      desc: "" },
+      { kind: "ability",  icon: "💥", name: "Chest Strike",   desc: "" },
+      { kind: "ultimate", icon: "⭐", name: "Impondo Zankomo", desc: "" },
+    ],
+  },
 ];
 
 const ROLE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
@@ -293,7 +343,7 @@ export default function CharacterSelection({ onStartGame, onBack, unlockedCharac
             const threshold = CHARACTER_UNLOCK_THRESHOLDS[c.id] ?? 0;
             const eventUnlock = CHARACTER_UNLOCK_EVENTS[c.id]; // e.g. 'thral_nor' for teddy
             const unlockLabel = eventUnlock
-              ? (c.id === 'teddy' ? 'Complete Act III' : c.id === 'mansa' ? 'Complete Act IV' : eventUnlock)
+              ? (c.id === 'tesla' ? 'Complete Act I' : c.id === 'teddy' ? 'Complete Act II' : c.id === 'mansa' ? 'Complete Act III' : c.id === 'velthar' ? 'Complete Act IV' : eventUnlock)
               : `${threshold} pts`;
             const isLocked = unlockedCharacterIds ? !unlockedCharacterIds.has(c.id) : false;
             const picked = selectedIds.includes(c.id);

@@ -15,18 +15,18 @@ const KEYWORD_COLOR: Record<string, string> = {
   AoE:     '#67e8f9',
 };
 
-export function CardDesc({ text }: { text: string }) {
+export const CardDesc = React.memo(function CardDesc({ text }: { text: string }) {
   const parts = text.split(SPLIT_RE);
   return (
-    <>
+    <span>
       {parts.map((part, i) => {
         if (!part) return null;
         if (KEYWORD_COLOR[part])
           return <span key={i} style={{ color: KEYWORD_COLOR[part], fontWeight: 600 }}>{part}</span>;
         if (NUMERIC_RE.test(part))
           return <span key={i} style={{ color: '#4ade80', fontWeight: 700 }}>{part}</span>;
-        return <React.Fragment key={i}>{part}</React.Fragment>;
+        return <span key={i}>{part}</span>;
       })}
-    </>
+    </span>
   );
-}
+});

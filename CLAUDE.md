@@ -147,3 +147,8 @@ Each has: 1 unique starting ability card, passive mechanic, and ultimate. Exclus
 ## Electron Build
 
 Output to `C:\Users\gaamc\AppData\Local\Temp\wcw-release\`. App ID: `com.waifuclonewars.app`. Windows x64 only, no code signing. Electron entry: `electron/main.cjs`.
+
+---
+
+@NEW_CONTENT_CHECKLIST.md
+@visual_update.md

@@ -99,13 +99,14 @@ function svgToScreen(
 }
 
 const NODE_META: Record<string, { icon: string; label: string; color: string; glow: string }> = {
-  enemy:    { icon: 'X',  label: 'Enemy',      color: '#ef4444', glow: 'rgba(239,68,68,0.6)' },
-  elite:    { icon: 'E',  label: 'Elite',      color: '#f97316', glow: 'rgba(249,115,22,0.6)' },
-  campfire: { icon: 'R',  label: 'Campfire',   color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
-  merchant: { icon: '$',  label: 'Merchant',   color: '#22c55e', glow: 'rgba(34,197,94,0.6)' },
-  treasure: { icon: 'T',  label: 'Treasure',   color: '#eab308', glow: 'rgba(234,179,8,0.6)' },
-  unknown:  { icon: '?',  label: 'Unknown',    color: '#94a3b8', glow: 'rgba(148,163,184,0.4)' },
-  boss:     { icon: 'B',  label: 'FINAL BOSS', color: '#f43f5e', glow: 'rgba(244,63,94,1.0)' },
+  enemy:           { icon: 'X', label: 'Enemy',          color: '#ef4444', glow: 'rgba(239,68,68,0.6)' },
+  elite:           { icon: 'E', label: 'Elite',          color: '#f97316', glow: 'rgba(249,115,22,0.6)' },
+  campfire:        { icon: 'R', label: 'Campfire',       color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
+  merchant:        { icon: '$', label: 'Merchant',       color: '#22c55e', glow: 'rgba(34,197,94,0.6)' },
+  treasure:        { icon: 'T', label: 'Treasure',       color: '#eab308', glow: 'rgba(234,179,8,0.6)' },
+  unknown:         { icon: '?', label: 'Unknown',        color: '#94a3b8', glow: 'rgba(148,163,184,0.4)' },
+  boss:            { icon: 'B', label: 'FINAL BOSS',     color: '#f43f5e', glow: 'rgba(244,63,94,1.0)' },
+  revival_shrine:  { icon: '☥', label: 'Revival Shrine', color: '#a855f7', glow: 'rgba(168,85,247,0.7)' },
 };
 
 /** Compute pointy-top hexagon polygon points */
@@ -169,6 +170,14 @@ const NODE_ICONS: Record<string, (color: string, size: number) => React.ReactNod
     <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
       fontSize={s * 0.7} fontWeight={900} fill={color}
       fontFamily="'Orbitron', monospace" style={{ userSelect: 'none' }}>?</text>
+  ),
+  revival_shrine: (color, s) => (
+    // Ankh-like shrine glyph: vertical pillar + arched top + base
+    <g>
+      <ellipse cx={0} cy={-s * 0.2} rx={s * 0.18} ry={s * 0.22} fill="none" stroke={color} strokeWidth={s * 0.13} />
+      <line x1={0} y1={s * 0.02} x2={0} y2={s * 0.42} stroke={color} strokeWidth={s * 0.16} strokeLinecap="round" />
+      <line x1={-s * 0.22} y1={s * 0.18} x2={s * 0.22} y2={s * 0.18} stroke={color} strokeWidth={s * 0.14} strokeLinecap="round" />
+    </g>
   ),
   boss: (color, s) => (
     // Crown shape
@@ -634,6 +643,7 @@ const CHAR_TO_EXCLUSIVE: Record<string, string> = {
   napoleon: 'Napoleon', genghis: 'Genghis', davinci: 'Da Vinci',
   leonidas: 'Leonidas', sunsin: 'Sun-sin', beethoven: 'Beethoven', huang: 'Huang-chan',
   nelson: 'Nelson', hannibal: 'Hannibal', picasso: 'Picasso', teddy: 'Teddy', mansa: 'Mansa',
+  velthar: "Vel'thar", musashi: 'Musashi', cleopatra: 'Cleopatra', tesla: 'Tesla', shaka: 'Shaka',
 };
 
 function AbilityUpgradeOverlay({ char, deckIds, upgradedCardDefIds, isUltimate, onClose, onUpgrade }: {

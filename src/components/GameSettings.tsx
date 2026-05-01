@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, Volume2, VolumeX, Monitor, Gamepad2, Globe, BookOpen } from "lucide-react";
+import { ChevronLeft, Volume2, VolumeX, Monitor, Gamepad2, Globe, BookOpen, Maximize2 } from "lucide-react";
 import ArenaBackground from "@/ui/ArenaBackground";
 import { useAudio } from "@/hooks/useAudio";
 import { useT, LANG_LABELS, Language } from "@/i18n";
 import { clearTutorialDone } from "@/hooks/useTutorialState";
+import { useAccessibility, TextSize } from "@/hooks/useAccessibility";
 
 interface Props {
   onBack: () => void;
@@ -22,6 +23,12 @@ type SettingsTab = 'general' | 'controls' | 'rules';
 export default function GameSettings({ onBack, onReplayTutorial }: Props) {
   const { settings, setMusicVolume, setSfxVolume, toggleMute, setVoiceVolume, setVoiceEnabled, setDialogueEnabled } = useAudio();
   const { t, lang, setLang } = useT();
+  const {
+    textSize, setTextSize,
+    reduceMotion, setReduceMotion,
+    highContrast, setHighContrast,
+    isFullscreen, toggleFullscreen,
+  } = useAccessibility();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   const [displayScale, setDisplayScale] = useState<number>(() => {
@@ -187,6 +194,119 @@ export default function GameSettings({ onBack, onReplayTutorial }: Props) {
                     <p className="text-slate-600 text-[11px] mt-3 font-orbitron tracking-wider">
                       {t.settings.display.hint}
                     </p>
+
+                    {/* Fullscreen toggle */}
+                    <div className="mt-6 pt-6 border-t border-slate-700/40 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Maximize2 className="w-4 h-4 text-cyan-400" />
+                        <span className="font-orbitron text-xs tracking-wider text-slate-300">
+                          {t.settings.display.fullscreen ?? 'Fullscreen'}
+                        </span>
+                      </div>
+                      <button onClick={toggleFullscreen}
+                        className="w-12 h-6 rounded-full border transition-all relative overflow-hidden"
+                        style={{
+                          background: isFullscreen ? 'rgba(6,182,212,0.8)' : 'rgba(51,65,85,0.9)',
+                          borderColor: isFullscreen ? '#22d3ee' : '#475569',
+                          boxShadow: isFullscreen ? '0 0 10px rgba(34,211,238,0.4)' : 'none',
+                        }}>
+                        <span className={[
+                          "absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all duration-200",
+                          isFullscreen ? "left-[25px]" : "left-[3px]",
+                        ].join(" ")} />
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Accessibility */}
+                <section>
+                  <div className="h-px mb-8 bg-gradient-to-r from-emerald-500/20 to-transparent" />
+                  <h2 className="font-orbitron text-[11px] tracking-[0.5em] mb-6 uppercase"
+                    style={{ color: "#34d399" }}>{t.settings.accessibility?.section ?? 'Accessibility'}</h2>
+                  <div className="rounded-xl border border-slate-700/40 p-6 space-y-6"
+                    style={{ background: "rgba(2,4,14,0.7)" }}>
+
+                    {/* Text size */}
+                    <div>
+                      <div className="font-orbitron text-xs text-slate-300 tracking-wider mb-3">
+                        {t.settings.accessibility?.textSize ?? 'Text Size'}
+                      </div>
+                      <div className="grid grid-cols-4 gap-3">
+                        {(['sm','md','lg','xl'] as TextSize[]).map(size => {
+                          const labels: Record<TextSize, string> = {
+                            sm: t.settings.accessibility?.sizes?.sm ?? 'Small',
+                            md: t.settings.accessibility?.sizes?.md ?? 'Medium',
+                            lg: t.settings.accessibility?.sizes?.lg ?? 'Large',
+                            xl: t.settings.accessibility?.sizes?.xl ?? 'Extra Large',
+                          };
+                          const active = textSize === size;
+                          return (
+                            <button key={size} onClick={() => setTextSize(size)}
+                              className="flex flex-col items-center gap-1 rounded-lg px-3 py-2.5 border transition-all"
+                              style={{
+                                background: active ? "rgba(52,211,153,0.10)" : "rgba(2,4,14,0.70)",
+                                borderColor: active ? "rgba(52,211,153,0.60)" : "rgba(100,116,139,0.40)",
+                                boxShadow: active ? "0 0 14px rgba(52,211,153,0.14)" : "none",
+                                color: active ? "#6ee7b7" : "#94a3b8",
+                              }}>
+                              <span className="font-orbitron font-semibold" style={{
+                                fontSize: size === 'sm' ? 11 : size === 'md' ? 13 : size === 'lg' ? 15 : 17,
+                              }}>Aa</span>
+                              <span className="text-[9px] opacity-70">{labels[size]}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Reduce motion */}
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-700/40">
+                      <div>
+                        <div className="font-orbitron text-xs text-slate-300 tracking-wider">
+                          {t.settings.accessibility?.reduceMotion ?? 'Reduce Motion'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {t.settings.accessibility?.reduceMotionHint ?? 'Disables screen shake, flashes, and non-essential animations'}
+                        </div>
+                      </div>
+                      <button onClick={() => setReduceMotion(!reduceMotion)}
+                        className="w-12 h-6 rounded-full border transition-all relative overflow-hidden shrink-0 ml-4"
+                        style={{
+                          background: reduceMotion ? 'rgba(52,211,153,0.8)' : 'rgba(51,65,85,0.9)',
+                          borderColor: reduceMotion ? '#34d399' : '#475569',
+                          boxShadow: reduceMotion ? '0 0 10px rgba(52,211,153,0.4)' : 'none',
+                        }}>
+                        <span className={[
+                          "absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all duration-200",
+                          reduceMotion ? "left-[25px]" : "left-[3px]",
+                        ].join(" ")} />
+                      </button>
+                    </div>
+
+                    {/* High contrast */}
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-700/40">
+                      <div>
+                        <div className="font-orbitron text-xs text-slate-300 tracking-wider">
+                          {t.settings.accessibility?.highContrast ?? 'High Contrast'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {t.settings.accessibility?.highContrastHint ?? 'Brighter text, darker backgrounds for low-vision players'}
+                        </div>
+                      </div>
+                      <button onClick={() => setHighContrast(!highContrast)}
+                        className="w-12 h-6 rounded-full border transition-all relative overflow-hidden shrink-0 ml-4"
+                        style={{
+                          background: highContrast ? 'rgba(52,211,153,0.8)' : 'rgba(51,65,85,0.9)',
+                          borderColor: highContrast ? '#34d399' : '#475569',
+                          boxShadow: highContrast ? '0 0 10px rgba(52,211,153,0.4)' : 'none',
+                        }}>
+                        <span className={[
+                          "absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all duration-200",
+                          highContrast ? "left-[25px]" : "left-[3px]",
+                        ].join(" ")} />
+                      </button>
+                    </div>
                   </div>
                 </section>
 

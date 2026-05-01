@@ -156,28 +156,53 @@ export function TurnQueueBar({
           <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
           <span className="font-orbitron text-[10px] text-slate-400 tracking-widest">AI THINKING</span>
         </div>
-      ) : (
-        <button
-          data-tut="endturn_btn"
-          onClick={onEndTurn}
-          className="font-orbitron text-[11px] font-bold px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95 relative overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, rgba(240,50,50,0.92) 0%, rgba(160,15,15,0.96) 100%)",
-            border: "1px solid rgba(255,80,80,0.75)",
-            color: "#fff",
-            letterSpacing: "0.14em",
-            textShadow: "0 0 12px rgba(255,120,120,0.9)",
-            animation: "btn-end-turn-pulse 1.8s ease-in-out infinite",
-          }}
-        >
-          {/* Shimmer sweep */}
-          <span className="absolute inset-0 pointer-events-none" style={{
-            background: "linear-gradient(105deg, transparent 30%, rgba(255,200,200,0.18) 50%, transparent 70%)",
-            animation: "card-foil-sweep 2.2s ease-in-out infinite",
-          }} />
-          {t.turnQueue.endTurn}
-        </button>
-      )}
+      ) : (() => {
+        // "Ready to end turn" = all alive p0 icons have used their card slot
+        // AND (no mana left OR no affordable cards in hand). Pulse harder to nudge the player.
+        const p0Icons: any[] = gameState.players?.[0]?.icons ?? [];
+        const aliveP0 = p0Icons.filter((i: any) => i.isAlive);
+        const allActed = aliveP0.length > 0 && aliveP0.every((i: any) => !!i.cardUsedThisTurn);
+        const mana: number = gameState.globalMana?.[0] ?? 0;
+        const hand = gameState.hands?.[0];
+        const canStillPlay = Array.isArray(hand?.cards)
+          && hand.cards.some((c: any) => (c?.manaCost ?? 0) <= mana);
+        const readyToEnd = allActed && !canStillPlay;
+        return (
+          <button
+            data-tut="endturn_btn"
+            onClick={onEndTurn}
+            className="font-orbitron text-[11px] font-bold px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95 relative overflow-hidden"
+            style={{
+              background: readyToEnd
+                ? "linear-gradient(135deg, rgba(255,180,40,0.96) 0%, rgba(220,90,20,0.98) 100%)"
+                : "linear-gradient(135deg, rgba(240,50,50,0.92) 0%, rgba(160,15,15,0.96) 100%)",
+              border: readyToEnd ? "1px solid rgba(255,210,80,0.95)" : "1px solid rgba(255,80,80,0.75)",
+              color: "#fff",
+              letterSpacing: "0.14em",
+              textShadow: readyToEnd
+                ? "0 0 16px rgba(255,200,80,1.0)"
+                : "0 0 12px rgba(255,120,120,0.9)",
+              boxShadow: readyToEnd
+                ? "0 0 24px rgba(255,180,40,0.55), 0 0 8px rgba(255,210,80,0.35)"
+                : undefined,
+              animation: readyToEnd
+                ? "btn-end-turn-pulse 0.9s ease-in-out infinite"
+                : "btn-end-turn-pulse 1.8s ease-in-out infinite",
+            }}
+          >
+            {/* Shimmer sweep */}
+            <span className="absolute inset-0 pointer-events-none" style={{
+              background: readyToEnd
+                ? "linear-gradient(105deg, transparent 30%, rgba(255,230,160,0.30) 50%, transparent 70%)"
+                : "linear-gradient(105deg, transparent 30%, rgba(255,200,200,0.18) 50%, transparent 70%)",
+              animation: readyToEnd
+                ? "card-foil-sweep 1.1s ease-in-out infinite"
+                : "card-foil-sweep 2.2s ease-in-out infinite",
+            }} />
+            {t.turnQueue.endTurn}
+          </button>
+        );
+      })()}
     </div>
   );
 }

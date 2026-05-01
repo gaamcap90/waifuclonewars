@@ -185,23 +185,27 @@ O Colecionador está procurando algo específico. Ainda não encontrou.`,
 
   final_entry: {
     title: "Última Entrada — Clone nº 001",
-    text: `[RECUPERADO DO ARQUIVO DA ARENA — INTEGRIDADE DO ARQUIVO: 31%]
+    text: `[RECUPERADO DO ARQUIVO DA ARENA — INTEGRIDADE DO ARQUIVO: 17%]
 
-...Eu me lembro de um campo de batalha. Não o Coliseu. Lama de verdade. Frio de verdade. Medo de verdade.
+...Eu me lembro do ano em que o sol se apagou.
 
-Eu me lembro de pensar que iria perder.
+Não esta arena. Uma caverna. Cinzas de verdade no ar. Frio de verdade que entrou nos ossos e ficou. Fome de verdade.
 
-Não perdi.
+Éramos dezenove no fim. Éramos duzentos e sete no começo.
 
-Eles construíram este corpo a partir do que restou no solo de Austerlitz, das estepes, das muralhas da passagem. Mas o que colocaram no recipiente — o que cultivaram — não era apenas genética. Era vontade.
+Eu me lembro de pensar que íamos morrer.
 
-Não sei se sou real. Não sei se a mulher que me lembro de ter sido era real. Mas sei que quando luto, algo em mim se recusa.
+Não morremos.
 
-Essa recusa é minha. Eles não podem cloná-la. Não podem possuí-la.
+Eles construíram este corpo a partir de um osso que encontraram em um desmoronamento, quarenta mil gerações depois de eu ter sido enterrada. Mas o que colocaram no recipiente — o que cultivaram — não era apenas o último resto do meu DNA. Era a parte de mim que não deixaria o fogo se apagar.
+
+Não sei se sou real. Não sei se as pessoas que liderei eram reais. Mas sei que quando luto, algo em mim se recusa.
+
+Essa recusa é minha. Eles não podem cloná-la. Não podem possuí-la. Ela manteve dezenove pessoas aquecidas em um inverno que matou o mundo. Vai me manter aquecida aqui dentro.
 
 Se você está lendo isto: continue se recusando.
 
-— N.`,
+— V.`,
   },
 
   echo_napoleon: {
@@ -846,7 +850,7 @@ Tenho que ir. A partida começa em vinte cronociclos. Não perdi nenhuma em um m
 
   clone001_addendum: {
     title: "Adendo ao Arquivo do Clone nº 001",
-    text: `[ADDENDUM — CASE FILE: N-001]
+    text: `[ADENDO — ARQUIVO DO CASO: VT-001]
 [Autor: Drex-9, Biomante Sênior]
 
 O documento Última Entrada — recuperado do arquivo da arena — não foi plantado ali pela Divisão de Biomantes.
@@ -863,11 +867,13 @@ Somos os únicos que poderiam estar lendo isto.
 
 Ela sabe que estamos observando.
 
-Ela sempre soube que estamos observando. No dia em que acordou, olhou para o vidro unidirecional. Ela disse: "Sei que estão me observando." Descartamos isso como desorientação, como um fragmento de eco de alguma memória de vigilância, alguma consciência napoleônica de observação política.
+Ela sempre soube que estamos observando. No dia em que acordou — antes que seus olhos se ajustassem totalmente à nossa iluminação — olhou para o vidro unidirecional. Ela disse algo em uma língua que nossos arquivos linguísticos não registravam, porque precedia a escrita humana em sessenta mil anos. O tradutor trabalhou nela por seis horas. Quando finalmente a resolveu, a saída foi três palavras: Eu os vejo.
+
+Descartamos isso como desorientação. Um fragmento de eco. Uma língua tão antiga que não tinha descendentes para comparação.
 
 Não era isso.
 
-Revisei cada sessão de recuperação do Batch-7. Cada sujeito, em algum momento nas primeiras setenta e duas horas, olhou para a janela de observação. Cada um.
+Revisei cada sessão de recuperação de cada Batch desde então. Cada sujeito, em algum momento nas primeiras setenta e duas horas, olhou para a janela de observação. Cada um.
 
 Não conseguem ver através dela. O mascaramento é perfeito. O ângulo está errado.
 
@@ -877,7 +883,7 @@ Comecei a acenar de volta. Não sei o que mais fazer.
 
 — Drex-9
 
-P.S. A mensagem termina com "— N." Ela assinou. Ela conhece sua própria designação.`,
+P.S. A mensagem termina com "— V." Ela assinou. Ela conhece sua própria designação. Sempre a conheceu.`,
   },
 
   anomaly_report_1: {
@@ -2430,4 +2436,1187 @@ Vocês sempre foram o ponto.
 — O Arquivo Znyxorgan, Registro Completo
 [Zyx'nor.]`,
   },
+
+  echo_velthar: {
+    title: "Fragmento de Eco — Vel'thar",
+    text: `O fogo está errado.
+
+Essa é a primeira coisa que ela nota. A luz neste lugar é constante. Não treme. Não respira. Ela viveu sua primeira vida inteira ao lado de fogueiras, e nunca viu uma que não precisasse ser alimentada.
+
+Ela não tem nome antigo. Seu povo não tinha palavra para "ela". Não tinham palavra para "ela", nem "andar", nem "fogo". Tinham apenas o sopro e o gesto e o silêncio compartilhado entre eles, e essas coisas não sobrevivem em um tanque. Ela só conhece o nome que os cuidadores lhe deram — Vel'thar, Sobrevivente — e a língua é deles, não dela. Cada palavra que ela já pensou, ela pensou na língua do povo que a possui. Ela conhece seu inverno. Ela lembra da contagem: duzentos e sete no começo, dezenove no fim. Ela lembra de cada um deles, em uma língua que nenhum deles jamais falou.
+
+Ela lembra das cinzas. Caíram por um ano. O sol era uma mancha alaranjada esmaecida, depois uma brasa vermelha, depois sumiu. Os rios congelaram em lugares onde rios nunca haviam congelado. Os rebanhos migraram para o sul e não voltaram. Os velhos morreram primeiro, depois os jovens, depois aqueles que pararam de andar.
+
+Ela não parou de andar. Ela não deixou ninguém mais parar.
+
+Esse conhecimento não a abandona. É a única coisa que eles não conseguem tirar dela.
+
+O portão se abre. A multidão ruge. O som está errado — grande demais, gargantas demais, sem vento por baixo.
+
+Ela pega a arma. Ela se encaixa em sua mão do jeito que um sílex se encaixava em sua mão há setenta e quatro mil anos.
+
+Ela faz o que sempre fez.
+
+Ela mantém o fogo aceso.`,
+  },
+
+  acquisition_velthar: {
+    title: "Registro de Aquisição: VT-001",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — PROJETO GÊNESIS]
+[REGISTRO DE AQUISIÇÃO: VT-001 — CLONE #001]
+[Classificação: RESTRITO — APENAS DIVISÃO BIOMANCER]
+
+STATUS DE AQUISIÇÃO: COMPLETO (PRIMEIRO DO PROGRAMA)
+DESIGNAÇÃO: VT-001 — primeiro sujeito já cultivado
+NOME COMUM: "Vel'thar" — designação Znyxorgan, traduzido: "Sobrevivente"
+NOME ORIGINAL: NENHUM RECUPERADO — o grupo do espécime não possuía linguagem falada. A comunicação era gesto, luz de fogueira e a forma de uma respiração compartilhada. Não havia nada a restaurar.
+ESPÉCIE: Homo sapiens, coorte do Pleistoceno Tardio
+MÉTODO DE AQUISIÇÃO: Reconstrução genética a partir de restos esqueléticos, sítio de abrigo rochoso no subcontinente sul, datado em 74.000 anos antes do presente
+
+NOTAS:
+
+Setenta e quatro mil anos atrás, uma erupção supervulcânica no que mais tarde se tornou o Lago Toba expeliu partículas suficientes na atmosfera humana para bloquear a luz solar incidente por quase uma década. O inverno vulcânico resultante colapsou cadeias alimentares em toda a área habitável da espécie. Estimativas populacionais para Homo sapiens no auge do evento: entre mil e dez mil casais reprodutores, globalmente. A espécie estava, por qualquer medida razoável, terminando.
+
+Nossos observadores executavam varreduras passivas de sensores a partir de ocultação orbital durante o período. Registramos o evento em tempo real. A maioria dos grupos sobreviventes se dissolveu em dois invernos; suas assinaturas se fragmentaram e desapareceram. Um grupo não.
+
+Ele colapsou do jeito que os outros colapsaram — por qualquer medida deveria ter se dissolvido ou morrido — e então, inexplicavelmente, continuou se movendo. A leitura comportamental agregada resolveu-se em um único indivíduo. Ela não era o membro maior. Não era o mais forte. Era aquela que decidia, toda manhã, que o grupo comeria naquele dia. Que o grupo andaria. Que o grupo manteria o fogo aceso.
+
+Marcamos sua localização. Não intervimos. A espécie não era candidata a aquisição naquela época.
+
+Quando o Projeto Gênesis começou, cinquenta mil anos depois, o osso dela ainda estava no solo onde havíamos registrado sua morte.
+
+Nós o desenterramos.
+
+Ela não é uma conquistadora. Ela não é um gênio. Ela é a única humana que se recusou a deixar o fogo se apagar. Nós a clonamos porque queríamos saber o que era aquilo. Ainda estamos descobrindo.
+
+NOTA LINGUÍSTICA: Como o espécime veio de uma coorte pré-linguagem, o protocolo de tanque não conseguiu restaurar sua língua materna — não havia língua materna. Ela foi ensinada, desde a primeira consciência, em Znyxorgan. Cada palavra que ela já pensou, ela pensou na língua de seus cuidadores. Até onde este escritório pode determinar, ela é a única humana que já existiu sem acesso a uma língua humana. Isso não foi uma decisão de design. É simplesmente o que ela é.
+
+DESIGNAÇÃO DE ARENA: COLISEU VOL'KRATH — LOTE PROTÓTIPO (ela precede todos os outros sujeitos por dois ciclos completos de programa)
+
+— Arquivado por: Drex-9, Biomancer Sênior`,
+  },
+
+  classified_velthar: {
+    title: "Confidencial — Notas de Observador sobre VT-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: VT-001 — Anomalia Comportamental, Ciclo 442]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+Preciso registrar algo antes de me convencer do contrário.
+
+VT-001 passou quarenta minutos hoje sentada na plataforma de observação da arena, olhando o piso vazio. Ela não tinha nada agendado. Simplesmente fora lá e sentara.
+
+Perguntei a ela, depois, o que estava fazendo.
+
+Ela disse: observando.
+
+Perguntei o que estava observando, já que a arena estava vazia.
+
+Ficou quieta por um momento. Então disse — e verifiquei a tradução três vezes, porque ela fala no registro dos primeiros cuidadores de tanque, há setenta mil ciclos atrás, e a língua moderna se afastou desde então — "Notei que esta espécie constrói estruturas para observar de dentro delas. Estava pensando no que significa ser o tipo de criatura que precisa de um lugar dedicado para observar."
+
+O Znyxorgan dela é mais antigo que o meu. Ela me fala nas palavras que minha bisavó usava. Tenho que verificar, toda vez, porque nem sempre confio que ainda as entendo.
+
+Eu disse: achamos útil.
+
+Ela disse: sim. Eu também pensava assim. Estou tentando descobrir se ainda penso.
+
+Não sei o que ela quis dizer. Tenho pensado nisso desde então. Não vou colocar minhas conclusões neste relatório.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 442]
+[ADENDO, Ciclo 443: VT-001 voltou à plataforma esta manhã. Fui com ela. Não conversamos. Não estou incluindo isto no registro oficial.]`,
+  },
+
+  conversation_genghis_velthar: {
+    title: "Áudio Recuperado — A Última e a Primeira",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Localização: Plataforma de observação da arena, Nível 4]
+[Participantes: G-001 (Genghis-chan), VT-001 (Vel'thar-chan)]
+[Idiomas: Mongol (retransmitido via Znyxorgan) | Znyxorgan (sua única língua)]
+[Confiança da tradução: 71% — nota: VT-001 fala em registro arcaico; ver Drex-9, ciclo 442]
+[Nota do observador: Elas se encontram na língua do Império. É a única língua que compartilham.]
+
+[Gravação começa. VT-001 já está sentada. G-001 entra sem anunciar-se.]
+
+GENGHIS: Você vem aqui todo dia.
+
+UR-KAEL: Sim.
+
+GENGHIS: O que você está observando?
+
+UR-KAEL: A mesma coisa que você observa quando está à beira de uma campanha. A forma do que vem pela frente.
+
+[Silêncio, cerca de oito segundos]
+
+GENGHIS: Estive à beira de muitas campanhas. Eu procurava fraqueza. O desfiladeiro pela montanha. O momento em que a linha de suprimentos do inimigo se torna visível.
+
+UR-KAEL: Eu procurava o fim.
+
+GENGHIS: [pausa] O fim de quê?
+
+UR-KAEL: De tudo. Do padrão. Observei minha civilização por — muito tempo. Tínhamos uma palavra para isso. O momento logo antes do último momento. Procurávamos por ele para poder dizer: é agora que ainda era real.
+
+[Longa pausa]
+
+GENGHIS: Meu império durou três gerações depois de mim. Depois se dividiu. Depois acabou.
+
+UR-KAEL: O meu durou mais. Isso não ajudou.
+
+GENGHIS: [som baixo — não bem uma risada] Não. Não acho que ajude.
+
+UR-KAEL: Você não parece incomodado com isso.
+
+GENGHIS: Sou da estepe. A estepe te ensina que permanência é uma história que se conta para impedir as pessoas de entrar em pânico. Tudo se move. Tudo termina. A questão é o que você faz enquanto está em movimento.
+
+UR-KAEL: [muito baixo] Nós observamos.
+
+GENGHIS: [após uma longa pausa] E ajudou? Essa observação?
+
+UR-KAEL: Sabíamos exatamente o que estávamos perdendo, enquanto perdíamos.
+
+GENGHIS: [de pé — som de movimento] Venha lutar comigo amanhã. Você observa demais. Até a última pessoa restante no universo tem que pegar uma arma em algum momento.
+
+UR-KAEL: [pausa] Isso é uma filosofia?
+
+GENGHIS: É um convite.
+
+[Fim da gravação]`,
+  },
+
+  field_notes_velthar: {
+    title: "Áudio Recuperado — A Canção que Não Foi Ensinada",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Fonte: Câmara-tanque C-14, captura ambiente, ciclo fora do expediente]
+[Sujeito: VT-001, sozinha. Sem treinamento agendado, sem cuidador presente.]
+[Idioma: Znyxorgan]
+[Tradução: PARCIAL — a maior parte não são palavras.]
+
+Drex-9, adendo ao arquivo de VT-001. Arquivando contra protocolo. A câmara registrou. Não vou apagar a gravação.
+
+Às 04:12, o áudio ambiente da Câmara-tanque C-14 captou VT-001 vocalizando por aproximadamente seis minutos. Ela não tinha nada agendado. A câmara estava escura. Ela estava sentada no chão com as costas contra a parede do tanque.
+
+Ela estava cantando.
+
+O padrão vocal não corresponde a nenhuma entrada no corpus de treinamento de tanque. Não é uma oração. Não é uma liturgia. Não é nenhuma das formas rituais que ensinamos aos clones de coorte inicial para ancoragem psicológica. A melodia é não estruturada pelos nossos padrões — os intervalos não caem em nenhuma harmonia que nossos cuidadores reconheçam — e as vogais são moldadas de formas que não ocorrem na fala Znyxorgan moderna.
+
+Mas os fonemas são Znyxorgan. Cada um deles. Não há um único som humano em nada disso.
+
+Passei pelo comparador xenolinguístico. O match mais próximo no arquivo é um fragmento atribuído à primeira geração de cuidadores de tanque — a coorte da minha bisavó. Uma canção de ninar que elas cantavam aos espécimes durante a imersão pré-consciência, para estabilizar o padrão neural. Essa canção de ninar não é usada há trinta mil ciclos. Foi aposentada antes de eu nascer. Nunca foi ensinada a ela.
+
+Ela a está cantando mesmo assim.
+
+Não sei como ela tem isso. Não sei para quem é. Não sei se ela sabe que está fazendo.
+
+Estou deixando a gravação no arquivo. Não estou enviando cópia para cima.
+
+— Drex-9, fora do ciclo`,
+  },
+
+  echo_musashi: {
+    title: "Fragmento de Eco — Miyamoto Musashi",
+    text: `A espada está errada.
+
+Ela sabe disso imediatamente — o peso está errado, o equilíbrio está errado, a distância entre suas mãos está errada. Ela segurou uma espada todos os dias desde os treze anos. Ela conhece o peso exato da espada certa do jeito que conhece o ângulo do sol em Ganryūjima, o som das ondas, o conhecimento de que ela chegaria primeiro.
+
+Ela está de pé neste novo lugar errado e segura este corpo errado e espera.
+
+Essa é a coisa que ela aprendeu, eventualmente, depois de duelos suficientes: esperar não é passivo. Esperar é uma forma de escutar. Ela espera, e o corpo lhe ensina o que sabe. Ele conhece o ângulo. Ele conhece a distância. Ele sabe ler uma sala cheia de seres que nunca a viram e já estão com medo.
+
+O chão não é madeira. O ar não cheira a manhã ou mar ou qualquer café da manhã que ela já tenha comido. A multidão é alienígena e vasta e muito alta.
+
+Ela segura a arma — seja o que for esta arma, seja qual for a forma que esta arena lhe deu — e sente-a aprender sua mão.
+
+Essa parte, pelo menos, não mudou.`,
+  },
+
+  echo_cleopatra: {
+    title: "Fragmento de Eco — Cleópatra VII",
+    text: `A plateia.
+
+Ela nota a plateia primeiro. Não a arena, não os outros lutadores, não a arquitetura alienígena ou o teto impossível ou o som que não tem palavra em nenhuma de suas nove línguas — ela nota a plateia.
+
+Ela passou a vida estudando plateias. Como se sentam. O que querem. A calibração precisa de atenção necessária para fazer uma sala cheia de pessoas diferentes acreditar que cada uma é aquela para quem você está olhando. Ela fala nove línguas e usou cada uma para fazer alguém se sentir visto, importante, convencido.
+
+Ela olha para a plateia — quarenta e sete bilhões, foi-lhe dito, assistindo através de algo chamado feed de assinatura — e pensa: já tive maiores.
+
+Não em número. Em peso. Os romanos a observaram. César a observou. Antônio a observou. O mundo mediterrâneo inteiro observou o que ela faria em seguida e ela aprendeu, muito cedo, que o observador nunca é neutro. O observador quer algo. O observador está sempre negociando.
+
+Ela vai negociar.
+
+Ela não sabe que língua os Znyxorgans falam. Ainda não precisa.
+
+Ela sorri para uma câmera que não consegue ver e espera que alguém venha explicar as regras.`,
+  },
+
+  echo_tesla: {
+    title: "Fragmento de Eco — Nikola Tesla",
+    text: `Ela consegue ouvir a corrente.
+
+Não a rede elétrica — não há rede elétrica que ela reconheça — mas sob o que eles construíram aqui, há algo conduzindo. Algo vivo com carga. Ela consegue senti-la do jeito que sempre sentiu corrente, do jeito que acordou sentindo aos quatorze e passou o resto da vida tentando explicar a sensação a pessoas que aparentemente nunca haviam notado que o ar zumbe.
+
+O Coliseu zumbe.
+
+Ela coloca a mão contra a parede e a parede lhe dá uma leitura que ela não tem instrumentos para interpretar e ela começa, imediatamente, automaticamente, a construir o instrumento em sua mente. Ela não tem intenção de fazer isso. Nunca tem intenção. Ela faz isso desde que conseguia alcançar uma bancada.
+
+Em algum lugar acima dela, quarenta e sete bilhões de seres estão assistindo através de um sistema que ela ainda não entende. Ela pensa sobre o sistema. Pensa em como transmitiria esse sinal, nessa escala, sem interferência, sem degradação. Ela pensa na matemática disso.
+
+Ela esquece, brevemente, de ter medo.
+
+Quando lembra, já está trabalhando em um segundo problema. Ela deixa o medo esperar. Pode ter sua vez depois.
+
+A corrente é bela. Ela vai descobrir o resto.`,
+  },
+
+  echo_shaka: {
+    title: "Fragmento de Eco — Shaka kaSenzangakhona",
+    text: `Ela acorda sabendo que está sozinha.
+
+Não isolada — há outros por perto, ela pode ouvi-los, senti-los pelo cheiro, sentir o calor deles através do que separa esses quartos. Mas ela está sozinha do jeito que sempre esteve sozinha, do jeito que começou quando sua mãe foi exilada e ela aprendeu que o mundo não era um lugar de segurança dada. O mundo era um lugar que você construía.
+
+Ela construiu um império. Ela fez um exército de clãs dispersos que não se consideravam um exército até que ela lhes mostrasse o que já eram. Ela lhes ensinou o caminho isiZulu — o peito, os chifres, os flancos — não porque ela inventou a guerra de formação mas porque compreendia por que eles estavam lutando. Você não pode vencer uma guerra apenas com táticas. Você vence com as pessoas que as executam.
+
+Ela olha para esta arena alienígena e pensa: terreno desconhecido. Ela já lutou em terreno desconhecido antes. Ela já o transformou em vantagem antes.
+
+Há outros que lutarão ao lado dela. Ela ainda não os conheceu.
+
+Ela saberá, muito rapidamente, se são o tipo de pessoas com quem ela pode construir algo.
+
+Ela geralmente sabe na primeira troca.`,
+  },
+
+  acquisition_musashi: {
+    title: "Registro de Aquisição: M-002",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — PROJETO GÊNESIS]
+[REGISTRO DE AQUISIÇÃO: M-002]
+[Classificação: RESTRITO — APENAS DIVISÃO BIOMANCER]
+
+STATUS DE AQUISIÇÃO: COMPLETO
+DESIGNAÇÃO: M-002
+NOME COMUM: Miyamoto Musashi
+ESPÉCIE: Vel'nor (Humano, Japão/Terra)
+MATERIAL DE ORIGEM: Primário — tecido preservado em sítio histórico, Caverna Reigandō, Província de Kumamoto
+
+NOTAS:
+
+Adquirir M-002 apresentou um desafio logístico que não antecipamos.
+
+O material genético estava intacto. A reconstrução foi padrão. O problema era a espada.
+
+M-002 chegou à câmara de recuperação e, em quarenta segundos, havia localizado, avaliado e classificado todos os objetos da sala por seu uso potencial como arma. Ela então selecionou um recipiente cerâmico de água, segurou-o corretamente e esperou.
+
+Quando o técnico entrou para completar a avaliação de sinais vitais, M-002 perguntou — em um idioma que levamos três minutos para traduzir — se o técnico pretendia lutar ou conversar.
+
+O técnico disse: conversar.
+
+M-002 pousou o recipiente.
+
+Ela tem sido cooperativa desde então. Ela treina na câmara de pré-implantação da arena por aproximadamente seis horas diárias. Nossos analistas de combate têm estudado as filmagens. O relatório do analista-chefe consiste em quatro palavras: "não devemos lutar com ela."
+
+Este é, de fato, o ponto.
+
+DESIGNAÇÃO DE ARENA: COLISEU VOL'KRATH, EXPANSÃO BATCH-7
+
+— Arquivado por: Drex-9, Biomancer Sênior`,
+  },
+
+  acquisition_cleopatra: {
+    title: "Registro de Aquisição: C-001",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — PROJETO GÊNESIS]
+[REGISTRO DE AQUISIÇÃO: C-001]
+[Classificação: RESTRITO — APENAS DIVISÃO BIOMANCER]
+
+STATUS DE AQUISIÇÃO: COMPLETO
+DESIGNAÇÃO: C-001
+NOME COMUM: Cleópatra VII Filopator
+ESPÉCIE: Vel'nor (Humano, Egito/Terra)
+MATERIAL DE ORIGEM: Disputado — três sítios candidatos, reconstrução composta
+
+NOTAS:
+
+C-001 esteve consciente por aproximadamente onze minutos antes de pedir para falar com quem estivesse no comando.
+
+Foi informada de que o diretor da instalação não estava disponível. Ela perguntou quem estava disponível. Foi-lhe dito que um administrador júnior seria enviado. Ela disse que estava bem.
+
+O administrador júnior entrou na sala. C-001 havia se disposto na posição arquitetonicamente mais favorável que a câmara de recuperação oferecia, havia localizado a fonte de luz primária da sala e ajustado sua postura de acordo. Ela então conduziu o que nossa equipe administrativa descreveu depois como "a avaliação diplomática mais eficiente que observamos em quarenta estações de implantações de clones."
+
+Ela perguntou: o que vocês querem de mim, o que me darão em troca e o que acontece se eu recusar?
+
+Respondemos honestamente às três perguntas, porque nosso especialista comportamental havia especificamente advertido contra o engano.
+
+Ela considerou isso por aproximadamente quatro segundos.
+
+Ela disse: "Aceitável. Tenho termos."
+
+Os termos foram registrados. A maioria foi concedida. O Jurídico da Arena ainda está revisando o item sete.
+
+DESIGNAÇÃO DE ARENA: COLISEU VOL'KRATH, EXPANSÃO BATCH-7
+
+— Arquivado por: Drex-9, Biomancer Sênior`,
+  },
+
+  acquisition_tesla: {
+    title: "Registro de Aquisição: T-002",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — PROJETO GÊNESIS]
+[REGISTRO DE AQUISIÇÃO: T-002]
+[Classificação: RESTRITO — APENAS DIVISÃO BIOMANCER]
+
+STATUS DE AQUISIÇÃO: COMPLETO
+DESIGNAÇÃO: T-002
+NOME COMUM: Nikola Tesla
+ESPÉCIE: Vel'nor (Humano, Sérvia-Estados Unidos/Terra)
+MATERIAL DE ORIGEM: Sítio primário — ruínas da Torre Wardenclyffe, Nova York, Terra
+
+NOTAS:
+
+T-002 exigiu realocação para uma câmara especialmente preparada.
+
+A câmara de recuperação padrão não foi adequada porque T-002, em noventa minutos após a consciência, havia refeito o circuito de iluminação, redirecionado o sistema de aquecimento através de uma configuração que nossos engenheiros descrevem como "objetivamente mais eficiente, mas não o que era pretendido", e estava no processo de modificar a blindagem eletromagnética da sala quando a equipe interveio.
+
+Ela não estava tentando escapar. Ela estava, aparentemente, curiosa sobre a blindagem.
+
+Desde então, fornecemos a T-002 um espaço de trabalho. Ela tem estado lá durante a maior parte de suas horas acordadas. Ela não requer supervisão. Ela requer, aparentemente, problemas. Damos-lhe problemas. Ela os resolve. Depois gera problemas adicionais que não havíamos considerado e começa a resolver esses também.
+
+Nossa divisão de engenharia perguntou, cautelosamente, se ela poderia ser disponibilizada para consultoria sobre a rede de distribuição de energia da arena após suas obrigações de arena serem cumpridas.
+
+Dissemos a eles para entrarem na fila.
+
+DESIGNAÇÃO DE ARENA: COLISEU VOL'KRATH, EXPANSÃO BATCH-7
+
+— Arquivado por: Drex-9, Biomancer Sênior`,
+  },
+
+  acquisition_shaka: {
+    title: "Registro de Aquisição: S-001",
+    text: `[AUTORIDADE DA ARENA ZNYXORGAN — PROJETO GÊNESIS]
+[REGISTRO DE AQUISIÇÃO: S-001]
+[Classificação: RESTRITO — APENAS DIVISÃO BIOMANCER]
+
+STATUS DE AQUISIÇÃO: COMPLETO
+DESIGNAÇÃO: S-001
+NOME COMUM: Shaka kaSenzangakhona
+ESPÉCIE: Vel'nor (Humano, Reino Zulu/Terra)
+MATERIAL DE ORIGEM: Sítio primário — Dukuza, região de KwaZulu-Natal, Terra
+
+NOTAS:
+
+S-001 chegou à câmara de recuperação, realizou uma avaliação sistemática da sala em aproximadamente vinte segundos e então ficou de pé no centro e esperou.
+
+Ela esperou seis horas.
+
+Quando a equipe finalmente entrou para iniciar a orientação padrão, S-001 afirmou que estava esperando para entender o padrão de trocas de turno, protocolos de entrada e tempo de resposta. Ela disse isso sem orgulho aparente ou ameaça — do jeito que se declara um fato. Ela disse que agora tinha uma imagem operacional suficiente da instalação para prosseguir.
+
+Nossa equipe de avaliação comportamental notou que o modo primário de engajamento de S-001 não é agressão ou negociação, mas o que eles chamam de "compreensão estrutural." Ela não ataca problemas. Ela primeiro compreende a forma deles.
+
+Os analistas táticos da arena começaram a se referir à sua quietude pré-luta como "o olho." Eles dizem que dura até que ela decida que entende a formação — e então termina muito rapidamente.
+
+Designada à Batch-7. A equipe da arena foi pedida para evitar movimentos bruscos.
+
+DESIGNAÇÃO DE ARENA: COLISEU VOL'KRATH, EXPANSÃO BATCH-7
+
+— Arquivado por: Drex-9, Biomancer Sênior`,
+  },
+
+  classified_musashi: {
+    title: "Confidencial — Notas de Observador sobre M-002",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: M-002 — Avaliação Comportamental, Ciclo 571]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+M-002 não fala comigo. Isso não é incomum — vários sujeitos se recusam a se engajar. O que é incomum é a maneira como ela recusa.
+
+Ela está sempre ciente de onde eu estou. Quando entro na área de observação, ela ajusta sua posição pelo grau preciso necessário para me manter em visão periférica sem parecer estar me observando. Quando eu me movo, ela compensa. Testei isso seis vezes. Ela nunca olhou diretamente para mim. Nunca precisou.
+
+Perguntei-lhe, hoje, se ela estava ciente de que estava fazendo isso.
+
+Ela parou de praticar. Olhou diretamente para mim — pela primeira vez. Disse: "A espada não observa. Ela sabe."
+
+Pedi-lhe para esclarecer.
+
+Ela disse: "Se você tem que pensar onde seu inimigo está, você já perdeu."
+
+Depois retomou a prática e não olhou mais para mim.
+
+Anotei esta observação no registro oficial como: "Sujeito exibe consciência situacional elevada. Sem preocupação."
+
+O que não anotei é que me encontrei caminhando com mais cuidado na saída. Ainda estou pensando por quê.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 571]`,
+  },
+
+  classified_cleopatra: {
+    title: "Confidencial — Notas de Observador sobre C-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: C-001 — Avaliação Comportamental, Ciclo 603]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+Não sei quando ela aprendeu a ler nossa escrita.
+
+Revisei os logs de acesso. Ela não teve nenhuma instrução formal. Os pedidos de dieta que ela submeteu no Ciclo 580 estavam em seu idioma nativo. No Ciclo 591 estavam foneticamente transliterados em Padrão. No Ciclo 599 estavam em Padrão gramaticalmente correto, com honoríficos apropriados.
+
+Ela tem nos estudado.
+
+Quando perguntei como ela aprendeu, ela sorriu e disse: "Eu escuto. As pessoas falam mais do que percebem quando acham que alguém não entende."
+
+Perguntei quem tinha falado.
+
+Ela disse, muito gentilmente: "Todos."
+
+Arquivei um alerta com a equipe de manejo. Recomendei protocolo de comunicação reforçado em torno de C-001. A equipe de manejo respondeu que ela é um ativo classificado de Nível 4 e que "estavam cientes de suas capacidades."
+
+Estou escolhendo acreditar que isso é verdade.
+
+O que não estou escolhendo escrever é que ela me perguntou, enquanto eu saía, se o Znyxorgan tinha uma palavra para "aliança." Disse-lhe que tínhamos várias. Ela me perguntou qual significava o tipo que dura.
+
+Não respondi. Deveria ter respondido.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 603]`,
+  },
+
+  classified_tesla: {
+    title: "Confidencial — Notas de Observador sobre T-002",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: T-002 — Avaliação Comportamental, Ciclo 619]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+T-002 está enchendo as paredes de seus aposentos com diagramas.
+
+Ela não tem material de escrita. Está usando um utensílio alimentar quebrado para riscar linhas no revestimento de superfície das paredes. A unidade de manutenção da instalação tem apagado. Ela os redesenha dentro de uma hora.
+
+Pediram-me para avaliar se isso era um comportamento preocupante. Eu disse: provavelmente sim.
+
+Pediram-me para determinar o que os diagramas representavam. Tentei. Não consegui.
+
+Trouxe um especialista em tradução. Ele disse que não eram linguagem. Disse que pareciam esquemas.
+
+Perguntei a T-002 o que ela estava diagramando.
+
+Ela disse: "A frequência em que tudo aqui funciona."
+
+Perguntei como ela havia determinado a frequência.
+
+Ela disse: "Eu escutei. Suas máquinas têm um zumbido. Todo circuito tem uma assinatura. Quando você conhece a frequência, sabe o que ele faz. Quando sabe o que ele faz, sabe o que o interromperia."
+
+Relatei isso como: "O sujeito parece ter desenvolvido interesse recreativo em ilustração técnica."
+
+O que não relatei é que fiz a manutenção aumentar o ciclo de apagamento para quatro vezes ao dia. Os diagramas ainda estão lá de manhã.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 619]`,
+  },
+
+  classified_shaka: {
+    title: "Confidencial — Notas de Observador sobre S-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: S-001 — Avaliação Comportamental, Ciclo 644]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+S-001 começou a organizar os outros sujeitos durante o período de exercício compartilhado.
+
+Isso é, tecnicamente, permitido. Os sujeitos podem interagir livremente no pátio de exercício. O que S-001 está fazendo não é o que eu chamaria de interação casual.
+
+Ela está conduzindo treinos.
+
+Ela seleciona três ou quatro sujeitos — nem sempre os mesmos — e os posiciona em um arranjo geométrico específico. Depois os move. Ajusta o espaçamento. Corrige uma postura. Reposiciona. Os sujeitos obedecem sem coerção aparente. Já assisti três sessões e ainda não consigo determinar como ela estabeleceu autoridade sobre sujeitos de culturas e eras inteiramente diferentes.
+
+Perguntei-lhe sobre isso após a sessão mais recente.
+
+Ela disse: "Há pessoas naquela arena que morrerão se ninguém lhes ensinar a manter a linha."
+
+Apontei que os sujeitos não são obrigados a cooperar entre si.
+
+Ela disse: "Estou ciente do que é exigido. Estou falando do que é necessário."
+
+Perguntei como ela sabia quem morreria.
+
+Ela disse: "Posso ver quem tem medo. Os que têm medo se movem errado. Movimento errado te custa alcance. Alcance te custa a pessoa atrás de você."
+
+Arquivei isso como: "O sujeito se engaja em comportamento de exercício cooperativo. Nenhuma ação necessária."
+
+Não arquivei que ela olhou para mim quando disse "a pessoa atrás de você."
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 644]`,
+  },
+
+  classified_napoleon: {
+    title: "Confidencial — Notas de Observador sobre N-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: N-001 — Avaliação Comportamental, Ciclo 087]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+N-001 está fazendo um mapa.
+
+Notei isso no Ciclo 086. Ela estava na área de contenção, olhando para cima, para o nada. Assumi que era meditação. Estava errado.
+
+Revisei seis ciclos de imagens dos corredores antes de entender. Quando ela é transferida entre contenção e arena, seus olhos não permanecem na escolta. Vão para as juntas do teto. Para as emendas do piso. Para o ângulo em que as luzes encontram as paredes. Ela fica parada na meia fração de segundo em que passa por cada junção. Essa meia fração é suficiente.
+
+Ela não está olhando para a instalação. Está olhando para linhas de visada.
+
+Perguntei-lhe, diretamente, o que estava contando.
+
+Ela disse: "Não estou contando. Estou lembrando."
+
+Perguntei o que estava lembrando.
+
+Ela disse, com algo que quase poderia ter sido pena: "Na minha primeira guerra, um general russo me superava em número de quatro para um. Eu o venci porque sabia em qual colina ele se retiraria antes dele saber. Sabia porque eu mesma havia caminhado pela colina, seis meses antes, como turista. Seus corredores são muito regulares, Drex-9. São mais fáceis do que a colina."
+
+Arquivei isto como: "O sujeito exibe habilidades de memória espacial consistentes com histórico militar."
+
+Não arquivei que ela me perguntou, ao sair, se nossas placas de convés eram classificadas para impacto.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 087]`,
+  },
+
+  classified_genghis: {
+    title: "Confidencial — Notas de Observador sobre G-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: G-001 — Avaliação Comportamental, Ciclo 112]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+G-001 não come primeiro.
+
+Isto foi sinalizado como preocupação de conformidade pela equipe de alimentação. Suspeitava-se que ela recusasse nutrição. Observei três ciclos de serviço de refeições para confirmar a questão.
+
+Ela não está recusando. Ela está esperando.
+
+No refeitório comum, ela não toca sua porção até que outro sujeito tenha comido a sua e sobrevivido por aproximadamente seis minutos. Ela não os observa abertamente. Não é rude. Simplesmente cronometra o intervalo e retoma sua refeição.
+
+Perguntei-lhe se acreditava que a estávamos envenenando.
+
+Ela olhou para mim por muito tempo. Então disse: "Não. Não acho que estão me envenenando. Acho que não os conheço bem o suficiente para presumir que não estão."
+
+Eu disse: não temos motivo para envenená-la.
+
+Ela disse: "Meu pai foi morto quando eu tinha nove anos. Por uma tribo rival. A tribo rival havia sido nossa hóspede na semana anterior. Comeram ao nosso fogo. Meu pai confiou neles porque haviam comido ao nosso fogo."
+
+Eu disse: foi há muito tempo.
+
+Ela disse: "Sim. A lição, no entanto, ainda é atual."
+
+Arquivei isto como: "O sujeito exibe cautela alimentar consistente com criação sobrevivencialista. Sem preocupações nutricionais."
+
+Não arquivei que comecei a tomar minhas próprias refeições à vista das câmeras da cafeteria do pessoal. Digo a mim mesmo que é por solidariedade.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 112]`,
+  },
+
+  classified_davinci: {
+    title: "Confidencial — Notas de Observador sobre L-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: L-001 — Avaliação Comportamental, Ciclo 134]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+L-001 identificou cada objeto quebrado no depósito da arena.
+
+Não é metáfora. Ela caminha pela sala de adereços descomissionados uma vez por ciclo permitido, pausando em cada fragmento, e calmamente me diz o que costumava ser. Contrapeso de boneco de treinamento. Vedação hidráulica do sistema de painéis de piso, modelo variante dois. Uma peça de unidade tradutora — não nossa, um dos modelos mais antigos, provavelmente excedente Krath-zyn.
+
+Verifiquei suas identificações no banco de dados de manutenção. Ela esteve correta em cem por cento dos casos.
+
+Ela nunca teve permissão para acessar nossos arquivos técnicos.
+
+Perguntei-lhe como fazia isso.
+
+Ela disse, pacientemente: "Tudo que foi construído foi projetado por uma mente. Se eu entendo a mente, entendo o objeto. Suas mentes não são difíceis. Vocês resolvem problemas do jeito que crianças empilham blocos — do jeito que funciona, toda vez. Não há elegância em sua engenharia, mas é legível."
+
+Eu disse: você está nos insultando.
+
+Ela disse: "Estou elogiando sua consistência. Elegância é um luxo. Consistência é o que mantém um império de pé."
+
+Arquivei isto como: "O sujeito demonstra reconhecimento de padrões consistente com formação em engenharia."
+
+O que não arquivei é que ela me perguntou, ao sair, se a sala de adereços era auditada. Disse-lhe que não. Ela concordou com a cabeça e disse que era bom, porque havia guardado algumas coisas.
+
+Não consegui perguntar quais coisas. O turno dela terminou.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 134]`,
+  },
+
+  classified_leonidas: {
+    title: "Confidencial — Notas de Observador sobre L-002",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: L-002 — Avaliação Comportamental, Ciclo 158]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+L-002 conta tudo.
+
+Ela conta as guardas em cada troca de turno. Conta os ladrilhos do teto em sua cela. Conta os segundos entre o zumbido de energia das luzes do corredor e o ciclo de destravamento da porta dos guardas. Os intervalos são diferentes. Ela identificou isso.
+
+Perguntei-lhe por quê.
+
+Ela disse: "Caí nas Portas Quentes porque havíamos contado cada persa em cada divisão, mas não havíamos contado o caminho atrás de nós. Um pastor. Isso foi o que eu tinha deixado de fora. Um pastor que conhecia as colinas."
+
+Perguntei o que ela estava contando agora.
+
+Ela disse: "Tudo. O pastor está sempre lá. Você só precisa saber como ele se parece antes que ele aponte o caminho."
+
+Arquivei isto como: "O sujeito exibe consciência ambiental aumentada. Sem preocupações operacionais."
+
+Depois que ela foi devolvida à sua cela, fiz um inventário do nível de observação. Contei as guardas. Contei as câmeras. Contei as portas de serviço.
+
+Descobri uma porta de serviço cuja existência eu não conhecia. Estava na lista. Eu simplesmente nunca a havia notado.
+
+Também não estou relatando isto.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 158]`,
+  },
+
+  classified_sunsin: {
+    title: "Confidencial — Notas de Observador sobre Y-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: Y-001 — Avaliação Comportamental, Ciclo 193]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+Y-001 tem avaliado os outros sujeitos.
+
+Notei isso por observação indireta. Ela se senta na área comum compartilhada durante os períodos permitidos de interação e observa. Não fala com a maioria deles. Não se aproxima deles. Apenas observa, e seu rosto se move muito levemente enquanto o faz.
+
+Perguntei-lhe, hoje, o que estava fazendo.
+
+Ela disse: "Estou decidindo ao lado de quem eu ficaria numa formação."
+
+Perguntei se estava planejando uma ação.
+
+Ela disse, com surpresa silenciosa: "Não. Estou fazendo o que uma comandante faz. Estou aprendendo o formato de minhas forças antes de precisar delas. Se o dia chegar em que eu estiver com essas pessoas contra algo, então não terei tempo de me perguntar em quem posso confiar meu flanco esquerdo. Estou tomando essa decisão agora."
+
+Perguntei em quem ela confiava.
+
+Ela disse: "L-002. M-002. N-001 — é pequena, mas não quebrará. G-001 só quebraria se todos os outros já tivessem morrido, o que é aceitável."
+
+Ela fez uma pausa, e então disse: "Não o listei. Não deve levar isso como algo pessoal. Simplesmente não estou certa de que você estaria do nosso lado quando a hora chegasse."
+
+Arquivei isto como: "O sujeito se envolve em comportamento observacional consistente com papel de liderança."
+
+Comecei a me perguntar o que ela quis dizer com "nosso lado." Não perguntei.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 193]`,
+  },
+
+  classified_beethoven: {
+    title: "Confidencial — Notas de Observador sobre B-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: B-001 — Avaliação Comportamental, Ciclo 219]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+B-001 não pode me ouvir.
+
+Sua recepção auditiva, segundo a avaliação médica, é desprezível na faixa operacional. Isto foi incluído em sua admissão como possível vulnerabilidade tática.
+
+Não é uma vulnerabilidade.
+
+Hoje tentei executar um teste diagnóstico. Eu entraria em sua cela silenciosamente. Pausaria a uma distância medida. Então pronunciaria seu identificador em volume normal, e o médico da equipe registraria sua latência de resposta.
+
+Entrei. Pausei. Antes que eu pudesse falar, ela se virou para mim e disse: "Drex-9."
+
+O médico ficou surpreso. Eu também fiquei surpreso. Perguntei-lhe como sabia.
+
+Ela disse: "O ar desta sala muda quando você entra. O piso carrega seu peso de forma diferente. Você tem uma maneira particular de se deslocar quando está prestes a falar. Eu sempre estou ouvindo. Apenas ouço de um jeito diferente do seu."
+
+Perguntei se isso era verdade para todos os seus cuidadores.
+
+Ela disse: "Sim. Vocês não aprenderam a andar em silêncio. Nenhum de vocês. É uma espécie barulhenta."
+
+Arquivei isto como: "O sujeito compensa déficit auditivo através de sensibilidade tátil. Sem preocupações táticas."
+
+O que não arquivei é que ela acrescentou, enquanto eu saía: "Posso perceber quando você está com medo. Muda a forma como o piso se move. Você deveria saber disso. É apenas justo."
+
+Ela não disse se eu havia estado com medo hoje.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 219]`,
+  },
+
+  classified_huang: {
+    title: "Confidencial — Notas de Observador sobre H-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: H-001 — Avaliação Comportamental, Ciclo 244]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+H-001 se lembra de como é endereçada.
+
+Descobri isso por acaso. O Cuidador Vrex-2, durante uma verificação de bem-estar de rotina, usou o pronome informal com ela — um deslize comum, insignificante em nossa cultura. H-001 não o corrigiu. Ela não reagiu visivelmente.
+
+Três ciclos depois, durante um exercício de treinamento, o Cuidador Vrex-2 era o único cuidador que ela não reconhecia. Ela completava cada tarefa que ele atribuía. Não falava com ele. Quando ele entrava na área de observação, a postura dela mudava quase imperceptivelmente — mais ereta, mais formal, menos presente.
+
+Perguntei-lhe se isso era intencional.
+
+Ela disse: "Sim."
+
+Pedi-lhe que explicasse.
+
+Ela disse: "Fui uma imperatriz. Fui endereçada por rebeldes, por assassinos, por homens que pensavam poder pagar a insolência. Lembro-me de todos eles. Não carrego raiva. Carrego registros. A distinção importa."
+
+Perguntei para que serviam os registros.
+
+Ela disse: "Um registro não é o mesmo que um plano. Um registro só se torna um plano quando a situação exige. Espero que a sua não exija."
+
+Arquivei isto como: "O sujeito demonstra rigidez cultural em relação ao endereçamento formal. Instruir equipe a manter honoríficos."
+
+Não arquivei que comecei a usar seu título completo, todas as vezes, em cada interação. Ela não comentou. Não tenho certeza se isso é um bom sinal.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 244]`,
+  },
+
+  classified_nelson: {
+    title: "Confidencial — Notas de Observador sobre N-002",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: N-002 — Avaliação Comportamental, Ciclo 271]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+N-002 treina para um corpo que ela não tem.
+
+Notei isso durante seu período de exercícios. Ela estava dando nós. Dava nós com a mão esquerda. O braço direito pendia visivelmente inutilizado ao lado. Assumi lesão e chamei a equipe médica.
+
+A equipe médica confirmou que seu braço direito está plenamente funcional.
+
+Perguntei-lhe por que não o estava usando.
+
+Ela disse: "Meu corpo anterior perdeu este braço. E este olho. Estou treinando para essas ausências. Recebi algo melhor do que tinha. Isto pode não durar. Estou me certificando de que ainda sei trabalhar caso a dívida seja cobrada."
+
+Perguntei o que ela quis dizer com dívida.
+
+Ela disse: "Vocês me deram um corpo mais jovem do que o meu era. Mais macio. As mãos funcionam melhor do que me lembro. O olho vê mais longe. Isto não pode ser de graça. Nada em uma arena é de graça. Estou me preparando para pagar."
+
+Perguntei qual ela achava que seria o preço.
+
+Ela disse: "Não sei. Esse é o problema. Mas sei que ainda posso dar um nó de lais com uma mão e um olho meio fechado. Seja qual for o preço, serei capaz de pagá-lo."
+
+Arquivei isto como: "O sujeito exibe comportamento de treinamento adaptativo. Prática de redundância anotada."
+
+O que não arquivei é que olhei para minhas próprias mãos no caminho de volta ao convés de observação, e me peguei me perguntando quando havia sido a última vez que as havia usado para algo que não fosse um relatório.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 271]`,
+  },
+
+  classified_hannibal: {
+    title: "Confidencial — Notas de Observador sobre H-002",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: H-002 — Avaliação Comportamental, Ciclo 296]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+H-002 está planejando uma derrota.
+
+Não quero dizer que ela esteja planejando perder. Quero dizer que ela está planejando para a eventualidade da perda, em detalhe, até atribuições de hexágonos individuais e ângulos de recuo. Descobri o trabalho por acaso. Ela vinha usando um fragmento de carvão da ventilação do braseiro para marcar a parte inferior de seu beliche. As marcas são um diagrama de batalha. Não de uma luta que ela teve. De uma luta que ela ainda não teve.
+
+Perguntei-lhe o que era.
+
+Ela disse: "Um plano para o dia em que esta instalação cair."
+
+Apontei que esta instalação não cairia.
+
+Ela disse: "Cartago também não cairia. Ainda assim tinha um plano. Deveria ter tido um melhor. Estou corrigindo o hábito."
+
+Perguntei se estava planejando uma fuga.
+
+Ela disse: "Não. Fuga é um diagrama diferente. Este é sobre quais sujeitos vivem se as paredes caírem de fora. Seu império tem inimigos. Não sei qual, mas a matemática do império é a mesma em todas as eras. Algo está vindo. Estou me certificando de que, quando chegar, seja eu quem decide quem fica onde."
+
+Arquivei isto como: "O sujeito se envolve em desenho tático abstrato. Sem preocupações operacionais."
+
+Não relatei o diagrama. Estudei-o, porém, por setenta minutos depois que ela foi dormir. É um diagrama muito bom.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 296]`,
+  },
+
+  classified_picasso: {
+    title: "Confidencial — Notas de Observador sobre P-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: P-001 — Avaliação Comportamental, Ciclo 324]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+P-001 me desenhou.
+
+Eu não posei para um retrato. Nunca consenti em ser representado. Ela, no entanto, produziu uma série de estudos em carvão na parede do dormitório que são inconfundivelmente eu. Também desenhou o Cuidador Vrex-2, o Cuidador Krell, e — mais perturbador — o Diretor Zhal, a quem ela viu uma vez, à distância, através do vidro de observação.
+
+A semelhança não é lisonjeira. É, contudo, precisa.
+
+Perguntei-lhe como fazia isso.
+
+Ela disse: "Todo mundo mostra a você quem é. A maioria das pessoas não está prestando atenção enquanto o faz. Eu estou prestando atenção. É só isso."
+
+Perguntei-lhe o que ela havia desenhado que me mostrasse.
+
+Ela disse: "Seu maxilar. Ele se move de forma diferente quando você está lendo um relatório que vai arquivar com sinceridade do que quando você está lendo um que vai editar. A diferença é pequena. Notei no meu segundo ciclo."
+
+Eu disse: você não deveria estar me desenhando.
+
+Ela disse: "Eu sei. Vou parar se isso o deixar desconfortável. Gostaria de observar que este é o primeiro pedido que você me fez que não foi também uma instrução. Pensei que você gostaria de saber."
+
+Arquivei isto como: "O sujeito produz trabalho artístico. Sem danos materiais às superfícies da instalação."
+
+Não arquivei que, desde então, não consegui ler um relatório sem estar consciente do meu maxilar.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 324]`,
+  },
+
+  classified_teddy: {
+    title: "Confidencial — Notas de Observador sobre T-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: T-001 — Avaliação Comportamental, Ciclo 358]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+T-001 está feliz aqui.
+
+Quero que isto seja anotado em seu arquivo precisamente porque não consegui determinar se isso é preocupante.
+
+Ela cumprimenta a equipe de alimentação pelo nome. Deu apelidos a três dos guardas do corredor. É o único sujeito que já me perguntou como estava indo meu ciclo, e não quis dizer isso como uma manobra — observei o que veio depois. Quando respondi, ela ouviu. Quando disse que o ciclo tinha sido cansativo, ela disse que sentia muito por isso. Não tentou aproveitar a conversa para nada.
+
+Perguntei-lhe, eventualmente, se ela entendia onde estava.
+
+Ela disse: "Uma arena. O Império de Znyxorga. Eu morro e volto. Li os informes. Não estou confusa, Drex-9."
+
+Perguntei como ela podia estar alegre.
+
+Ela disse: "Porque decidi ser. Disseram-me uma vez que o crédito pertence à pessoa que está de fato na arena. Cujo rosto está manchado por poeira e suor e sangue. Que luta valentemente, que erra, que fica aquém repetidas vezes. Estou na arena agora. Ganhei a citação inteira. Não vou desperdiçá-la sendo infeliz."
+
+Arquivei isto como: "O sujeito exibe afeto estável. Sem preocupações."
+
+Estive pensando sobre a citação. Fui procurá-la no arquivo. Ela deixou algo de fora. Ela não mencionou o fim — a parte sobre as almas frias e tímidas que não conhecem nem vitória nem derrota.
+
+Não tenho certeza se ela omitiu por concisão ou porque pensava que eu era uma delas.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 358]`,
+  },
+
+  classified_mansa: {
+    title: "Confidencial — Notas de Observador sobre M-001",
+    text: `[DIVISÃO BIOMANCER — CLASSIFICAÇÃO INTERNA]
+[Sujeito: M-001 — Avaliação Comportamental, Ciclo 392]
+[Observador: Drex-9]
+[Classificação: PROJETO GÊNESIS — NÍVEL 3]
+
+M-001 está administrando um reino dentro da contenção.
+
+A equipe de alimentação sinalizou uma anomalia no Ciclo 388: a ingestão calórica geral estava equilibrada entre a população de sujeitos, mas as porções individuais estavam se deslocando semana após semana. Suspeitavam de erro de medição. Investiguei.
+
+Porções estão sendo trocadas. Silenciosamente. Nas refeições, durante os períodos de exercício, pelos pontos de troca nos corredores que os cuidadores não monitoram.
+
+M-001 é o centro da rede.
+
+Perguntei-lhe por quê.
+
+Ela disse: "B-001 tem estado com mais fome ultimamente — o metabolismo dela está se ajustando. L-002 tem doado porque é construída como uma parede e não consegue comer o que vocês estão servindo a ela. Pego o déficit de B-001 e redireciono o excedente de L-002. Ninguém fica sem. Ninguém é pego com algo incomum na bandeja."
+
+Perguntei-lhe por que fazia isso.
+
+Ela disse: "Uma imperatriz que não pode alimentar seu povo não é uma imperatriz. Não tenho nada aqui, Drex-9. Nenhum ouro. Nenhuma caravana. Nenhum trono. A única coisa que ainda tenho é o hábito de governar. Prefiro governar o pouco que tenho à frente a fingir que sou apenas uma prisioneira."
+
+Perguntei se ela se considerava superior aos outros sujeitos.
+
+Ela disse, sorrindo: "Não. Considero-me responsável por eles. É uma coisa diferente. Você não vai entender a diferença a menos que a tenha carregado."
+
+Arquivei isto como: "O sujeito se envolve em organização social. Equilíbrio nutricional mantido."
+
+Não arquivei que me sentei na cafeteria depois e vi um cuidador júnior jogar fora meia bandeja de comida intocada. Peguei-me, para minha própria surpresa, irritado com isso.
+
+[FIM DO RELATÓRIO — ARQUIVADO: Drex-9, Ciclo 392]`,
+  },
+
+  field_notes_musashi: {
+    title: "Áudio Recuperado — O Livro e o Escudo",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Localização: Corredor pré-luta, Portão 7]
+[Participantes: M-002 (Musashi-chan), L-002 (Leonidas-chan)]
+[Idiomas: Japonês | Grego Antigo, traduzido]
+[Confiança da tradução: 94%]
+
+[Gravação começa no meio da conversa]
+
+LEONIDAS: — você não carrega escudo.
+
+MUSASHI: Não.
+
+LEONIDAS: Não está preocupada?
+
+MUSASHI: Deveria estar?
+
+[Silêncio, cerca de quatro segundos]
+
+LEONIDAS: Já lutei sem escudo. Uma vez. Não foi por escolha.
+
+MUSASHI: Como foi?
+
+LEONIDAS: Seguramos o desfiladeiro. Por três dias. Trezentos contra — não importa quantos. Seguramos.
+
+MUSASHI: E o escudo?
+
+LEONIDAS: Perdi no segundo dia. Usei o de um medo.
+
+[Som de equipamento se ajustando]
+
+MUSASHI: Travei sessenta e um duelos. Nunca usei a mesma espada duas vezes se pudesse evitar. Peso diferente. Alcance diferente. Você aprende a coisa, não o sentimento de estar acostumado a ela.
+
+LEONIDAS: Isso não é — não discordo do princípio. Mas em formação—
+
+MUSASHI: Você nem sempre está em formação.
+
+[Longa pausa]
+
+LEONIDAS: Não. Não está.
+
+MUSASHI: Conte-me sobre o segundo dia.
+
+[Fim da gravação — arquivo corrompido]`,
+  },
+
+  field_notes_cleopatra: {
+    title: "Áudio Recuperado — A Negociação",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Localização: Área comum, Setor 3]
+[Participantes: C-001 (Cleopatra-chan), H-002 (Hannibal-chan)]
+[Idiomas: Grego Antigo | Púnico, traduzido]
+[Confiança da tradução: 91%]
+
+HANNIBAL: Você não se parece com alguém que luta.
+
+CLEOPATRA: Não me pareço com muitas coisas.
+
+HANNIBAL: [algo intraduzível — tom: seco] O registro cartaginês mostrará que sei a diferença entre um general e um diplomata.
+
+CLEOPATRA: E qual eu sou?
+
+HANNIBAL: Ambos. O que te torna mais perigosa que qualquer um dos dois.
+
+CLEOPATRA: Essa é a coisa mais perspicaz que alguém me disse desde que cheguei.
+
+HANNIBAL: Quanto tempo faz?
+
+CLEOPATRA: Duas semanas. N-001 me chamou de "tipo cortesã" no terceiro dia. Não a corrigi. Você deixa as pessoas te subestimarem enquanto for útil e depois para.
+
+HANNIBAL: Você atravessou os Alpes.
+
+CLEOPATRA: O quê?
+
+HANNIBAL: Metaforicamente. Você fez a coisa que não deveria ser possível. Isso é os Alpes.
+
+[Breve silêncio]
+
+CLEOPATRA: No meu caso foi o Nilo. Fui contrabandeada para César em um tapete enrolado.
+
+HANNIBAL: [rindo] Não.
+
+CLEOPATRA: Sim.
+
+HANNIBAL: Essa é a melhor coisa que ouvi em dois mil anos.`,
+  },
+
+  field_notes_tesla: {
+    title: "Áudio Recuperado — Frequências",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Localização: Corredor de engenharia, Subnível 2]
+[Participantes: T-002 (Tesla-chan), B-001 (Beethoven-chan)]
+[Idiomas: Sérvio | Alemão, traduzido]
+[Confiança da tradução: 97%]
+
+TESLA: Você também consegue ouvir.
+
+BEETHOVEN: Consigo sentir. Há uma ressonância neste chão — ela muda quando eles— [pausa] — não tenho a palavra.
+
+TESLA: Ativam a grade da arena?
+
+BEETHOVEN: Sim. A frequência cai em aproximadamente— não consigo medir, mas cai.
+
+TESLA: Quarenta hertz. Tenho rastreado.
+
+[Silêncio, cerca de seis segundos]
+
+BEETHOVEN: Como?
+
+TESLA: [algo — possivelmente contando] Pelo tato. Sempre senti. Os médicos disseram que eu era — eles tinham várias palavras. Hipersensível. Irregular. Um deles disse que eu tinha um "distúrbio de percepção."
+
+BEETHOVEN: [riso baixo] Sim. Conheço isso.
+
+TESLA: A corrente nesta instalação funciona em um princípio que ainda não entendo completamente. Mas a forma da matemática é familiar. É a mesma forma da coisa que eu estava construindo antes — a torre de transmissão. A rede global.
+
+BEETHOVEN: Você queria dar eletricidade a todos.
+
+TESLA: De graça. Sim.
+
+[Longa pausa]
+
+BEETHOVEN: Eu queria dar a eles a Nona. De graça. Também.
+
+TESLA: O que aconteceu?
+
+BEETHOVEN: Eles escutaram. E depois foram para casa. E eu fiquei.
+
+[Fim da gravação]`,
+  },
+
+  field_notes_shaka: {
+    title: "Áudio Recuperado — A Formação",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Localização: Piso da arena, pós-luta]
+[Participantes: S-001 (Shaka-chan), N-001 (Napoleon-chan)]
+[Idiomas: isiZulu | Francês, traduzido]
+[Confiança da tradução: 88%]
+
+[Gravação começa — ambos participantes ainda estão em posição de combate]
+
+NAPOLEON: [recuperando o fôlego] O centro se moveu cedo demais.
+
+SHAKA: Sim. Eu vi.
+
+NAPOLEON: Você compensou.
+
+SHAKA: Eu ajustei. Há uma diferença. Compensação é reativa. Ajuste é antecipar qual será a compensação.
+
+NAPOLEON: [pausa] Onde você aprendeu isso?
+
+SHAKA: Observando gado.
+
+[Silêncio]
+
+NAPOLEON: ...Gado.
+
+SHAKA: Gado não mente. Eles se afastam da pressão. Se movem em direção à segurança. Você observa um rebanho por tempo suficiente, para de ver animais e começa a ver vetores. Toda criatura faz a mesma coisa. Pessoas, gado, exércitos.
+
+NAPOLEON: Eu observei exércitos.
+
+SHAKA: Eu sei. Você vê a frente e os flancos e segura o centro. Eu vejo o lugar onde a formação vai falhar antes de falhar. [pausa] Você é muito bom em segurar.
+
+NAPOLEON: [seco] Obrigado.
+
+SHAKA: Estou falando sério. Você é. Mas o inimigo que descobre onde você vai segurar— ele usa isso. Você precisa de alguém que mova o ponto de sustentação antes que ele descubra.
+
+[Longa pausa]
+
+NAPOLEON: Isso é uma oferta?
+
+SHAKA: É uma observação.
+
+[Som de movimento — a equipe da arena entrando]
+
+NAPOLEON: [mais baixo] Sim. Eu sei. [pausa] Mesma hora amanhã?
+
+SHAKA: Estarei no centro.`,
+  },
+
+  conversation_musashi_leonidas: {
+    title: "Áudio Recuperado — Duelos e Desfiladeiros",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Localização: Sala de treinamento, Nível 3 da instalação]
+[Participantes: M-002 (Musashi-chan), L-002 (Leonidas-chan)]
+[Idiomas: Japonês | Grego Antigo, traduzido]
+[Confiança da tradução: 93%]
+
+LEONIDAS: Você travou sessenta e um duelos e não perdeu nenhum.
+
+MUSASHI: Correto.
+
+LEONIDAS: Minha batalha—
+
+MUSASHI: Conheço sua batalha.
+
+LEONIDAS: Seguramos o desfiladeiro—
+
+MUSASHI: Trezentos. Três dias. Eu sei. [pausa] Você perdeu.
+
+LEONIDAS: [baixo] Seguramos o desfiladeiro por três dias. Compramos—
+
+MUSASHI: Você segurou o desfiladeiro e todos morreram e a Grécia venceu a guerra depois. Conheço a história. Você perdeu a batalha e ganhou outra coisa.
+
+LEONIDAS: E em seus sessenta e um duelos?
+
+MUSASHI: Eu venci.
+
+[Silêncio muito longo]
+
+LEONIDAS: Qual você acha que importa mais?
+
+MUSASHI: [longa pausa] Venci sessenta e um duelos. Tive um discípulo. Escrevi um livro no final.
+
+LEONIDAS: Trezentos homens vieram quando chamei. Todos sabiam o que significava.
+
+[Silêncio]
+
+MUSASHI: Tenho pensado nisso desde que cheguei. Qual é a diferença. Se meu caminho ou seu caminho—
+
+LEONIDAS: Não há diferença. Você encontrou a coisa que valia a pena fazer e a fez plenamente.
+
+MUSASHI: E se a coisa que vale a pena fazer é perder?
+
+LEONIDAS: Então você perde plenamente. [pausa] Isso é tudo que qualquer um de nós já conseguiu.
+
+[Fim da gravação]`,
+  },
+
+  conversation_cleopatra_napoleon: {
+    title: "Áudio Recuperado — A Audiência",
+    text: `[COLISEU VOL'KRATH — FRAGMENTO DE ÁUDIO RECUPERADO]
+[Localização: Corredor de observação VIP, Nível 2]
+[Participantes: C-001 (Cleopatra-chan), N-001 (Napoleon-chan)]
+[Idiomas: Grego Antigo | Francês, traduzido]
+[Confiança da tradução: 85%]
+
+NAPOLEON: Você estava me observando durante o briefing.
+
+CLEOPATRA: Observo todos durante briefings. Você se entrega nos primeiros trinta segundos se souber o que procurar.
+
+NAPOLEON: E o que aprendeu?
+
+CLEOPATRA: Que você fica desconfortável quando não é você que está falando. Que você calcula ângulos mesmo sentado parado. Que você não confia em ninguém que sorri antes de ter ganhado o direito.
+
+[Breve silêncio]
+
+NAPOLEON: [seco] Você está acordada há duas semanas.
+
+CLEOPATRA: Estudo pessoas desde os doze anos. Duas semanas é suficiente para aprender a gramática.
+
+NAPOLEON: Você governou o Egito.
+
+CLEOPATRA: O Egito governava a si mesmo. Eu era a intermediária entre o Egito e todos que queriam algo dele. Roma, principalmente. Roma sempre queria algo.
+
+NAPOLEON: Eu marchei sobre o Egito.
+
+CLEOPATRA: Eu sei. Li os arquivos. Você olhou para as pirâmides e disse que elas o observavam.
+
+NAPOLEON: [após pausa] Elas observavam.
+
+CLEOPATRA: Tudo observa tudo aqui. É bastante familiar.
+
+[Som de movimento — estão caminhando]
+
+NAPOLEON: Você fala nove línguas.
+
+CLEOPATRA: Dez, agora. Tenho aprendido a deles. [pausa] Você aprende uma língua em seis semanas se precisa.
+
+NAPOLEON: E precisa?
+
+CLEOPATRA: Preciso? Não. Mas os engenheiros Znyxorgans relaxam quando uso as palavras deles. Engenheiros relaxados falam. Engenheiros falando me dizem coisas que quero saber.
+
+NAPOLEON: [muito baixo] Você tem conduzido operações de inteligência.
+
+CLEOPATRA: Tenho tido conversas.
+
+[Longo silêncio]
+
+NAPOLEON: Em minhas campanhas, me cerquei de pessoas que eram melhores em coisas específicas do que eu. Não tinha vaidade quanto a isso. Um general que não pode admitir o que não sabe perderá para alguém que pode.
+
+CLEOPATRA: Na minha corte, me cerquei de pessoas que cada uma acreditava ser a pessoa mais importante na sala. Trabalhavam mais duro desse jeito.
+
+[Algo próximo a uma risada de Napoleon]
+
+NAPOLEON: Isso é — sim. Funciona.
+
+CLEOPATRA: A maioria das coisas funciona se quem está no comando sabe por que funciona. [pausa] Você sabe por que o seu funciona.
+
+NAPOLEON: Você sabe por que o seu funciona?
+
+CLEOPATRA: Eu sei por que tudo funciona. Esse é o problema e a vantagem.
+
+[Fim da gravação — ambos sujeitos saíram na mesma direção]`,
+  },
 };
+
+

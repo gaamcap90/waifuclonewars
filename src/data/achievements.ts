@@ -1,4 +1,4 @@
-// Achievement system — 76 achievements across 5 categories
+// Achievement system — 107 achievements across 5 categories
 // Thresholds tuned for long-term progression (roughly 10× the original drafts).
 
 export type AchievementCategory = 'combat' | 'clones' | 'arena' | 'enemies' | 'observer' | 'secret';
@@ -66,6 +66,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     eventKey: 'multi_kill_3',
   },
   {
+    id: 'armageddon',
+    name: 'Armageddon',
+    description: 'Kill 10 or more enemies in a single fight.',
+    points: 25, category: 'combat', icon: '☠️',
+    eventKey: 'multi_kill_10',
+  },
+  {
     id: 'bully',
     name: 'Bully!',
     description: 'Win 3 fights in a row.',
@@ -75,10 +82,24 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'no_retreat',
     name: 'No Retreat, No Surrender',
-    description: 'Win 5 fights in a row.',
+    description: 'Win 10 fights in a row.',
     points: 15, category: 'combat', icon: '💪',
-    eventKey: 'five_consecutive_wins',
+    eventKey: 'ten_consecutive_wins',
     loreUnlockId: 'conversation_leonidas_hannibal',
+  },
+  {
+    id: 'unstoppable',
+    name: 'Unstoppable',
+    description: 'Win 25 fights in a row.',
+    points: 20, category: 'combat', icon: '🔱',
+    eventKey: 'twentyfive_consecutive_wins',
+  },
+  {
+    id: 'juggernaut',
+    name: 'Juggernaut',
+    description: 'Win 100 fights in a row.',
+    points: 30, category: 'combat', icon: '👑',
+    eventKey: 'hundred_consecutive_wins',
   },
   {
     id: 'this_is_sparta',
@@ -175,6 +196,46 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     loreUnlockId: 'echo_mansa',
   },
   {
+    id: 'echo_velthar',
+    name: 'Void Signal',
+    description: 'Use Singularity 50 times.',
+    points: 15, category: 'combat', icon: '🔑',
+    statKey: 'ult_used_velthar', threshold: 50,
+    loreUnlockId: 'echo_velthar',
+  },
+  {
+    id: 'echo_musashi',
+    name: 'The Book',
+    description: 'Use Book of Five Rings 50 times.',
+    points: 15, category: 'combat', icon: '📜',
+    statKey: 'ult_used_musashi', threshold: 50,
+    loreUnlockId: 'echo_musashi',
+  },
+  {
+    id: 'echo_cleopatra',
+    name: 'Eternal Kingdom',
+    description: 'Use Eternal Kingdom 50 times.',
+    points: 15, category: 'combat', icon: '👁️',
+    statKey: 'ult_used_cleopatra', threshold: 50,
+    loreUnlockId: 'echo_cleopatra',
+  },
+  {
+    id: 'echo_tesla',
+    name: 'Death Ray Protocol',
+    description: 'Use Death Ray 50 times.',
+    points: 15, category: 'combat', icon: '📡',
+    statKey: 'ult_used_tesla', threshold: 50,
+    loreUnlockId: 'echo_tesla',
+  },
+  {
+    id: 'echo_shaka',
+    name: 'Impondo Zankomo',
+    description: 'Use Impondo Zankomo 50 times.',
+    points: 15, category: 'combat', icon: '🌊',
+    statKey: 'ult_used_shaka', threshold: 50,
+    loreUnlockId: 'echo_shaka',
+  },
+  {
     id: 'ultimate_power',
     name: 'Ultimate Power',
     description: 'Use 250 ultimate cards total.',
@@ -205,14 +266,198 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     loreUnlockId: 'transmission_velk',
   },
 
-  // ── Clones ────────────────────────────────────────────────────────────────
+  // ── Combat — original character kit moments ──────────────────────
+  {
+    id: 'mitrailleur',
+    name: 'Mitrailleur',
+    description: 'Win 10 fights with Napoleon alive after 4 or more enemies were killed.',
+    points: 5, category: 'combat', icon: '💥',
+    statKey: 'napoleon_alive_4kills', threshold: 10,
+  },
+  {
+    id: 'blood_in_water',
+    name: 'Blood in the Water',
+    description: 'Reach 4 Bloodlust stacks with Genghis in 10 different fights.',
+    points: 5, category: 'combat', icon: '🩸',
+    statKey: 'genghis_bloodlust_4', threshold: 10,
+  },
+  {
+    id: 'still_standing',
+    name: 'Still Standing',
+    description: "Win 10 fights with Da Vinci's Combat Drone still alive.",
+    points: 5, category: 'combat', icon: '🤖',
+    statKey: 'davinci_drone_alive_win', threshold: 10,
+  },
+  {
+    id: 'wall_of_bronze',
+    name: 'Wall of Bronze',
+    description: 'Reach 3 Phalanx stacks with Leonidas in 10 different fights.',
+    points: 5, category: 'combat', icon: '🏛️',
+    statKey: 'leonidas_max_phalanx', threshold: 10,
+  },
+  {
+    id: 'land_and_sea',
+    name: 'Land and Sea',
+    description: 'Win 10 fights with Yi Sun-sin positioned on a water tile.',
+    points: 5, category: 'combat', icon: '🐢',
+    statKey: 'sunsin_wins_on_water', threshold: 10,
+  },
+  {
+    id: 'fortissimo',
+    name: 'Fortissimo',
+    description: 'Reach 10 Crescendo stacks with Beethoven in 10 different fights.',
+    points: 5, category: 'combat', icon: '🎶',
+    statKey: 'beethoven_10_crescendo', threshold: 10,
+  },
+  {
+    id: 'still_rising',
+    name: 'Still Rising',
+    description: "Win 10 fights with at least one of Huang's Terracotta units still alive.",
+    points: 5, category: 'combat', icon: '🗿',
+    statKey: 'huang_terracotta_alive_win', threshold: 10,
+  },
+  {
+    id: 'england_expects',
+    name: 'England Expects',
+    description: 'Win 10 fights with Nelson at full HP.',
+    points: 5, category: 'combat', icon: '⚓',
+    statKey: 'nelson_full_hp_win', threshold: 10,
+  },
+  {
+    id: 'the_elephant_remembers',
+    name: 'The Elephant Remembers',
+    description: "Win 10 fights with Hannibal's War Elephant still alive on the board.",
+    points: 5, category: 'combat', icon: '🐘',
+    statKey: 'hannibal_elephant_alive_win', threshold: 10,
+  },
+  {
+    id: 'broken_canvas',
+    name: 'Broken Canvas',
+    description: "Win 10 fights while an enemy has Armor Break from Picasso's Guernica.",
+    points: 5, category: 'combat', icon: '🎨',
+    statKey: 'picasso_guernica_win', threshold: 10,
+  },
+  {
+    id: 'bull_moose',
+    name: 'Bull Moose',
+    description: 'Reach 3 Bully! stacks with Teddy in 10 different fights.',
+    points: 5, category: 'combat', icon: '🦌',
+    statKey: 'teddy_max_bully', threshold: 10,
+  },
+  {
+    id: 'golden_age',
+    name: 'Golden Age',
+    description: 'Win 10 fights with Mansa alive and 400+ gold in your treasury.',
+    points: 5, category: 'combat', icon: '💰',
+    statKey: 'mansa_treasury_win', threshold: 10,
+  },
+
+  // ── Combat — new character gameplay ───────────────────────────────────────
+  {
+    id: 'the_bottleneck',
+    name: 'The Bottleneck',
+    description: "Win 10 fights with Vel'thar as the last clone standing.",
+    points: 5, category: 'combat', icon: '🌀',
+    statKey: 'velthar_solo_win', threshold: 10,
+    loreUnlockId: 'classified_velthar',
+  },
+  {
+    id: 'volcanic_winter',
+    name: 'Volcanic Winter',
+    description: 'Accumulate 5 Bottleneck stacks in 10 different fights.',
+    points: 5, category: 'combat', icon: '🔮',
+    statKey: 'bottleneck_5_stacks', threshold: 10,
+  },
+  {
+    id: 'ganryujima',
+    name: 'Ganryŭjima',
+    description: 'Kill 2 enemies in a single turn with Musashi-chan, 10 times.',
+    points: 5, category: 'combat', icon: '⚔️',
+    statKey: 'musashi_dual_kill', threshold: 10,
+  },
+  {
+    id: 'book_mastery',
+    name: 'Book of Five Rings',
+    description: 'Win 10 fights with Musashi at max Battle Scar stacks (3).',
+    points: 5, category: 'combat', icon: '📜',
+    statKey: 'musashi_max_stacks_win', threshold: 10,
+    loreUnlockId: 'field_notes_musashi',
+  },
+  {
+    id: 'sixty_one',
+    name: 'Sixty-One',
+    description: 'Stun 3 enemies with a single Eternal Kingdom, 10 times.',
+    points: 5, category: 'combat', icon: '👑',
+    statKey: 'cleo_stun_3', threshold: 10,
+  },
+  {
+    id: 'nine_languages',
+    name: 'Nine Languages',
+    description: 'Use Royal Decree 10 times in a single run.',
+    points: 5, category: 'combat', icon: '🌸',
+    statKey: 'cleo_royal_decree_used', threshold: 10,
+  },
+  {
+    id: 'the_ptolemaic_court',
+    name: 'The Ptolemaic Court',
+    description: 'Win 10 fights without Cleopatra taking any damage.',
+    points: 5, category: 'combat', icon: '👁️',
+    statKey: 'cleopatra_no_damage_win', threshold: 10,
+    loreUnlockId: 'field_notes_cleopatra',
+  },
+  {
+    id: 'chain_reaction',
+    name: 'Chain Reaction',
+    description: 'Hit 3 or more enemies with a single Arc Bolt chain, 10 times.',
+    points: 5, category: 'combat', icon: '⚡',
+    statKey: 'tesla_chain_3', threshold: 10,
+  },
+  {
+    id: 'the_tower',
+    name: 'The Tower',
+    description: 'Deal 300 or more damage with a single Death Ray, 10 times.',
+    points: 5, category: 'combat', icon: '📡',
+    statKey: 'tesla_death_ray_300', threshold: 10,
+  },
+  {
+    id: 'resonance_peak',
+    name: 'Resonance Peak',
+    description: 'Reach 5 Voltage stacks with Tesla in 10 different fights.',
+    points: 5, category: 'combat', icon: '🔮',
+    statKey: 'tesla_max_voltage', threshold: 10,
+    loreUnlockId: 'field_notes_tesla',
+  },
+  {
+    id: 'into_the_deep',
+    name: 'Into the Deep',
+    description: 'Kill an enemy by pulling them into water with Shaka-chan, 10 times.',
+    points: 5, category: 'combat', icon: '🌊',
+    statKey: 'shaka_water_kill', threshold: 10,
+  },
+  {
+    id: 'bull_horn_push',
+    name: 'The Horns Close',
+    description: 'Use Impondo Zankomo to pull 3 or more enemies at once, 10 times.',
+    points: 5, category: 'combat', icon: '🏹',
+    statKey: 'shaka_impondo_3', threshold: 10,
+  },
+  {
+    id: 'formation',
+    name: 'Formation',
+    description: 'Have all 3 allies adjacent to Shaka at the start of a turn, 10 times.',
+    points: 5, category: 'combat', icon: '🛡️',
+    statKey: 'shaka_full_formation', threshold: 10,
+    loreUnlockId: 'field_notes_shaka',
+  },
+
+  // ── Clones ──────────────────────────────────────────────────────────────────────────
   {
     id: 'clone_napoleon',
     name: 'Little Corporal',
     description: 'Win 3 runs with Napoleon.',
     points: 25, category: 'clones', icon: '🎖️',
     statKey: 'napoleon_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_napoleon',
+    loreUnlockId: 'classified_napoleon',
   },
   {
     id: 'clone_genghis',
@@ -220,7 +465,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Genghis.',
     points: 25, category: 'clones', icon: '🏕️',
     statKey: 'genghis_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_genghis',
+    loreUnlockId: 'classified_genghis',
   },
   {
     id: 'clone_davinci',
@@ -228,7 +473,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Da Vinci.',
     points: 25, category: 'clones', icon: '🔭',
     statKey: 'davinci_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_davinci',
+    loreUnlockId: 'classified_davinci',
   },
   {
     id: 'clone_leonidas',
@@ -236,7 +481,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Leonidas.',
     points: 25, category: 'clones', icon: '🏛️',
     statKey: 'leonidas_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_leonidas',
+    loreUnlockId: 'classified_leonidas',
   },
   {
     id: 'clone_sunsin',
@@ -244,7 +489,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Yi Sun-sin.',
     points: 25, category: 'clones', icon: '⛵',
     statKey: 'sunsin_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_sunsin',
+    loreUnlockId: 'classified_sunsin',
   },
   {
     id: 'clone_beethoven',
@@ -252,7 +497,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Beethoven.',
     points: 25, category: 'clones', icon: '🎼',
     statKey: 'beethoven_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_beethoven',
+    loreUnlockId: 'classified_beethoven',
   },
   {
     id: 'clone_huang',
@@ -260,7 +505,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Huang.',
     points: 25, category: 'clones', icon: '👑',
     statKey: 'huang_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_huang',
+    loreUnlockId: 'classified_huang',
   },
   {
     id: 'clone_nelson',
@@ -268,7 +513,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Nelson.',
     points: 25, category: 'clones', icon: '🌊',
     statKey: 'nelson_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_nelson',
+    loreUnlockId: 'classified_nelson',
   },
   {
     id: 'clone_hannibal',
@@ -276,7 +521,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Hannibal.',
     points: 25, category: 'clones', icon: '🐘',
     statKey: 'hannibal_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_hannibal',
+    loreUnlockId: 'classified_hannibal',
   },
   {
     id: 'clone_picasso',
@@ -284,7 +529,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Picasso.',
     points: 25, category: 'clones', icon: '🎨',
     statKey: 'picasso_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_picasso',
+    loreUnlockId: 'classified_picasso',
   },
   {
     id: 'clone_teddy',
@@ -292,7 +537,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Teddy Roosevelt.',
     points: 25, category: 'clones', icon: '🤠',
     statKey: 'teddy_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_teddy',
+    loreUnlockId: 'classified_teddy',
   },
   {
     id: 'clone_mansa',
@@ -300,15 +545,47 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Win 3 runs with Mansa Musa.',
     points: 25, category: 'clones', icon: '💰',
     statKey: 'mansa_runs_won', threshold: 3,
-    loreUnlockId: 'acquisition_mansa',
+    loreUnlockId: 'classified_mansa',
   },
   {
-    id: 'true_commander',
-    name: 'True Commander',
-    description: 'Win 10 runs with any single character.',
+    id: 'win_3_velthar',
+    name: "The Last One Standing",
+    description: "Win 3 runs with Vel'thar-chan on your squad.",
+    points: 25, category: 'clones', icon: '🌀',
+    statKey: 'velthar_runs_won', threshold: 3,
+    loreUnlockId: 'classified_velthar',
+  },
+  {
+    id: 'win_3_musashi',
+    name: 'Sword Saint',
+    description: 'Win 3 runs with Musashi-chan on your squad.',
+    points: 25, category: 'clones', icon: '⚔️',
+    statKey: 'musashi_runs_won', threshold: 3,
+    loreUnlockId: 'classified_musashi',
+  },
+  {
+    id: 'win_3_cleopatra',
+    name: "Queen's Gambit",
+    description: 'Win 3 runs with Cleopatra-chan on your squad.',
     points: 25, category: 'clones', icon: '👑',
-    eventKey: 'ten_runs_one_char',
-    loreUnlockId: 'echo_genghis',
+    statKey: 'cleopatra_runs_won', threshold: 3,
+    loreUnlockId: 'classified_cleopatra',
+  },
+  {
+    id: 'win_3_tesla',
+    name: 'Full Charge',
+    description: 'Win 3 runs with Tesla-chan on your squad.',
+    points: 25, category: 'clones', icon: '⚡',
+    statKey: 'tesla_runs_won', threshold: 3,
+    loreUnlockId: 'classified_tesla',
+  },
+  {
+    id: 'win_3_shaka',
+    name: 'Bull Horn',
+    description: 'Win 3 runs with Shaka-chan on your squad.',
+    points: 25, category: 'clones', icon: '🛡️',
+    statKey: 'shaka_runs_won', threshold: 3,
+    loreUnlockId: 'classified_shaka',
   },
 
   // ── Character Legacy ──────────────────────────────────────────────────────
@@ -319,6 +596,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_napoleon',
     runPerk: { id: 'legacy_might_napoleon', label: "+5 Might per act — Napoleon's Legacy" },
+    loreUnlockId: 'acquisition_napoleon',
   },
   {
     id: 'legacy_genghis',
@@ -327,6 +605,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_genghis',
     runPerk: { id: 'legacy_might_genghis', label: "+5 Might per act — Genghis's Legacy" },
+    loreUnlockId: 'acquisition_genghis',
   },
   {
     id: 'legacy_davinci',
@@ -335,6 +614,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_davinci',
     runPerk: { id: 'legacy_power_davinci', label: "+5 Power per act — Da Vinci's Legacy" },
+    loreUnlockId: 'acquisition_davinci',
   },
   {
     id: 'legacy_leonidas',
@@ -343,6 +623,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_leonidas',
     runPerk: { id: 'legacy_defense_leonidas', label: "+5 Defense per act — Leonidas's Legacy" },
+    loreUnlockId: 'acquisition_leonidas',
   },
   {
     id: 'legacy_sunsin',
@@ -351,6 +632,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_sunsin',
     runPerk: { id: 'legacy_power_sunsin', label: "+5 Power per act — Sun-sin's Legacy" },
+    loreUnlockId: 'acquisition_sunsin',
   },
   {
     id: 'legacy_beethoven',
@@ -359,6 +641,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_beethoven',
     runPerk: { id: 'legacy_power_beethoven', label: "+5 Power per act — Beethoven's Legacy" },
+    loreUnlockId: 'acquisition_beethoven',
   },
   {
     id: 'legacy_huang',
@@ -367,6 +650,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_huang',
     runPerk: { id: 'legacy_might_huang', label: "+5 Might per act — Huang's Legacy" },
+    loreUnlockId: 'acquisition_huang',
   },
   {
     id: 'legacy_nelson',
@@ -375,6 +659,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_nelson',
     runPerk: { id: 'legacy_might_nelson', label: "+5 Might per act — Nelson's Legacy" },
+    loreUnlockId: 'acquisition_nelson',
   },
   {
     id: 'legacy_hannibal',
@@ -383,6 +668,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_hannibal',
     runPerk: { id: 'legacy_might_hannibal', label: "+5 Might per act — Hannibal's Legacy" },
+    loreUnlockId: 'acquisition_hannibal',
   },
   {
     id: 'legacy_picasso',
@@ -391,6 +677,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_picasso',
     runPerk: { id: 'legacy_power_picasso', label: "+5 Power per act — Picasso's Legacy" },
+    loreUnlockId: 'acquisition_picasso',
   },
   {
     id: 'legacy_teddy',
@@ -399,6 +686,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_teddy',
     runPerk: { id: 'legacy_might_teddy', label: "+5 Might per act — Teddy's Legacy" },
+    loreUnlockId: 'acquisition_teddy',
   },
   {
     id: 'legacy_mansa',
@@ -407,6 +695,127 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 10, category: 'clones', icon: '🏅',
     eventKey: 'legacy_mansa',
     runPerk: { id: 'legacy_power_mansa', label: "+5 Power per act — Mansa's Legacy" },
+    loreUnlockId: 'acquisition_mansa',
+  },
+  {
+    id: 'legacy_velthar',
+    name: 'Signal Persists',
+    description: "Bring Vel'thar alive through Act 4. Grants her +5 Power per act in all future runs.",
+    points: 10, category: 'clones', icon: '🏅',
+    eventKey: 'legacy_velthar',
+    runPerk: { id: 'legacy_power_velthar', label: "+5 Power per act — Vel'thar's Legacy" },
+    loreUnlockId: 'acquisition_velthar',
+  },
+  {
+    id: 'legacy_musashi',
+    name: 'No Second Stroke',
+    description: 'Bring Musashi alive through Act 4. Grants her +5 Might per act in all future runs.',
+    points: 10, category: 'clones', icon: '🏅',
+    eventKey: 'legacy_musashi',
+    runPerk: { id: 'legacy_might_musashi', label: "+5 Might per act — Musashi's Legacy" },
+    loreUnlockId: 'acquisition_musashi',
+  },
+  {
+    id: 'legacy_cleopatra',
+    name: 'Eternal Court',
+    description: 'Bring Cleopatra alive through Act 4. Grants her +5 Defense per act in all future runs.',
+    points: 10, category: 'clones', icon: '🏅',
+    eventKey: 'legacy_cleopatra',
+    runPerk: { id: 'legacy_defense_cleopatra', label: "+5 Defense per act — Cleopatra's Legacy" },
+    loreUnlockId: 'acquisition_cleopatra',
+  },
+  {
+    id: 'legacy_tesla',
+    name: 'Storm Eternal',
+    description: 'Bring Tesla alive through Act 4. Grants her +5 Power per act in all future runs.',
+    points: 10, category: 'clones', icon: '🏅',
+    eventKey: 'legacy_tesla',
+    runPerk: { id: 'legacy_power_tesla', label: "+5 Power per act — Tesla's Legacy" },
+    loreUnlockId: 'acquisition_tesla',
+  },
+  {
+    id: 'legacy_shaka',
+    name: 'Iron Formation',
+    description: 'Bring Shaka alive through Act 4. Grants her +5 Defense per act in all future runs.',
+    points: 10, category: 'clones', icon: '🏅',
+    eventKey: 'legacy_shaka',
+    runPerk: { id: 'legacy_defense_shaka', label: "+5 Defense per act — Shaka's Legacy" },
+    loreUnlockId: 'acquisition_shaka',
+  },
+
+  // ── Duo runs ──────────────────────────────────────────────────────────────────────────
+  {
+    id: 'clash_of_swords',
+    name: 'Clash of Swords',
+    description: 'Win a run with both Musashi-chan and Leonidas-chan on the same squad.',
+    points: 10, category: 'clones', icon: '⚔️',
+    eventKey: 'musashi_leonidas_run_win',
+    loreUnlockId: 'conversation_musashi_leonidas',
+  },
+  {
+    id: 'symmetry',
+    name: 'Symmetry',
+    description: 'Win a run with Da Vinci-chan and Beethoven-chan on the same squad.',
+    points: 10, category: 'clones', icon: '🎵',
+    eventKey: 'davinci_beethoven_run_win',
+    loreUnlockId: 'conversation_davinci_beethoven',
+  },
+  {
+    id: 'the_pass_and_the_angle',
+    name: 'The Pass and the Angle',
+    description: 'Win a run with Leonidas-chan and Hannibal-chan on the same squad.',
+    points: 10, category: 'clones', icon: '🛡️',
+    eventKey: 'leonidas_hannibal_run_win',
+    loreUnlockId: 'conversation_leonidas_hannibal',
+  },
+  {
+    id: 'the_mirror',
+    name: 'The Mirror',
+    description: 'Win a run with Napoleon-chan and Sun-sin-chan on the same squad.',
+    points: 10, category: 'clones', icon: '⚔️',
+    eventKey: 'napoleon_sunsin_run_win',
+    loreUnlockId: 'conversation_napoleon_sunsin',
+  },
+  {
+    id: 'the_canal_and_the_gold',
+    name: 'The Canal and the Gold',
+    description: 'Win a run with Teddy-chan and Mansa-chan on the same squad.',
+    points: 10, category: 'clones', icon: '🤠',
+    eventKey: 'teddy_mansa_run_win',
+    loreUnlockId: 'conversation_teddy_mansa',
+  },
+  {
+    id: 'the_frequencies',
+    name: 'The Frequencies',
+    description: 'Win a run with Tesla-chan and Beethoven-chan on the same squad.',
+    points: 10, category: 'clones', icon: '⚡',
+    eventKey: 'tesla_beethoven_run_win',
+    loreUnlockId: 'field_notes_tesla',
+  },
+  {
+    id: 'the_formation_holds',
+    name: 'The Formation Holds',
+    description: 'Win a run with Shaka-chan and Napoleon-chan on the same squad.',
+    points: 10, category: 'clones', icon: '🛡️',
+    eventKey: 'shaka_napoleon_run_win',
+    loreUnlockId: 'field_notes_shaka',
+  },
+  {
+    id: 'the_court_and_the_general',
+    name: 'The Court and the General',
+    description: 'Win a run with Cleopatra-chan and Hannibal-chan on the same squad.',
+    points: 10, category: 'clones', icon: '👑',
+    eventKey: 'cleopatra_hannibal_run_win',
+    loreUnlockId: 'field_notes_cleopatra',
+  },
+
+  {
+    id: 'true_commander',
+    name: 'True Commander',
+    description: 'Win 10 runs with any single character.',
+    points: 25, category: 'clones', icon: '👑',
+    eventKey: 'ten_runs_one_char',
+    loreUnlockId: 'echo_genghis',
   },
 
   // ── Arena ─────────────────────────────────────────────────────────────────
@@ -442,7 +851,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 20, category: 'arena', icon: '🌑',
     eventKey: 'act_3_complete',
     loreUnlockId: 'final_entry',
-    runPerk: { id: 'char_teddy', label: 'Teddy Roosevelt unlocked' },
+    runPerk: { id: 'char_mansa', label: 'Mansa Musa unlocked' },
   },
   {
     id: 'vel_zar_thral',
@@ -451,7 +860,23 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 30, category: 'arena', icon: '🌌',
     eventKey: 'act_4_complete',
     loreUnlockId: 'velzar_log',
-    runPerk: { id: 'char_mansa', label: 'Mansa Musa unlocked' },
+    runPerk: { id: 'char_velthar', label: "Vel'thar unlocked" },
+  },
+  {
+    id: 'veterans_fury',
+    name: "Veteran's Fury",
+    description: 'Complete Act III. Whenever a clone falls in battle, the survivors permanently gain +15% Might & Power for the rest of that run.',
+    points: 0, category: 'arena', icon: '🔱',
+    eventKey: 'act_3_complete',
+    runPerk: { id: 'veterans_fury', label: "+15% Might & Power when a clone falls — permanent for the run" },
+  },
+  {
+    id: 'emperors_coffers_unlock',
+    name: "Emperor's Coffers",
+    description: "Complete Act IV. The Empire rewards your dominance — start every run with 150 bonus gold.",
+    points: 0, category: 'arena', icon: '🪙',
+    eventKey: 'act_4_complete',
+    runPerk: { id: 'emperors_coffers', label: "Start each run with 150 bonus gold" },
   },
   {
     id: 'krath_zyn',
@@ -889,7 +1314,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     name: 'Full Roster',
     description: 'View all character Archives entries.',
     points: 15, category: 'observer', icon: '👥',
-    statKey: 'characters_viewed', threshold: 12,
+    statKey: 'characters_viewed', threshold: 17,
   },
   {
     id: 'collector',
@@ -992,7 +1417,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: 'Read every lore entry, including the hidden ones.',
     points: 50, category: 'secret', icon: '📖',
     hidden: true,
-    statKey: 'lore_entries_read', threshold: 87,
+    statKey: 'lore_entries_read', threshold: 123,
     loreUnlockId: 'final_transmission',
   },
   {
@@ -1003,6 +1428,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     hidden: true,
     eventKey: 'all_achievements_complete',
     loreUnlockId: 'the_truth',
+  },
+  {
+    id: 'veth_nor_thral',
+    name: "Veth'Nor'Thral",
+    description: 'Reach 1000 total achievement points. A Znyxorgan philologist\'s field report on the Imperial tongue.',
+    points: 0, category: 'secret', icon: '📜',
+    hidden: true,
+    // Unlocked via points milestone directly in useAchievements.ts (oldTotal < 1000 && newTotal >= 1000)
+    eventKey: '__points_1000__',
+    loreUnlockId: 'znyxorgan_lexicon',
   },
 ];
 
@@ -1025,12 +1460,17 @@ export const CHARACTER_UNLOCK_THRESHOLDS: Record<string, number> = {
   nelson:    250,
   hannibal:  400,
   picasso:   550,
+  musashi:   700,
+  cleopatra: 850,
+  shaka:     1000,
 };
 
 // Event-based unlocks: character ID → achievement ID that unlocks them.
 export const CHARACTER_UNLOCK_EVENTS: Record<string, string> = {
-  teddy: 'thral_nor',  // Act III complete
-  mansa: 'vel_zar_thral', // Act IV complete
+  tesla:  'vel_nor',       // Act I complete
+  teddy:  'vel_krath',     // Act II complete
+  mansa:  'thral_nor',     // Act III complete
+  velthar: 'vel_zar_thral', // Act IV complete
 };
 
 export function getAchievementsByCategory(cat: AchievementCategory): AchievementDef[] {

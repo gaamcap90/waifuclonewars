@@ -83,15 +83,16 @@ function snapToLineHexes(from: Qr, to: Qr, range: number): Qr[] {
 function hasLineMountain(board: HexTile[], from: Qr, to: Qr): boolean {
   const dq = to.q - from.q, dr = to.r - from.r;
   if (dq === 0 && dr === 0) return false;
-  let uq: number, ur: number;
-  if (dr === 0 && dq !== 0)      { uq = dq > 0 ? 1 : -1; ur = 0; }
-  else if (dq === 0 && dr !== 0) { uq = 0; ur = dr > 0 ? 1 : -1; }
-  else if (dq + dr === 0)        { uq = dq > 0 ? 1 : -1; ur = dr > 0 ? 1 : -1; }
-  else return false; // not on a hex axial line — no blocking
-  const steps = Math.max(Math.abs(dq), Math.abs(dr));
-  for (let i = 1; i < steps; i++) {
-    const hq = from.q + i * uq, hr = from.r + i * ur;
-    const tile = board.find(t => t.coordinates.q === hq && t.coordinates.r === hr);
+  const N = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+  for (let i = 1; i < N; i++) {
+    const t = i / N;
+    const fq = from.q + dq * t, fr = from.r + dr * t;
+    const fs = -(fq + fr);
+    let rq = Math.round(fq), rr = Math.round(fr), rs = Math.round(fs);
+    const eq = Math.abs(rq - fq), er = Math.abs(rr - fr), es = Math.abs(rs - fs);
+    if (eq > er && eq > es) rq = -rr - rs;
+    else if (er > es) rr = -rq - rs;
+    const tile = board.find(t => t.coordinates.q === rq && t.coordinates.r === rr);
     if (tile?.terrain.type === 'mountain') return true;
   }
   return false;
@@ -150,7 +151,7 @@ const getTerrainForPosition = (q: number, r: number): TerrainType => {
   ]);
   const key = `${q},${r}`;
   if (mtn.has(key))
-    return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
+    return { type: "mountain", effects: { movementModifier: -999 } };
 
   // Lakes — impassable deep water (Yi Sun-sin can cross; passable "river" only on random maps)
   const lake = new Set([
@@ -205,15 +206,15 @@ function getRandomTerrainForPosition(
 ): TerrainType {
   const key = `${q},${r}`;
   if (q === 0 && r === 0) {
-    if (ruinsSet.has("0,0"))           return { type: "ruins",        effects: { rangeBonus: true } };
+    if (ruinsSet.has("0,0"))           return { type: "ruins",        effects: {} };
     return                                      { type: "mana_crystal", effects: { movementModifier: -999 } };
   }
   if ((q === -5 && r === 4) || (q === 5 && r === -4)) return { type: "base", effects: { movementModifier: -999 } };
   if ((q >= -5 && q <= -3 && r >= 3 && r <= 5) || (q >= 3 && q <= 5 && r >= -5 && r <= -3))
     return { type: "spawn", effects: {} };
   // Strategic ruins — check before other cover terrain so they always appear
-  if (ruinsSet.has(key))   return { type: "ruins",    effects: { rangeBonus: true } };
-  if (mountainSet.has(key)) return { type: "mountain", effects: { rangeBonus: true, blocksLineOfSight: true, movementModifier: -999 } };
+  if (ruinsSet.has(key))   return { type: "ruins",    effects: {} };
+  if (mountainSet.has(key)) return { type: "mountain", effects: { movementModifier: -999 } };
   if (lakeSet.has(key))    return { type: "lake",     effects: { movementModifier: -999 } as any };
   if (riverSet.has(key))   return { type: "river",    effects: {} };           // passable shallow water — costs 2 (1 for Sun-sin)
   if (iceSet.has(key))     return { type: "ice",      effects: {} };           // passable, cost 1
@@ -470,7 +471,7 @@ const createInitialIcons = (): Icon[] => {
         { id: "2", name: "Grande Armée", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "Summons phantom soldiers. +20% damage to all allies for 3 turns.", damage: 0 },
         { id: "ultimate", name: "Final Salvo", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 3, description: "ULTIMATE: Deal 30 damage in a 3-tile line", damage: 0 },
       ],
-      passive: "Tactical Genius: +1 movement range when commanding from high ground",
+      passive: "Tactical Genius: +1 movement at turn start while standing on a vantage tile (Forest or Ruins)",
     },
     {
       name: "Genghis-chan",
@@ -566,6 +567,8 @@ type ExtState = GameState & {
   tutorialHandScript?: string[][];
   /** How many times player 0 has drawn a fresh hand (starts at 0). */
   tutorialPlayerTurnIdx: number;
+  /** Most recent lethal hit on a player character — used on defeat to show who killed us. */
+  lastPlayerCasualty?: { victimName: string; killerName: string; sourceName: string; damage: number };
 };
 
 /** Remove `card` from `playerId`'s hand and put it in discard (no mid-turn replacement draw). */
@@ -618,8 +621,10 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       .filter((t): t is string => !!t) ?? [];
     // move_plus_1: add +1 to base movement range
     const movePlusOne = itemPassiveTags.filter(t => t === 'move_plus_1').length;
-    // swift_wraps_burst: +2 movement on the first turn only (not added to moveRange)
-    const swiftWrapsBurst = itemPassiveTags.includes('swift_wraps_burst') ? 2 : 0;
+    // swift_wraps_burst: +1 permanent move + extra +2 on the first turn (first-turn bonus baked into 'movement' only, permanent added to 'moveRange')
+    const hasSwiftWraps = itemPassiveTags.includes('swift_wraps_burst');
+    const swiftWrapsPermanent = hasSwiftWraps ? 1 : 0;
+    const swiftWrapsBurst = hasSwiftWraps ? 2 : 0;
     const baseDefense = template.role === "support" ? 20 : template.role === "dps_melee" ? 25 : template.role === "tank" ? 35 : template.role === "controller" ? 25 : template.role === "hybrid" ? 20 : 15;
     const maxHpWithItems = (runChar ? runChar.maxHp : template.stats.hp) + itemBonus.hp;
     // If character was at full HP before the item, scale up currentHp too (item heals to new max)
@@ -635,16 +640,16 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       stats: {
         hp:        baseHp,
         maxHp:     maxHp,
-        moveRange: (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne,
+        moveRange: (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne + swiftWrapsPermanent,
         speed:     template.role === "dps_melee" ? 8 : template.role === "dps_ranged" ? 6 : template.role === "tank" ? 3 : 4,
-        attackRange: (template.name.includes("Mansa") ? 3
+        attackRange: (template.name.includes("Mansa") || template.name.includes("Tesla") ? 3
                    : (template.name.includes("Picasso") || template.role === "dps_ranged") ? 2
                    : (template.name.includes("Sun-sin") && itemPassiveTags.includes('sig_sunsin_turtle_helm')) ? 2
                    : 1) + itemBonus.attackRange,
         might:     template.stats.might + (statBonus.might ?? 0) + itemBonus.might,
         power:     (template.stats.power ?? 50) + (statBonus.power ?? 0) + itemBonus.power,
         defense:   baseDefense + (statBonus.defense ?? 0) + itemBonus.defense,
-        movement:  (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne + swiftWrapsBurst,
+        movement:  (template.role === "tank" || template.role === "controller" ? 2 : 3) + movePlusOne + swiftWrapsPermanent + swiftWrapsBurst,
         mana: 3,
         maxMana: 3,
       },
@@ -665,8 +670,15 @@ function buildIconsFromSelection(selected: any[], runChars?: CharacterRunState[]
       voidArmorUsed:    false,
       firstHitNegated:  false,
       firstAbilityUsed: false,
-      // Restore persisted passive stacks (Genghis Bloodlust always carries at 50% between fights)
-      passiveStacks: template.name?.includes('Genghis') ? (runChar?.passiveStacks ?? 0) : 0,
+      // Restore persisted passive stacks (Genghis Bloodlust; Musashi Battle Scar with scar_persist item)
+      passiveStacks: (() => {
+        if (template.name?.includes('Genghis')) return runChar?.passiveStacks ?? 0;
+        if (template.name?.includes('Musashi')) {
+          const base = itemPassiveTags.includes('musashi_scar_persist') ? (runChar?.passiveStacks ?? 0) : 0;
+          return itemPassiveTags.includes('sig_musashi_niten_scrolls') ? Math.max(base, 2) : base;
+        }
+        return 0;
+      })(),
     };
   };
 
@@ -737,7 +749,32 @@ function getAbilitiesForCharacter(name: string) {
   if (name.includes("Mansa")) return [
     { id: "1", name: "Salt Road", manaCost: 1, cooldown: 0, currentCooldown: 0, range: 3, description: "Place a 7-hex mana zone. Allies starting their turn on it restore 1 Mana. Lasts 2 turns.", damage: 0, manaZone: true },
     { id: "2", name: "Hajj of Gold", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 0, description: "Heal all allies for 20% of max HP. All allies gain +10 Power for 2 turns.", damage: 0, hajjOfGold: true, hajjHealPct: 0.2 },
-    { id: "ultimate", name: "Mansa's Bounty", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 0, description: "ULTIMATE: Golden Stasis — all units (allies and enemies) are frozen for 1 turn.", damage: 0, mansaBounty: true },
+    { id: "ultimate", name: "Mansa's Bounty", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 0, description: "ULTIMATE: Golden Stasis — all units (allies and enemies) are frozen for 1 turn.", damage: 0, mansaBounty: true },
+  ];
+  if (name.includes("Vel'thar")) return [
+    { id: "1", name: "Toba's Fury", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "Melee strike ~64 dmg. At 2+ Bottleneck stacks: applies Armor Break.", damage: 0, powerMult: 1.1, armorBreakAtStacks: 2 },
+    { id: "2", name: "Last Ember", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 2, description: "Bottleneck active: heal 25 HP + +15 DEF 1t. Else: ~50 AoE dmg range 2.", damage: 0, powerMult: 1.0, lastRites: true, selfHealIfLost: 25, selfDefenseIfLost: 15 },
+    { id: "ultimate", name: "Humanity's Last Light", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: ~87 AoE dmg range 2. Vel'thar heals 30 HP. Scales with Bottleneck Power boost.", damage: 0, powerMult: 1.5, humanitysLastLight: true, selfHeal: 30 },
+  ];
+  if (name.includes("Musashi")) return [
+    { id: "1", name: "Ichi no Tachi", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "~36 dmg. Places Duel 2t. If Dueled: ~63 dmg + Bleed.", damage: 0, powerMult: 0.8, duelApply: true, duelPowerMult: 1.4, duelBleed: true },
+    { id: "2", name: "Niten Ichi-ryu", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "Strike twice ~32 each. Both apply Bleed. If Dueled: refresh Duel + ~22 splash.", damage: 0, powerMult: 0.7, multiHit: 2, bleedOnHit: true, duelRefresh: true, duelSplashMult: 0.5 },
+    { id: "ultimate", name: "Book of Five Rings", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Duel all enemies in range 2. Deal ~38 dmg each. Duel bonus +35% → +65% this round.", damage: 0, powerMult: 0.85, bookOfFiveRings: true, applyDuelAll: true, duelBonusBoost: 65 },
+  ];
+  if (name.includes("Cleopatra")) return [
+    { id: "1", name: "Asp's Kiss", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "~46 dmg at range 3. Reduce target Power by −15 for 3 turns.", damage: 0, powerMult: 0.7, powerReduction: 15, powerReductionDuration: 3 },
+    { id: "2", name: "Royal Decree", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Dual-use. Enemy: Charm 1t + Poison. Ally: +20 Might, +10 DEF for 2 turns.", damage: 0, royalDecree: true, charm: true, allyMightBonus: 20, allyDefBonus: 10, allyBuffTurns: 2 },
+    { id: "ultimate", name: "Eternal Kingdom", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 2, description: "ULTIMATE: Stun + Poison ALL enemies range 2 for 1t. Cleopatra Untouchable 1t.", damage: 0, eternalKingdom: true, untouchable: 1 },
+  ];
+  if (name.includes("Tesla")) return [
+    { id: "1", name: "Arc Bolt", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "~72 dmg at range 3. At Voltage ≥3: chains to ALL adjacent enemies for ~40 each.", damage: 0, powerMult: 0.9, chainAllAdjacent: true, chainThreshold: 3, chainPct: 0.5 },
+    { id: "2", name: "Coil Surge", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 3, description: "Place Tesla Coil zone on tile (range 3). Enemies there: −20 DEF + Stun 1t. Lasts 3t. Costs 1 Voltage.", damage: 0, coilZone: true, coilDuration: 3, coilDefPenalty: 20, voltageCost: 1 },
+    { id: "ultimate", name: "Death Ray", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 6, description: "ULTIMATE: Requires ≥1 Voltage. Line range 6 — ~40 per stack, 50% falloff. Consumes all Voltage.", damage: 0, deathRay: true, lineTarget: true, voltageRequired: 1, voltagePerStackMult: 0.5, chainFalloffPct: 0.5 },
+  ];
+  if (name.includes("Shaka")) return [
+    { id: "1", name: "The Horns", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 2, description: "Charge at target (up to 2 tiles), ~24 dmg. Knock sideways. Water: lethal. Mountain: Stun 1t.", damage: 0, powerMult: 0.6, chargeHorns: true, chargePushSideways: true, waterKill: true, mountainStun: true },
+    { id: "2", name: "Chest Strike", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "~27 dmg at range 1. Push back 1 tile. Armor Break.", damage: 0, powerMult: 0.7, pushBack: 1, debuffType: 'armor_break', debuffMagnitude: 35, debuffDuration: 2 },
+    { id: "ultimate", name: "Impondo Zankomo", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 1, description: "ULTIMATE: ~19 dmg to ALL adjacent enemies. Adjacent allies +35 DEF, Shaka +50 DEF for 2t.", damage: 0, powerMult: 0.5, impondo: true, aoeAdjacent: true, allyDefBonus: 35, selfDefBonus: 50, defTurns: 2 },
   ];
   // fallback (shouldn't be reached)
   return [
@@ -780,6 +817,23 @@ function getPassiveForCharacter(name: string, level: number = 1) {
   if (name.includes("Mansa")) {
     const costReduction = level >= 6 ? 2 : 1;
     return `Treasury: After each battle, earn bonus gold equal to Mansa's Power% (60 Power = +60% more gold). Ability cards cost ${costReduction} less Mana${level >= 6 ? ' (lvl 6+ bonus active)' : ` (cost 2 less at lvl 6+)`}.`;
+  }
+  if (name.includes("Vel'thar")) {
+    const perStack = 3 + 2 * level;
+    return `Bottleneck: When a player character ally dies, Vel'thar gains +${perStack} Might and +${perStack} Power (scales: +5 at L1, +19 at L8). Stacks indefinitely, battle scope only. Does not trigger on summons or drones.`;
+  }
+  if (name.includes("Musashi")) {
+    const perStack = Math.ceil(level / 2);
+    return `Battle Scar: Each time Musashi takes damage, gain +${perStack} Might permanently for this battle (cap: 3 stacks, max +${perStack * 3} Might). Scales: +1 at L1, +4 at L8. Resets on fight end.`;
+  }
+  if (name.includes("Cleopatra")) {
+    const moveNote = level >= 5 ? " Also reduces target Move by 1." : " At level 5: also reduces target Move by 1.";
+    return `Asp's Venom: Basic attacks apply Poison (−8 Might and −5 Defense per turn, 3 turns, stacks up to 3).${moveNote}`;
+  }
+  if (name.includes("Tesla")) return "Voltage: Gain 1 stack when NOT moving on your turn. Lose 1 stack when you move (max 5). At 5 stacks (Overloaded): next basic attack or ability costs 0 Mana, deals +50% damage, and Stuns the target 1 turn. Consumed on use.";
+  if (name.includes("Shaka")) {
+    const defBonus = 9 + level;
+    return `Isigodlo (Formation): Adjacent allies gain +${defBonus} Defense while Shaka lives (scales: +10 at L1, +17 at L8). Shaka deals +20% damage when attacking from the flank.`;
   }
   return "";
 }
@@ -864,7 +918,8 @@ function computeAIIntents(state: ExtState): AIIntent[] {
     if (!mainIntentSet && (state as any).encounterObjective === 'destroy_base') {
       const playerBase: Qr = { q: -5, r: 4 };
       if (hexDistance(ai.position, playerBase) <= basicRange && state.baseHealth[0] > 0) {
-        const dmg = Math.max(1, ai.stats.might);
+        // Base attack: flat 30 + 25% of attacker Might (mirrors enemy base symmetry, no run-away scaling).
+        const dmg = Math.max(1, 30 + Math.floor(ai.stats.might * 0.25));
         intents.push({ iconId: ai.id, type: 'attack', abilityName: 'Attack Base',
           label: String(Math.round(dmg)), damage: dmg, range: basicRange });
         mainIntentSet = true;
@@ -1019,6 +1074,9 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
             }),
           })),
         };
+        if (newHp <= 0 && t.playerId === 0 && !t.isDecoy) {
+          s.lastPlayerCasualty = { victimName: t.name, killerName: ai.name, sourceName: ab.name, damage: dmg };
+        }
       }
       const avgDmg = logDmg.length ? Math.round(logDmg.reduce((a, b) => a + b, 0) / logDmg.length) : 0;
       pushLog(s, `${ai.name} used ${ab.name} for ~${avgDmg} dmg to ${targets.length} target(s)!`, 1);
@@ -1066,6 +1124,9 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
             }),
           })),
         };
+        if (newHp <= 0 && t.playerId === 0 && !t.isDecoy) {
+          s.lastPlayerCasualty = { victimName: t.name, killerName: ai.name, sourceName: ab.name, damage: dmg };
+        }
       }
       const label = effect.trueDamage ? `${baseDmg} TRUE dmg` : `~${baseDmg} dmg (DEF applies)`;
       pushLog(s, `${ai.name} used ${ab.name} — ${label} to ALL!`, 1);
@@ -1132,6 +1193,9 @@ function executeEnemyAbilities(s: ExtState, aiId: string): ExtState {
             }),
           })),
         };
+        if (newHp <= 0 && target.playerId === 0 && !target.isDecoy) {
+          s.lastPlayerCasualty = { victimName: target.name, killerName: ai.name, sourceName: ab.name, damage: dmg };
+        }
         pushLog(s, `${ai.name} used ${ab.name} on ${target.name} for ${dmg} dmg!`, 1);
         abilitiesUsed++;
       } else continue;
@@ -1267,6 +1331,27 @@ function executeAITurn(state: ExtState): ExtState {
       pushLog(s, `${aiOrig.name} is STUNNED — cannot act!`, 1);
       continue;
     }
+    // Charmed: attacks nearest alive ally instead of player
+    if (preStunCheck?.debuffs?.some(d => d.type === 'charmed')) {
+      const charmedIcon = preStunCheck!;
+      const nearestAlly = s.players[1].icons
+        .filter(ic => ic.isAlive && ic.id !== charmedIcon.id && hexDistance(charmedIcon.position, ic.position) <= (charmedIcon.stats.attackRange ?? 1))
+        .sort((a, b) => hexDistance(charmedIcon.position, a.position) - hexDistance(charmedIcon.position, b.position))[0];
+      if (nearestAlly) {
+        const dmg = resolveBasicAttackDamage(s, charmedIcon, nearestAlly);
+        const newHp = Math.round(Math.max(0, nearestAlly.stats.hp - dmg));
+        s.players = s.players.map(p => ({
+          ...p, icons: p.icons.map(ic => ic.id !== nearestAlly.id ? ic : {
+            ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+          }),
+        }));
+        s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === charmedIcon.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
+        pushLog(s, `${charmedIcon.name} is CHARMED — attacked ally ${nearestAlly.name} for ${dmg.toFixed(0)} dmg!`, 1);
+      } else {
+        pushLog(s, `${charmedIcon.name} is CHARMED — no ally in range to attack.`, 1);
+      }
+      continue; // skip normal AI logic
+    }
     // Silence: skip ability execution but allow basic attack
     const isSilenced = preStunCheck?.debuffs?.some(d => d.type === 'silence') ?? false;
     // Execute boss/elite abilities at the start of each enemy's turn
@@ -1322,7 +1407,8 @@ function executeAITurn(state: ExtState): ExtState {
         if (mainIntent?.abilityName === 'Attack Base' && (s as any).encounterObjective === 'destroy_base') {
           const PLAYER_BASE_INTENT: Qr = { q: -5, r: 4 };
           if (hexDistance(ai.position, PLAYER_BASE_INTENT) <= basicRange && s.baseHealth[0] > 0) {
-            const dmg = Math.max(0.1, calcEffectiveStats(s, ai).might);
+            // Base attack: flat 30 + 25% of attacker Might. Mirrors intent calc above so the badge number matches reality.
+            const dmg = Math.max(1, 30 + Math.floor(ai.stats.might * 0.25));
             const newBases = [...s.baseHealth];
             newBases[0] = Math.max(0, newBases[0] - dmg);
             s.baseHealth = newBases as [number, number];
@@ -1352,6 +1438,10 @@ function executeAITurn(state: ExtState): ExtState {
             }));
             s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
             pushLog(s, `${ai.name} basic-attacked ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
+            // Record defeat cause if this basic attack just killed a player character
+            if (newHp <= 0 && target.playerId === 0 && !target.isDecoy) {
+              s.lastPlayerCasualty = { victimName: target.name, killerName: ai.name, sourceName: 'Basic Attack', damage: Math.round(dmg) };
+            }
             // Decoy explosion: if target is a decoy and just died, explode
             if (newHp <= 0 && target.isDecoy && (target.decoyExplosionDmg ?? 0) > 0) {
               const explosionDmg = target.decoyExplosionDmg!;
@@ -1452,6 +1542,9 @@ function executeAITurn(state: ExtState): ExtState {
           }));
           s.players = s.players.map(p => ({ ...p, icons: p.icons.map(ic => ic.id === ai!.id ? { ...ic, cardUsedThisTurn: true } : ic) }));
           pushLog(s, `${ai.name} attacked ${target.name} for ${dmg.toFixed(0)} dmg`, 1);
+          if (newHp <= 0 && target.playerId === 0 && !target.isDecoy) {
+            s.lastPlayerCasualty = { victimName: target.name, killerName: ai.name, sourceName: 'Basic Attack', damage: Math.round(dmg) };
+          }
         } else if (!(s as any).isRoguelikeRun && hexDistance(ai.position, PLAYER_BASE) <= basicRange && s.baseHealth[0] > 0) {
           const dmg = Math.max(0.1, calcEffectiveStats(s, ai).might);
           const newBases = [...s.baseHealth];
@@ -1536,7 +1629,8 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
     }
   }
 
-  // Genghis Bloodlust: +12 Might stack, +1 mana (cap 3, or uncapped with Eternal Steppe)
+  // Genghis Bloodlust: +12 Might stack, +1 mana (cap 3, or uncapped with Eternal Steppe).
+  // Eternal Steppe also grants +1 moveRange per stack but is HARD-CAPPED at +3 to prevent runaway scaling.
   if (killer.name.includes("Genghis")) {
     const stacks = killer.passiveStacks ?? 0;
     const hasEternalSteppe = killer.itemPassiveTags?.includes('sig_genghis_uncapped_bloodlust');
@@ -1544,19 +1638,24 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
     const maxStacks = hasEternalSteppe ? 999 : levelCap;
     if (stacks < maxStacks) {
       const newStacks = stacks + 1;
+      const ETERNAL_STEPPE_MOVE_CAP = 3;
+      const grantsMoveBonus = hasEternalSteppe && newStacks <= ETERNAL_STEPPE_MOVE_CAP;
       s.players = s.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => ic.id !== killerId ? ic : {
           ...ic,
           passiveStacks: newStacks,
-          // Eternal Steppe: each stack also grants +1 movement
-          stats: hasEternalSteppe ? { ...ic.stats, moveRange: ic.stats.moveRange + 1, movement: ic.stats.movement + 1 } : ic.stats,
+          // Eternal Steppe: +1 moveRange per stack, capped at +3 total.
+          stats: grantsMoveBonus ? { ...ic.stats, moveRange: ic.stats.moveRange + 1, movement: ic.stats.movement + 1 } : ic.stats,
         }),
       }));
       const newMana = [...s.globalMana] as [number, number];
       newMana[killer.playerId] = Math.min(5, newMana[killer.playerId] + 1);
       s.globalMana = newMana;
-      const label = hasEternalSteppe ? `${newStacks} stacks (+12 Might, +1 Move, +1 Mana)` : `${newStacks}/${maxStacks} stacks (+12 Might, +1 Mana)`;
+      const moveLabel = hasEternalSteppe
+        ? (grantsMoveBonus ? `, +1 Move (${newStacks}/${ETERNAL_STEPPE_MOVE_CAP})` : ', Move at cap')
+        : '';
+      const label = hasEternalSteppe ? `${newStacks} stacks (+12 Might${moveLabel}, +1 Mana)` : `${newStacks}/${maxStacks} stacks (+12 Might, +1 Mana)`;
       pushLog(s, `${killer.name} Bloodlust! ${label}`, killer.playerId);
     }
   }
@@ -1584,6 +1683,27 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
       }));
       const label = hasBullMoose ? `${newStacks}/3 stacks (+${bullyBonus} Might, +10 DEF)` : `${newStacks}/3 stacks (+${bullyBonus} Might)`;
       pushLog(s, `${killer.name} Bully! ${label}`, killer.playerId);
+    }
+  }
+
+  // Vel'thar Bottleneck: when a player 0 character (not summon/decoy) dies, all Vel'thar on same team gain +1 stack
+  if (victim && victim.playerId === 0) {
+    const isMinorUnit = victim.name.includes("Drone") || victim.name.includes("Decoy") || victim.name.includes("Terracotta") || victim.name.includes("Cavalry");
+    if (!isMinorUnit) {
+      const veltharAllies = s.players
+        .flatMap(p => p.icons)
+        .filter(ic => ic.isAlive && ic.playerId === 0 && ic.name.includes("Vel'thar") && ic.id !== victim.id);
+      for (const vel of veltharAllies) {
+        const newStacks = (vel.passiveStacks ?? 0) + 1;
+        s.players = s.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== vel.id ? ic : { ...ic, passiveStacks: newStacks }),
+        }));
+        const lvl = vel.level ?? 1;
+        const perStack = 3 + 2 * lvl;
+        pushLog(s, `${vel.name} Bottleneck — ${newStacks} stack(s) (+${perStack} Might & Power per stack)`, vel.playerId);
+      }
+      // Survivor's Totem DR is handled passively in applyDamageToIcon — no ally-death trigger needed
     }
   }
 
@@ -1629,16 +1749,18 @@ function applyKillPassives(s: ExtState, killerId: string, victimWasAlive: boolea
     pushLog(s, `${killer.name} Znyxorga's Eye: next ${eye1Count} card(s) are FREE!`, killer.playerId);
   }
 
-  // War Trophy (on_kill_might_power_plus3): permanently +2 Might and +2 Power per trophy
+  // War Trophy (on_kill_might_power_plus3): permanently +2 Might and +2 Power per trophy (cap: 5 stacks per holder → +10/+10)
   const warTrophyCount = killer.itemPassiveTags?.filter(t => t === 'on_kill_might_power_plus3').length ?? 0;
   if (warTrophyCount > 0) {
     s.players = s.players.map(p => ({
       ...p,
       icons: p.icons.map(ic => {
         if (ic.id !== killerId || !ic.isAlive) return ic;
+        const curStacks = ic.warTrophyStacks ?? 0;
+        if (curStacks >= 5) return ic; // cap reached
         const bonus = 2 * warTrophyCount;
-        pushLog(s, `${ic.name} War Trophy: +${bonus} Might, +${bonus} Power!`, ic.playerId);
-        return { ...ic, stats: { ...ic.stats, might: ic.stats.might + bonus, power: ic.stats.power + bonus } };
+        pushLog(s, `${ic.name} War Trophy: +${bonus} Might, +${bonus} Power! (${curStacks + 1}/5)`, ic.playerId);
+        return { ...ic, stats: { ...ic.stats, might: ic.stats.might + bonus, power: ic.stats.power + bonus }, warTrophyStacks: curStacks + 1 };
       }),
     }));
   }
@@ -1661,6 +1783,13 @@ function applyDmgToIcon(ic: Icon, dmg: number, s: ExtState, logFn?: (msg: string
   // Turtle Hull: Yi Sun-sin takes 20% less damage from all sources
   if (dmg > 0 && ic.itemPassiveTags?.includes('sunsin_dmg_reduce_20pct')) {
     dmg = Math.floor(dmg * 0.80);
+  }
+  // Survivor's Totem: Vel'thar takes 35% less damage at or below 40% HP
+  if (dmg > 0 && ic.name.includes("Vel'thar") && ic.itemPassiveTags?.includes('velthar_low_hp_resilience')) {
+    if (ic.stats.hp / ic.stats.maxHp <= 0.40) {
+      dmg = Math.round(dmg * 0.65);
+      if (logFn) logFn(`${ic.name} Survivor's Totem — 35% DR (low HP)!`);
+    }
   }
   const rawHp = Math.max(0, ic.stats.hp - dmg);
   // Void Armor: once per fight, survive a lethal hit at 1 HP
@@ -1962,7 +2091,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
   const selectTile = useCallback((coordinates: Coordinates) => {
     setGameState((prev) => {
-      const state = { ...prev } as ExtState;
+      let state = { ...prev } as ExtState;
 
       // ── Card targeting path ──────────────────────────────────────────────────
       if (state.cardTargetingMode) {
@@ -2969,6 +3098,44 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
         }
 
+        // ── Tesla: Coil Surge — place Tesla Coil zone ─────────────────────────
+        if (state.targetingMode?.abilityId === "coil_zone") {
+          const tile = updated.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
+          if (!tile || tile.terrain.effects.movementModifier === -999) { toast.error("Can't place zone there!"); return prev; }
+          const coilZone: Zone = {
+            center: coordinates,
+            radius: 0,
+            effect: 'teslaCoil',
+            magnitude: card.effect.coilDefPenalty ?? 20,
+            ownerId: executor.playerId,
+            turnsRemaining: card.effect.coilDuration ?? 3,
+            coilStun: card.effect.coilStun ?? true,
+          };
+          updated = { ...updated, activeZones: [...(updated.activeZones ?? []), coilZone] } as ExtState;
+          // Consume voltage cost up-front
+          const voltageCost = card.effect.voltageCost ?? 1;
+          if (voltageCost > 0) {
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, passiveStacks: Math.max(0, (ic.passiveStacks ?? 0) - voltageCost) }),
+            }));
+          }
+          // Deduct mana
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          pushLog(updated, `${executor.name} Coil Surge — Tesla Coil active for ${coilZone.turnsRemaining} turns${voltageCost > 0 ? ` (−${voltageCost} Voltage)` : ''}`, executor.playerId);
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
         // ── Mansa: Salt Road — place mana zone ────────────────────────────────
         if (state.targetingMode?.abilityId === "mana_zone") {
           const tile = updated.board.find(t => t.coordinates.q === coordinates.q && t.coordinates.r === coordinates.r);
@@ -3051,15 +3218,18 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             }));
             pushLog(updated, `${executor.name} applied ${debuff.type} to ${targetIcon.name}`, executor.playerId);
 
-            // Taunt: grant executor a defense bonus while taunting
+            // Taunt: grant executor a defense bonus for the taunt duration (matches debuff)
             if (card.effect.debuffType === 'taunted' && card.effect.tauntDefBonus) {
+              const tauntTurns = card.effect.debuffDuration ?? 2;
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-                  ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + card.effect.tauntDefBonus!,
+                  ...ic,
+                  cardBuffDef: (ic.cardBuffDef ?? 0) + card.effect.tauntDefBonus!,
+                  cardBuffTurns: tauntTurns > 1 ? Math.max(ic.cardBuffTurns ?? 0, tauntTurns) : (ic.cardBuffTurns ?? 0),
                 }),
               }));
-              pushLog(updated, `${executor.name} taunts! +${card.effect.tauntDefBonus} DEF while taunting`, executor.playerId);
+              pushLog(updated, `${executor.name} taunts! +${card.effect.tauntDefBonus} DEF for ${tauntTurns} turn${tauntTurns !== 1 ? 's' : ''}`, executor.playerId);
             }
 
             // Shield Bash counter-stance: grants Leonidas +15 DEF until his next turn
@@ -3111,6 +3281,174 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           updated.players = updated.players.map(p => ({
             ...p,
             icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1 }),
+          }));
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Cleopatra: Royal Decree — dual-use (enemy: Charm+Poison; ally: +Might+DEF) ──
+        if (card.effect.royalDecree) {
+          if (!targetIcon) { toast.error(getT().messages.noTarget); return prev; }
+          if (targetIcon.playerId === executor.playerId) {
+            // Ally target: grant +Might and +DEF buff for `allyBuffTurns` of the owner's turns (default 2)
+            const mightBonus = card.effect.allyMightBonus ?? 20;
+            const defBonus = card.effect.allyDefBonus ?? 10;
+            const buffTurns = card.effect.allyBuffTurns ?? 2;
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                ...ic,
+                cardBuffAtk: (ic.cardBuffAtk ?? 0) + mightBonus,
+                cardBuffDef: (ic.cardBuffDef ?? 0) + defBonus,
+                cardBuffTurns: Math.max(ic.cardBuffTurns ?? 0, buffTurns),
+              }),
+            }));
+            pushLog(updated, `${executor.name} Royal Decree — ${targetIcon.name} gains +${mightBonus} Might and +${defBonus} DEF for ${buffTurns} turns!`, executor.playerId);
+          } else {
+            // Enemy target: Charm (1 turn, 2 with Eye of Ra) + Poison
+            const charmTurns = executor.itemPassiveTags?.includes('sig_cleopatra_eye_of_ra') ? 2 : 1;
+            const charmDebuff: Debuff = { type: 'charmed', magnitude: 0, turnsRemaining: charmTurns };
+            const poisonDebuff: Debuff = { type: 'poison', magnitude: 8, turnsRemaining: 3 };
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                ...ic,
+                debuffs: [
+                  ...(ic.debuffs ?? []).filter(d => d.type !== 'charmed' && d.type !== 'poison'),
+                  charmDebuff,
+                  poisonDebuff,
+                ],
+              }),
+            }));
+            pushLog(updated, `${executor.name} Royal Decree — ${targetIcon.name} CHARMED & POISONED!`, executor.playerId);
+          }
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+          }));
+          updated = consumeCardFromHand(updated, card, executor.playerId);
+          return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
+        }
+
+        // ── Shaka: The Horns — charge to target, deal damage, push enemy sideways ──
+        if (card.effect.chargeHorns) {
+          if (!targetIcon || targetIcon.playerId === executor.playerId) { toast.error(getT().messages.noTarget); return prev; }
+          const dq = targetIcon.position.q - executor.position.q;
+          const dr = targetIcon.position.r - executor.position.r;
+          // Charge executor adjacent to target (move 1 step toward target)
+          const chargeRange = card.effect.range ?? 2;
+          const dist = hexDistance(executor.position, targetIcon.position);
+          const targetTile = updated.board.find(t => t.coordinates.q === targetIcon.position.q && t.coordinates.r === targetIcon.position.r);
+          const isWater = targetTile?.terrain.type === 'lake' || targetTile?.terrain.type === 'river';
+          const isMountain = (targetTile?.terrain.effects.movementModifier ?? 0) === -999;
+          // Determine landing tile (one step back from target in charge direction)
+          const norm = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+          const stepQ = norm > 0 ? Math.round(dq / norm) : 0;
+          const stepR = norm > 0 ? Math.round(dr / norm) : 0;
+          const landQ = dist > 1 ? targetIcon.position.q - stepQ : executor.position.q;
+          const landR = dist > 1 ? targetIcon.position.r - stepR : executor.position.r;
+          const landOccupied = updated.players.flatMap(p => p.icons).some(ic => ic.id !== executorId && ic.isAlive && ic.position.q === landQ && ic.position.r === landR);
+          if (!landOccupied && dist > 1 && chargeRange >= dist) {
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, position: { q: landQ, r: landR }, movedThisTurn: true }),
+            }));
+          }
+          if (isMountain && card.effect.mountainStun) {
+            // Stun instead of damage
+            const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), stunDebuff],
+              }),
+            }));
+            pushLog(updated, `${executor.name} The Horns — charged into mountain, ${targetIcon.name} is STUNNED!`, executor.playerId);
+          } else {
+            // Deal damage
+            const atkStats = calcEffectiveStats(updated, executor);
+            const defStats = calcEffectiveStats(updated, targetIcon);
+            const dmg = Math.max(0.1, atkStats.power * (card.effect.powerMult ?? 0.6) - defStats.defense);
+            const wasAlive = targetIcon.isAlive;
+            const newHp = Math.round(Math.max(0, targetIcon.stats.hp - dmg));
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+              }),
+            }));
+            updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, targetIcon.id);
+            pushLog(updated, `${executor.name} The Horns — charged ${targetIcon.name} for ${dmg.toFixed(0)} dmg!`, executor.playerId);
+            // Assegai: Horns also knocks back 1 adjacent enemy 1 hex in the charge direction
+            if (executor.itemPassiveTags?.includes('shaka_horns_splash') && newHp > 0) {
+              const splashEnemy = updated.players.flatMap(p => p.icons).find(
+                ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 1
+              );
+              if (splashEnemy) {
+                const splashDest = { q: splashEnemy.position.q + stepQ, r: splashEnemy.position.r + stepR };
+                const splashTile = updated.board.find(t => t.coordinates.q === splashDest.q && t.coordinates.r === splashDest.r);
+                const splashOcc = updated.players.flatMap(p => p.icons).some(ic => ic.id !== splashEnemy.id && ic.isAlive && ic.position.q === splashDest.q && ic.position.r === splashDest.r);
+                if (splashTile && !splashOcc && splashTile.terrain.effects.movementModifier !== -999) {
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== splashEnemy.id ? ic : { ...ic, position: splashDest }),
+                  }));
+                  pushLog(updated, `${executor.name} Assegai — ${splashEnemy.name} knocked back!`, executor.playerId);
+                }
+              }
+            }
+            // Sideways push: knock target perpendicular to charge direction
+            if (card.effect.chargePushSideways && newHp > 0) {
+              const HEX_DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
+              const perpDirs = HEX_DIRS.filter(d => d.q * stepQ + d.r * stepR === 0); // perpendicular to charge
+              const pushed = updated.players.flatMap(p => p.icons).find(ic => ic.id === targetIcon.id);
+              if (pushed && pushed.isAlive) {
+                const sideDir = perpDirs.find(d => {
+                  const dest = { q: pushed.position.q + d.q, r: pushed.position.r + d.r };
+                  const destTile = updated.board.find(t => t.coordinates.q === dest.q && t.coordinates.r === dest.r);
+                  const occupied = updated.players.flatMap(p => p.icons).some(ic => ic.id !== pushed.id && ic.isAlive && ic.position.q === dest.q && ic.position.r === dest.r);
+                  return destTile && !occupied;
+                }) ?? perpDirs[0];
+                if (sideDir) {
+                  const dest = { q: pushed.position.q + sideDir.q, r: pushed.position.r + sideDir.r };
+                  const destTile = updated.board.find(t => t.coordinates.q === dest.q && t.coordinates.r === dest.r);
+                  if (destTile) {
+                    const pushIntoWater = card.effect.waterKill && (destTile.terrain.type === 'lake' || destTile.terrain.type === 'river');
+                    if (pushIntoWater) {
+                      updated.players = updated.players.map(p => ({
+                        ...p,
+                        icons: p.icons.map(ic => ic.id !== pushed.id ? ic : {
+                          ...ic, position: dest, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4,
+                        }),
+                      }));
+                      pushLog(updated, `${pushed.name} was knocked into the water — INSTANT KILL!`, executor.playerId);
+                    } else if (destTile.terrain.effects.movementModifier !== -999) {
+                      updated.players = updated.players.map(p => ({
+                        ...p,
+                        icons: p.icons.map(ic => ic.id !== pushed.id ? ic : { ...ic, position: dest }),
+                      }));
+                      pushLog(updated, `${pushed.name} was knocked sideways by The Horns!`, executor.playerId);
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if (card.manaCost > 0) {
+            const pid = executor.playerId as 0 | 1;
+            const nm = [...updated.globalMana] as [number, number];
+            nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+            updated.globalMana = nm;
+          }
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
           }));
           updated = consumeCardFromHand(updated, card, executor.playerId);
           return { ...updated, cardTargetingMode: undefined, targetingMode: undefined };
@@ -3250,15 +3588,35 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const enemies = updated.players
               .flatMap(p => p.icons)
               .filter(ic => ic.isAlive && ic.playerId !== executor.playerId && lineKeys.has(tileKey(ic.position.q, ic.position.r)))
-              // Sort furthest-first so pushing doesn't create blocking chains
-              .sort((a, b) => hexDistance(b.position, executor.position) - hexDistance(a.position, executor.position));
+              // Death Ray: sort closest-first so falloff runs along the beam naturally.
+              // Other lineTargets: furthest-first so pushing doesn't create blocking chains.
+              .sort((a, b) => card.effect.deathRay
+                ? hexDistance(a.position, executor.position) - hexDistance(b.position, executor.position)
+                : hexDistance(b.position, executor.position) - hexDistance(a.position, executor.position));
             if (enemies.length === 0) { toast.error(getT().messages.noEnemiesOnLine); return prev; }
+            // Death Ray voltage-scaled damage: Power × voltagePerStackMult × voltageStacks for first target, then chainFalloffPct per step.
+            const isDeathRay = !!card.effect.deathRay;
+            const voltageStacks = isDeathRay ? (executor.passiveStacks ?? 0) : 0;
+            const voltagePerStackMult = card.effect.voltagePerStackMult ?? 0.5;
+            const chainFalloff = card.effect.chainFalloffPct ?? 0.5;
+            let lineTargetTotalDmg = 0;
+            let deathRayIndex = 0;
             for (const enemy of enemies) {
-              let dmg = computeCardDamage(enemy);
+              let dmg: number;
+              if (isDeathRay) {
+                const atkStats = calcEffectiveStats(updated, executor);
+                const defStats = calcEffectiveStats(updated, enemy);
+                const scaled = atkStats.power * voltagePerStackMult * voltageStacks * Math.pow(chainFalloff, deathRayIndex);
+                dmg = Math.max(1, scaled - defStats.defense);
+                deathRayIndex += 1;
+              } else {
+                dmg = computeCardDamage(enemy);
+              }
               // executeDouble: double damage if target is below 50% HP
               if (card.effect.executeDouble && enemy.stats.hp < enemy.stats.maxHp * 0.4) {
                 dmg = dmg * 2;
               }
+              lineTargetTotalDmg += dmg;
               const newEnemyHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
               updated.players = updated.players.map(p => ({
                 ...p,
@@ -3322,6 +3680,19 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 }
               }
             }
+            // the_tower achievement: Tesla Death Ray deals 300+ total damage in one use
+            if (executor.name.includes('Tesla') && executor.playerId === 0 && lineTargetTotalDmg >= 300) {
+              (updated as any).kitMomentEvents = [...((updated as any).kitMomentEvents ?? []), 'tesla_death_ray_300'];
+            }
+            // Death Ray: consume all Voltage after resolution
+            if (isDeathRay) {
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, passiveStacks: 0 }),
+              }));
+              pushLog(updated, `${executor.name} Death Ray — consumed ${voltageStacks} Voltage stack${voltageStacks !== 1 ? 's' : ''}`, executor.playerId);
+            }
+
             // Beethoven Crescendo passive
             if (executor.name.includes("Beethoven") && card.exclusiveTo === "Beethoven") {
               updated.players = updated.players.map(p => ({
@@ -3375,6 +3746,21 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               toast.error(getT().messages.cantAttackOwn);
               return prev;
             }
+            // Mountain Line-of-Sight: targeted ability cards with range > 1 cannot pass through mountains
+            const cardEffectiveRange = card.effect.range ?? 1;
+            if (cardEffectiveRange > 1 && hasLineMountain(state.board, executor.position, targetIcon.position)) {
+              toast.error('Mountain blocks line of sight!');
+              return prev;
+            }
+            // Taunt enforcement: taunted caster can only hit the taunter with damage cards
+            const abilityTaunt = executor.debuffs?.find(d => d.type === 'taunted');
+            if (abilityTaunt?.sourceIconId) {
+              const taunter = state.players.flatMap(p => p.icons).find(ic => ic.id === abilityTaunt.sourceIconId && ic.isAlive);
+              if (taunter && targetIcon.id !== taunter.id) {
+                toast.error(`${executor.name} is Taunted — must target ${taunter.name}`);
+                return prev;
+              }
+            }
             // Apply multiHit
             let totalDmg = 0;
             let currentHp = targetIcon.stats.hp;
@@ -3388,6 +3774,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   const cannaeMult = has70 ? 1.7 : (1.3 + 0.02 * (executor.level ?? 1));
                   hitDmg = Math.round(hitDmg * cannaeMult);
                 }
+              }
+              // Faraday Coat: Tesla takes 15% less ability damage
+              if (targetIcon.name.includes("Tesla") && targetIcon.itemPassiveTags?.includes('tesla_faraday_coat_15')) {
+                hitDmg = Math.round(hitDmg * 0.85);
               }
               totalDmg += hitDmg;
               currentHp = Math.max(0, currentHp - hitDmg);
@@ -3409,8 +3799,57 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             }));
             if (survivedVoid) pushLog(updated, `${targetIcon.name} Void Armor: survived lethal blow at 1 HP!`, targetIcon.playerId);
             updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, targetIcon.id);
+            if (newHp <= 0 && !survivedVoid && executor.name.includes('Musashi') && executor.playerId === 0) {
+              (updated as any).musashiTurnKills = ((updated as any).musashiTurnKills ?? 0) + 1;
+            }
             const hitLabel = multiHit > 1 ? `${multiHit}×${(totalDmg/multiHit).toFixed(0)}` : totalDmg.toFixed(0);
             pushLog(updated, `${executor.name} played ${card.name} on ${targetIcon.name} for ${hitLabel} dmg`, executor.playerId);
+
+            // Arc Bolt chain: at Voltage >= chainThreshold, deal chainPct damage to all adjacent enemies
+            if (card.effect.chainAllAdjacent && (executor.passiveStacks ?? 0) >= (card.effect.chainThreshold ?? 3)) {
+              const chainPct = card.effect.chainPct ?? 0.5;
+              const freshExec = updated.players.flatMap(p => p.icons).find(ic => ic.id === executorId) ?? executor;
+              const atkStats = calcEffectiveStats(updated, freshExec);
+              const chainTargets = updated.players.flatMap(p => p.icons).filter(
+                ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id && hexDistance(ic.position, targetIcon.position) <= 1
+              );
+              for (const ct of chainTargets) {
+                const defStats = calcEffectiveStats(updated, ct);
+                const chainDmg = Math.max(0.1, atkStats.power * chainPct - defStats.defense);
+                const chainHp = Math.max(0, ct.stats.hp - chainDmg);
+                const wasAliveChain = ct.isAlive;
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== ct.id ? ic : { ...ic, stats: { ...ic.stats, hp: chainHp }, isAlive: chainHp > 0, respawnTurns: chainHp > 0 ? ic.respawnTurns : 4 }),
+                }));
+                updated = applyKillPassives(updated, executorId, wasAliveChain, chainHp <= 0, ct.id);
+                pushLog(updated, `${executor.name} Arc Bolt chains to ${ct.name} for ${chainDmg.toFixed(0)} dmg!`, executor.playerId);
+              }
+              // Resonant Oscillator (tesla_arc_extra_chain): also chain to 1 additional non-adjacent enemy within range 2
+              if (executor.itemPassiveTags?.includes('tesla_arc_extra_chain')) {
+                const chainedIds = new Set(chainTargets.map(ct => ct.id));
+                chainedIds.add(targetIcon.id);
+                const extraTarget = updated.players.flatMap(p => p.icons).find(
+                  ic => ic.isAlive && ic.playerId !== executor.playerId && !chainedIds.has(ic.id) && hexDistance(ic.position, targetIcon.position) <= 2
+                );
+                if (extraTarget) {
+                  const defStats = calcEffectiveStats(updated, extraTarget);
+                  const extraDmg = Math.max(0.1, atkStats.power * chainPct * 0.7 - defStats.defense);
+                  const extraHp = Math.max(0, extraTarget.stats.hp - extraDmg);
+                  const wasAliveExtra = extraTarget.isAlive;
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== extraTarget.id ? ic : { ...ic, stats: { ...ic.stats, hp: extraHp }, isAlive: extraHp > 0, respawnTurns: extraHp > 0 ? ic.respawnTurns : 4 }),
+                  }));
+                  updated = applyKillPassives(updated, executorId, wasAliveExtra, extraHp <= 0, extraTarget.id);
+                  pushLog(updated, `${executor.name} Oscillator — extra chain hits ${extraTarget.name} for ${extraDmg.toFixed(0)} dmg!`, executor.playerId);
+                }
+              }
+              // chain_reaction achievement: Tesla Arc Bolt hits 3+ enemies total (primary + 2 chain)
+              if (executor.name.includes('Tesla') && executor.playerId === 0 && chainTargets.length >= 2) {
+                (updated as any).kitMomentEvents = [...((updated as any).kitMomentEvents ?? []), 'tesla_chain_3'];
+              }
+            }
 
             // Nelson Trafalgar Square: on-kill AoE ~50 dmg to enemies adjacent to dead target
             if (newHp <= 0 && card.definitionId?.includes('trafalgar')) {
@@ -3430,6 +3869,27 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 }));
                 updated = applyKillPassives(updated, executorId, splashEnemy.isAlive, splashHp <= 0, splashEnemy.id);
                 pushLog(updated, `${executor.name} Trafalgar Square chain — ${splashEnemy.name} for ${splashDmg.toFixed(0)}!`, executor.playerId);
+              }
+            }
+
+            // Daishō Set (musashi_niten_kill_bonus): Niten Ichi-ryu kill → immediate extra strike on nearest other enemy
+            if (newHp <= 0 && card.effect.multiHit && executor.name.includes("Musashi") && executor.itemPassiveTags?.includes('musashi_niten_kill_bonus')) {
+              const nextTarget = updated.players.flatMap(p => p.icons).find(
+                ic => ic.isAlive && ic.playerId !== executor.playerId && ic.id !== targetIcon.id
+              );
+              if (nextTarget) {
+                const freshExecN = updated.players.flatMap(p => p.icons).find(ic => ic.id === executorId) ?? executor;
+                const atkStatsN = calcEffectiveStats(updated, freshExecN);
+                const defStatsN = calcEffectiveStats(updated, nextTarget);
+                const bonusDmg = Math.max(0.1, atkStatsN.power * (card.effect.powerMult ?? 0.7) - defStatsN.defense);
+                const bonusHp = Math.max(0, nextTarget.stats.hp - bonusDmg);
+                const wasAliveN = nextTarget.isAlive;
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== nextTarget.id ? ic : { ...ic, stats: { ...ic.stats, hp: bonusHp }, isAlive: bonusHp > 0, respawnTurns: bonusHp > 0 ? ic.respawnTurns : 4 }),
+                }));
+                updated = applyKillPassives(updated, executorId, wasAliveN, bonusHp <= 0, nextTarget.id);
+                pushLog(updated, `${executor.name} Daishō — kill bonus strike on ${nextTarget.name} for ${bonusDmg.toFixed(0)} dmg!`, executor.playerId);
               }
             }
 
@@ -3563,6 +4023,97 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                   }),
                 }));
                 pushLog(updated, `${adj.name} is ROOTED by THIS IS SPARTA! (2 turns)`, executor.playerId);
+              }
+            }
+            // powerReduction: Asp's Kiss — reduce target Power for N turns (Lotus Library Scroll: -25 instead of -15)
+            if (card.effect.powerReduction !== undefined && newHp > 0) {
+              const pwrMag = executor.itemPassiveTags?.includes('cleo_asp_power_reduction_boost') ? 25 : card.effect.powerReduction;
+              const pwrDebuff: Debuff = { type: 'power_reduction', magnitude: pwrMag, turnsRemaining: card.effect.powerReductionDuration ?? 3 };
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                  ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'power_reduction'), pwrDebuff],
+                }),
+              }));
+              pushLog(updated, `${targetIcon.name} Power reduced by ${pwrMag} for ${card.effect.powerReductionDuration ?? 3} turns!`, executor.playerId);
+              // Lotus Crown: Asp's Kiss also stacks Asp's Venom (same as basic attack)
+              if (executor.name.includes("Cleopatra") && executor.itemPassiveTags?.includes('cleo_venom_on_abilities')) {
+                const freshVT = updated.players.flatMap(p => p.icons).find(i => i.id === targetIcon.id);
+                if (freshVT) {
+                  const existingPoison = freshVT.debuffs?.find(d => d.type === 'poison');
+                  const newPoisonMag = Math.min((existingPoison?.magnitude ?? 0) + 8, 24);
+                  const venomDebuff: Debuff = { type: 'poison', magnitude: newPoisonMag, turnsRemaining: 3 };
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== freshVT.id ? ic : {
+                      ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'poison'), venomDebuff],
+                    }),
+                  }));
+                  pushLog(updated, `${targetIcon.name} Lotus Crown — Asp's Kiss stacks Venom! (magnitude ${newPoisonMag})`, executor.playerId);
+                }
+              }
+            }
+            // armorBreakAtStacks: Toba's Fury — apply armor_break if executor has >= N Bottleneck stacks
+            if (card.effect.armorBreakAtStacks !== undefined && newHp > 0) {
+              if ((executor.passiveStacks ?? 0) >= card.effect.armorBreakAtStacks) {
+                const abDebuff: Debuff = { type: 'armor_break', magnitude: 35, turnsRemaining: 2 };
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'armor_break'), abDebuff],
+                  }),
+                }));
+                pushLog(updated, `${executor.name} Toba's Fury — ${targetIcon.name} ARMOR BROKEN! (${executor.passiveStacks} Bottleneck stacks)`, executor.playerId);
+              }
+            }
+            // duelApply: Ichi no Tachi — apply Duel (taunted) to primary target
+            if (card.effect.duelApply && newHp > 0) {
+              const duelDebuff: Debuff = { type: 'taunted', magnitude: 35, turnsRemaining: 3 };
+              updated.players = updated.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                  ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'taunted'), duelDebuff],
+                }),
+              }));
+              pushLog(updated, `${executor.name} DUELS ${targetIcon.name}! (+35% bonus damage)`, executor.playerId);
+              // Niten Ichi-ryu Scrolls: Duel also applies Blinded (1 turn)
+              if (executor.itemPassiveTags?.includes('sig_musashi_niten_scrolls')) {
+                const blindDebuff: Debuff = { type: 'blinded', magnitude: 0, turnsRemaining: 1 };
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'blinded'), blindDebuff],
+                  }),
+                }));
+                pushLog(updated, `${targetIcon.name} is BLINDED by Niten Scrolls!`, executor.playerId);
+              }
+              // duelBleed: apply Bleed to Dueled target
+              if (card.effect.duelBleed) {
+                const atkStats = calcEffectiveStats(updated, executor);
+                const bleedDmg = Math.round(atkStats.power * 0.25);
+                const bleedDebuff: Debuff = { type: 'bleed', magnitude: bleedDmg, turnsRemaining: 2 };
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== targetIcon.id ? ic : {
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'bleed'), bleedDebuff],
+                  }),
+                }));
+                pushLog(updated, `${targetIcon.name} is BLEEDING — ${bleedDmg} HP/turn for 2 turns!`, executor.playerId);
+              }
+            }
+            // Battle Scar: when targetIcon IS Musashi and takes damage → gain stack
+            {
+              const freshTarget = updated.players.flatMap(p => p.icons).find(ic => ic.id === targetIcon.id);
+              if (freshTarget && freshTarget.isAlive && freshTarget.name.includes("Musashi") && totalDmg > 0) {
+                const curStacks = freshTarget.passiveStacks ?? 0;
+                if (curStacks < 3) {
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== freshTarget.id ? ic : { ...ic, passiveStacks: curStacks + 1 }),
+                  }));
+                  const lvl = freshTarget.level ?? 1;
+                  pushLog(updated, `${freshTarget.name} Battle Scar — ${curStacks + 1}/3 stacks (+${Math.ceil(lvl / 2)} Might per stack)`, freshTarget.playerId);
+                }
               }
             }
           } else {
@@ -3792,6 +4343,21 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               toast.error(getT().messages.cantAttackOwn2);
               return prev;
             }
+            // Mountain Line-of-Sight: ranged attacks (range > 1) cannot pass through mountains on the same axial line
+            const casterRange = caster.stats.attackRange ?? 1;
+            if (casterRange > 1 && hasLineMountain(state.board, caster.position, targetIcon.position)) {
+              toast.error('Mountain blocks line of sight!');
+              return prev;
+            }
+            // Taunt enforcement: if caster is taunted and the taunter is alive, they can only attack the taunter
+            const casterTaunt = caster.debuffs?.find(d => d.type === 'taunted');
+            if (casterTaunt?.sourceIconId) {
+              const taunter = state.players.flatMap(p => p.icons).find(ic => ic.id === casterTaunt.sourceIconId && ic.isAlive);
+              if (taunter && targetIcon.id !== taunter.id) {
+                toast.error(`${caster.name} is Taunted — must attack ${taunter.name}`);
+                return prev;
+              }
+            }
             // Basic Attack+ has mightMult in its effect — use it if present
             const pendingCardEffect = (state.targetingMode as any)?.cardRefund?.card?.effect;
             const cardMightMult = pendingCardEffect?.mightMult as number | undefined;
@@ -3832,6 +4398,47 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             const updatedTarget = updated.players.flatMap(p => p.icons).find(i => i.id === targetIcon.id);
             const newBasicHp = updatedTarget?.stats.hp ?? 0;
             updated = applyKillPassives(updated, caster.id, wasAlive, newBasicHp <= 0, targetIcon.id);
+            // Cleopatra Asp's Venom: basic attacks apply stacking Poison (cap 3 stacks) + move debuff at L5
+            if (caster.name.includes("Cleopatra") && newBasicHp > 0) {
+              const venomDuration = 3;
+              const freshVenomTarget = updated.players.flatMap(p => p.icons).find(i => i.id === targetIcon.id);
+              if (freshVenomTarget) {
+                const existingPoison = freshVenomTarget.debuffs?.find(d => d.type === 'poison');
+                const newPoisonMag = Math.min((existingPoison?.magnitude ?? 0) + 8, 24); // 3 stacks × 8
+                const poisonDebuff: Debuff = { type: 'poison', magnitude: newPoisonMag, turnsRemaining: venomDuration };
+                updated.players = updated.players.map(p => ({
+                  ...p,
+                  icons: p.icons.map(ic => ic.id !== freshVenomTarget.id ? ic : {
+                    ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'poison'), poisonDebuff],
+                  }),
+                }));
+                const stackCount = Math.round(newPoisonMag / 8);
+                pushLog(updated, `${caster.name} Asp's Venom — ${freshVenomTarget.name} Poisoned (${stackCount}/3 stacks)!`, caster.playerId);
+                // Eye of Ra: venom also reduces Power by 5 per stack
+                if (caster.itemPassiveTags?.includes('sig_cleopatra_eye_of_ra')) {
+                  const existingPwr = freshVenomTarget.debuffs?.find(d => d.type === 'power_reduction');
+                  const newPwrMag = Math.min((existingPwr?.magnitude ?? 0) + 5, 15); // 3 stacks × 5
+                  const eyePwrDebuff: Debuff = { type: 'power_reduction', magnitude: newPwrMag, turnsRemaining: venomDuration };
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== freshVenomTarget.id ? ic : {
+                      ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'power_reduction'), eyePwrDebuff],
+                    }),
+                  }));
+                }
+                // Level 5: also apply mud_throw (move −1) for venom duration
+                if ((caster.level ?? 1) >= 5) {
+                  const moveDebuff: Debuff = { type: 'mud_throw', magnitude: 1, turnsRemaining: venomDuration };
+                  updated.players = updated.players.map(p => ({
+                    ...p,
+                    icons: p.icons.map(ic => ic.id !== freshVenomTarget.id ? ic : {
+                      ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'mud_throw'), moveDebuff],
+                    }),
+                  }));
+                  pushLog(updated, `${caster.name} Asp's Venom (L5) — ${freshVenomTarget.name} Move −1!`, caster.playerId);
+                }
+              }
+            }
             // Thermopylae Stone: at 3 phalanx stacks, basic attacks taunt the target
             if (caster.name.includes("Leonidas") && (caster.passiveStacks ?? 0) >= 3 && caster.itemPassiveTags?.includes('sig_leonidas_thermopylae') && newBasicHp > 0) {
               const tauntDebuff: Debuff = { type: 'taunted' as any, magnitude: 0, turnsRemaining: 1, sourceIconId: caster.id };
@@ -3925,7 +4532,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             }));
             pushLog(updated, `${caster.name} cast ${ability.name} on ${targetIcon.name}, healing ${heal} HP`, caster.playerId);
           } else if ((ability as any).scalingAoE) {
-            // Horde Tactics: Power × perEnemyMult × enemyCount to ALL enemies in range
+            // Horde Tactics: Power × perEnemyMult × enemyCount to ALL enemies in range (cap at 2.5× Power)
             const perEnemyMult = (ability as any).perEnemyMult as number ?? 0.5;
             const casterStats = calcEffectiveStats(updated, caster);
             const enemiesInRange = updated.players
@@ -3933,7 +4540,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               .filter(ic => ic.isAlive && ic.playerId !== caster.playerId && hexDistance(caster.position, ic.position) <= (ability.range ?? 2));
             const enemyCount = enemiesInRange.length;
             if (enemyCount === 0) { toast.error(getT().messages.noTargetToHit); return prev; }
-            const scaledMult = perEnemyMult * enemyCount;
+            const scaledMult = Math.min(perEnemyMult * enemyCount, 2.5);
             for (const enemy of enemiesInRange) {
               const enemyStats = calcEffectiveStats(updated, enemy);
               const dmg = Math.max(0.1, casterStats.power * scaledMult - enemyStats.defense);
@@ -4345,6 +4952,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       ) ?? prev.players[prev.activePlayerId]?.icons.find(i => i.isAlive && !(i as any).terracottaControlled);
       if (!me || me.cardUsedThisTurn) return prev;
       if (prev.gameMode === "singleplayer" && me.playerId === 1) return prev;
+      if (me.debuffs?.some(d => d.type === 'silence') && !me.name.includes("Nelson")) {
+        toast.error(`${me.name} is SILENCED and cannot use abilities!`);
+        return prev;
+      }
 
       // Toggle off if already targeting this ability for this icon
       if (prev.targetingMode?.abilityId === abilityId && prev.targetingMode.iconId === me.id) {
@@ -4387,7 +4998,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
 
       // Toggle off if already targeting basic for this icon
       if (prev.targetingMode?.abilityId === "basic_attack" && prev.targetingMode.iconId === me.id) {
-        return { ...prev, targetingMode: undefined };
+        return { ...prev, targetingMode: undefined, cardTargetingMode: undefined };
       }
 
       const onWater = ['lake', 'river'].includes(prev.board.find(t => t.coordinates.q === me.position.q && t.coordinates.r === me.position.r)?.terrain.type ?? '');
@@ -4395,7 +5006,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       const range = isBlinded ? 1
         : me.name.includes("Sun-sin") && onWater ? 2 + (me.stats.attackRange ?? 1)
         : (me.stats.attackRange ?? 1);
-      return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range } };
+      // Clearing cardTargetingMode prevents the prior ability from firing on the next tile click
+      return { ...prev, targetingMode: { abilityId: "basic_attack", iconId: me.id, range }, cardTargetingMode: undefined };
     });
   }, []);
 
@@ -4434,8 +5046,48 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         ic => ic.isAlive && ic.name.includes("Beethoven") && ic.itemPassiveTags?.includes('beethoven_freud_def5')
       ) ?? false;
 
+      // Tesla Voltage: +1 stack if did NOT move this turn; -1 stack if moved (min 0, max 5)
+      // Overloaded state (5 stacks) is read by card effects; stacks persist across turns
+      let prevWithVoltage = prev;
+      {
+        const teslaIcons = prev.players[prev.activePlayerId]?.icons.filter(ic => ic.isAlive && ic.name.includes("Tesla")) ?? [];
+        for (const tesla of teslaIcons) {
+          const moved = tesla.movedThisTurn;
+          const curVolt = tesla.passiveStacks ?? 0;
+          const voltCap = tesla.itemPassiveTags?.includes('sig_tesla_transmitter') ? 8 : 5;
+          const newVolt = moved ? Math.max(0, curVolt - 1) : Math.min(voltCap, curVolt + 1);
+          if (newVolt !== curVolt) {
+            prevWithVoltage = {
+              ...prevWithVoltage,
+              players: prevWithVoltage.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== tesla.id ? ic : { ...ic, passiveStacks: newVolt }),
+              })),
+            };
+            const overloaded = newVolt >= voltCap ? ' ⚡ OVERLOADED!' : '';
+            pushLog(prevWithVoltage as ExtState, `${tesla.name} Voltage: ${newVolt}/${voltCap} stacks${overloaded}`, tesla.playerId);
+          }
+        }
+      }
+
+      // Cleopatra untouchable: tick down untouchableTurns
+      {
+        prevWithVoltage = {
+          ...prevWithVoltage,
+          players: prevWithVoltage.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => {
+              if (!ic.untouchableTurns || ic.untouchableTurns <= 0 || ic.playerId !== prev.activePlayerId) return ic;
+              const remaining = ic.untouchableTurns - 1;
+              if (remaining === 0) pushLog(prevWithVoltage as ExtState, `${ic.name} is no longer UNTOUCHABLE.`, ic.playerId);
+              return { ...ic, untouchableTurns: remaining };
+            }),
+          })),
+        };
+      }
+
       // Reset icons for the player who just ended + clear buffs for starting player
-      const resetPlayers = prev.players.map((player) => ({
+      let resetPlayers = prevWithVoltage.players.map((player) => ({
         ...player,
         icons: player.icons.map((ic) => {
           if (ic.playerId === prev.activePlayerId) {
@@ -4485,11 +5137,15 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             // Admiral's Turtle Helm: Sun-sin on water heals 10 HP/turn
             const turtleHelmRegen = sunsinOnRiver && ic.itemPassiveTags?.includes('sig_sunsin_turtle_helm') ? 10 : 0;
             if (turtleHelmRegen > 0) pushLog(prev as any, `🐢 ${ic.name} Turtle Helm: +${turtleHelmRegen} HP regen (water form)`, nextPlayer);
+            // Multi-turn card buff persistence: if cardBuffTurns > 1, decrement and KEEP the buff values
+            const buffTurnsLeft = (ic.cardBuffTurns ?? 0) - 1;
+            const keepBuff = buffTurnsLeft > 0;
             return {
               ...ic,
-              cardBuffAtk: 0,
-              cardBuffDef: (inFreudZone ? 5 : 0) + (hardyCoatActive ? 25 : 0),
-              cardBuffPow: 0,
+              cardBuffAtk: keepBuff ? (ic.cardBuffAtk ?? 0) : 0,
+              cardBuffDef: keepBuff ? (ic.cardBuffDef ?? 0) : ((inFreudZone ? 5 : 0) + (hardyCoatActive ? 25 : 0)),
+              cardBuffPow: keepBuff ? (ic.cardBuffPow ?? 0) : 0,
+              cardBuffTurns: keepBuff ? buffTurnsLeft : 0,
               cardsUsedThisTurn: frozen ? 3 : 0,
               movedThisTurn: frozen ? true : false,
               passiveStacks: newPassiveStacks,
@@ -4504,12 +5160,12 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }),
       }));
 
-      // Global mana refill for next player — base 5, +1 if any ally adjacent to crystal, +2 if all allies adjacent
+      // Global mana refill for next player — base 5, +1 if 1–2 allies adjacent to crystal, +2 if 3+ allies adjacent
       const nextPlayerIcons = resetPlayers.find(p => p.id === nextPlayer)?.icons.filter(ic => ic.isAlive) ?? [];
       const crystalAdjCount = crystalTile
         ? nextPlayerIcons.filter(ic => hexDistFn(ic.position, crystalTile.coordinates) === 1).length
         : 0;
-      const crystalBonus = crystalAdjCount === nextPlayerIcons.length && nextPlayerIcons.length > 0 ? 2 : crystalAdjCount > 0 ? 1 : 0;
+      const crystalBonus = crystalAdjCount >= 3 ? 2 : crystalAdjCount > 0 ? 1 : 0;
       const nextMana = 5 + crystalBonus;
       const mana = [...prev.globalMana] as [number, number];
       mana[nextPlayer] = nextMana;
@@ -4534,6 +5190,30 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           maxMana[nextPlayer] = Math.min(8, maxMana[nextPlayer] + manaRegenCount);
           pushLog(prev as any, `Salt Road: +${manaRegenCount} Mana from mana zone!`, nextPlayer);
         }
+      }
+
+      // Tesla Coil zones: when an enemy of the zone owner starts their turn on it, apply Armor Break + Stun.
+      // Zone owner is the Tesla player. `nextPlayer` starts their turn now — if they are NOT the owner, any of their
+      // icons standing on the zone get hit.
+      const teslaCoilZones = (prev.activeZones ?? []).filter(z => z.effect === 'teslaCoil' && z.ownerId !== nextPlayer);
+      if (teslaCoilZones.length > 0) {
+        resetPlayers = resetPlayers.map(p => p.id !== nextPlayer ? p : ({
+          ...p,
+          icons: p.icons.map(ic => {
+            if (!ic.isAlive) return ic;
+            const onCoil = teslaCoilZones.find(z => hexDistance(ic.position, z.center) <= z.radius);
+            if (!onCoil) return ic;
+            const armorBreak: Debuff = { type: 'armor_break', magnitude: onCoil.magnitude, turnsRemaining: 1 };
+            const newDebuffs = [...(ic.debuffs ?? []).filter(d => d.type !== 'armor_break'), armorBreak];
+            if (onCoil.coilStun) {
+              newDebuffs.push({ type: 'stun', magnitude: 0, turnsRemaining: 1 });
+              pushLog(prev as any, `⚡ ${ic.name} stunned by Tesla Coil (−${onCoil.magnitude} DEF, 1t)!`, nextPlayer);
+            } else {
+              pushLog(prev as any, `⚡ ${ic.name} Tesla Coil: −${onCoil.magnitude} DEF this turn!`, nextPlayer);
+            }
+            return { ...ic, debuffs: newDebuffs };
+          }),
+        }));
       }
 
       // Respawn tick (once per full round, when player 0's turn starts)
@@ -4600,10 +5280,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             pushLog({ ...prev, players: playersAfter } as any, `${ic.name} drowned in the lake!`, ic.playerId);
             return { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 };
           }
-          // Scorching Heat: desert tiles deal 5 pure damage at turn end
+          // Scorching Heat: desert tiles deal 10 pure damage at turn end
           if (tile?.terrain.type === 'desert') {
-            const newHp = Math.max(0, ic.stats.hp - 5);
-            pushLog({ ...prev, players: playersAfter } as any, `🌡 ${ic.name} takes 5 scorching heat damage!`, ic.playerId);
+            const newHp = Math.max(0, ic.stats.hp - 10);
+            pushLog({ ...prev, players: playersAfter } as any, `🌡 ${ic.name} takes 10 scorching heat damage!`, ic.playerId);
             return newHp <= 0
               ? { ...ic, isAlive: false, stats: { ...ic.stats, hp: 0 }, respawnTurns: 4 }
               : { ...ic, stats: { ...ic.stats, hp: newHp } };
@@ -4753,7 +5433,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
             { id: 'gravity_well',  name: 'Gravity Well',   icon: '⬇️', description: 'A gravity well forms at the center! All units are pulled 2 hexes toward the arena\'s heart.' },
             { id: 'gravity_crush',   name: 'Gravity Crush',   icon: '🪨', description: 'Intense gravity crushes the arena! All unit movement is halved this round.' },
             { id: 'repulse_field',   name: 'Repulse Field',   icon: '💥', description: 'Magnetic repulsion erupts from the center! All units are blasted 2 hexes outward.' },
-            { id: 'adrenaline_cloud', name: 'Adrenaline Cloud', icon: '🧪', description: 'The aliens flood the arena with stimulants! All units deal +50% damage this round — but so does the enemy.' },
+            { id: 'adrenaline_cloud', name: 'Adrenaline Cloud', icon: '🧪', description: 'The aliens flood the arena with stimulants! All units gain +25% Might and Power this round — watch for bursty enemy abilities.' },
             { id: 'scramble',        name: 'Scramble',        icon: '🌀', description: 'Znyxorga scrambles all unit positions! Every combatant is teleported to a random location on the battlefield.' },
           ];
           // Don't roll events that are already active or already pending
@@ -4919,6 +5599,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               }));
             }
           } else if (arenaEvent.id === 'adrenaline_cloud') {
+            // +25% Might/Power this round (reduced from +50% to prevent one-shots when combined with high-multiplier enemy abilities)
             const adrenSave: Record<string, { might: number; power: number }> = {};
             playersAfter.forEach(p => p.icons.forEach(ic => {
               if (ic.isAlive) adrenSave[ic.id] = { might: ic.stats.might, power: ic.stats.power };
@@ -4928,8 +5609,8 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               icons: p.icons.map(ic => !ic.isAlive ? ic : {
                 ...ic, stats: {
                   ...ic.stats,
-                  might: Math.round(ic.stats.might * 1.5),
-                  power: Math.round(ic.stats.power * 1.5),
+                  might: Math.round(ic.stats.might * 1.25),
+                  power: Math.round(ic.stats.power * 1.25),
                 },
               }),
             }));
@@ -5058,7 +5739,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       // Alien Tide flood spreading — every turn flood is active, adjacent tiles have 50% to become lake (impassable)
       if (floodIsActive && nextPlayer === 0) {
         const HEX_DIRS = [{q:1,r:0},{q:-1,r:0},{q:0,r:1},{q:0,r:-1},{q:1,r:-1},{q:-1,r:1}];
-        const PROTECTED = new Set(['base','mana_crystal','spawn','beast_camp']);
+        const PROTECTED = new Set(['base','mana_crystal','spawn']);
         const lakeFloodKeys = new Set(boardAfter.filter(t => t.terrain.type === 'lake').map(t => `${t.coordinates.q},${t.coordinates.r}`));
         const newRiverKeys = new Set<string>();
         for (const tile of boardAfter) {
@@ -5138,6 +5819,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
       //   • Player applies bleed to enemy  → fires when AI ends turn  (nextPlayer === 0)
       //   • Enemy applies bleed to player  → fires when player ends turn (nextPlayer === 1)
       // ic.playerId === nextPlayer means "this unit's side is ABOUT TO START" — skip them.
+      let bleedKilledPlayer: { victimName: string; bleedDmg: number } | null = null;
       playersAfter = playersAfter.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
@@ -5146,6 +5828,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
           // Bleed tick
           const bleed = ic.debuffs.find(d => d.type === 'bleed');
           const newHp = bleed ? Math.max(0, ic.stats.hp - bleed.magnitude) : ic.stats.hp;
+          if (bleed && ic.playerId === 0 && newHp <= 0 && ic.stats.hp > 0) {
+            bleedKilledPlayer = { victimName: ic.name, bleedDmg: bleed.magnitude };
+          }
           // Duration decrement (all debuffs)
           const newDebuffs = ic.debuffs
             .map(d => ({ ...d, turnsRemaining: d.turnsRemaining - 1 }))
@@ -5245,15 +5930,16 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         }
       }
 
-      // Napoleon Tactical Genius: +1 movement range when standing on high ground (forest)
+      // Napoleon Tactical Genius: +1 movement when standing on a vantage tile (Forest or Ruins).
+      // Refreshed each turn-start; the bonus naturally evaporates if she steps off next turn.
       playersAfter = playersAfter.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
           if (!ic.name.includes("Napoleon") || !ic.isAlive || ic.playerId !== nextPlayer) return ic;
           const tile = boardAfter.find(t => t.coordinates.q === ic.position.q && t.coordinates.r === ic.position.r);
-          const onHighGround = tile?.terrain.type === 'forest';
+          const onHighGround = tile?.terrain.type === 'forest' || tile?.terrain.type === 'ruins';
           if (!onHighGround) return ic;
-          pushLog(prev as any, `⚔ ${ic.name} Tactical Genius: +1 move (high ground)`, nextPlayer);
+          pushLog(prev as any, `⚔ ${ic.name} Tactical Genius: +1 move (vantage)`, nextPlayer);
           return { ...ic, stats: { ...ic.stats, movement: ic.stats.movement + 1 } };
         }),
       }));
@@ -5451,6 +6137,25 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         ? ((prev as any).tutorialPlayerTurnIdx as number ?? 0) + 1
         : ((prev as any).tutorialPlayerTurnIdx as number ?? 0);
 
+      // ── Kit moment: per-turn and round-boundary checks ─────────────────────
+      const kitMomentEvents: string[] = [...((prev as any).kitMomentEvents ?? [])];
+
+      if (nextPlayer === 1) {
+        // Player 0 just finished their turn — check Musashi dual kill
+        const musashiKills = (prev as any).musashiTurnKills ?? 0;
+        if (musashiKills >= 2) kitMomentEvents.push('musashi_dual_kill');
+      }
+
+      if (nextPlayer === 0) {
+        // Start of player 0's turn — check Shaka formation
+        const p0Icons = playersAfter.find(p => p.id === 0)?.icons.filter(ic => ic.isAlive) ?? [];
+        const shakaIcon = p0Icons.find(ic => ic.name.includes('Shaka'));
+        if (shakaIcon && p0Icons.length >= 3) {
+          const allAdjacent = p0Icons.every(ic => ic.id === shakaIcon.id || hexDistance(ic.position, shakaIcon.position) <= 1);
+          if (allAdjacent) kitMomentEvents.push('shaka_full_formation');
+        }
+      }
+
       return {
         ...prev,
         board: boardAfter,
@@ -5485,6 +6190,12 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         ...(hands && { hands }),
         ...(decks && { decks }),
         tutorialPlayerTurnIdx: newTutTurnIdx,
+        kitMomentEvents,
+        musashiTurnKills: nextPlayer === 1 ? 0 : (prev as any).musashiTurnKills ?? 0,
+        // Defeat attribution for bleed ticks (most recent player death from bleed wins)
+        lastPlayerCasualty: bleedKilledPlayer
+          ? { victimName: bleedKilledPlayer.victimName, killerName: 'Bleed', sourceName: 'Status Effect', damage: bleedKilledPlayer.bleedDmg }
+          : (prev as any).lastPlayerCasualty,
       } as ExtState;
     });
   }, []);
@@ -5524,7 +6235,7 @@ const respawnCharacter = useCallback((iconId: string, coordinates: Coordinates) 
    ========================= */
 const playCard = useCallback((card: Card, executorId: string) => {
   setGameState((prev) => {
-    const state = { ...prev } as ExtState;
+    let state = { ...prev } as ExtState;
     const executor = state.players.flatMap(p => p.icons).find(i => i.id === executorId);
     if (!executor || !executor.isAlive) return prev;
     if ((executor as any).isDecoy) {
@@ -5546,10 +6257,9 @@ const playCard = useCallback((card: Card, executorId: string) => {
       toast.error(`${executor.name} is SILENCED and cannot use abilities!`);
       return prev;
     }
-    const draw4Bonus = (() => { try { return (JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]).includes('draw_4_cards') ? 1 : 0; } catch { return 0; } })();
     const cardLimit = executor.itemPassiveTags?.includes('cards_per_turn_unlimited')
       ? Infinity
-      : 3 + draw4Bonus + (executor.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
+      : 3 + (prev.permanentCardBonus ?? 0) + (executor.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
     if ((executor.cardsUsedThisTurn ?? 0) >= cardLimit) {
       toast.error(getT().messages.cardLimitReached);
       return prev;
@@ -5557,6 +6267,22 @@ const playCard = useCallback((card: Card, executorId: string) => {
     if (card.exclusiveTo && !executor.name.includes(card.exclusiveTo)) {
       toast.error(getT().messages.wrongCharacter.replace('{name}', card.exclusiveTo ?? ''));
       return prev;
+    }
+    // Magnifying Transmitter: Tesla at max Voltage plays next ability for free (consumes all Voltage)
+    if (executor.name.includes("Tesla") && executor.itemPassiveTags?.includes('sig_tesla_transmitter') && card.exclusiveTo === 'Tesla') {
+      const voltCap = 8;
+      if ((executor.passiveStacks ?? 0) >= voltCap) {
+        // Pre-add the card cost so handlers' deductions net to 0 mana change
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...state.globalMana] as [number, number];
+        nm[pid] = (nm[pid] ?? 0) + (card.manaCost ?? 0);
+        state = { ...state, globalMana: nm,
+          players: state.players.map(p => ({
+            ...p, icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, passiveStacks: 0 }),
+          })),
+        } as typeof state;
+        pushLog(state as any, `${executor.name} Magnifying Transmitter — max Voltage! Ability costs 0 Mana. Voltage reset.`, executor.playerId);
+      }
     }
     // Overcharge bypass: if overcharge flag is set for this player, skip mana check (the card itself shouldn't be overcharge)
     const overchargeBypass = (state as any).overchargePlayerId === executor.playerId && !card.effect.overcharge;
@@ -5784,12 +6510,23 @@ const playCard = useCallback((card: Card, executorId: string) => {
     if (card.effect.manaZone) {
       return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "mana_zone", iconId: executorId, range: card.effect.range ?? 3 } };
     }
+    // Tesla: Coil Surge — place Tesla Coil zone. Gate voltage cost BEFORE entering targeting so we don't consume on abort.
+    if (card.effect.coilZone) {
+      const voltageCost = card.effect.voltageCost ?? 1;
+      const voltageStacks = executor.passiveStacks ?? 0;
+      if (voltageCost > 0 && voltageStacks < voltageCost) {
+        toast.error(`Needs ≥${voltageCost} Voltage (have ${voltageStacks})`);
+        return prev;
+      }
+      return { ...state, cardTargetingMode: { card, executorId }, targetingMode: { abilityId: "coil_zone", iconId: executorId, range: card.effect.range ?? 3 } };
+    }
     // Teddy: Rough Riders' Rally — apply team buffs immediately, then enter teleport targeting
     if (card.effect.selfTeleportAnywhere) {
       let updated = { ...state } as ExtState;
-      const allyMightBonus = 25;
+      const allyMightBonus = card.effect.teamDmgFlat ?? 25;
       const allyMoveBonus = card.effect.moveBonus ?? 2;
       const selfExtra = card.effect.selfMightBonus ?? 45;
+      const buffTurns = card.effect.turns ?? 2;
       updated.players = updated.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
@@ -5798,6 +6535,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
           return {
             ...ic,
             cardBuffAtk: (ic.cardBuffAtk ?? 0) + allyMightBonus + extraMight,
+            cardBuffTurns: Math.max(ic.cardBuffTurns ?? 0, buffTurns),
             stats: { ...ic.stats, movement: ic.stats.movement + allyMoveBonus },
           };
         }),
@@ -5904,9 +6642,13 @@ const playCard = useCallback((card: Card, executorId: string) => {
     // Mansa: Hajj of Gold / Mansa's Bounty — heal all allies + buff (immediate)
     if (card.effect.hajjOfGold) {
       let updated = { ...state } as ExtState;
-      const healPct = card.effect.hajjHealPct ?? 0.2;
+      // Infinite Vault (sig_mansa_vault): +20% heal pct on Hajj of Gold
+      const vaultBonus = executor.itemPassiveTags?.includes('sig_mansa_vault') ? 0.2 : 0;
+      const healPct = (card.effect.hajjHealPct ?? 0.2) + vaultBonus;
       const powerBonusHajj = card.effect.teamPowerFlat ?? 0;
       const mightBonusHajj = card.effect.teamDmgFlat ?? 0;
+      const hajjBuffTurns = card.effect.turns ?? 2;
+      const hasAnyBuff = powerBonusHajj > 0 || mightBonusHajj > 0;
       updated.players = updated.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
@@ -5917,6 +6659,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
             stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + healAmt) },
             cardBuffPow: (ic.cardBuffPow ?? 0) + powerBonusHajj,
             cardBuffAtk: (ic.cardBuffAtk ?? 0) + mightBonusHajj,
+            cardBuffTurns: hasAnyBuff ? Math.max(ic.cardBuffTurns ?? 0, hajjBuffTurns) : (ic.cardBuffTurns ?? 0),
           };
         }),
       }));
@@ -5979,13 +6722,296 @@ const playCard = useCallback((card: Card, executorId: string) => {
       return { ...updated };
     }
 
+    // Vel'thar: Humanity's Last Light — AoE Power×1.5 to all enemies in range 2 + self-heal
+    if (card.effect.humanitysLastLight) {
+      let updated = { ...state } as ExtState;
+      const hasAshfallMantle = executor.itemPassiveTags?.includes('velthar_ashfall_mantle');
+      const range = (card.effect.range ?? 2) + (hasAshfallMantle ? 1 : 0);
+      const selfHealAmt = (card.effect.selfHeal ?? 30) + (hasAshfallMantle ? 15 : 0);
+      const enemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
+      );
+      if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+      for (const enemy of enemies) {
+        const atkStats = calcEffectiveStats(updated, executor);
+        const defStats = calcEffectiveStats(updated, enemy);
+        const dmg = Math.max(0.1, atkStats.power * (card.effect.powerMult ?? 1.5) - defStats.defense);
+        const wasAlive = enemy.isAlive;
+        const newHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+          }),
+        }));
+        updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, enemy.id);
+        pushLog(updated, `${executor.name} Humanity's Last Light hit ${enemy.name} for ${dmg.toFixed(0)} dmg`, executor.playerId);
+      }
+      if (selfHealAmt > 0) {
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+            ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + selfHealAmt) },
+          }),
+        }));
+        pushLog(updated, `${executor.name} Humanity's Last Light — self-healed ${selfHealAmt} HP!`, executor.playerId);
+      }
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
+    // Vel'thar: Last Ember — conditional: if passiveStacks >= 1, self-buff; else AoE damage
+    if (card.effect.lastRites) {
+      let updated = { ...state } as ExtState;
+      const stacks = executor.passiveStacks ?? 0;
+      if (stacks >= 1) {
+        const healAmt = card.effect.selfHealIfLost ?? 25;
+        const defBonus = card.effect.selfDefenseIfLost ?? 15;
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+            ...ic,
+            stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + healAmt) },
+            cardBuffDef: (ic.cardBuffDef ?? 0) + defBonus,
+          }),
+        }));
+        pushLog(updated, `${executor.name} Last Ember — self-healed ${healAmt} HP, +${defBonus} DEF (${stacks} Bottleneck stacks)!`, executor.playerId);
+      } else {
+        const range = card.effect.range ?? 2;
+        const enemies = updated.players.flatMap(p => p.icons).filter(
+          ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
+        );
+        if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+        for (const enemy of enemies) {
+          const atkStats = calcEffectiveStats(updated, executor);
+          const defStats = calcEffectiveStats(updated, enemy);
+          const dmg = Math.max(0.1, atkStats.power * (card.effect.powerMult ?? 1.0) - defStats.defense);
+          const wasAlive = enemy.isAlive;
+          const newHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
+          updated.players = updated.players.map(p => ({
+            ...p,
+            icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+              ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+            }),
+          }));
+          updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, enemy.id);
+          pushLog(updated, `${executor.name} Last Ember hit ${enemy.name} for ${dmg.toFixed(0)} dmg (no Bottleneck stacks)`, executor.playerId);
+        }
+        // Ashfall Mantle: Last Ember AoE mode also heals Vel'thar 20 HP
+        if (executor.itemPassiveTags?.includes('velthar_ashfall_mantle')) {
+          const freshExec = updated.players.flatMap(p => p.icons).find(ic => ic.id === executorId);
+          if (freshExec) {
+            const ashHp = Math.min(freshExec.stats.maxHp, freshExec.stats.hp + 20);
+            updated.players = updated.players.map(p => ({
+              ...p,
+              icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, stats: { ...ic.stats, hp: ashHp } }),
+            }));
+            pushLog(updated, `${executor.name} Ashfall Mantle — ember warmth heals 20 HP!`, executor.playerId);
+          }
+        }
+      }
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
+    // Cleopatra: Eternal Kingdom — Stun + Poison all enemies in range 2; self untouchable
+    if (card.effect.eternalKingdom) {
+      let updated = { ...state } as ExtState;
+      const range = card.effect.range ?? 2;
+      const stunDuration = card.effect.debuffDuration ?? 1;
+      const untouchTurns = card.effect.untouchable ?? 1;
+      const enemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
+      );
+      if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+      if (enemies.length >= 3 && executor.playerId === 0) {
+        (updated as any).kitMomentEvents = [...((updated as any).kitMomentEvents ?? []), 'cleo_stun_3'];
+      }
+      const stunDebuff: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: stunDuration };
+      const poisonDebuff: Debuff = { type: 'poison', magnitude: 8, turnsRemaining: 3 };
+      for (const enemy of enemies) {
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic,
+            debuffs: [
+              ...(ic.debuffs ?? []).filter(d => d.type !== 'stun' && (card.effect.massPoison ? d.type !== 'poison' : true)),
+              stunDebuff,
+              ...(card.effect.massPoison ? [poisonDebuff] : []),
+            ],
+          }),
+        }));
+      }
+      pushLog(updated, `${executor.name} Eternal Kingdom — ${enemies.length} enem${enemies.length !== 1 ? 'ies' : 'y'} STUNNED & POISONED!`, executor.playerId);
+      if (untouchTurns > 0) {
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+            ...ic, untouchableTurns: (ic.untouchableTurns ?? 0) + untouchTurns,
+          }),
+        }));
+        pushLog(updated, `${executor.name} is UNTOUCHABLE for ${untouchTurns} turn(s)!`, executor.playerId);
+      }
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
+    // Shaka: Impondo Zankomo — AoE damage to adjacent enemies + ally DEF buff + self DEF buff
+    if (card.effect.impondo) {
+      let updated = { ...state } as ExtState;
+      const isigodloBonus = executor.itemPassiveTags?.includes('sig_shaka_isigodlo') ? 20 : 0;
+      const allyDefBuff = (card.effect.allyDefBonus ?? 35) + isigodloBonus;
+      const selfDefBuff = (card.effect.selfDefBonus ?? 50) + isigodloBonus;
+      const adjacentEnemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= 1
+      );
+      for (const enemy of adjacentEnemies) {
+        const atkStats = calcEffectiveStats(updated, executor);
+        const defStats = calcEffectiveStats(updated, enemy);
+        const dmg = Math.max(0.1, atkStats.power * (card.effect.powerMult ?? 0.5) - defStats.defense);
+        const wasAlive = enemy.isAlive;
+        const newHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+          }),
+        }));
+        updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, enemy.id);
+        if (newHp <= 0 && executor.playerId === 0) {
+          const enemyTile = updated.board.find(t => t.coordinates.q === enemy.position.q && t.coordinates.r === enemy.position.r);
+          if (enemyTile?.terrain.type === 'lake') {
+            (updated as any).kitMomentEvents = [...((updated as any).kitMomentEvents ?? []), 'shaka_water_kill'];
+          }
+        }
+        pushLog(updated, `${executor.name} Impondo Zankomo — ${enemy.name} hit for ${dmg.toFixed(0)} dmg!`, executor.playerId);
+      }
+      if (adjacentEnemies.length >= 3 && executor.playerId === 0) {
+        (updated as any).kitMomentEvents = [...((updated as any).kitMomentEvents ?? []), 'shaka_impondo_3'];
+      }
+      if (adjacentEnemies.length === 0) pushLog(updated, `${executor.name} Impondo Zankomo — war cry! No adjacent enemies.`, executor.playerId);
+      // Buff adjacent allies and self — persist for `defTurns` of owner's turns (default 2)
+      const impondoTurns = card.effect.defTurns ?? 2;
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => {
+          if (!ic.isAlive || ic.playerId !== executor.playerId || ic.id === executorId) return ic;
+          if (hexDistance(executor.position, ic.position) > 1) return ic;
+          return {
+            ...ic,
+            cardBuffDef: (ic.cardBuffDef ?? 0) + allyDefBuff,
+            cardBuffTurns: Math.max(ic.cardBuffTurns ?? 0, impondoTurns),
+          };
+        }),
+      }));
+      // Self DEF buff
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : {
+          ...ic,
+          cardBuffDef: (ic.cardBuffDef ?? 0) + selfDefBuff,
+          cardBuffTurns: Math.max(ic.cardBuffTurns ?? 0, impondoTurns),
+        }),
+      }));
+      pushLog(updated, `${executor.name} Impondo Zankomo — adj. allies +${allyDefBuff} DEF, self +${selfDefBuff} DEF!`, executor.playerId);
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
+    // Musashi: Book of Five Rings — apply Duel to all enemies + deal Power damage to each
+    if (card.effect.bookOfFiveRings) {
+      let updated = { ...state } as ExtState;
+      const duelBoostPct = (card.effect.duelBonusBoost ?? 65) / 100;
+      const duelDebuff: Debuff = { type: 'taunted', magnitude: 35, turnsRemaining: 3 };
+      const allEnemies = updated.players.flatMap(p => p.icons).filter(
+        ic => ic.isAlive && ic.playerId !== executor.playerId
+      );
+      if (allEnemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
+      for (const enemy of allEnemies) {
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'taunted'), duelDebuff],
+          }),
+        }));
+        const freshExec = updated.players.flatMap(p => p.icons).find(ic => ic.id === executorId) ?? executor;
+        const atkStats = calcEffectiveStats(updated, freshExec);
+        const defStats = calcEffectiveStats(updated, enemy);
+        const baseDmg = Math.max(0.1, atkStats.power * (card.effect.powerMult ?? 1.0) - defStats.defense);
+        const dmg = Math.round(baseDmg * (1 + duelBoostPct));
+        const wasAlive = enemy.isAlive;
+        const newHp = Math.round(Math.max(0, enemy.stats.hp - dmg));
+        updated.players = updated.players.map(p => ({
+          ...p,
+          icons: p.icons.map(ic => ic.id !== enemy.id ? ic : {
+            ...ic, stats: { ...ic.stats, hp: newHp }, isAlive: newHp > 0, respawnTurns: newHp > 0 ? ic.respawnTurns : 4,
+          }),
+        }));
+        updated = applyKillPassives(updated, executorId, wasAlive, newHp <= 0, enemy.id);
+        pushLog(updated, `${executor.name} Book of Five Rings — ${enemy.name} DUELED for ${dmg.toFixed(0)} dmg!`, executor.playerId);
+      }
+      if (card.manaCost > 0) {
+        const pid = executor.playerId as 0 | 1;
+        const nm = [...updated.globalMana] as [number, number];
+        nm[pid] = Math.max(0, nm[pid] - card.manaCost);
+        updated.globalMana = nm;
+      }
+      updated.players = updated.players.map(p => ({
+        ...p,
+        icons: p.icons.map(ic => ic.id !== executorId ? ic : { ...ic, cardUsedThisTurn: true, cardsUsedThisTurn: (ic.cardsUsedThisTurn ?? 0) + 1, abilityUsedThisTurn: true }),
+      }));
+      updated = consumeCardFromHand(updated, card, executor.playerId);
+      return { ...updated };
+    }
+
     // Damage / healing / single-target powerMult / retribution → enter targeting mode
     const needsTarget =
       card.effect.damage !== undefined ||
       card.effect.retributionMult !== undefined ||
       ((card.effect.healing !== undefined || card.effect.healingMult !== undefined) && !card.effect.selfCast) ||
       (card.effect.powerMult !== undefined && !card.effect.allEnemiesInRange && !card.effect.lineTarget && !card.effect.randomTargets && !card.effect.coneTarget) ||
-      (card.effect.debuffType !== undefined && !card.effect.allEnemiesInRange);
+      (card.effect.debuffType !== undefined && !card.effect.allEnemiesInRange) ||
+      card.effect.royalDecree === true;
 
     if (needsTarget) {
       const isBasicAttack = card.definitionId === "shared_basic_attack";
@@ -6037,23 +7063,27 @@ const playCard = useCallback((card: Card, executorId: string) => {
         toast.error(getT().messages.fortifyRequiresFullMovement ?? "Fortify requires full movement — use before moving!");
         return prev;
       }
+      const fortifyTurns = card.effect.fortifyDuration ?? 1;
       updated.players = updated.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => ic.id !== executorId ? ic : {
           ...ic,
           cardBuffAtk: (ic.cardBuffAtk ?? 0) + (card.effect.atkBonus ?? 0),
           cardBuffDef: (ic.cardBuffDef ?? 0) + (card.effect.defBonus ?? 0),
+          cardBuffTurns: fortifyTurns > 1 ? Math.max(ic.cardBuffTurns ?? 0, fortifyTurns) : (ic.cardBuffTurns ?? 0),
           stats: { ...ic.stats, movement: 0 }, // lock movement for this turn
         }),
       }));
       pushLog(updated, `${executor.name} fortifies! +${card.effect.defBonus} DEF, +${card.effect.atkBonus} ATK — cannot move this turn.`, executor.playerId);
     } else if (card.effect.atkBonus || card.effect.defBonus) {
+      const genericBuffTurns = card.effect.turns ?? 1;
       updated.players = updated.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => ic.id !== executorId ? ic : {
           ...ic,
           cardBuffAtk: (ic.cardBuffAtk ?? 0) + (card.effect.atkBonus ?? 0),
           cardBuffDef: (ic.cardBuffDef ?? 0) + (card.effect.defBonus ?? 0),
+          cardBuffTurns: genericBuffTurns > 1 ? Math.max(ic.cardBuffTurns ?? 0, genericBuffTurns) : (ic.cardBuffTurns ?? 0),
         }),
       }));
       pushLog(updated, `${executor.name} played ${card.name}`, executor.playerId);
@@ -6114,7 +7144,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       }
       // falls through to mana deduction + consumeCard below
     } else if (card.effect.scalingAoE) {
-      // Horde Tactics: damage = power × perEnemyMult × number of enemies in range (immediate, no targeting)
+      // Horde Tactics: damage = power × perEnemyMult × number of enemies in range (capped at 2.5× Power)
       const range = card.effect.range ?? 2;
       const perEnemyMult = card.effect.perEnemyMult ?? 0.5;
       const atkStats = calcEffectiveStats(updated, executor);
@@ -6122,7 +7152,8 @@ const playCard = useCallback((card: Card, executorId: string) => {
         ic => ic.isAlive && ic.playerId !== executor.playerId && hexDistance(executor.position, ic.position) <= range
       );
       if (enemies.length === 0) { toast.error(getT().messages.noEnemiesInRange); return prev; }
-      const totalDmgPerHit = Math.round(atkStats.power * perEnemyMult * enemies.length);
+      const cappedMult = Math.min(perEnemyMult * enemies.length, 2.5);
+      const totalDmgPerHit = Math.round(atkStats.power * cappedMult);
       for (const enemy of enemies) {
         const defStats = calcEffectiveStats(updated, enemy);
         const dmg = Math.max(1, totalDmgPerHit - defStats.defense);
@@ -6143,6 +7174,20 @@ const playCard = useCallback((card: Card, executorId: string) => {
     } else if (card.effect.coneTarget) {
       // Cone target: player clicks a direction, hits cone of enemies
       const cardRange = card.effect.range ?? 3;
+      return {
+        ...state,
+        cardTargetingMode: { card, executorId },
+        targetingMode: { abilityId: card.definitionId, iconId: executorId, range: cardRange },
+      };
+    } else if (card.effect.deathRay) {
+      // Tesla Death Ray: voltage gate BEFORE any mana/card consumption. If insufficient, abort with no cost.
+      const voltageRequired = card.effect.voltageRequired ?? 1;
+      const voltageStacks = executor.passiveStacks ?? 0;
+      if (voltageStacks < voltageRequired) {
+        toast.error(`Needs ≥${voltageRequired} Voltage (have ${voltageStacks})`);
+        return prev;
+      }
+      const cardRange = card.effect.range ?? 6;
       return {
         ...state,
         cardTargetingMode: { card, executorId },
@@ -6367,7 +7412,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
    ========================= */
 const undoMovement = useCallback(() => {
   setGameState((prev) => {
-    const state = { ...prev } as ExtState;
+    let state = { ...prev } as ExtState;
     const me = state.players[state.activePlayerId]?.icons.find(
       i => (state.selectedIcon ? i.id === state.selectedIcon : true) && i.isAlive
     ) ?? state.players[state.activePlayerId]?.icons.find(i => i.isAlive);
@@ -6434,6 +7479,8 @@ const startBattle = useCallback((
   upgradedCardDefIds?: string[],
   act?: 1 | 2 | 3 | 4,
   permanentManaBonus?: number,
+  permanentCardBonus?: number,
+  veteransFuryActive?: boolean,
 ) => {
   const sel = selectedCharactersRef.current;
   if (!sel || sel.length === 0) return;
@@ -6472,7 +7519,20 @@ const startBattle = useCallback((
         return ic;
       });
     };
-    const p0IconsFinal = applyForcedPos(p0Icons);
+    const p0IconsForced = applyForcedPos(p0Icons);
+    const p0IconsFinal = (() => {
+      const afterFury = (() => {
+        if (!veteransFuryActive) return p0IconsForced;
+        try { const p = JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]; if (!p.includes('veterans_fury')) return p0IconsForced; } catch { return p0IconsForced; }
+        return p0IconsForced.map(ic => ({ ...ic, stats: { ...ic.stats, might: Math.round(ic.stats.might * 1.15), power: Math.round(ic.stats.power * 1.15) } }));
+      })();
+      // Shaka Kraal Shield: at fight start, gain 10% maxHp per ally as bonus HP
+      const shakaIdx = afterFury.findIndex(ic => ic.name.includes("Shaka") && ic.itemPassiveTags?.includes('shaka_kraal_shield'));
+      if (shakaIdx < 0) return afterFury;
+      const shaka = afterFury[shakaIdx];
+      const shieldHp = Math.round(shaka.stats.maxHp * 0.1 * (afterFury.length - 1));
+      return afterFury.map((ic, i) => i !== shakaIdx ? ic : { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + shieldHp) } });
+    })();
     const p1IconsFinal = applyForcedPos(p1Icons);
     const allIcons = [...p0IconsFinal, ...p1IconsFinal];
 
@@ -6490,7 +7550,8 @@ const startBattle = useCallback((
           return s;
         }, 0);
       }, 0);
-      const maxSize = 7 + handSizeBonus;
+      const perkHandBonus = (() => { try { const p = JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]; return (p.includes('card_draw_bonus_1') ? 1 : 0) + (p.includes('card_draw_bonus_2') ? 1 : 0); } catch { return 0; } })();
+      const maxSize = 7 + handSizeBonus + perkHandBonus;
       return [{ cards: allCards.slice(0, maxSize), maxSize }, { drawPile: allCards.slice(maxSize), discardPile: [] }];
     };
     let [hand0, deck0] = buildHand(p0Names, deckCardIds);
@@ -6534,11 +7595,13 @@ const startBattle = useCallback((
         })
       : rawBoard;
     const actBaseHp = isRoguelikeRun ? (act === 4 ? 450 : act === 3 ? 300 : act === 2 ? 200 : 150) : 150;
-    // Chrono Shard: +1 starting mana per holder at the start of the first turn of combat
+    // Chrono Shard: +2 starting mana per holder at the start of the first turn of combat
     const chronoShardCount = p0IconsFinal.filter(ic => ic.itemPassiveTags?.includes('chrono_shard_t1')).length;
     const manaBonus = permanentManaBonus ?? 0;
-    const startMana: [number, number] = [5 + chronoShardCount + manaBonus, 5];
-    const startMaxMana: [number, number] = [5 + chronoShardCount + manaBonus, 5];
+    const perkCardBonus = (() => { try { const p = JSON.parse(localStorage.getItem('wcw_run_perks_v1') ?? '[]') as string[]; return (p.includes('draw_4_cards') ? 1 : 0); } catch { return 0; } })();
+    const totalCardBonus = (permanentCardBonus ?? 0) + perkCardBonus;
+    const startMana: [number, number] = [5 + chronoShardCount * 2 + manaBonus, 5];
+    const startMaxMana: [number, number] = [5 + chronoShardCount * 2 + manaBonus, 5];
     return {
       currentTurn: 1,
       activePlayerId: 0 as const,
@@ -6551,6 +7614,7 @@ const startBattle = useCallback((
       board,
       globalMana:   startMana,
       globalMaxMana: startMaxMana,
+      permanentCardBonus: totalCardBonus,
       turnTimer:    20,
       speedQueue,
       queueIndex:   0,

@@ -4,14 +4,11 @@ export interface Coordinates {
 }
 
 export interface TerrainType {
-  type: 'forest' | 'mountain' | 'river' | 'plain' | 'mana_crystal' | 'beast_camp' | 'base' | 'spawn' | 'lake' | 'desert' | 'snow' | 'ice' | 'mud' | 'ash' | 'ruins';
+  type: 'forest' | 'mountain' | 'river' | 'plain' | 'mana_crystal' | 'base' | 'spawn' | 'lake' | 'desert' | 'snow' | 'ice' | 'mud' | 'ash' | 'ruins';
   effects: {
     movementModifier?: number;
     dodgeBonus?: boolean;
-    rangeBonus?: boolean;
     stealthBonus?: boolean;
-    blocksLineOfSight?: boolean;
-    manaRegen?: number;
   };
 }
 
@@ -35,6 +32,7 @@ export interface Icon {
   cardBuffAtk?: number; // Temporary Might bonus from cards this turn
   cardBuffDef?: number; // Temporary DEF bonus from cards this turn
   cardBuffPow?: number; // Temporary Power bonus from cards this turn
+  cardBuffTurns?: number; // If > 1, buffs persist across turn-start reset (decrements instead of clearing)
   abilities: Ability[];
   passive: string;
   position: Coordinates;
@@ -64,12 +62,14 @@ export interface Icon {
   freeCardsLeft?: number;      // next_2_cards_free_on_kill: remaining free cards
   firstAbilityUsed?: boolean;  // first_ability_free: first ability card has been used this fight
   firstHitNegated?: boolean;   // negate_first_hit (Diamond Shell): first hit this fight already negated
+  warTrophyStacks?: number;    // on_kill_might_power_plus3 (War Trophy): per-holder kill stacks, capped at 5 per run
   terracottaControlled?: boolean;  // Huang-chan Eternal Army: this enemy is currently controlled
   controlledByPlayer?: number;     // which player controls it (0 = player)
   controlExpiresTurn?: number;     // turn on which control expires
   isDecoy?: boolean;               // Decoy card: this unit is a decoy, explodes on death
   decoyExplosionDmg?: number;      // flat damage dealt to nearby enemies when decoy is killed
   decoyExplosionRange?: number;    // radius of decoy explosion
+  untouchableTurns?: number;       // Cleopatra Eternal Kingdom: turns remaining as untouchable
 }
 
 export interface Ability {
@@ -91,7 +91,7 @@ export interface Ability {
 export type CardType = 'attack' | 'defense' | 'buff' | 'movement' | 'ultimate' | 'debuff' | 'curse';
 export type CardRarity = 'common' | 'rare' | 'ultimate';
 
-export type DebuffType = 'mud_throw' | 'rooted' | 'armor_break' | 'silence' | 'poison' | 'stun' | 'bleed' | 'blinded' | 'taunted';
+export type DebuffType = 'mud_throw' | 'rooted' | 'armor_break' | 'silence' | 'poison' | 'stun' | 'bleed' | 'blinded' | 'taunted' | 'charmed' | 'power_reduction';
 
 export interface Debuff {
   type: DebuffType;
@@ -189,15 +189,70 @@ export interface EffectValues {
   overcharge?: boolean;              // Overcharge: next card played this turn costs 0 mana
   retributionMult?: number;          // Retribution: damage = (maxHp - hp) * retributionMult
   retributionBleed?: boolean;        // Retribution+: also apply Bleed for 30% of damage dealt (2 turns)
+
+  // ── Vel'thar ──────────────────────────────────────────────────────────────
+  humanitysLastLight?: boolean;      // AoE Power×1.5 to all enemies in range 2 + self-heal
+  lastRites?: boolean;               // Last Ember: conditional — passiveStacks≥1 → self-buff; else AoE
+  selfHeal?: number;                 // flat HP healing to self on card use
+  selfHealIfLost?: number;           // Last Ember: heal this amount if passiveStacks >= 1
+  selfDefenseIfLost?: number;        // Last Ember: +DEF buff amount if passiveStacks >= 1
+  armorBreakAtStacks?: number;       // Toba's Fury: apply armor_break if executor passiveStacks >= this
+
+  // ── Cleopatra ─────────────────────────────────────────────────────────────
+  powerReduction?: number;           // Asp's Kiss: reduce target Power by this flat amount
+  powerReductionDuration?: number;   // duration (turns) of power_reduction debuff
+  royalDecree?: boolean;             // dual-use: enemy → Charm+Poison; ally → +Might+DEF buff
+  charmedApplyPoison?: boolean;      // Royal Decree: charmed enemy also gets Poison
+  allyDefBonus?: number;             // flat Defense bonus granted to ally target
+  allyBuffTurns?: number;            // duration of ally stat buffs
+  eternalKingdom?: boolean;          // AoE Stun + Poison all enemies in range 2 + self untouchable
+  massPoison?: boolean;              // apply Poison to all AoE targets
+  untouchable?: number;              // executor becomes untouchable for N turns
+
+  // ── Shaka ─────────────────────────────────────────────────────────────────
+  chargeHorns?: boolean;             // charge toward target, deal damage, push enemy sideways
+  chargePushSideways?: boolean;      // push hit enemy perpendicular to charge direction
+  waterKill?: boolean;               // push into water = instant kill
+  mountainStun?: boolean;            // charge into mountain = Stun 1t instead of damage
+  impondo?: boolean;                 // war cry: AoE adjacent damage + ally DEF + self DEF
+  aoeAdjacent?: boolean;             // hits all icons adjacent to executor (radius 1)
+  allyDefTurns?: number;             // duration of ally DEF buff
+  selfDefBonus?: number;             // flat DEF bonus granted to executor
+  selfDefTurns?: number;             // duration of self DEF buff
+
+  // ── Musashi ──────────────────────────────────────────────────────────────
+  bookOfFiveRings?: boolean;         // apply Duel to all enemies + deal damage to each
+  applyDuelAll?: boolean;            // apply Duel (taunted) to all enemies in range
+  duelBonusBoost?: number;           // extra % damage to Dueled targets (this card play only)
+  duelApply?: boolean;               // apply Duel to the primary target
+  duelPowerMult?: number;            // damage multiplier when target is already Dueled
+  duelBleed?: boolean;               // Ichi no Tachi: apply Bleed to Dueled target
+  duelRefresh?: boolean;             // Niten: refresh Duel duration on primary target
+  duelSplashMult?: number;           // Niten: also damages adjacent enemies at this mult
+  bleedOnHit?: boolean;              // each hit in multiHit applies Bleed
+
+  // ── Tesla ─────────────────────────────────────────────────────────────────
+  chainAllAdjacent?: boolean;        // Arc Bolt: chain to ALL adjacent at Voltage >= chainThreshold
+  chainThreshold?: number;           // minimum Voltage stacks to trigger chain
+  chainPct?: number;                 // damage % for chain targets
+  deathRay?: boolean;                // line beam: power*volt/stack, 50% falloff (Overloaded stun is handled by Voltage passive)
+  voltageRequired?: number;          // minimum Voltage stacks required to fire
+  voltagePerStackMult?: number;      // power mult per Voltage stack for Death Ray
+  chainFalloffPct?: number;          // % of previous target's damage passed to next target
+  coilZone?: boolean;                // place Coil zone that applies DEF penalty inside
+  coilDuration?: number;             // Coil zone duration in turns
+  coilDefPenalty?: number;           // DEF reduction in Coil zone
+  voltageCost?: number;              // ability costs N Voltage stacks
 }
 
 export interface Zone {
   center: Coordinates;
   radius: number;
-  effect: 'moveBonus' | 'manaRegen';
-  magnitude: number;   // e.g. +2 movement / +1 mana
+  effect: 'moveBonus' | 'manaRegen' | 'teslaCoil';
+  magnitude: number;   // e.g. +2 movement / +1 mana / DEF reduction for coil
   ownerId: number;     // player who placed the zone
   turnsRemaining: number;
+  coilStun?: boolean;  // teslaCoil: also stuns 1 turn when enemy starts turn on zone
 }
 
 export interface Card {
@@ -286,6 +341,7 @@ export interface GameState {
   playerKillBlows?: Record<string, number>; // display name → kill count (player 0 vs enemies only)
   killedEnemyNameLog?: string[];            // every enemy name killed this fight (including respawned kills)
   pendingZeroHitPositions?: {q:number, r:number}[]; // positions where an attack landed but dealt 0 HP damage (for "BLOCKED" VFX)
+  permanentCardBonus?: number;              // total extra cards/turn (run act choices + run perks) — set at battle start
 
   // ── Phased boss ──────────────────────────────────────────────────────────────
   bossPhases?: import('@/types/roguelike').EnemyTemplate[][];  // remaining phases (shrinks as each phase is cleared)
