@@ -71,6 +71,7 @@ export function CampfireScreen({ runState, onHealAll, onUpgradeSharedCard, onRem
   const [phase, setPhase] = useState<CampfirePhase>('choose');
   const [upgradesUsed, setUpgradesUsed] = useState(0);
   const upgradesAllowed = hasDualUpgrade ? 2 : 1;
+  const [healing, setHealing] = useState(false);
 
   // Shared cards in deck that can still be upgraded at campfire — each copy shown separately
   const upgradeableShared = useMemo(() => {
@@ -109,6 +110,8 @@ export function CampfireScreen({ runState, onHealAll, onUpgradeSharedCard, onRem
 
 
   const handleHealAll = () => {
+    if (healing) return;
+    setHealing(true);
     onHealAll();
     onLeave();
   };
@@ -187,7 +190,7 @@ export function CampfireScreen({ runState, onHealAll, onUpgradeSharedCard, onRem
             {/* Heal All */}
             <button
               onClick={handleHealAll}
-              disabled={allFull}
+              disabled={allFull || healing}
               className="rounded-xl border p-4 text-left transition-all hover:scale-[1.02] flex items-center gap-4"
               style={{
                 background: allFull ? 'rgba(6,3,18,0.50)' : 'rgba(8,5,25,0.85)',

@@ -266,7 +266,7 @@ const CARD_DEFS: CardDef[] = [
   {
     definitionId: "davinci_masterpiece",
     name: "Masterpiece",
-    manaCost: 3,
+    manaCost: 2,
     type: "defense",
     rarity: "rare",
     description: "Heal an ally within range 3 for ~50 HP.",
@@ -540,7 +540,7 @@ const CARD_DEFS: CardDef[] = [
   {
     definitionId: "picasso_guernica",
     name: "Guernica",
-    manaCost: 2,
+    manaCost: 3,
     type: "attack",
     rarity: "rare",
     description: "Deal ~70 damage to ALL enemies within range 2. Apply Armor Break (−25% Defense for 2 turns) to all hit.",
@@ -585,7 +585,7 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Deal ~87 Might damage at range 1. +50% bonus (~130) if target is Stunned or Taunted.",
+    description: "Deal ~87 Might damage at range 1. +30% bonus (~113) if target is Stunned or Taunted.",
     exclusiveTo: CHARACTER_IDS.teddy,
     effect: { damage: 1, damageType: 'atk', mightMult: 1.45, range: 1, executeVsDebuffed: true },
   },
@@ -777,9 +777,9 @@ const CARD_DEFS: CardDef[] = [
     manaCost: 2,
     type: "attack",
     rarity: "rare",
-    description: "Deal ~27 damage at range 1. Push target back 1 tile. Applies Armor Break.",
+    description: "Deal ~27 damage at range 1. Push target back 1 tile. Applies Armor Break (−25% Defense).",
     exclusiveTo: "Shaka",
-    effect: { powerMult: 0.7, range: 1, pushBack: 1, debuffType: 'armor_break', debuffMagnitude: 35, debuffDuration: 2 },
+    effect: { powerMult: 0.7, range: 1, pushBack: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 },
   },
   {
     definitionId: "shaka_impondo_zankomo",
@@ -1286,7 +1286,7 @@ export const CARD_UPGRADES: Record<string, {
   shaka_chest_strike: {
     upgradedName: 'Chest Strike+',
     descriptionUpgrade: 'Damage ×0.7 → ×0.9, Armor Break unchanged',
-    patch: { description: 'Deal ~34 damage at range 1. Push target back 1 tile. Applies Armor Break.', effect: { powerMult: 0.9, range: 1, pushBack: 1, debuffType: 'armor_break', debuffMagnitude: 35, debuffDuration: 2 } },
+    patch: { description: 'Deal ~34 damage at range 1. Push target back 1 tile. Applies Armor Break (−25% Defense).', effect: { powerMult: 0.9, range: 1, pushBack: 1, debuffType: 'armor_break', debuffMagnitude: 25, debuffDuration: 2 } },
   },
   shaka_impondo_zankomo: {
     upgradedName: 'Impondo Zankomo+',

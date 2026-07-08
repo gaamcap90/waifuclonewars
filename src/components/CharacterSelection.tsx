@@ -184,7 +184,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "musashi", name: "Musashi-chan", tagline: "", role: "dps_melee",
-    stats: { hp: 90, might: 72, power: 45 },
+    stats: { hp: 90, might: 65, power: 45 },
     badges: [
       { kind: "passive",  icon: "🗡️", name: "Battle Scar",       desc: "Each time Musashi takes damage, gain +1 Might (scales +1 per 2 levels, max 3 stacks). Stacks reset on fight end." },
       { kind: "ability",  icon: "🗡️", name: "Ichi no Tachi",     desc: "" },
@@ -204,7 +204,7 @@ const AVAILABLE: Character[] = [
   },
   {
     id: "tesla", name: "Tesla-chan", tagline: "", role: "dps_ranged",
-    stats: { hp: 85, might: 25, power: 80 },
+    stats: { hp: 90, might: 25, power: 80 },
     badges: [
       { kind: "passive",  icon: "⚡", name: "Voltage",      desc: "Staying still charges Voltage (+1/turn, max 5). Moving loses 1 stack. At 5 stacks (Overloaded): next basic attack or ability is free, +50% dmg, Stuns." },
       { kind: "ability",  icon: "🌩️", name: "Arc Bolt",    desc: "" },

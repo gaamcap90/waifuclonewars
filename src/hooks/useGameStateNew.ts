@@ -743,13 +743,13 @@ function getAbilitiesForCharacter(name: string) {
   ];
   if (name.includes("Teddy")) return [
     { id: "1", name: "Speak Softly", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 2, description: "All enemies in range 2 Taunted — must target Teddy. Teddy gains +30 DEF until her next turn.", damage: 0, globalTauntRange: 2 },
-    { id: "2", name: "Big Stick", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "~78 Might dmg at range 1. +50% bonus (~117) if target is Stunned or Taunted.", damage: 0, mightMult: 1.3, executeVsDebuffed: true },
+    { id: "2", name: "Big Stick", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "~78 Might dmg at range 1. +30% bonus (~101) if target is Stunned or Taunted.", damage: 0, mightMult: 1.3, executeVsDebuffed: true },
     { id: "ultimate", name: "Rough Riders' Rally", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 5, description: "ULTIMATE: Allies gain +25 Might, +2 Move for 2 turns. Teddy gains +45 Might and teleports range 5.", damage: 0, selfMightBonus: 45, selfTeleportAnywhere: 5 },
   ];
   if (name.includes("Mansa")) return [
     { id: "1", name: "Salt Road", manaCost: 1, cooldown: 0, currentCooldown: 0, range: 3, description: "Place a 7-hex mana zone. Allies starting their turn on it restore 1 Mana. Lasts 2 turns.", damage: 0, manaZone: true },
     { id: "2", name: "Hajj of Gold", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 0, description: "Heal all allies for 20% of max HP. All allies gain +10 Power for 2 turns.", damage: 0, hajjOfGold: true, hajjHealPct: 0.2 },
-    { id: "ultimate", name: "Mansa's Bounty", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 0, description: "ULTIMATE: Golden Stasis — all units (allies and enemies) are frozen for 1 turn.", damage: 0, mansaBounty: true },
+    { id: "ultimate", name: "Mansa's Bounty", manaCost: 3, cooldown: 0, currentCooldown: 0, range: 0, description: "ULTIMATE: Golden Stasis — freeze all enemies for 1 turn. Draw 2 cards.", damage: 0, mansaBounty: true },
   ];
   if (name.includes("Vel'thar")) return [
     { id: "1", name: "Toba's Fury", manaCost: 2, cooldown: 0, currentCooldown: 0, range: 1, description: "Melee strike ~64 dmg. At 2+ Bottleneck stacks: applies Armor Break.", damage: 0, powerMult: 1.1, armorBreakAtStacks: 2 },
@@ -820,7 +820,7 @@ function getPassiveForCharacter(name: string, level: number = 1) {
   }
   if (name.includes("Vel'thar")) {
     const perStack = 3 + 2 * level;
-    return `Bottleneck: When a player character ally dies, Vel'thar gains +${perStack} Might and +${perStack} Power (scales: +5 at L1, +19 at L8). Stacks indefinitely, battle scope only. Does not trigger on summons or drones.`;
+    return `Bottleneck: When a player character ally dies, Vel'thar gains +${perStack} Might and +${perStack} Power (scales: +5 at L1, +19 at L8). Also triggers once when Vel'thar's own HP falls to ≤25%. Stacks battle scope only.`;
   }
   if (name.includes("Musashi")) {
     const perStack = Math.ceil(level / 2);
@@ -3226,7 +3226,7 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
                 icons: p.icons.map(ic => ic.id !== executorId ? ic : {
                   ...ic,
                   cardBuffDef: (ic.cardBuffDef ?? 0) + card.effect.tauntDefBonus!,
-                  cardBuffTurns: tauntTurns > 1 ? Math.max(ic.cardBuffTurns ?? 0, tauntTurns) : (ic.cardBuffTurns ?? 0),
+                  cardBuffTurns: Math.max(ic.cardBuffTurns ?? 0, tauntTurns * 2),
                 }),
               }));
               pushLog(updated, `${executor.name} taunts! +${card.effect.tauntDefBonus} DEF for ${tauntTurns} turn${tauntTurns !== 1 ? 's' : ''}`, executor.playerId);
@@ -3237,7 +3237,9 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               updated.players = updated.players.map(p => ({
                 ...p,
                 icons: p.icons.map(ic => ic.id !== executorId ? ic : {
-                  ...ic, cardBuffDef: (ic.cardBuffDef ?? 0) + 20,
+                  ...ic,
+                  cardBuffDef: (ic.cardBuffDef ?? 0) + 20,
+                  cardBuffTurns: Math.max(ic.cardBuffTurns ?? 0, 2),
                 }),
               }));
               pushLog(updated, `${executor.name} counter-stance: +20 DEF this turn`, executor.playerId);
@@ -3472,10 +3474,10 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
               let baseDmg = Math.max(0.1, atkStats.might * card.effect.mightMult * terrainMult - (defStats.defense ?? 0));
               // Carry a Bigger Stick: +20 flat Might damage bonus
               if (card.definitionId === 'teddy_big_stick' && executor.itemPassiveTags?.includes('teddy_big_stick_range2')) baseDmg += 20;
-              // Big Stick executeVsDebuffed: +50% bonus damage if target is Stunned or Taunted
+              // Big Stick executeVsDebuffed: +30% bonus damage if target is Stunned or Taunted
               if (card.effect.executeVsDebuffed && tgt) {
                 const isDebuffed = (tgt.debuffs ?? []).some(d => d.type === 'stun' || d.type === 'taunted');
-                if (isDebuffed) baseDmg *= 1.5;
+                if (isDebuffed) baseDmg *= 1.3;
               }
               return baseDmg * berserkerMult;
             }
@@ -5086,6 +5088,30 @@ const useGameState = (gameMode: "singleplayer" | "multiplayer" = "singleplayer",
         };
       }
 
+      // Vel'thar Bottleneck low-HP trigger: once per fight when HP ≤ 25%
+      {
+        const veltharIcons = prevWithVoltage.players.flatMap(p => p.icons).filter(
+          ic => ic.isAlive && ic.name.includes("Vel'thar") && !ic.veltharLowHpGranted
+        );
+        for (const vel of veltharIcons) {
+          if (vel.stats.hp <= vel.stats.maxHp * 0.25) {
+            const lvl = vel.level ?? 1;
+            const perStack = 3 + 2 * lvl;
+            const newStacks = (vel.passiveStacks ?? 0) + 1;
+            prevWithVoltage = {
+              ...prevWithVoltage,
+              players: prevWithVoltage.players.map(p => ({
+                ...p,
+                icons: p.icons.map(ic => ic.id !== vel.id ? ic : {
+                  ...ic, passiveStacks: newStacks, veltharLowHpGranted: true,
+                }),
+              })),
+            };
+            pushLog(prevWithVoltage as ExtState, `${vel.name} BOTTLENECK — Critical HP! +${perStack} Might & Power (${newStacks} stacks total)`, vel.playerId);
+          }
+        }
+      }
+
       // Reset icons for the player who just ended + clear buffs for starting player
       let resetPlayers = prevWithVoltage.players.map((player) => ({
         ...player,
@@ -6258,7 +6284,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
       return prev;
     }
     const cardLimit = executor.itemPassiveTags?.includes('cards_per_turn_unlimited')
-      ? Infinity
+      ? 5
       : 3 + (prev.permanentCardBonus ?? 0) + (executor.itemPassiveTags?.filter(t => t === 'cards_per_turn_plus_1').length ?? 0);
     if ((executor.cardsUsedThisTurn ?? 0) >= cardLimit) {
       toast.error(getT().messages.cardLimitReached);
@@ -6684,24 +6710,33 @@ const playCard = useCallback((card: Card, executorId: string) => {
       return { ...updated };
     }
 
-    // Mansa: Mansa's Bounty — Golden Stasis (freeze ALL units for 1 turn; upgrade freezes enemies 2 turns)
+    // Mansa: Mansa's Bounty — Golden Stasis (freeze enemies; allies draw 2 cards)
     if (card.effect.mansaBounty) {
       let updated = { ...state } as ExtState;
       const isUpgrade = card.effect.mansaBountyExtra === true;
-      // Golden Stasis: freeze all units for 1 turn (upgraded: enemies frozen 2 turns)
-      const allyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: 1 };
+      // Golden Stasis: freeze enemies only (base: 1 turn, upgraded: 2 turns)
       const enemyFreeze: Debuff = { type: 'stun', magnitude: 0, turnsRemaining: isUpgrade ? 2 : 1 };
       updated.players = updated.players.map(p => ({
         ...p,
         icons: p.icons.map(ic => {
-          if (!ic.isAlive) return ic;
-          const freeze = ic.playerId === executor.playerId ? allyFreeze : enemyFreeze;
-          return { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), freeze] };
+          if (!ic.isAlive || ic.playerId === executor.playerId) return ic;
+          return { ...ic, debuffs: [...(ic.debuffs ?? []).filter(d => d.type !== 'stun'), enemyFreeze] };
         }),
       }));
+      // Golden Stasis also draws 2 cards for the casting team
+      const pid = executor.playerId as 0 | 1;
+      const hand = (updated as any).hands?.[pid];
+      const deck = (updated as any).decks?.[pid];
+      if (hand && deck) {
+        const { drawn, newDraw, newDiscard } = drawCards(deck.drawPile, deck.discardPile, 2);
+        (updated as any).hands = [...((updated as any).hands ?? [null, null])];
+        (updated as any).decks = [...((updated as any).decks ?? [null, null])];
+        (updated as any).hands[pid] = { ...hand, cards: [...hand.cards, ...drawn] };
+        (updated as any).decks[pid] = { drawPile: newDraw, discardPile: newDiscard };
+      }
       const desc = isUpgrade
-        ? `${executor.name} Mansa's Bounty+ — Golden Stasis! All units frozen (enemies 2 turns).`
-        : `${executor.name} Mansa's Bounty — Golden Stasis! All units frozen for 1 turn.`;
+        ? `${executor.name} Mansa's Bounty+ — Golden Stasis! Enemies frozen 2 turns. Drew 2 cards.`
+        : `${executor.name} Mansa's Bounty — Golden Stasis! Enemies frozen 1 turn. Drew 2 cards.`;
       pushLog(updated, desc, executor.playerId);
       // Mansa Treasury: ability cards cost 1 less mana (2 less with Mali Coffers)
       const mansaDiscountBounty = executor.name.includes("Mansa") && card.definitionId?.startsWith("mansa_")
@@ -7070,7 +7105,7 @@ const playCard = useCallback((card: Card, executorId: string) => {
           ...ic,
           cardBuffAtk: (ic.cardBuffAtk ?? 0) + (card.effect.atkBonus ?? 0),
           cardBuffDef: (ic.cardBuffDef ?? 0) + (card.effect.defBonus ?? 0),
-          cardBuffTurns: fortifyTurns > 1 ? Math.max(ic.cardBuffTurns ?? 0, fortifyTurns) : (ic.cardBuffTurns ?? 0),
+          cardBuffTurns: Math.max(ic.cardBuffTurns ?? 0, fortifyTurns * 2),
           stats: { ...ic.stats, movement: 0 }, // lock movement for this turn
         }),
       }));
@@ -7528,10 +7563,15 @@ const startBattle = useCallback((
       })();
       // Shaka Kraal Shield: at fight start, gain 10% maxHp per ally as bonus HP
       const shakaIdx = afterFury.findIndex(ic => ic.name.includes("Shaka") && ic.itemPassiveTags?.includes('shaka_kraal_shield'));
-      if (shakaIdx < 0) return afterFury;
-      const shaka = afterFury[shakaIdx];
-      const shieldHp = Math.round(shaka.stats.maxHp * 0.1 * (afterFury.length - 1));
-      return afterFury.map((ic, i) => i !== shakaIdx ? ic : { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + shieldHp) } });
+      const afterShaka = shakaIdx < 0 ? afterFury : (() => {
+        const shaka = afterFury[shakaIdx];
+        const shieldHp = Math.round(shaka.stats.maxHp * 0.1 * (afterFury.length - 1));
+        return afterFury.map((ic, i) => i !== shakaIdx ? ic : { ...ic, stats: { ...ic.stats, hp: Math.min(ic.stats.maxHp, ic.stats.hp + shieldHp) } });
+      })();
+      // Beethoven Crescendo: start with 2 stacks at fight start
+      return afterShaka.map(ic => ic.name.includes("Beethoven")
+        ? { ...ic, passiveStacks: Math.max(ic.passiveStacks ?? 0, 2) }
+        : ic);
     })();
     const p1IconsFinal = applyForcedPos(p1Icons);
     const allIcons = [...p0IconsFinal, ...p1IconsFinal];

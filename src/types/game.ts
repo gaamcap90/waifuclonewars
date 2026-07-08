@@ -70,6 +70,7 @@ export interface Icon {
   decoyExplosionDmg?: number;      // flat damage dealt to nearby enemies when decoy is killed
   decoyExplosionRange?: number;    // radius of decoy explosion
   untouchableTurns?: number;       // Cleopatra Eternal Kingdom: turns remaining as untouchable
+  veltharLowHpGranted?: boolean;  // Vel'thar Bottleneck: low-HP trigger already fired this fight
 }
 
 export interface Ability {

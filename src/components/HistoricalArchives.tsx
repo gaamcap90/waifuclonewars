@@ -138,7 +138,7 @@ const CHARACTERS: CharacterEntry[] = [
     abilities: [
       { kind: "passive", icon: "🔧", name: "Tinkerer", cost: "Passive", desc: <>Draw <span style={{ color: "#34d399", fontWeight: 700 }}>+1 extra card</span> at the start of every turn. Draws <span style={{ color: "#34d399", fontWeight: 700 }}>+1 additional card</span> while the <span style={{ color: "#fbbf24", fontWeight: 700 }}>Combat Drone</span> is alive.</> },
       { kind: "ability", icon: "✈️", name: "Flying Machine", cost: "2 Mana", desc: <>Teleport to <span style={{ color: "#34d399", fontWeight: 700 }}>any unoccupied hex</span> on the board. No range limit. Bypasses terrain and obstacles.</> },
-      { kind: "ability", icon: "💚", name: "Masterpiece", cost: "3 Mana", desc: <>Restore <span style={{ color: "#4ade80", fontWeight: 700 }}>50 HP</span> to an ally within range 3. Also removes the Poison debuff.</> },
+      { kind: "ability", icon: "💚", name: "Masterpiece", cost: "2 Mana", desc: <>Restore <span style={{ color: "#4ade80", fontWeight: 700 }}>50 HP</span> to an ally within range 3. Also removes the Poison debuff.</> },
       { kind: "ultimate", icon: "⭐", name: "Vitruvian Guardian", cost: "3 Mana · Exhaust", desc: <>Summon a combat drone: <span style={{ color: "#4ade80", fontWeight: 700 }}>HP 90</span>, <span style={{ color: "#f87171", fontWeight: 700 }}>Might 60</span>, <span style={{ color: "#fbbf24", fontWeight: 700 }}>Defense 30</span>. Lasts until defeated. (Scales with Power)</> },
     ],
   },
@@ -246,7 +246,7 @@ const CHARACTERS: CharacterEntry[] = [
     stats: { hp: 80, might: 30, power: 70, defense: 20, moveRange: 3, attackRange: 2 },
     abilities: [
       { kind: "passive", icon: "🎨", name: "Fractured Perspective", cost: "Passive", desc: <>Every <span style={{ color: "#fbbf24", fontWeight: 700 }}>3rd card</span> Picasso-chan plays <span style={{ color: "#fbbf24", fontWeight: 700 }}>this battle</span> costs <span style={{ color: "#34d399", fontWeight: 700 }}>0 Mana</span>. At <span style={{ color: "#fbbf24", fontWeight: 700 }}>level 7+</span>, triggers every <span style={{ color: "#34d399", fontWeight: 700 }}>2nd card</span> instead. Counter persists across turns.</> },
-      { kind: "ability", icon: "💥", name: "Guernica", cost: "2 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~70 damage</span> to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL enemies</span> within range 2. Applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense, 2 turns) to all hit enemies.</> },
+      { kind: "ability", icon: "💥", name: "Guernica", cost: "3 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~70 damage</span> to <span style={{ color: "#fbbf24", fontWeight: 700 }}>ALL enemies</span> within range 2. Applies <span style={{ color: "#fbbf24", fontWeight: 700 }}>Armor Break</span> (−25% Defense, 2 turns) to all hit enemies.</> },
       { kind: "ability", icon: "🪞", name: "Cubist Mirror", cost: "2 Mana", desc: <>Swap positions with any unit within range 4. If the target is an <span style={{ color: "#f87171", fontWeight: 700 }}>enemy</span>, deal <span style={{ color: "#f87171", fontWeight: 700 }}>~35 damage</span> on swap.</> },
       { kind: "ultimate", icon: "⭐", name: "Blue Period", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#8b5cf6", fontWeight: 700 }}>Scramble all units</span> to random positions on the board. Heal all allies for <span style={{ color: "#4ade80", fontWeight: 700 }}>60 HP</span> and grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+20 Defense</span> until your next turn.</> },
     ],
@@ -261,7 +261,7 @@ const CHARACTERS: CharacterEntry[] = [
     abilities: [
       { kind: "passive", icon: "🦁", name: "Bully!", cost: "Passive", desc: <>Each kill grants Teddy-chan <span style={{ color: "#f87171", fontWeight: 700 }}>(8 + level) Might</span> per stack (up to 3 stacks). Scales from +9 at lvl 1 to +16 at lvl 8. Does not trigger from Terracotta or drone kills.</> },
       { kind: "ability", icon: "📣", name: "Speak Softly", cost: "2 Mana", desc: <>All enemies within range 2 are <span style={{ color: "#f87171", fontWeight: 700 }}>Taunted</span> for 1 turn — they must target Teddy-chan. Teddy-chan gains <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30 Defense</span> until her next turn.</> },
-      { kind: "ability", icon: "🏏", name: "Big Stick", cost: "2 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~87 damage</span> to an enemy at range 1. <span style={{ color: "#f59e0b", fontWeight: 700 }}>+50% bonus (~130)</span> if the target is Stunned or Taunted.</> },
+      { kind: "ability", icon: "🏏", name: "Big Stick", cost: "2 Mana", desc: <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~87 damage</span> to an enemy at range 1. <span style={{ color: "#f59e0b", fontWeight: 700 }}>+30% bonus (~113)</span> if the target is Stunned or Taunted.</> },
       { kind: "ultimate", icon: "⭐", name: "Rough Riders' Rally", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — All allies gain <span style={{ color: "#f87171", fontWeight: 700 }}>+25 Might</span> and <span style={{ color: "#34d399", fontWeight: 700 }}>+2 Movement</span> until end of turn. Teddy-chan gains <span style={{ color: "#f87171", fontWeight: 700 }}>+45 Might</span> and <span style={{ color: "#8b5cf6", fontWeight: 700 }}>teleports</span> to any hex within range 5.</> },
     ],
   },
@@ -276,7 +276,7 @@ const CHARACTERS: CharacterEntry[] = [
       { kind: "passive", icon: "💰", name: "Treasury", cost: "Passive", desc: <>After each battle, earn <span style={{ color: "#fbbf24", fontWeight: 700 }}>bonus gold</span> equal to Mansa-chan's Power% (70 Power = +70% more gold). Ability cards cost <span style={{ color: "#34d399", fontWeight: 700 }}>1 less Mana</span> (min 1); at <span style={{ color: "#fbbf24", fontWeight: 700 }}>level 6+</span> they cost <span style={{ color: "#34d399", fontWeight: 700 }}>2 less Mana</span> (min 1).</> },
       { kind: "ability", icon: "⚗️", name: "Salt Road", cost: "1 Mana", desc: <>Place a <span style={{ color: "#fbbf24", fontWeight: 700 }}>7-hex mana zone</span> centered on a tile within range 3. Allies starting their turn on any zone tile restore <span style={{ color: "#34d399", fontWeight: 700 }}>+1 Mana</span>. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>2 turns</span>.</> },
       { kind: "ability", icon: "✨", name: "Hajj of Gold", cost: "2 Mana", desc: <>Heal all allies for <span style={{ color: "#4ade80", fontWeight: 700 }}>20% of their max HP</span>. All allies gain <span style={{ color: "#60a5fa", fontWeight: 700 }}>+10 Power</span> until end of turn.</> },
-      { kind: "ultimate", icon: "⭐", name: "Mansa's Bounty", cost: "2 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#fbbf24", fontWeight: 700 }}>Golden Stasis</span>: freeze every unit on the board (allies and enemies) for <span style={{ color: "#fbbf24", fontWeight: 700 }}>1 turn</span> — no movement, no actions.</> },
+      { kind: "ultimate", icon: "⭐", name: "Mansa's Bounty", cost: "3 Mana · Exhaust", desc: <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — <span style={{ color: "#fbbf24", fontWeight: 700 }}>Golden Stasis</span>: freeze all <span style={{ color: "#f87171", fontWeight: 700 }}>enemies</span> for <span style={{ color: "#fbbf24", fontWeight: 700 }}>1 turn</span> — no movement, no actions. Draw <span style={{ color: "#34d399", fontWeight: 700 }}>2 cards</span>.</> },
     ],
   },
   {
@@ -299,7 +299,7 @@ const CHARACTERS: CharacterEntry[] = [
     role: "DPS MELEE", portrait: "/art/musashi_portrait.png",
     accentColor: "#dc2626", ringColor: "rgba(220,38,38,0.55)",
     lore: "Miyamoto Musashi fought sixty-one duels and lost none. He lived by the sword, philosophized with it, and died peacefully at sixty in a cave. Znyxorga found his clone-template in the grain of a worn wooden practice sword preserved in Kyoto. Reborn as Musashi-chan, she brings the Book of Five Rings to the colosseum — two blades, two-strike form, and a calm certainty that there is always one more lesson to teach.",
-    stats: { hp: 90, might: 72, power: 45, defense: 25, moveRange: 3, attackRange: 1 },
+    stats: { hp: 90, might: 65, power: 45, defense: 25, moveRange: 3, attackRange: 1 },
     abilities: [
       { kind: "passive", icon: "⚔️", name: "Battle Scar", cost: "Passive", desc: <>Each time Musashi takes damage in combat, permanently gain <span style={{ color: "#f87171", fontWeight: 700 }}>+1 Might</span> for this battle (scales +1 per 2 levels — +1 at L1, +4 at L8). Caps at <span style={{ color: "#f87171", fontWeight: 700 }}>3 stacks</span>.</> },
       { kind: "ability", icon: "🗡️", name: "Ichi no Tachi", cost: "2 Mana", desc: <>A single decisive strike at range 1 — deal <span style={{ color: "#f87171", fontWeight: 700 }}>~36 damage</span> and place a <span style={{ color: "#fbbf24", fontWeight: 700 }}>Duel</span> on target (2 turns). If target is already <span style={{ color: "#fbbf24", fontWeight: 700 }}>Dueled</span>: deal <span style={{ color: "#f87171", fontWeight: 700 }}>~63 damage</span> instead and apply <span style={{ color: "#f87171", fontWeight: 700 }}>Bleed</span>.</> },
@@ -400,7 +400,7 @@ const UPGRADE_DESCS: Record<string, React.ReactNode> = {
   "picasso_Blue Period": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Scramble all units to random positions. Heal allies for <span style={{ color: "#4ade80", fontWeight: 700 }}>80 HP</span> and grant <span style={{ color: "#fbbf24", fontWeight: 700 }}>+30 Defense</span> until your next turn.</>,
   // Teddy
   "teddy_Speak Softly": <>All enemies within range 3 are <span style={{ color: "#f87171", fontWeight: 700 }}>Taunted</span> for 2 turns. Teddy-chan gains <span style={{ color: "#fbbf24", fontWeight: 700 }}>+40 Defense</span> until her next turn.</>,
-  "teddy_Big Stick": <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~99 damage</span> at range 1. <span style={{ color: "#f59e0b", fontWeight: 700 }}>+50% bonus (~149)</span> if target is Stunned or Taunted.</>,
+  "teddy_Big Stick": <>Deal <span style={{ color: "#f87171", fontWeight: 700 }}>~99 damage</span> at range 1. <span style={{ color: "#f59e0b", fontWeight: 700 }}>+30% bonus (~129)</span> if target is Stunned or Taunted.</>,
   "teddy_Rough Riders' Rally": <><span style={{ color: "#f59e0b", fontWeight: 700 }}>ULTIMATE</span> — Allies gain <span style={{ color: "#f87171", fontWeight: 700 }}>+35 Might</span> and <span style={{ color: "#34d399", fontWeight: 700 }}>+3 Movement</span>. Teddy-chan gains <span style={{ color: "#f87171", fontWeight: 700 }}>+60 Might</span> and teleports range 7.</>,
   // Mansa
   "mansa_Salt Road": <>Place a <span style={{ color: "#fbbf24", fontWeight: 700 }}>7-hex mana zone</span> within range 4. Lasts <span style={{ color: "#fbbf24", fontWeight: 700 }}>3 turns</span>. Costs 0 Mana (Treasury discount).</>,
@@ -576,13 +576,13 @@ interface ItemEntry {
 
 const ITEMS: ItemEntry[] = [
   // Common
-  { id: 'iron_gauntlets',   name: 'Iron Gauntlets',   icon: '🥊', tier: 'common',   description: '+5 Might for this run.',                                    statBonus: { might: 5 } },
-  { id: 'bone_plate',       name: 'Bone Plate',        icon: '🦴', tier: 'common',   description: '+5 Defense for this run.',                                  statBonus: { defense: 5 } },
+  { id: 'iron_gauntlets',   name: 'Iron Gauntlets',   icon: '🥊', tier: 'common',   description: '+8 Might for this run.',                                    statBonus: { might: 8 } },
+  { id: 'bone_plate',       name: 'Bone Plate',        icon: '🦴', tier: 'common',   description: '+8 Defense for this run.',                                  statBonus: { defense: 8 } },
   { id: 'vitality_shard',   name: 'Vitality Shard',    icon: '💠', tier: 'common',   description: '+12 max HP for this run.',                                  statBonus: { hp: 12 } },
-  { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+5 Power for this run.',                                    statBonus: { power: 5 } },
+  { id: 'mana_conduit',     name: 'Mana Conduit',      icon: '🔋', tier: 'common',   description: '+8 Power for this run.',                                    statBonus: { power: 8 } },
   { id: 'swift_wraps',     name: 'Swift Wraps',       icon: '🩹', tier: 'common',   description: '+1 permanent movement range + +2 extra movement on the first turn of each battle.' },
   { id: 'targeting_visor', name: 'Targeting Visor',   icon: '🎯', tier: 'common',   description: '+1 Attack Range.',                                          statBonus: { attackRange: 1 } },
-  { id: 'adrenaline_injector', name: 'Adrenaline Injector', icon: '💉', tier: 'common', description: '+3 Might, +3 Power.',                                  statBonus: { might: 3, power: 3 } },
+  { id: 'adrenaline_injector', name: 'Adrenaline Injector', icon: '💉', tier: 'common', description: '+5 Might, +5 Power.',                                  statBonus: { might: 5, power: 5 } },
   { id: 'plated_boots',   name: 'Plated Boots',       icon: '🥾', tier: 'common',   description: '+8 HP, +2 Defense.',                                        statBonus: { hp: 8, defense: 2 } },
   // Uncommon
   { id: 'battle_drum',      name: 'Battle Drum',       icon: '🥁', tier: 'uncommon', description: 'After killing an enemy, draw 1 card.' },
@@ -620,7 +620,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'admirals_banner',  name: "Admiral's Banner",  icon: '⛵', tier: 'rare',     description: 'Naval Repairs / Broadside also grants all nearby allies +30 DEF for 1 turn.',       targetCharacter: 'sunsin' },
   // Rare — Beethoven
   { id: 'resonant_crystal', name: 'Resonant Crystal',  icon: '🔮', tier: 'rare',     description: 'After any Beethoven ability card, deal ~12 damage to all adjacent enemies.',           targetCharacter: 'beethoven' },
-  { id: 'composers_baton',  name: "Composer's Baton",  icon: '🎼', tier: 'rare',     description: 'Allies standing on a Freudenspur zone also gain +5 Defense at turn start.',              targetCharacter: 'beethoven' },
+  { id: 'composers_baton',  name: "Composer's Baton",  icon: '🎼', tier: 'rare',     description: '+10 Defense and +5 Power for this run.',              targetCharacter: 'beethoven' },
   // Rare — Huang-chan
   { id: 'dragon_kiln',      name: 'Dragon Kiln',       icon: '🏺', tier: 'rare',     description: 'Terracotta units are summoned with +20 HP and +10 Might.',                               targetCharacter: 'huang' },
   { id: 'iron_edict',       name: 'Iron Edict',        icon: '📜', tier: 'rare',     description: 'Eternal Army lasts 3 turns instead of 2.',                                               targetCharacter: 'huang' },
@@ -632,7 +632,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'carthaginian_ring', name: 'Carthaginian Ring', icon: '💍', tier: 'rare',    description: 'Cannae bonus damage increased from 40% to 70%.',                                         targetCharacter: 'hannibal' },
   // Rare — Picasso-chan
   { id: 'blue_canvas',      name: 'Blue Canvas',        icon: '🎨', tier: 'rare',    description: 'Armor Break from Guernica lasts 3 turns instead of 2.',                                  targetCharacter: 'picasso' },
-  { id: 'cubist_lens',      name: 'Cubist Lens',        icon: '🪟', tier: 'rare',    description: 'Fractured Perspective free-card triggers every 2nd card instead of every 3rd.',          targetCharacter: 'picasso' },
+  { id: 'cubist_lens',      name: 'Cubist Lens',        icon: '🪟', tier: 'rare',    description: '+12 Power and +5 Defense for this run.',          targetCharacter: 'picasso' },
   // Rare — Teddy-chan
   { id: 'big_stick_upgrade', name: 'Carry a Bigger Stick', icon: '🏏', tier: 'rare', description: 'Big Stick range increased to 2 and deals +20 bonus Might damage.',                     targetCharacter: 'teddy' },
   { id: 'rough_rider_badge', name: "Rough Rider's Badge",  icon: '🏅', tier: 'rare', description: "Rough Riders' Rally also removes all debuffs from allied units.",                       targetCharacter: 'teddy' },
@@ -644,7 +644,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'void_mantle',     name: 'Ashfall Mantle',    icon: '🌋', tier: 'rare',      description: "Last Ember's AoE mode also heals Vel'thar 20 HP. Humanity's Last Light AoE radius +1 and self-heal +15 HP.",           targetCharacter: 'velthar' },
   // Rare — Musashi-chan
   { id: 'daisho_set',      name: 'Daishō Set',        icon: '🗡️', tier: 'rare',      description: 'Each Niten Ichi-ryu strike that kills grants an immediate extra strike on a new target.',                               targetCharacter: 'musashi' },
-  { id: 'ganryu_stone',    name: 'Ganryu Island Stone',icon: '🪨', tier: 'rare',      description: '+15 Might, +5 Power. Battle Scar stacks persist between fights.',                                                        targetCharacter: 'musashi', statBonus: { might: 15, power: 5 } },
+  { id: 'ganryu_stone',    name: 'Ganryu Island Stone',icon: '🪨', tier: 'rare',      description: '+10 Might, +5 Power. Battle Scar stacks persist between fights.',                                                        targetCharacter: 'musashi', statBonus: { might: 10, power: 5 } },
   // Rare — Cleopatra-chan
   { id: 'lotus_crown',     name: 'Lotus Crown',       icon: '🌸', tier: 'rare',      description: "Asp's Venom now also stacks when Cleopatra uses an ability card, not only on basic attacks.",                      targetCharacter: 'cleopatra' },
   { id: 'library_scroll',  name: 'Alexandrian Codex', icon: '📜', tier: 'rare',      description: "Asp's Kiss Power reduction increased from −15 to −25 for 3 turns.",                                                       targetCharacter: 'cleopatra' },
@@ -655,7 +655,7 @@ const ITEMS: ItemEntry[] = [
   { id: 'assegai',         name: 'Assegai',           icon: '🗡️', tier: 'rare',      description: '+15 Might. The Horns also knocks back one adjacent enemy 1 hex.',                                                        targetCharacter: 'shaka', statBonus: { might: 15 } },
   { id: 'cattle_kraal',    name: 'Cattle Kraal Token', icon: '🐄', tier: 'rare',     description: 'At fight start, gain bonus HP equal to 10% of max HP per ally in the squad.',                                          targetCharacter: 'shaka' },
   // Legendary
-  { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'This character has no limit on cards played per turn (normally capped at 3).' },
+  { id: 'znyxorgas_eye',   name: "Znyxorga's Eye",    icon: '👁️', tier: 'legendary', description: 'This character can play up to 5 cards per turn (normally capped at 3).' },
   { id: 'void_armor',       name: 'Void Armor',        icon: '🛡️', tier: 'legendary', description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.' },
   { id: 'arena_champion',   name: 'Arena Champion',    icon: '🏆', tier: 'legendary', description: '+25 HP, +15 Might, +15 Power, +15 Defense while this character is alive.', statBonus: { hp: 25, might: 15, power: 15, defense: 15 } },
   { id: 'warlords_grimoire', name: "Warlord's Grimoire", icon: '📖', tier: 'legendary', description: 'On turns 2, 3, and 4 of each fight, draw +2 cards and gain +2 Mana.' },
@@ -897,7 +897,7 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '🌑', name: 'Shadow Step', desc: 'Phases through reality — teleports adjacent to the closest enemy and strikes for 1× Might (DEF applies). (Every 3 turns)' },
     ],
   },
-  { id: 'krath_berserker',   name: 'Krath Berserker',      icon: '💢', act: 2, rank: 'Elite',  ai: 'berserker',  portrait: '/art/enemies/krath_berserker_portrait.png',  stats: { hp: 140, might: 60, power: 55, defense: 14, moveRange: 4, attackRange: 1 }, description: 'The veteran of Act I. Goes berserk for a burst of +18 Might, then leaps across the field.',
+  { id: 'krath_berserker',   name: 'Krath Berserker',      icon: '💢', act: 2, rank: 'Elite',  ai: 'berserker',  portrait: '/art/enemies/krath_berserker_portrait.png',  stats: { hp: 120, might: 47, power: 55, defense: 14, moveRange: 4, attackRange: 1 }, description: 'The veteran of Act I. Goes berserk for a burst of +15 Might, then leaps across the field.',
     abilities: [
       { icon: '💢', name: 'Bloodrage', desc: 'Gains +18 Might and loses 20 Defense for 2 turns. (Every 3 turns)' },
       { icon: '🦘', name: 'Savage Leap', desc: 'Teleports adjacent to the closest enemy and deals 1.2× Might (~72) damage (DEF applies). (Every 2 turns)' },
@@ -935,7 +935,7 @@ const ENEMIES: EnemyEntry[] = [
       { icon: '💀', name: 'Void Sunder',        desc: "Tears reality open — applies Armor Break (−25% DEF) to ALL player characters for 2 turns. (Every 4 turns)" },
       { icon: '⚡', name: 'Imperial Mandate',   desc: "The Emperor's will made flesh — Stuns all player characters within range 1 for 1 turn. Don't cluster near it. (Every 3 turns)" },
       { icon: '👁️', name: 'Apex Ascension',     desc: 'INVINCIBLE for 2 turns and gains +25 Might/Power permanently. Triggers ONCE when below 60% HP — act fast before it ascends.' },
-      { icon: '⭐', name: 'Total Authority',     desc: "The Emperor's absolute will — gains +30 Might/Power/Defense permanently. Triggers ONCE when below 25% HP. This is its final form." },
+      { icon: '⭐', name: 'Total Authority',     desc: "The Emperor's absolute will — gains +20 Might/Power/Defense permanently. Triggers ONCE when below 25% HP. This is its final form." },
     ],
   },
   // ── New Enemies ────────────────────────────────────────────────────────────
@@ -1008,7 +1008,7 @@ const ENEMIES: EnemyEntry[] = [
   },
   { id: 'qrix_voidbreacher', name: 'Qrix Voidbreacher', icon: '⚡', act: 3, rank: 'Elite', ai: 'berserker', portrait: '/art/enemies/qrix_voidbreacher_portrait.png', stats: { hp: 105, might: 72, power: 55, defense: 14, moveRange: 5, attackRange: 1 }, description: "A Qrix whose void-adaptation has compounded past the baseline. Fastest thing in Act III. By the time you see it, it's already next to your weakest character.",
     abilities: [
-      { icon: '⚡', name: 'Phase Step', desc: 'Teleports adjacent to the chosen target and Silences them for 2 turns. (Every 3 turns)' },
+      { icon: '⚡', name: 'Phase Step', desc: 'Teleports adjacent to the chosen target and Silences them for 1 turn. (Every 3 turns)' },
       { icon: '🗡️', name: 'Void Slash', desc: 'Deals 1× Might damage at melee range. (Every 2 turns)' },
     ],
   },

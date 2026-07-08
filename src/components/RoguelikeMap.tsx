@@ -1399,7 +1399,8 @@ export default function RoguelikeMap({ runState, onSelectNode, onAbandonRun, onS
           onAllocateStat={onAllocateStat ? (stat) => {
             onAllocateStat(detailChar.id as CharacterId, stat);
             const remaining = detailChar.pendingStatPoints - 1;
-            const updated = { ...detailChar, pendingStatPoints: remaining, statBonuses: { ...detailChar.statBonuses, [stat]: detailChar.statBonuses[stat] + (stat === 'hp' ? 8 : 5) }, maxHp: stat === 'hp' ? detailChar.maxHp + 8 : detailChar.maxHp, currentHp: stat === 'hp' ? detailChar.currentHp + 8 : detailChar.currentHp };
+            const statAmt = stat === 'hp' ? 12 : stat === 'defense' ? 8 : 5;
+            const updated = { ...detailChar, pendingStatPoints: remaining, statBonuses: { ...detailChar.statBonuses, [stat]: detailChar.statBonuses[stat] + statAmt }, maxHp: stat === 'hp' ? detailChar.maxHp + statAmt : detailChar.maxHp, currentHp: stat === 'hp' ? detailChar.currentHp + statAmt : detailChar.currentHp };
             if (remaining > 0) {
               setDetailChar(updated);
             } else {

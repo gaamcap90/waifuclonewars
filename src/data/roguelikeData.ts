@@ -26,7 +26,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     stats: { hp: 30, maxHp: 30, might: 22, power: 15, defense: 4, moveRange: 4, attackRange: 1 },
     ai: 'aggressive',
     abilities: [
-      { id: 'swarm_bite', name: 'Swarm Bite', icon: '🦟', description: 'Leaps onto the closest enemy and deals 40 damage to all enemies within range 1 (DEF applies).', cooldown: 4, effect: { type: 'aoe_damage', range: 1, damage: 40 } },
+      { id: 'swarm_bite', name: 'Swarm Bite', icon: '🦟', description: 'Leaps onto the closest enemy and deals 28 damage to all enemies within range 1 (DEF applies).', cooldown: 4, effect: { type: 'aoe_damage', range: 1, damage: 28 } },
     ] as EnemyAbilityDef[],
   },
   naxion_scout: {
@@ -134,7 +134,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     id: 'krath_berserker', name: 'Krath Berserker', icon: '💢', count: 1,
     portrait: '/art/enemies/krath_berserker_portrait.png',
     description: 'A Krath warrior who has abandoned all sense of self-preservation. Four bladed arms moving faster than the eye can follow. It doesn\'t fight to win — it fights until nothing is left standing.',
-    stats: { hp: 155, maxHp: 155, might: 52, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
+    stats: { hp: 120, maxHp: 120, might: 47, power: 55, defense: 14, moveRange: 4, attackRange: 1 },
     ai: 'berserker',
     abilities: [
       { id: 'bloodrage', name: 'Bloodrage', icon: '💢', description: 'Gains +15 Might for 2 turns (but loses 20 Defense).', cooldown: 3, effect: { type: 'buff_self', mightBonus: 15, defenseBonus: -20, duration: 2 } },
@@ -201,7 +201,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
       { id: 'void_sunder',       name: 'Void Sunder',        icon: '💀', description: 'Tears reality open — applies Armor Break (−25% DEF) to ALL player characters for 2 turns.',                                                                                                                          cooldown: 4, effect: { type: 'debuff_enemies', range: 10, debuffType: 'armor_break', magnitude: 25, duration: 2 } },
       { id: 'imperial_mandate',  name: 'Imperial Mandate',   icon: '⚡', description: "The Emperor's will made flesh — Stuns all player characters within range 1 for 1 turn. Stay spread out.",                                                                                                            cooldown: 3, effect: { type: 'debuff_enemies', range: 1, debuffType: 'stun', magnitude: 0, duration: 1 } },
       { id: 'apex_ascension',    name: 'Apex Ascension',     icon: '👁️', description: 'Transcends physical limits — becomes INVINCIBLE for 2 turns and gains +25 Might and +25 Power permanently. Triggers ONCE when below 60% HP.',                                                                        cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.60, effect: { type: 'buff_self', mightBonus: 25, powerBonus: 25, defenseBonus: 500, duration: 2 } },
-      { id: 'total_authority',   name: 'Total Authority',    icon: '⭐', description: "The Emperor's absolute will — gains +30 Might, +30 Power, and +30 Defense permanently. Triggers ONCE when below 25% HP.",                                                                                             cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.25, effect: { type: 'buff_self', mightBonus: 30, powerBonus: 30, defenseBonus: 30, duration: 999 } },
+      { id: 'total_authority',   name: 'Total Authority',    icon: '⭐', description: "The Emperor's absolute will — gains +20 Might, +20 Power, and +20 Defense permanently. Triggers ONCE when below 25% HP.",                                                                                             cooldown: 0, oncePerFight: true, triggerCondition: 'low_hp', hpThreshold: 0.25, effect: { type: 'buff_self', mightBonus: 20, powerBonus: 20, defenseBonus: 20, duration: 999 } },
     ] as EnemyAbilityDef[],
   },
   // ── New Enemies ────────────────────────────────────────────────────────────
@@ -341,7 +341,7 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
     ai: 'berserker',
     abilities: [
       { id: 'phase_step_qrix', name: 'Phase Step', icon: '⚡', description: 'Void-transit burst — dashes to the chosen target and deals 0.9× Might damage (DEF applies).', cooldown: 3, effect: { type: 'dash_attack', dashRange: 6, multiplier: 0.9 } },
-      { id: 'void_disruption', name: 'Void Disruption', icon: '🌀', description: 'Dimensional interference — Silences a single target within range 1 for 2 turns.', cooldown: 2, effect: { type: 'debuff_enemies', range: 1, debuffType: 'silence', magnitude: 0, duration: 2, singleTarget: true } },
+      { id: 'void_disruption', name: 'Void Disruption', icon: '🌀', description: 'Dimensional interference — Silences a single target within range 1 for 1 turn.', cooldown: 2, effect: { type: 'debuff_enemies', range: 1, debuffType: 'silence', magnitude: 0, duration: 1, singleTarget: true } },
     ] as EnemyAbilityDef[],
   },
   cryo_drifter: {
@@ -362,17 +362,17 @@ export const ENEMIES: Record<string, EnemyTemplate> = {
 export const ITEMS: RunItem[] = [
   // COMMON
   { id: 'iron_gauntlets', name: 'Iron Gauntlets', icon: '🥊', tier: 'common',
-    description: '+5 Might for this run.',
-    statBonus: { might: 5 } },
+    description: '+8 Might for this run.',
+    statBonus: { might: 8 } },
   { id: 'bone_plate', name: 'Bone Plate', icon: '🦴', tier: 'common',
-    description: '+5 Defense for this run.',
-    statBonus: { defense: 5 } },
+    description: '+8 Defense for this run.',
+    statBonus: { defense: 8 } },
   { id: 'vitality_shard', name: 'Vitality Shard', icon: '💠', tier: 'common',
     description: '+12 max HP for this run.',
     statBonus: { hp: 12 } },
   { id: 'mana_conduit', name: 'Mana Conduit', icon: '🔋', tier: 'common',
-    description: '+5 Power for this run.',
-    statBonus: { power: 5 } },
+    description: '+8 Power for this run.',
+    statBonus: { power: 8 } },
   { id: 'swift_wraps', name: 'Swift Wraps', icon: '🩹', tier: 'common',
     description: '+1 permanent movement range + +2 extra movement on the first turn of each battle.',
     passiveTag: 'swift_wraps_burst' },
@@ -380,8 +380,8 @@ export const ITEMS: RunItem[] = [
     description: '+1 Attack Range for this run.',
     statBonus: { attackRange: 1 } },
   { id: 'adrenaline_injector', name: 'Adrenaline Injector', icon: '💉', tier: 'common',
-    description: '+3 Might and +3 Power for this run.',
-    statBonus: { might: 3, power: 3 } },
+    description: '+5 Might and +5 Power for this run.',
+    statBonus: { might: 5, power: 5 } },
   { id: 'plated_boots', name: 'Plated Boots', icon: '🥾', tier: 'common',
     description: '+8 HP and +2 Defense for this run.',
     statBonus: { hp: 8, defense: 2 } },
@@ -481,8 +481,8 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'beethoven_resonance_aoe' },
   { id: 'composers_baton', name: "Composer's Baton", icon: '🎼', tier: 'rare',
     targetCharacter: 'beethoven',
-    description: 'Allies standing on a Freudenspur zone also gain +5 Defense at turn start.',
-    passiveTag: 'beethoven_freud_def5' },
+    description: '+10 Defense and +5 Power for this run.',
+    statBonus: { defense: 10, power: 5 } },
   // RARE — Huang-chan
   { id: 'dragon_kiln', name: 'Dragon Kiln', icon: '🏺', tier: 'rare',
     targetCharacter: 'huang',
@@ -517,8 +517,8 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'picasso_guernica_extend' },
   { id: 'cubist_lens', name: 'Cubist Lens', icon: '🪟', tier: 'rare',
     targetCharacter: 'picasso',
-    description: 'Fractured Perspective free-card triggers every 2nd card instead of every 3rd.',
-    passiveTag: 'picasso_perspective_2nd' },
+    description: '+12 Power and +5 Defense for this run.',
+    statBonus: { power: 12, defense: 5 } },
   // RARE — Teddy-chan
   { id: 'big_stick_upgrade', name: 'Carry a Bigger Stick', icon: '🏏', tier: 'rare',
     targetCharacter: 'teddy',
@@ -553,8 +553,8 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'musashi_niten_kill_bonus' },
   { id: 'musashi_ganryu_stone', name: 'Ganryu Island Stone', icon: '🪨', tier: 'rare',
     targetCharacter: 'musashi',
-    description: '+15 Might, +5 Power. Battle Scar stacks persist between fights.',
-    statBonus: { might: 15, power: 5 },
+    description: '+10 Might, +5 Power. Battle Scar stacks persist between fights.',
+    statBonus: { might: 10, power: 5 },
     passiveTag: 'musashi_scar_persist' },
   // RARE — Cleopatra-chan
   { id: 'cleo_lotus_crown', name: 'Lotus Crown', icon: '🌸', tier: 'rare',
@@ -587,7 +587,7 @@ export const ITEMS: RunItem[] = [
     passiveTag: 'shaka_kraal_shield' },
   // LEGENDARY
   { id: 'znyxorgas_eye', name: "Znyxorga's Eye", icon: '👁️', tier: 'legendary',
-    description: 'This character has no limit on cards played per turn (normally capped at 3).',
+    description: 'This character can play up to 5 cards per turn (normally capped at 3).',
     passiveTag: 'cards_per_turn_unlimited' },
   { id: 'void_armor', name: 'Void Armor', icon: '🛡️', tier: 'legendary',
     description: 'Once per fight, negate a lethal blow — survive at 1 HP instead.',
@@ -804,7 +804,7 @@ export const CARD_REWARD_POOL: CardReward[] = [
   { definitionId: 'picasso_blue_period', name: 'Blue Period', icon: '⭐', manaCost: 3, rarity: 'ultimate', description: 'ULTIMATE — Scramble all units to random positions. Heal all allies 60 HP, +20 DEF until next turn.', exclusiveTo: 'Picasso' },
   // ── Rare — Teddy-chan ─────────────────────────────────────────────────────
   { definitionId: 'teddy_speak_softly', name: 'Speak Softly', icon: '📣', manaCost: 2, rarity: 'rare',    description: 'All enemies in range 2 are Taunted for 2 turns — must target Teddy. Teddy gains +30 DEF.', exclusiveTo: 'Teddy' },
-  { definitionId: 'teddy_big_stick',    name: 'Big Stick',    icon: '🏏', manaCost: 2, rarity: 'rare',    description: '~87 Might dmg at range 1. Doubled (~174) if target is Stunned or Taunted.', exclusiveTo: 'Teddy' },
+  { definitionId: 'teddy_big_stick',    name: 'Big Stick',    icon: '🏏', manaCost: 2, rarity: 'rare',    description: '~87 Might dmg at range 1. +30% bonus (~113) if target is Stunned or Taunted.', exclusiveTo: 'Teddy' },
   // ── Ultimate — Teddy-chan ─────────────────────────────────────────────────
   { definitionId: 'teddy_rough_riders_rally', name: "Rough Riders' Rally", icon: '⭐', manaCost: 3, rarity: 'ultimate', description: "ULTIMATE — Allies gain +25 Might and +2 Move. Teddy gains +45 Might and teleports range 5.", exclusiveTo: 'Teddy' },
   // ── Rare — Mansa-chan ─────────────────────────────────────────────────────
@@ -1407,7 +1407,7 @@ export function buildStartingCharacters(itemSlots = 6): CharacterRunState[] {
     },
     {
       id: 'tesla', displayName: 'Tesla-chan', portrait: '/art/tesla_portrait.png',
-      currentHp: 85, maxHp: 85, level: 1, xp: 0, xpToNext: 100,
+      currentHp: 90, maxHp: 90, level: 1, xp: 0, xpToNext: 100,
       statBonuses: { hp: 0, might: 0, power: 0, defense: 0 }, pendingStatPoints: 0,
       pendingAbilityUpgrades: 0, pendingUltimateUpgrade: 0, upgradedAbilityIds: [],
       items: [...emptyItems],
